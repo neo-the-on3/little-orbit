@@ -1,0 +1,90 @@
+# Build output, local state, and secrets stay out of the repo.
+# Shared project files stay tracked: *.xcodeproj (including project.xcproj),
+# xcshareddata (shared schemes), Package.resolved, mise.toml, and mise.lock.
+
+# --- Swift / Swift Package Manager ---
+
+# swift build / swift test products
+.build/
+
+# Per-user SwiftPM and Xcode-for-packages state
+.swiftpm/
+
+# Package.resolved is committed for app packages.
+# little-orbit is an application, so the lockfile is shared state, not a
+# local artifact. Keep every copy tracked, including:
+#   Package.resolved
+#   *.xcodeproj/project.xcworkspace/xcshareddata/swiftpm/Package.resolved
+# Do not ignore Package.resolved.
+
+# --- Xcode ---
+
+# The project bundle is committed. Do not ignore *.xcodeproj, project.xcproj,
+# or xcshareddata/ (shared schemes live there).
+
+# User-specific state
+xcuserdata/
+*.xcuserstate
+*.xcscmblueprint
+
+# In-tree build and index data
+DerivedData/
+build/
+
+# Build products
+*.hmap
+*.ipa
+*.dSYM
+*.dSYM.zip
+
+# Test results and coverage
+*.xcresult
+*.xccovreport
+*.xccovarchive
+*.profdata
+*.profraw
+*.gcda
+*.gcno
+*.gcov
+
+# --- mise ---
+
+# Personal overrides. https://mise.jdx.dev/configuration.html
+# Shared mise.toml and mise.lock stay tracked.
+mise.local.toml
+.mise.local.toml
+mise.*.local.toml
+.mise.*.local.toml
+mise/*.local.toml
+.mise/*.local.toml
+
+# Lockfiles for tools pinned only in a local config.
+# https://mise.jdx.dev/dev-tools/mise-lock.html
+mise.local.lock
+mise.*.local.lock
+.mise/locks/mise.local/
+.mise/locks/mise.*.local/
+
+# Project-local caches. The default cache is outside the repo
+# (~/Library/Caches/mise on macOS, ~/.cache/mise on Linux). A localized
+# install keeps rebuildable cache data in .mise/cache.
+.mise/cache/
+
+# --- macOS / editors ---
+
+.DS_Store
+.AppleDouble
+.LSOverride
+._*
+.localized
+__MACOSX/
+
+.vscode/
+.idea/
+
+# --- Secrets and signing ---
+
+.env
+.env.*
+*.p12
+*.mobileprovision

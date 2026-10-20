@@ -1,0 +1,39 @@
+# LF in the repository and in the working tree on Linux and macOS.
+* text=auto eol=lf
+
+# Binary assets. Listed after the text rule so these override it.
+*.png binary
+*.jpg binary
+*.jpeg binary
+*.gif binary
+*.webp binary
+*.heic binary
+*.ico binary
+*.icns binary
+*.pdf binary
+*.ttf binary
+*.otf binary
+*.ttc binary
+*.car binary
+*.mov binary
+*.mp4 binary
+*.m4a binary
+*.mp3 binary
+*.wav binary
+*.caf binary
+
+# JSON project format (Xcode 27 project.xcproj). Diff and merge as text so
+# conflicts stay line-oriented. Do not use merge=union: union can duplicate
+# keys and silently drop entries.
+*.xcproj text eol=lf diff=json
+
+# Legacy property-list project format, only if a .pbxproj fallback is ever
+# added. merge=union is the usual fallback for that format and does not
+# apply to .xcproj.
+*.pbxproj text eol=lf merge=union
+
+# Shared Xcode text files. text=auto on plists keeps XML plists diffable
+# and leaves binary property lists untouched.
+*.xcscheme text eol=lf
+*.plist text=auto eol=lf
+*.xcstrings text eol=lf
