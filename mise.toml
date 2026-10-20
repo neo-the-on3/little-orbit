@@ -27,7 +27,7 @@ artifactbundle = false
 filter_bins = ["xcprojformatter"]
 
 [tasks.lint]
-description = "Lint Swift sources with SwiftLint (Linux and macOS)."
+description = "Lint Swift sources with SwiftLint using .swiftlint.yml (Linux and macOS)."
 run = '''
 #!/usr/bin/env bash
 set -euo pipefail
@@ -46,11 +46,11 @@ swiftlint
 '''
 
 [tasks.format]
-description = "Rewrite Swift sources in place with swift-format (Linux and macOS)."
+description = "Rewrite Swift sources in place with swift-format using .swift-format (Linux and macOS)."
 run = "swift-format format --in-place --recursive ."
 
 [tasks."format-check"]
-description = "Fail if swift-format would change Swift sources (Linux and macOS)."
+description = "Fail if swift-format would change Swift sources, using .swift-format (Linux and macOS)."
 run = "swift-format lint --strict --recursive ."
 
 [tasks.test]

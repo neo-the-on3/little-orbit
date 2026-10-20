@@ -1,0 +1,73 @@
+# SwiftLint for the SwiftUI app. swift-format (.swift-format) owns layout:
+# indentation, wrapping, commas, braces, and import order. Rules below that
+# would disagree with that layout are disabled. Semantic checks stay here.
+# `strict` makes every warning fail `mise run lint`, so CI fails on a violation.
+
+included:
+  - .
+
+excluded:
+  - .git
+  - .build
+  - "**/.build"
+  - .swiftpm
+  - "**/.swiftpm"
+  - DerivedData
+  - "**/DerivedData"
+  - "**/SourcePackages"
+  - "**/checkouts"
+
+strict: true
+
+# Xcode's Swift indent. Matches .swift-format indentation.spaces = 4.
+indentation: 4
+
+disabled_rules:
+  # SwiftUI view builders use more than one trailing closure
+  # (`Button { } label: { }`). swift-format still rejects a non-trailing
+  # closure argument mixed with a trailing closure.
+  - multiple_closures_with_trailing_closure
+  # swift-format lineLength (120) wraps code. It does not reflow string
+  # literals, so a SwiftLint line length check would fail formatted strings.
+  - line_length
+
+opt_in_rules:
+  # @State, @StateObject, and the other SwiftUI state wrappers stay private.
+  - private_swiftui_state
+
+# View bodies run longer than a typical function.
+function_body_length:
+  warning: 100
+  error: 250
+
+type_body_length:
+  warning: 400
+  error: 600
+
+file_length:
+  warning: 500
+  error: 1200
+
+# SwiftUI initializers often take more parameters than a plain function.
+function_parameter_count:
+  warning: 8
+  error: 12
+  ignores_default_parameters: true
+
+# Multiline collection literals keep a trailing comma, matching
+# multilineTrailingCommaBehavior: alwaysUsed. swift-format applies that
+# comma to argument lists as well; SwiftLint does not check those.
+trailing_comma:
+  mandatory_comma: true
+
+# swift-format places the brace on the signature's last line, including when
+# the signature itself is wrapped.
+opening_brace:
+  ignore_multiline_function_signatures: true
+  ignore_multiline_statement_conditions: true
+
+vertical_whitespace:
+  max_empty_lines: 1
+
+switch_case_alignment:
+  indented_cases: false

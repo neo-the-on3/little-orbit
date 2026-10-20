@@ -101,7 +101,7 @@ The first install builds `xcprojformatter` from that commit, so it needs network
 
 `lint` prints a note and succeeds when the tree has no Swift sources. `build` runs `xcodebuild -version` first and stops unless it reports Xcode 27.2 or newer. On Linux that check fails and the message points at `swift build` for shared package code. `test` stops when the tree has no `Package.swift`. `validate-project` succeeds and prints a short note when no `project.xcproj` exists yet.
 
-SwiftLint and swift-format read their config files from the tree when those files are added (`mise run lint`, `mise run format`, and `mise run format-check` stay the same commands).
+SwiftLint reads `.swiftlint.yml` and swift-format reads `.swift-format`. `mise run lint`, `mise run format`, and `mise run format-check` stay the same commands.
 
 ### CI
 
