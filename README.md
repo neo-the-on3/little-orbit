@@ -56,11 +56,13 @@ swift build
 swift test
 ```
 
-The four modules are platform-independent, so they compile on Linux. The apps themselves build in Xcode on macOS.
+The four modules are platform-independent, so they compile on Linux. The apps themselves build in Xcode on macOS. On a Mac, run package tests with `mise run test` from the repository root so they use Xcode's Swift. See [Tooling](#tooling).
 
 ## Tooling
 
-mise is the entry point for project tools. A machine with mise installs the same pinned versions on Linux and macOS. CI installs from this `mise.toml` and runs tasks with `mise run`.
+mise is the entry point for project tools. CI installs from this `mise.toml` and runs tasks with `mise run`.
+
+Linux and macOS use different Swift toolchains. Linux installs the pinned swift.org Swift 6.4.1. macOS uses the Swift and swift-format shipped with Xcode 27.2 or newer (`xcrun swift`, `xcrun swift-format`), selected with `xcode-select`. The swift.org macOS toolchain cannot build `Packages/LittleOrbitKit` for Apple platforms (`Could not choose a single platform for target 'LittleOrbitCore'`).
 
 Verified with mise 2026.10.14.
 
@@ -73,18 +75,20 @@ mise trust
 mise install
 ```
 
-`mise install` installs every tool pinned in `mise.toml`. `mise.lock` records the download URLs for those pins, including SwiftLint checksums, for Linux and macOS.
+`mise install` installs the tools in `mise.toml` that apply to the current operating system. `mise.lock` records the download URLs for those pins, including SwiftLint checksums, for Linux and macOS. Swift's lock entries are the ones `mise lock` writes: Linux uses `swift_platform = "ubuntu24.04"`, and the file also records the swift.org macOS package URLs. `os = ["linux"]` filters which host installs Swift, so on macOS `mise install` skips that tool.
 
 | Tool | Pin | Where it runs |
 | --- | --- | --- |
-| Swift | 6.4.1 (swift.org) | Linux and macOS |
-| swift-format | 6.4.1, the `swift-format` binary in that Swift toolchain | Linux and macOS |
+| Swift | 6.4.1 (swift.org) | Linux |
+| swift-format | 6.4.1, the `swift-format` binary in that Swift toolchain | Linux |
+| Swift | Xcode 27.2 or newer, `xcrun swift` | macOS |
+| swift-format | the `swift-format` binary in that Xcode, `xcrun swift-format` | macOS |
 | SwiftLint | 0.65.1 (`aqua:realm/SwiftLint`) | Linux and macOS |
 | xcprojformatter | apple/xcode-project-format `0.1.0` (`c132630aabf40f6d6c3f7bb004595d2e5a28ea42`), built from source | Linux and macOS |
 
-The first install builds `xcprojformatter` from that commit, so it needs network access to GitHub. Every pinned tool installs on Linux and macOS.
+The first install builds `xcprojformatter` from that commit, so it needs network access to GitHub. On Linux that build uses the pinned Swift toolchain. On macOS the Swift tool is skipped, and the build uses Xcode's `swift`.
 
-`xcodebuild` is macOS-only. It ships with Xcode 27.2 or newer and is selected with `xcode-select`. On macOS, `swift`, `swift test`, and `swift-format` come from the mise-pinned Swift 6.4.1 toolchain, and `xcodebuild` uses the selected Xcode.
+`xcodebuild` is macOS-only. It ships with Xcode 27.2 or newer and is selected with `xcode-select`.
 
 ### Tasks
 
@@ -93,19 +97,19 @@ The first install builds `xcprojformatter` from that commit, so it needs network
 | Task | Platforms | What it runs |
 | --- | --- | --- |
 | `lint` | Linux and macOS | `swiftlint` when the tree contains Swift sources |
-| `format` | Linux and macOS | `swift-format format --in-place --recursive .` |
-| `format-check` | Linux and macOS | `swift-format lint --strict --recursive .` |
-| `test` | Linux and macOS | `swift test --package-path` for each `Package.swift` |
+| `format` | Linux and macOS | Linux: `swift-format format --in-place --recursive .`. macOS: `xcrun swift-format format --in-place --recursive .` |
+| `format-check` | Linux and macOS | Linux: `swift-format lint --strict --recursive .`. macOS: `xcrun swift-format lint --strict --recursive .` |
+| `test` | Linux and macOS | Linux: `swift test --package-path` for each `Package.swift`, using Swift 6.4.1. macOS: `xcrun swift test --package-path` for each `Package.swift` |
 | `build` | macOS only | `xcodebuild -version`, then `xcodebuild` for each shared scheme in `LittleOrbit.xcodeproj` |
 | `validate-project` | Linux and macOS | `xcprojformatter` on each `project.xcproj` |
 
-`lint` prints a note and succeeds when the tree has no Swift sources. `build` runs `xcodebuild -version` first and stops unless it reports Xcode 27.2 or newer. On Linux that check fails and the message points at `swift build` for shared package code. `test` stops when the tree has no `Package.swift`. `validate-project` succeeds and prints a short note when no `project.xcproj` exists yet.
+`lint` prints a note and succeeds when the tree has no Swift sources. `build` runs `xcodebuild -version` first and stops unless it reports Xcode 27.2 or newer. On Linux that check fails and the message points at `swift build` for shared package code. `test` stops when the tree has no `Package.swift`. On macOS, `test`, `format`, and `format-check` stop if `xcrun` cannot find the tool. `validate-project` succeeds and prints a short note when no `project.xcproj` exists yet.
 
-SwiftLint reads `.swiftlint.yml` and swift-format reads `.swift-format`. `mise run lint`, `mise run format`, and `mise run format-check` stay the same commands.
+SwiftLint reads `.swiftlint.yml` and swift-format reads `.swift-format`. The task names stay `mise run lint`, `mise run format`, and `mise run format-check`.
 
 ### CI
 
-CI runs `mise install` and `mise run` against this `mise.toml`. Tool versions stay in this file.
+CI runs `mise install` and `mise run` against this `mise.toml`. Tool versions stay in this file. On macOS, `mise run test`, `mise run format`, and `mise run format-check` use the selected Xcode toolchain.
 
 ### Project format fallback
 
