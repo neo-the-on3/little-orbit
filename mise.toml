@@ -1,0 +1,166 @@
+# Tool versions for little-orbit.
+#
+# Local machines and CI install with `mise install` and run tasks with `mise run`.
+#
+# Platforms
+# - swift, swift-format, SwiftLint, and xcprojformatter install on Linux and macOS.
+# - swift-format is the `swift-format` binary shipped in the pinned Swift toolchain.
+# - xcodebuild ships with Xcode 27.2 or newer. The `build` task is macOS-only.
+#
+# Fallback: if the JSON project.xcproj format cannot be used, add XcodeGen with
+# mise in that change and record why.
+
+[tools]
+# swift.org Swift 6.4.1 (Xcode 27 line). Also provides Apple's swift-format 6.4.1.
+swift = "6.4.1"
+# Official SwiftLint release binaries for Linux and macOS.
+"aqua:realm/SwiftLint" = "0.65.1"
+
+# apple/xcode-project-format tag 0.1.0. The tag has no GitHub release assets,
+# so mise builds this commit from source with the pinned Swift toolchain.
+[tools."spm:apple/xcode-project-format"]
+version = "rev:c132630aabf40f6d6c3f7bb004595d2e5a28ea42"
+depends = ["swift"]
+artifactbundle = false
+filter_bins = ["xcprojformatter"]
+
+[tasks.lint]
+description = "Lint Swift sources with SwiftLint (Linux and macOS)."
+run = '''
+#!/usr/bin/env bash
+set -euo pipefail
+
+sources=()
+while IFS= read -r file; do
+  sources+=("$file")
+done < <(find . -name '*.swift' -not -path '*/.*' | sort)
+
+if [ -z "${sources[*]:-}" ]; then
+  echo "lint: no Swift sources to lint."
+  exit 0
+fi
+
+swiftlint
+'''
+
+[tasks.format]
+description = "Rewrite Swift sources in place with swift-format (Linux and macOS)."
+run = "swift-format format --in-place --recursive ."
+
+[tasks."format-check"]
+description = "Fail if swift-format would change Swift sources (Linux and macOS)."
+run = "swift-format lint --strict --recursive ."
+
+[tasks.test]
+description = "Run swift test for each Swift package (Linux and macOS)."
+run = '''
+#!/usr/bin/env bash
+set -euo pipefail
+
+packages=()
+while IFS= read -r manifest; do
+  packages+=("$(dirname "$manifest")")
+done < <(find . -name Package.swift -not -path '*/.*' | sort)
+
+if [ -z "${packages[*]:-}" ]; then
+  echo "error: no Package.swift found, so there are no Swift package tests to run." >&2
+  echo "This task runs swift test --package-path in each package once those packages are in the tree." >&2
+  exit 1
+fi
+
+for package_dir in "${packages[@]}"; do
+  echo "swift test --package-path ${package_dir}"
+  swift test --package-path "$package_dir"
+done
+'''
+
+[tasks.build]
+description = "Build shared Xcode schemes with xcodebuild (macOS only). Package code uses swift build on Linux and macOS."
+run = '''
+#!/usr/bin/env bash
+set -euo pipefail
+
+if [ "$(uname -s)" != "Darwin" ]; then
+  echo "error: build is macOS-only. It runs xcodebuild from Xcode 27.2 or newer." >&2
+  echo "xcodebuild is not installed by mise." >&2
+  echo "Shared Swift packages build on Linux and macOS with: swift build" >&2
+  exit 1
+fi
+
+if ! command -v xcodebuild >/dev/null 2>&1; then
+  echo "error: xcodebuild not found. Install Xcode 27.2 or newer and point xcode-select at it." >&2
+  exit 1
+fi
+
+project="LittleOrbit.xcodeproj"
+if [ ! -d "$project" ]; then
+  echo "error: ${project} is not in the tree, so xcodebuild has nothing to build." >&2
+  exit 1
+fi
+
+schemes=()
+in_schemes=0
+while IFS= read -r line; do
+  case "$line" in
+    "    Schemes:")
+      in_schemes=1
+      ;;
+    "")
+      if [ "$in_schemes" -eq 1 ]; then
+        break
+      fi
+      ;;
+    *)
+      if [ "$in_schemes" -eq 1 ]; then
+        schemes+=("${line#"${line%%[![:space:]]*}"}")
+      fi
+      ;;
+  esac
+done < <(xcodebuild -project "$project" -list)
+
+if [ -z "${schemes[*]:-}" ]; then
+  echo "error: ${project} has no shared schemes." >&2
+  exit 1
+fi
+
+for scheme in "${schemes[@]}"; do
+  echo "xcodebuild -project ${project} -scheme ${scheme} build"
+  xcodebuild -project "$project" -scheme "$scheme" build CODE_SIGNING_ALLOWED=NO "$@"
+done
+'''
+
+[tasks."validate-project"]
+description = "Check project.xcproj files with xcprojformatter (Linux and macOS)."
+run = '''
+#!/usr/bin/env bash
+set -euo pipefail
+
+files=()
+while IFS= read -r file; do
+  files+=("$file")
+done < <(find . -name project.xcproj -not -path '*/.*' | sort)
+
+if [ -z "${files[*]:-}" ]; then
+  echo "validate-project: no project.xcproj files found."
+  exit 0
+fi
+
+status=0
+for file in "${files[@]}"; do
+  canonical="$(mktemp)"
+  if ! xcprojformatter "$file" >"$canonical"; then
+    echo "error: xcprojformatter could not read ${file}." >&2
+    status=1
+    rm -f "$canonical"
+    continue
+  fi
+  if ! diff -u "$file" "$canonical"; then
+    echo "error: ${file} differs from xcprojformatter canonical output." >&2
+    echo "Rewrite it with: xcprojformatter --update <project>.xcodeproj" >&2
+    status=1
+  fi
+  rm -f "$canonical"
+done
+
+exit "$status"
+'''
