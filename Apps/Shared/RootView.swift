@@ -25,7 +25,8 @@ struct RootView: View {
             LittleOrbitDomain.moduleName,
             LittleOrbitPersistence.moduleName,
             LittleOrbitTheme.moduleName,
-        ].joined(separator: "\n")
+        ]
+        .joined(separator: "\n")
     }
 }
 

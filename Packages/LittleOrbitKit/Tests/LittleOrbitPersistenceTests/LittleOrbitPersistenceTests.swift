@@ -1,4 +1,5 @@
 import XCTest
+
 @testable import LittleOrbitPersistence
 
 final class LittleOrbitPersistenceTests: XCTestCase {

@@ -19,31 +19,31 @@ let package = Package(
         .target(name: "LittleOrbitCore"),
         .target(
             name: "LittleOrbitDomain",
-            dependencies: ["LittleOrbitCore"]
+            dependencies: ["LittleOrbitCore"],
         ),
         .target(
             name: "LittleOrbitPersistence",
-            dependencies: ["LittleOrbitDomain"]
+            dependencies: ["LittleOrbitDomain"],
         ),
         .target(
             name: "LittleOrbitTheme",
-            dependencies: ["LittleOrbitCore"]
+            dependencies: ["LittleOrbitCore"],
         ),
         .testTarget(
             name: "LittleOrbitCoreTests",
-            dependencies: ["LittleOrbitCore"]
+            dependencies: ["LittleOrbitCore"],
         ),
         .testTarget(
             name: "LittleOrbitDomainTests",
-            dependencies: ["LittleOrbitDomain"]
+            dependencies: ["LittleOrbitDomain"],
         ),
         .testTarget(
             name: "LittleOrbitPersistenceTests",
-            dependencies: ["LittleOrbitPersistence"]
+            dependencies: ["LittleOrbitPersistence"],
         ),
         .testTarget(
             name: "LittleOrbitThemeTests",
-            dependencies: ["LittleOrbitTheme"]
+            dependencies: ["LittleOrbitTheme"],
         ),
-    ]
+    ],
 )
