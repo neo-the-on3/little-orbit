@@ -38,10 +38,10 @@ The first install builds `xcprojformatter` from that commit, so it needs network
 | `format` | Linux and macOS | `swift-format format --in-place --recursive .` |
 | `format-check` | Linux and macOS | `swift-format lint --strict --recursive .` |
 | `test` | Linux and macOS | `swift test --package-path` for each `Package.swift` |
-| `build` | macOS only | `xcodebuild` for each shared scheme in `LittleOrbit.xcodeproj` |
+| `build` | macOS only | `xcodebuild -version`, then `xcodebuild` for each shared scheme in `LittleOrbit.xcodeproj` |
 | `validate-project` | Linux and macOS | `xcprojformatter` on each `project.xcproj` |
 
-`lint` prints a note and succeeds when the tree has no Swift sources. `build` stops on Linux with a message that points at `swift build` for shared package code. `test` stops when the tree has no `Package.swift`. `validate-project` succeeds and prints a short note when no `project.xcproj` exists yet.
+`lint` prints a note and succeeds when the tree has no Swift sources. `build` runs `xcodebuild -version` first and stops unless it reports Xcode 27.2 or newer. On Linux that check fails and the message points at `swift build` for shared package code. `test` stops when the tree has no `Package.swift`. `validate-project` succeeds and prints a short note when no `project.xcproj` exists yet.
 
 SwiftLint and swift-format read their config files from the tree when those files are added (`mise run lint`, `mise run format`, and `mise run format-check` stay the same commands).
 

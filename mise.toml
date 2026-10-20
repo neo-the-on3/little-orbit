@@ -12,6 +12,8 @@
 
 [tools]
 # swift.org Swift 6.4.1 (Xcode 27 line). Also provides Apple's swift-format 6.4.1.
+# mise.lock has two [[tools.swift]] entries because mise matches on options:
+# macOS uses the entry with no options, Linux uses swift_platform = "ubuntu24.04".
 swift = "6.4.1"
 # Official SwiftLint release binaries for Linux and macOS.
 "aqua:realm/SwiftLint" = "0.65.1"
@@ -75,20 +77,46 @@ done
 '''
 
 [tasks.build]
-description = "Build shared Xcode schemes with xcodebuild (macOS only). Package code uses swift build on Linux and macOS."
+description = "Build shared Xcode schemes with xcodebuild (macOS only, Xcode 27.2 or newer). Package code uses swift build on Linux and macOS."
 run = '''
 #!/usr/bin/env bash
 set -euo pipefail
 
-if [ "$(uname -s)" != "Darwin" ]; then
-  echo "error: build is macOS-only. It runs xcodebuild from Xcode 27.2 or newer." >&2
-  echo "xcodebuild is not installed by mise." >&2
-  echo "Shared Swift packages build on Linux and macOS with: swift build" >&2
+# Require Xcode 27.2+ before any other build step. `xcodebuild -version`
+# prints "Xcode <marketing-version>" on the first line.
+version_output=""
+if ! version_output="$(xcodebuild -version 2>&1)"; then
+  echo "error: build requires Xcode 27.2 or newer, but \`xcodebuild -version\` failed." >&2
+  if [ "$(uname -s)" != "Darwin" ]; then
+    echo "This task is macOS-only. xcodebuild ships with Xcode." >&2
+    echo "Shared Swift packages build on Linux and macOS with: swift build" >&2
+  else
+    echo "Install Xcode 27.2 or newer and point xcode-select at it." >&2
+    printf '%s\n' "$version_output" >&2
+  fi
   exit 1
 fi
 
-if ! command -v xcodebuild >/dev/null 2>&1; then
-  echo "error: xcodebuild not found. Install Xcode 27.2 or newer and point xcode-select at it." >&2
+version_line="${version_output%%$'\n'*}"
+case "$version_line" in
+  "Xcode "[0-9]*)
+    version="${version_line#Xcode }"
+    ;;
+  *)
+    echo "error: build requires Xcode 27.2 or newer. \`xcodebuild -version\` reported: ${version_line}" >&2
+    exit 1
+    ;;
+esac
+
+IFS=. read -r major minor _ <<EOF
+$version
+EOF
+major="${major%%[!0-9]*}"
+minor="${minor%%[!0-9]*}"
+major="${major:-0}"
+minor="${minor:-0}"
+if [ "$major" -lt 27 ] || { [ "$major" -eq 27 ] && [ "$minor" -lt 2 ]; }; then
+  echo "error: build requires Xcode 27.2 or newer. \`xcodebuild -version\` reported: ${version_line}" >&2
   exit 1
 fi
 
