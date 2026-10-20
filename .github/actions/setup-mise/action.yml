@@ -1,0 +1,62 @@
+name: Install mise tools
+description: >-
+  Install the tools pinned in mise.toml. On Linux, install the system
+  packages the swift.org toolchain needs first. On macOS, Xcode's Swift
+  must already be selected so xcprojformatter builds with xcrun swift.
+
+runs:
+  using: composite
+  steps:
+    - name: Install Swift Linux dependencies
+      if: runner.os == 'Linux'
+      shell: bash
+      run: |
+        set -euo pipefail
+        export DEBIAN_FRONTEND=noninteractive
+        sudo apt-get update
+        # swift.org's Ubuntu 24.04 toolchain list. ubuntu-latest is moving to
+        # 26.04 through November 2026, where the gcc 13 -dev packages may be gone.
+        common=(
+          binutils
+          git
+          gnupg2
+          libc6-dev
+          libcurl4-openssl-dev
+          libedit2
+          libpython3-dev
+          libsqlite3-0
+          libxml2-dev
+          libncurses-dev
+          libz3-dev
+          pkg-config
+          tzdata
+          unzip
+          zlib1g-dev
+        )
+        if apt-cache show libgcc-13-dev >/dev/null 2>&1 && apt-cache show libstdc++-13-dev >/dev/null 2>&1; then
+          compiler=(libgcc-13-dev libstdc++-13-dev)
+        else
+          echo "libgcc-13-dev is not in this image; installing gcc and g++ instead."
+          compiler=(gcc g++)
+        fi
+        if ! apt-cache show gnupg2 >/dev/null 2>&1; then
+          replaced=()
+          for pkg in "${common[@]}"; do
+            if [ "$pkg" = "gnupg2" ]; then
+              replaced+=(gnupg)
+            else
+              replaced+=("$pkg")
+            fi
+          done
+          common=("${replaced[@]}")
+        fi
+        sudo apt-get install -y --no-install-recommends "${common[@]}" "${compiler[@]}"
+
+    # jdx/mise-action @ 0cc9f843d6d05e847c460bf6b36b9f7c7c04727a (2026-10-19, includes v5.2.1).
+    # version matches the mise release recorded in the README. Caching is the
+    # action default and stays inside the repo's 10 GB Actions cache.
+    - name: Install pinned tools
+      uses: jdx/mise-action@0cc9f843d6d05e847c460bf6b36b9f7c7c04727a
+      with:
+        version: "2026.10.14"
+        cache: true
