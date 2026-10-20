@@ -56,7 +56,7 @@ swift build
 swift test
 ```
 
-The four modules are platform-independent, so they compile on Linux. The apps themselves build in Xcode on macOS. On a Mac, run package tests with `mise run test` from the repository root so they use Xcode's Swift. See [Tooling](#tooling).
+The package builds on Linux. Domain rules and the in-memory repository are platform-independent, so `swift test` covers them here. The SwiftData store is compiled only for iOS, macOS, and watchOS (`#if canImport(SwiftData)`). How a later schema version migrates existing data is documented in [docs/persistence-migration.md](docs/persistence-migration.md). The apps themselves build in Xcode on macOS. On a Mac, run package tests with `mise run test` from the repository root so they use Xcode's Swift. See [Tooling](#tooling).
 
 ## Tooling
 
