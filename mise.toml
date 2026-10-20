@@ -3,23 +3,33 @@
 # Local machines and CI install with `mise install` and run tasks with `mise run`.
 #
 # Platforms
-# - swift, swift-format, SwiftLint, and xcprojformatter install on Linux and macOS.
-# - swift-format is the `swift-format` binary shipped in the pinned Swift toolchain.
+# - swift.org Swift 6.4.1 installs on Linux only (`os = ["linux"]`). Its macOS
+#   toolchain cannot build Packages/LittleOrbitKit for Apple platforms.
+# - On macOS, `test`, `format`, and `format-check` call Xcode's toolchain with
+#   `xcrun swift` and `xcrun swift-format` (Xcode 27.2 or newer).
+# - swift-format on Linux is the `swift-format` binary in the pinned toolchain.
+# - SwiftLint and xcprojformatter install on Linux and macOS.
 # - xcodebuild ships with Xcode 27.2 or newer. The `build` task is macOS-only.
 #
 # Fallback: if the JSON project.xcproj format cannot be used, add XcodeGen with
 # mise in that change and record why.
 
 [tools]
-# swift.org Swift 6.4.1 (Xcode 27 line). Also provides Apple's swift-format 6.4.1.
-# mise.lock has two [[tools.swift]] entries because mise matches on options:
-# macOS uses the entry with no options, Linux uses swift_platform = "ubuntu24.04".
-swift = "6.4.1"
 # Official SwiftLint release binaries for Linux and macOS.
 "aqua:realm/SwiftLint" = "0.65.1"
 
+# swift.org Swift 6.4.1 (Xcode 27 line), Linux only. Also provides Apple's
+# swift-format 6.4.1 there. `os` is a host filter, not a lockfile option, so
+# mise.lock still records the Linux entry (swift_platform = "ubuntu24.04")
+# and the macOS swift.org URLs `mise lock` writes for other platforms.
+# `mise install` skips this tool on macOS.
+[tools.swift]
+version = "6.4.1"
+os = ["linux"]
+
 # apple/xcode-project-format tag 0.1.0. The tag has no GitHub release assets,
-# so mise builds this commit from source with the pinned Swift toolchain.
+# so mise builds this commit from source. Linux uses the pinned Swift toolchain
+# (`depends` below). macOS skips that toolchain and builds with Xcode's swift.
 [tools."spm:apple/xcode-project-format"]
 version = "rev:c132630aabf40f6d6c3f7bb004595d2e5a28ea42"
 depends = ["swift"]
@@ -46,18 +56,61 @@ swiftlint
 '''
 
 [tasks.format]
-description = "Rewrite Swift sources in place with swift-format using .swift-format (Linux and macOS)."
-run = "swift-format format --in-place --recursive ."
-
-[tasks."format-check"]
-description = "Fail if swift-format would change Swift sources, using .swift-format (Linux and macOS)."
-run = "swift-format lint --strict --recursive ."
-
-[tasks.test]
-description = "Run swift test for each Swift package (Linux and macOS)."
+description = "Rewrite Swift sources in place with swift-format using .swift-format (Linux: pinned toolchain; macOS: xcrun swift-format)."
 run = '''
 #!/usr/bin/env bash
 set -euo pipefail
+
+if [ "$(uname -s)" = "Darwin" ]; then
+  if ! xcrun --find swift-format >/dev/null 2>&1; then
+    echo "error: format on macOS uses Xcode's swift-format via \`xcrun swift-format\`." >&2
+    echo "Install Xcode 27.2 or newer and point xcode-select at it." >&2
+    exit 1
+  fi
+  swift_format=(xcrun swift-format)
+else
+  swift_format=(swift-format)
+fi
+
+"${swift_format[@]}" format --in-place --recursive .
+'''
+
+[tasks."format-check"]
+description = "Fail if swift-format would change Swift sources, using .swift-format (Linux: pinned toolchain; macOS: xcrun swift-format)."
+run = '''
+#!/usr/bin/env bash
+set -euo pipefail
+
+if [ "$(uname -s)" = "Darwin" ]; then
+  if ! xcrun --find swift-format >/dev/null 2>&1; then
+    echo "error: format-check on macOS uses Xcode's swift-format via \`xcrun swift-format\`." >&2
+    echo "Install Xcode 27.2 or newer and point xcode-select at it." >&2
+    exit 1
+  fi
+  swift_format=(xcrun swift-format)
+else
+  swift_format=(swift-format)
+fi
+
+"${swift_format[@]}" lint --strict --recursive .
+'''
+
+[tasks.test]
+description = "Run swift test for each Swift package (Linux: pinned Swift 6.4.1; macOS: xcrun swift)."
+run = '''
+#!/usr/bin/env bash
+set -euo pipefail
+
+if [ "$(uname -s)" = "Darwin" ]; then
+  if ! xcrun --find swift >/dev/null 2>&1; then
+    echo "error: test on macOS uses Xcode's Swift via \`xcrun swift\`." >&2
+    echo "Install Xcode 27.2 or newer and point xcode-select at it." >&2
+    exit 1
+  fi
+  swift=(xcrun swift)
+else
+  swift=(swift)
+fi
 
 packages=()
 while IFS= read -r manifest; do
@@ -71,8 +124,8 @@ if [ -z "${packages[*]:-}" ]; then
 fi
 
 for package_dir in "${packages[@]}"; do
-  echo "swift test --package-path ${package_dir}"
-  swift test --package-path "$package_dir"
+  echo "${swift[*]} test --package-path ${package_dir}"
+  "${swift[@]}" test --package-path "$package_dir"
 done
 '''
 
