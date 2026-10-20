@@ -1,0 +1,15 @@
+#include "Shared.xcconfig"
+#include "Signing.xcconfig"
+
+// Standalone watchOS app. Deployment target 27.0. Bundle ID app.littleorbit.watchos.
+// Not embedded in the iOS app, so it runs directly in the watch simulator.
+
+PRODUCT_NAME = LittleOrbitWatch
+PRODUCT_BUNDLE_IDENTIFIER = app.littleorbit.watchos
+INFOPLIST_KEY_CFBundleDisplayName = Little Orbit
+SDKROOT = watchos
+WATCHOS_DEPLOYMENT_TARGET = 27.0
+TARGETED_DEVICE_FAMILY = 4
+INFOPLIST_KEY_WKApplication = YES
+INFOPLIST_KEY_WKRunsIndependentlyOfCompanionApp = YES
+LD_RUNPATH_SEARCH_PATHS = $(inherited) @executable_path/Frameworks
