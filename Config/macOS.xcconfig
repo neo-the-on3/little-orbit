@@ -1,11 +1,12 @@
 #include "Shared.xcconfig"
 #include "Signing.xcconfig"
 
-// macOS app. Deployment target 27.0. Bundle ID app.littleorbit.macos.
+// macOS app. Deployment target 27.0. Bundle ID app.littleorbit.macos plus
+// the optional LITTLEORBIT_BUNDLE_ID_SUFFIX from Signing.xcconfig.
 // App Sandbox is not enabled. Add an entitlements file with that capability later.
 
 PRODUCT_NAME = LittleOrbitMac
-PRODUCT_BUNDLE_IDENTIFIER = app.littleorbit.macos
+PRODUCT_BUNDLE_IDENTIFIER = app.littleorbit.macos$(LITTLEORBIT_BUNDLE_ID_SUFFIX)
 INFOPLIST_KEY_CFBundleDisplayName = Little Orbit
 SDKROOT = macosx
 MACOSX_DEPLOYMENT_TARGET = 27.0

@@ -53,7 +53,7 @@
 .LSOverride
 
 # Icon must end with two \r
-Icon
+Icon
 
 # Thumbnails
 ._*
@@ -226,3 +226,6 @@ mise.*.local.lock
 .env.*
 *.p12
 *.mobileprovision
+
+# Personal team ID for local device builds. Copy the example, do not commit the copy.
+Config/Signing.local.xcconfig

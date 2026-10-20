@@ -25,9 +25,27 @@ The on-screen name is **Little Orbit** on every platform. The watchOS app is sta
 
 ## Signing
 
-Signing is automatic (`CODE_SIGN_STYLE = Automatic` in `Config/Signing.xcconfig`).
+Signing is automatic (`CODE_SIGN_STYLE = Automatic`). `Config/Signing.xcconfig` leaves `LITTLEORBIT_DEVELOPMENT_TEAM` empty and sets `DEVELOPMENT_TEAM` from that variable for the iOS, macOS, and watchOS targets. No Team ID, certificate, or profile is committed.
 
-`LITTLEORBIT_DEVELOPMENT_TEAM` is empty on purpose. Simulator builds skip signing, and the Mac app is ad-hoc signed, so they launch before a Team ID is set. For a device or distribution build, set that variable to the 10-character Apple Developer Team ID and remove the `CODE_SIGN_IDENTITY[sdk=macosx*]` override. Do not commit certificates, private keys, or provisioning profiles.
+Simulator builds skip signing. Mac builds stay ad-hoc if you copy the example as-is. After `LITTLEORBIT_DEVELOPMENT_TEAM` is a real team, uncomment `CODE_SIGN_IDENTITY[sdk=macosx*] = Apple Development` in the local file so the Mac build uses that team. A device build uses your own team. Xcode creates the development provisioning profile on your Mac.
+
+**Option A.** Open the target's Signing & Capabilities tab, set the team to your free personal team or the paid team, and do not commit the project or xcconfig change.
+
+**Option B.** Copy the example and edit the copy only:
+
+```sh
+cp Config/Signing.local.xcconfig.example Config/Signing.local.xcconfig
+```
+
+Set `LITTLEORBIT_DEVELOPMENT_TEAM` to your 10-character Team ID. The Apple Development line in the example is commented out, so a copy with an empty team still ad-hoc signs the Mac app. Uncomment that line only after the team is set. Then, from the repo root:
+
+```sh
+xcodebuild -scheme 'LittleOrbit iOS' -destination 'generic/platform=iOS' -allowProvisioningUpdates build
+xcodebuild -scheme 'LittleOrbit watchOS' -destination 'generic/platform=watchOS' -allowProvisioningUpdates build
+xcodebuild -scheme 'LittleOrbit macOS' -destination 'generic/platform=macOS' -allowProvisioningUpdates build
+```
+
+`Config/Signing.local.xcconfig` is gitignored. If `app.littleorbit.*` is already registered, set `LITTLEORBIT_BUNDLE_ID_SUFFIX` to a unique suffix that includes the leading dot, such as `.yourname`. A free personal team's profiles expire after 7 days.
 
 ## Package on Linux
 

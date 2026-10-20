@@ -11,7 +11,9 @@
 // Display name on every platform: Little Orbit
 // The watchOS app is standalone. It is not embedded in the iOS app.
 //
-// Signing (automatic) and the Apple Team ID: Config/Signing.xcconfig
+// Signing is automatic. The committed Team ID is empty.
+// Local team and optional bundle ID suffix: Config/Signing.local.xcconfig
+// (see Config/Signing.local.xcconfig.example).
 
 MARKETING_VERSION = 1.0
 CURRENT_PROJECT_VERSION = 1
