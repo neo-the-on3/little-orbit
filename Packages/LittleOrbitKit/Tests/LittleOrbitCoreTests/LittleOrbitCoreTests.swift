@@ -1,4 +1,5 @@
 import XCTest
+
 @testable import LittleOrbitCore
 
 final class LittleOrbitCoreTests: XCTestCase {
