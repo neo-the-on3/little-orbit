@@ -1,10 +1,11 @@
 #include "Shared.xcconfig"
 #include "Signing.xcconfig"
 
-// iOS app. Deployment target 27.0. Bundle ID app.littleorbit.ios.
+// iOS app. Deployment target 27.0. Bundle ID app.littleorbit.ios plus
+// the optional LITTLEORBIT_BUNDLE_ID_SUFFIX from Signing.xcconfig.
 
 PRODUCT_NAME = LittleOrbit
-PRODUCT_BUNDLE_IDENTIFIER = app.littleorbit.ios
+PRODUCT_BUNDLE_IDENTIFIER = app.littleorbit.ios$(LITTLEORBIT_BUNDLE_ID_SUFFIX)
 INFOPLIST_KEY_CFBundleDisplayName = Little Orbit
 SDKROOT = iphoneos
 IPHONEOS_DEPLOYMENT_TARGET = 27.0

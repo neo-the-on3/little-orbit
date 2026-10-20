@@ -29,6 +29,7 @@
       "children": [
         { "path": "Shared.xcconfig" },
         { "path": "Signing.xcconfig" },
+        { "path": "Signing.local.xcconfig.example" },
         { "path": "iOS.xcconfig" },
         { "path": "macOS.xcconfig" },
         { "path": "watchOS.xcconfig" },
