@@ -1,0 +1,191 @@
+{
+  "id": "E3A91B704C2D4F8A1C0E2B7D",
+  "organization": "Little Orbit",
+  "default-configuration": "Release",
+  "configurations": [
+    "Debug",
+    "Release",
+  ],
+  "localizations": {
+    "development": "en",
+    "supported": [
+      "Base",
+    ],
+  },
+  "packages": [
+    {
+      "kind": "local",
+      "path": "Packages/LittleOrbitKit",
+    },
+  ],
+  "files": [
+    { "kind": "folder", "path": "Apps/iOS", "target-membership": [ "LittleOrbit iOS" ] },
+    { "kind": "folder", "path": "Apps/macOS", "target-membership": [ "LittleOrbit macOS" ] },
+    { "kind": "folder", "path": "Apps/watchOS", "target-membership": [ "LittleOrbit watchOS" ] },
+    { "kind": "folder", "path": "Apps/Shared", "target-membership": [ "LittleOrbit iOS", "LittleOrbit macOS", "LittleOrbit watchOS" ] },
+    {
+      "kind": "group",
+      "path": "Config",
+      "children": [
+        { "path": "Shared.xcconfig" },
+        { "path": "Signing.xcconfig" },
+        { "path": "iOS.xcconfig" },
+        { "path": "macOS.xcconfig" },
+        { "path": "watchOS.xcconfig" },
+      ],
+    }, {
+      "kind": "group",
+      "name": "Products",
+      "children": [
+        { "path": "<PRODUCTS>/LittleOrbit.app", "id": "7C2E9B1A4D6F48C2E9B1A4D6", "index": false },
+        { "path": "<PRODUCTS>/LittleOrbitMac.app", "id": "7C2E9B1A4D6F48C2E9B1A4D7", "index": false },
+        { "path": "<PRODUCTS>/LittleOrbitWatch.app", "id": "7C2E9B1A4D6F48C2E9B1A4D8", "index": false },
+      ],
+    },
+  ],
+  "targets": [
+    {
+      "name": "LittleOrbit iOS",
+      "id": "4F8A1C0E2B7D49A1C0E2B7D4",
+      "product": "Products/LittleOrbit.app",
+      "product-type": "application",
+      "specialized-configurations": [
+        { "name": "Debug", "file": "Config/iOS.xcconfig" },
+        { "name": "Release", "file": "Config/iOS.xcconfig" },
+      ],
+      "dependencies": [
+        { "kind": "package", "package": "LittleOrbitKit", "product-name": "LittleOrbitCore" },
+        { "kind": "package", "package": "LittleOrbitKit", "product-name": "LittleOrbitDomain" },
+        { "kind": "package", "package": "LittleOrbitKit", "product-name": "LittleOrbitPersistence" },
+        { "kind": "package", "package": "LittleOrbitKit", "product-name": "LittleOrbitTheme" },
+      ],
+      "build-phases": [
+        "compile-sources",
+        "frameworks",
+        "resources",
+      ],
+      "package-product-members": [
+        {
+          "package": "LittleOrbitKit",
+          "product-name": "LittleOrbitCore",
+          "build-phase": { "build-phase": "frameworks" },
+        }, {
+          "package": "LittleOrbitKit",
+          "product-name": "LittleOrbitDomain",
+          "build-phase": { "build-phase": "frameworks" },
+        }, {
+          "package": "LittleOrbitKit",
+          "product-name": "LittleOrbitPersistence",
+          "build-phase": { "build-phase": "frameworks" },
+        }, {
+          "package": "LittleOrbitKit",
+          "product-name": "LittleOrbitTheme",
+          "build-phase": { "build-phase": "frameworks" },
+        },
+      ],
+    }, {
+      "name": "LittleOrbit macOS",
+      "id": "4F8A1C0E2B7D49A1C0E2B7D5",
+      "product": "Products/LittleOrbitMac.app",
+      "product-type": "application",
+      "specialized-configurations": [
+        { "name": "Debug", "file": "Config/macOS.xcconfig" },
+        { "name": "Release", "file": "Config/macOS.xcconfig" },
+      ],
+      "dependencies": [
+        { "kind": "package", "package": "LittleOrbitKit", "product-name": "LittleOrbitCore" },
+        { "kind": "package", "package": "LittleOrbitKit", "product-name": "LittleOrbitDomain" },
+        { "kind": "package", "package": "LittleOrbitKit", "product-name": "LittleOrbitPersistence" },
+        { "kind": "package", "package": "LittleOrbitKit", "product-name": "LittleOrbitTheme" },
+      ],
+      "build-phases": [
+        "compile-sources",
+        "frameworks",
+        "resources",
+      ],
+      "package-product-members": [
+        {
+          "package": "LittleOrbitKit",
+          "product-name": "LittleOrbitCore",
+          "build-phase": { "build-phase": "frameworks" },
+        }, {
+          "package": "LittleOrbitKit",
+          "product-name": "LittleOrbitDomain",
+          "build-phase": { "build-phase": "frameworks" },
+        }, {
+          "package": "LittleOrbitKit",
+          "product-name": "LittleOrbitPersistence",
+          "build-phase": { "build-phase": "frameworks" },
+        }, {
+          "package": "LittleOrbitKit",
+          "product-name": "LittleOrbitTheme",
+          "build-phase": { "build-phase": "frameworks" },
+        },
+      ],
+    }, {
+      "name": "LittleOrbit watchOS",
+      "id": "4F8A1C0E2B7D49A1C0E2B7D6",
+      "product": "Products/LittleOrbitWatch.app",
+      "product-type": "application",
+      "specialized-configurations": [
+        { "name": "Debug", "file": "Config/watchOS.xcconfig" },
+        { "name": "Release", "file": "Config/watchOS.xcconfig" },
+      ],
+      "dependencies": [
+        { "kind": "package", "package": "LittleOrbitKit", "product-name": "LittleOrbitCore" },
+        { "kind": "package", "package": "LittleOrbitKit", "product-name": "LittleOrbitDomain" },
+        { "kind": "package", "package": "LittleOrbitKit", "product-name": "LittleOrbitPersistence" },
+        { "kind": "package", "package": "LittleOrbitKit", "product-name": "LittleOrbitTheme" },
+      ],
+      "build-phases": [
+        "compile-sources",
+        "frameworks",
+        "resources",
+      ],
+      "package-product-members": [
+        {
+          "package": "LittleOrbitKit",
+          "product-name": "LittleOrbitCore",
+          "build-phase": { "build-phase": "frameworks" },
+        }, {
+          "package": "LittleOrbitKit",
+          "product-name": "LittleOrbitDomain",
+          "build-phase": { "build-phase": "frameworks" },
+        }, {
+          "package": "LittleOrbitKit",
+          "product-name": "LittleOrbitPersistence",
+          "build-phase": { "build-phase": "frameworks" },
+        }, {
+          "package": "LittleOrbitKit",
+          "product-name": "LittleOrbitTheme",
+          "build-phase": { "build-phase": "frameworks" },
+        },
+      ],
+    },
+  ],
+  "build-settings": {
+    "ALWAYS_SEARCH_USER_PATHS": "NO",
+    "CLANG_ENABLE_MODULES": "YES",
+    "CLANG_ENABLE_OBJC_ARC": "YES",
+    "COPY_PHASE_STRIP": "NO",
+    "DEBUG_INFORMATION_FORMAT[config=Debug]": "dwarf",
+    "DEBUG_INFORMATION_FORMAT[config=Release]": "dwarf-with-dsym",
+    "ENABLE_STRICT_OBJC_MSGSEND": "YES",
+    "ENABLE_TESTABILITY[config=Debug]": "YES",
+    "ENABLE_USER_SCRIPT_SANDBOXING": "YES",
+    "GCC_NO_COMMON_BLOCKS": "YES",
+    "GCC_OPTIMIZATION_LEVEL[config=Debug]": "0",
+    "GCC_OPTIMIZATION_LEVEL[config=Release]": "s",
+    "MTL_ENABLE_DEBUG_INFO[config=Debug]": "INCLUDE_SOURCE",
+    "MTL_ENABLE_DEBUG_INFO[config=Release]": "NO",
+    "ONLY_ACTIVE_ARCH[config=Debug]": "YES",
+    "ONLY_ACTIVE_ARCH[config=Release]": "NO",
+    "SWIFT_ACTIVE_COMPILATION_CONDITIONS[config=Debug]": "DEBUG",
+    "SWIFT_COMPILATION_MODE[config=Release]": "wholemodule",
+    "SWIFT_OPTIMIZATION_LEVEL[config=Debug]": "-Onone",
+    "SWIFT_OPTIMIZATION_LEVEL[config=Release]": "-O",
+    "SWIFT_VERSION": "6.0",
+  },
+  "last-upgrade": "27.2",
+  "last-swift-update": "6.4",
+}

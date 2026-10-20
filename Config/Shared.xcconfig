@@ -1,0 +1,20 @@
+// Shared build settings for the Little Orbit apps.
+//
+// Deployment targets match the SDKs that ship with Xcode 27.2.
+// Platform xcconfig files set the per-target values:
+//
+//   Target              SDK        Deployment   Bundle ID                  Product
+//   LittleOrbit iOS     iphoneos   27.0         app.littleorbit.ios        LittleOrbit.app
+//   LittleOrbit macOS   macosx     27.0         app.littleorbit.macos      LittleOrbitMac.app
+//   LittleOrbit watchOS watchos    27.0         app.littleorbit.watchos    LittleOrbitWatch.app
+//
+// Display name on every platform: Little Orbit
+// The watchOS app is standalone. It is not embedded in the iOS app.
+//
+// Signing (automatic) and the Apple Team ID: Config/Signing.xcconfig
+
+MARKETING_VERSION = 1.0
+CURRENT_PROJECT_VERSION = 1
+GENERATE_INFOPLIST_FILE = YES
+ENABLE_PREVIEWS = YES
+SWIFT_EMIT_LOC_STRINGS = YES

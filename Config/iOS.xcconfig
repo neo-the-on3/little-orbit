@@ -1,0 +1,18 @@
+#include "Shared.xcconfig"
+#include "Signing.xcconfig"
+
+// iOS app. Deployment target 27.0. Bundle ID app.littleorbit.ios.
+
+PRODUCT_NAME = LittleOrbit
+PRODUCT_BUNDLE_IDENTIFIER = app.littleorbit.ios
+INFOPLIST_KEY_CFBundleDisplayName = Little Orbit
+SDKROOT = iphoneos
+IPHONEOS_DEPLOYMENT_TARGET = 27.0
+TARGETED_DEVICE_FAMILY = 1,2
+SUPPORTS_MACCATALYST = NO
+DERIVE_MACCATALYST_PRODUCT_BUNDLE_IDENTIFIER = NO
+INFOPLIST_KEY_UIApplicationSceneManifest_Generation = YES
+INFOPLIST_KEY_UILaunchScreen_Generation = YES
+INFOPLIST_KEY_UISupportedInterfaceOrientations_iPhone = UIInterfaceOrientationPortrait UIInterfaceOrientationLandscapeLeft UIInterfaceOrientationLandscapeRight
+INFOPLIST_KEY_UISupportedInterfaceOrientations_iPad = UIInterfaceOrientationPortrait UIInterfaceOrientationPortraitUpsideDown UIInterfaceOrientationLandscapeLeft UIInterfaceOrientationLandscapeRight
+LD_RUNPATH_SEARCH_PATHS = $(inherited) @executable_path/Frameworks

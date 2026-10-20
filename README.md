@@ -1,5 +1,45 @@
 # little-orbit
 
+SwiftUI app shell for iOS, macOS, and watchOS. The Xcode project stays thin: shared code lives in the local Swift package `Packages/LittleOrbitKit`.
+
+Open `LittleOrbit.xcodeproj` in Xcode 27.2 or later. The project file is `project.xcproj` (JSON). There is no `project.pbxproj`.
+
+## Layout
+
+- `LittleOrbit.xcodeproj` — iOS, macOS, and watchOS app targets, plus shared schemes
+- `Apps/` — SwiftUI app entry points and the placeholder root view
+- `Packages/LittleOrbitKit` — `LittleOrbitCore`, `LittleOrbitDomain`, `LittleOrbitPersistence`, and `LittleOrbitTheme`, each with a test target
+- `Config/` — bundle IDs, deployment targets, and signing
+
+## Platforms
+
+| Target | Scheme | Deployment | Bundle ID | Product |
+| --- | --- | --- | --- | --- |
+| LittleOrbit iOS | LittleOrbit iOS | iOS 27.0 | `app.littleorbit.ios` | `LittleOrbit.app` |
+| LittleOrbit macOS | LittleOrbit macOS | macOS 27.0 | `app.littleorbit.macos` | `LittleOrbitMac.app` |
+| LittleOrbit watchOS | LittleOrbit watchOS | watchOS 27.0 | `app.littleorbit.watchos` | `LittleOrbitWatch.app` |
+
+The on-screen name is **Little Orbit** on every platform. The watchOS app is standalone (it is not embedded in the iOS app) and runs in the watchOS simulator. Values live in `Config/`.
+
+`Packages/LittleOrbitKit` declares the same iOS 27, macOS 27, and watchOS 27 floors (`// swift-tools-version: 6.4`).
+
+## Signing
+
+Signing is automatic (`CODE_SIGN_STYLE = Automatic` in `Config/Signing.xcconfig`).
+
+`LITTLEORBIT_DEVELOPMENT_TEAM` is empty on purpose. Simulator builds skip signing, and the Mac app is ad-hoc signed, so they launch before a Team ID is set. For a device or distribution build, set that variable to the 10-character Apple Developer Team ID and remove the `CODE_SIGN_IDENTITY[sdk=macosx*]` override. Do not commit certificates, private keys, or provisioning profiles.
+
+## Package on Linux
+
+From `Packages/LittleOrbitKit`, with Swift 6.4 or later:
+
+```sh
+swift build
+swift test
+```
+
+The four modules are platform-independent, so they compile on Linux. The apps themselves build in Xcode on macOS.
+
 ## Tooling
 
 mise is the entry point for project tools. A machine with mise installs the same pinned versions on Linux and macOS. CI installs from this `mise.toml` and runs tasks with `mise run`.
