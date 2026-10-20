@@ -109,7 +109,21 @@ SwiftLint reads `.swiftlint.yml` and swift-format reads `.swift-format`. The tas
 
 ### CI
 
-CI runs `mise install` and `mise run` against this `mise.toml`. Tool versions stay in this file. On macOS, `mise run test`, `mise run format`, and `mise run format-check` use the selected Xcode toolchain.
+`.github/workflows/ci.yml` runs on pull requests and on pushes to `main`. Linux jobs install the tools in this `mise.toml` with mise. The macOS job selects Xcode 27.2 first, so `mise install` and `mise run test` use that Xcode (`xcrun swift`). Tool versions stay in this file.
+
+The workflow uses the standard `ubuntu-latest` and `xcode-27` runners. It does not set branch protection. On a pull request the checks are `CI / <job name>`. The status-check name to require later is the job name.
+
+| Job name | Runner | What it runs |
+| --- | --- | --- |
+| `lint` | `ubuntu-latest` | `mise run lint` |
+| `format-check` | `ubuntu-latest` | `mise run format-check` |
+| `Linux tests` | `ubuntu-latest` | `swift test` for each Swift package |
+| `validate-project` | `ubuntu-latest` | `mise run validate-project` |
+| `macOS build and test` | `xcode-27` | `xcodebuild build` for the three schemes, then `mise run test` |
+
+The shared schemes have no test action, so `xcodebuild test` is not used. The macOS job builds `LittleOrbit iOS`, `LittleOrbit macOS`, and `LittleOrbit watchOS`, then runs the package tests with Xcode's Swift.
+
+`Linux tests` succeeds without running `swift test` when the tree has no `Package.swift`. `macOS build and test` succeeds without building when `LittleOrbit.xcodeproj` or a `Package.swift` is missing. A failing lint, format check, package test, project check, or Apple build fails the corresponding job. Apple builds set `CODE_SIGNING_ALLOWED=NO`. Test reports are kept for 7 days.
 
 ### Project format fallback
 

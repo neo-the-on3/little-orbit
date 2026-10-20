@@ -1,0 +1,251 @@
+# PR checks for little-orbit. Job names are stable so #9 can require them.
+# Branch protection is not configured here.
+#
+# Required status check names are the job names. On a pull request they show as
+# "CI / <job name>".
+#
+# Runners are standard hosted images only: ubuntu-latest and xcode-27.
+# No larger runners, no paid add-ons, no secrets.
+
+name: CI
+
+on:
+  pull_request:
+  push:
+    branches:
+      - main
+
+concurrency:
+  group: ${{ github.workflow }}-${{ github.ref }}
+  # Pull requests cancel older runs on the same ref. Pushes to main do not,
+  # so a merge does not cancel the run for the commit it landed on.
+  cancel-in-progress: ${{ github.event_name == 'pull_request' }}
+
+# contents: read checks out the repo. Cache save and restore use the runner
+# cache token, so this workflow does not grant actions: write. No secrets.
+permissions:
+  contents: read
+
+defaults:
+  run:
+    shell: bash
+
+jobs:
+  lint:
+    name: lint
+    runs-on: ubuntu-latest
+    timeout-minutes: 45
+    steps:
+      - name: Checkout
+        uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
+        with:
+          persist-credentials: false
+
+      - name: Install tools
+        uses: ./.github/actions/setup-mise
+
+      - name: Lint
+        run: mise run lint
+
+  format-check:
+    name: format-check
+    runs-on: ubuntu-latest
+    timeout-minutes: 45
+    steps:
+      - name: Checkout
+        uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
+        with:
+          persist-credentials: false
+
+      - name: Install tools
+        uses: ./.github/actions/setup-mise
+
+      - name: Check formatting
+        run: mise run format-check
+
+  linux-tests:
+    name: Linux tests
+    runs-on: ubuntu-latest
+    timeout-minutes: 45
+    steps:
+      - name: Checkout
+        uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
+        with:
+          persist-credentials: false
+
+      - name: Install tools
+        uses: ./.github/actions/setup-mise
+
+      - name: Cache SwiftPM
+        uses: actions/cache@55cc8345863c7cc4c66a329aec7e433d2d1c52a9 # v6.1.0
+        with:
+          path: ~/.cache/org.swift.swiftpm
+          key: swiftpm-${{ runner.os }}-${{ hashFiles('**/Package.swift', '**/Package.resolved') }}
+          restore-keys: swiftpm-${{ runner.os }}-
+
+      - name: Test Swift packages
+        run: |
+          set -euo pipefail
+
+          packages=()
+          # Same discovery as mise.toml [tasks.test]: every Package.swift outside dot directories.
+          while IFS= read -r manifest; do
+            packages+=("$(dirname "$manifest")")
+          done < <(find . -name Package.swift -not -path '*/.*' | sort)
+
+          if [ "${#packages[@]}" -eq 0 ]; then
+            echo "Linux tests: no Package.swift in the tree, so swift test has nothing to run."
+            echo "This job succeeds until a package is added. swift test then runs, and a failing test fails the job."
+            exit 0
+          fi
+
+          mkdir -p test-results
+          for package_dir in "${packages[@]}"; do
+            name="$(basename "$package_dir")"
+            report="test-results/${name}.xml"
+            echo "swift test --package-path ${package_dir} --xunit-output ${report}"
+            swift test --package-path "$package_dir" --xunit-output "$report"
+          done
+
+      - name: Upload test reports
+        if: ${{ !cancelled() }}
+        uses: actions/upload-artifact@cf430e030ddbb5b0abf93d22962f4752f3646cd9 # v7.0.2
+        with:
+          name: linux-test-results
+          path: test-results/
+          retention-days: 7
+          if-no-files-found: ignore
+
+  validate-project:
+    name: validate-project
+    runs-on: ubuntu-latest
+    timeout-minutes: 45
+    steps:
+      - name: Checkout
+        uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
+        with:
+          persist-credentials: false
+
+      - name: Install tools
+        uses: ./.github/actions/setup-mise
+
+      - name: Validate project.xcproj
+        run: mise run validate-project
+
+  apple:
+    name: macOS build and test
+    runs-on: xcode-27
+    timeout-minutes: 60
+    steps:
+      - name: Checkout
+        uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
+        with:
+          persist-credentials: false
+
+      - name: Select Xcode 27.2
+        run: |
+          set -euo pipefail
+
+          xcode_app="/Applications/Xcode_27.2.app"
+          if [ ! -d "$xcode_app" ]; then
+            echo "error: Xcode 27.2 is not installed at ${xcode_app}." >&2
+            echo "The xcode-27 runner should provide that path (a symlink to the 27.2 beta until it is GA)." >&2
+            echo "JSON project.xcproj files need Xcode 27.2 or newer. This job does not fall back to the image default." >&2
+            echo "Xcode apps on this runner:" >&2
+            ls -d /Applications/Xcode*.app >&2 || true
+            exit 1
+          fi
+
+          sudo xcode-select -s "$xcode_app"
+          echo "DEVELOPER_DIR=$(xcode-select -p)"
+          xcodebuild -version
+
+          version="$(xcodebuild -version | awk 'NR==1 { print $2 }')"
+          major="${version%%.*}"
+          rest="${version#*.}"
+          if [ "$version" = "$rest" ]; then
+            minor="0"
+          else
+            minor="${rest%%.*}"
+          fi
+          if ! [[ "$major" =~ ^[0-9]+$ && "$minor" =~ ^[0-9]+$ ]]; then
+            echo "error: could not parse the Xcode version '${version}'." >&2
+            exit 1
+          fi
+          if [ "$major" -lt 27 ] || { [ "$major" -eq 27 ] && [ "$minor" -lt 2 ]; }; then
+            echo "error: ${xcode_app} reports Xcode ${version}, which is older than 27.2." >&2
+            exit 1
+          fi
+
+          sudo xcodebuild -license accept
+          sudo xcodebuild -runFirstLaunch
+
+      - name: Install tools
+        uses: ./.github/actions/setup-mise
+
+      - name: Cache SwiftPM
+        uses: actions/cache@55cc8345863c7cc4c66a329aec7e433d2d1c52a9 # v6.1.0
+        with:
+          path: ~/Library/Caches/org.swift.swiftpm
+          key: swiftpm-${{ runner.os }}-${{ hashFiles('**/Package.swift', '**/Package.resolved') }}
+          restore-keys: swiftpm-${{ runner.os }}-
+
+      - name: Build and test iOS, macOS, and watchOS
+        run: |
+          set -euo pipefail
+
+          project="LittleOrbit.xcodeproj"
+          package=""
+          while IFS= read -r manifest; do
+            package="$manifest"
+            break
+          done < <(find . -name Package.swift -not -path '*/.*' | sort)
+          if [ ! -d "$project" ] || [ -z "$package" ]; then
+            echo "macOS build and test: skipped."
+            if [ ! -d "$project" ]; then
+              echo "Missing ${project}."
+            fi
+            if [ -z "$package" ]; then
+              echo "Missing Package.swift."
+            fi
+            echo "Once both are in the tree, this job builds the three schemes with CODE_SIGNING_ALLOWED=NO, then runs mise run test (xcrun swift)."
+            echo "  LittleOrbit iOS     - iOS Simulator, iPhone 17, OS 27.0"
+            echo "  LittleOrbit macOS   - macOS (arm64)"
+            echo "  LittleOrbit watchOS - watchOS Simulator, Apple Watch Series 12 (42mm), OS 27.0"
+            exit 0
+          fi
+
+          derived="derived-data"
+
+          # The shared schemes' TestAction has no testables, so `xcodebuild test`
+          # exits 66: "Scheme ... is not currently configured for the test action."
+          # Build the apps here. Package tests use Xcode's Swift via mise.
+          run_scheme() {
+            scheme="$1"
+            destination="$2"
+            echo "xcodebuild -project ${project} -scheme ${scheme} -destination ${destination} build CODE_SIGNING_ALLOWED=NO"
+            xcodebuild \
+              -project "$project" \
+              -scheme "$scheme" \
+              -destination "$destination" \
+              -derivedDataPath "$derived" \
+              build \
+              CODE_SIGNING_ALLOWED=NO
+          }
+
+          run_scheme "LittleOrbit iOS" "platform=iOS Simulator,name=iPhone 17,OS=27.0"
+          run_scheme "LittleOrbit macOS" "platform=macOS,arch=arm64"
+          run_scheme "LittleOrbit watchOS" "platform=watchOS Simulator,name=Apple Watch Series 12 (42mm),OS=27.0"
+
+          echo "mise run test"
+          mise run test
+
+      - name: Upload test reports
+        if: ${{ !cancelled() }}
+        uses: actions/upload-artifact@cf430e030ddbb5b0abf93d22962f4752f3646cd9 # v7.0.2
+        with:
+          name: apple-test-results
+          path: test-results/
+          retention-days: 7
+          if-no-files-found: ignore
+          include-hidden-files: true
