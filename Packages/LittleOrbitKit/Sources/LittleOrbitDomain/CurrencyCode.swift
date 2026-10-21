@@ -22,6 +22,23 @@ public enum CurrencyCode {
         code.trimmingCharacters(in: .whitespacesAndNewlines).uppercased()
     }
 
+    /// Every supported ISO 4217 code, sorted.
+    public static var allCodes: [String] {
+        exponents.keys.sorted()
+    }
+
+    /// Codes a person can pick for a new account: `allCodes` without ISO 4217 fund, index, test and
+    /// metal codes (USN, UYI, UYW, BOV, CHE, CHW, CLF, COU, MXV, XTS, XXX, XAU and so on). Those stay valid
+    /// in `validate(_:)`, so stored data keeps working.
+    public static var circulatingCodes: [String] {
+        allCodes.filter { !nonCirculating.contains($0) }
+    }
+
+    private static let nonCirculating: Set<String> = [
+        "BOV", "CHE", "CHW", "CLF", "COU", "MXV", "USN", "UYI", "UYW",
+        "XAG", "XAU", "XBA", "XBB", "XBC", "XBD", "XDR", "XPD", "XPT", "XSU", "XTS", "XUA", "XXX",
+    ]
+
     public static func minorUnits(for code: String) -> Int? {
         exponents[normalize(code)]
     }
