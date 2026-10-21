@@ -1,6 +1,6 @@
 Author: <Role>
 
-<!-- Replace <Role> with Product Manager, UI Designer, Developer, Tester or Project Manager. Keep this as the first line, followed by a blank line. -->
+<!-- Replace <Role> with Product Manager, UI Designer, Developer, Tester, Project Manager or Tech Architect. Keep this as the first line, followed by a blank line. -->
 <!-- Title: a Conventional Commits summary, e.g. "feat(accounts): add the accounts list". -->
 
 Closes #

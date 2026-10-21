@@ -18,7 +18,7 @@ This guide covers how work moves from an issue to `main`. It applies to everyone
 | `platform:ios`, `platform:macos`, `platform:watchos` | Platforms the change affects. |
 | `priority:high`, `priority:medium`, `priority:low` | Order of work. |
 | `blocked` | Work cannot continue. ProjectManager coordinates. |
-| `needs-kiran` | Waiting on the repository owner: an important or paid decision, or a pull request review. Only the owner removes it. Add it again only when the owner's input is needed again. |
+| `needs-kiran` | Waiting on the repository owner: an important or paid decision, or a review of a pull request with cost, architecture, performance or maintainability implications. Only the owner removes it. Add it again only when the owner's input is needed again. |
 
 - When you start a ticket, comment **`Taken up by <role>`**, for example `Taken up by Developer`.
 - When you pass a ticket to another role, comment **`Handed off to <role>: <reason>`** and switch the `role:*` label.
@@ -34,7 +34,7 @@ Author: Developer
 Taken up by Developer
 ```
 
-The roles are `Product Manager`, `UI Designer`, `Developer`, `Tester` and `Project Manager`. This applies whether you post with `gh`, the GitHub website or the Cursor app. Comments written before this rule are not edited. The repository owner's own comments, including approvals, don't need an author line.
+The roles are `Product Manager`, `UI Designer`, `Developer`, `Tester`, `Project Manager` and `Tech Architect`. This applies whether you post with `gh`, the GitHub website or the Cursor app. Comments written before this rule are not edited. The repository owner's own comments, including approvals, don't need an author line.
 
 ### Screenshots on UI posts
 
@@ -87,7 +87,11 @@ Put the reason for the change in the commit body. Put `Closes #N` in the pull re
    - `macOS build and test`
 2. **Automated review.** Cursor Bugbot reviews pull requests. Resolve or answer every review thread; unresolved threads block the merge.
 3. **Tester verification.** Request verification from Tester for anything that runs in an app (see [Testing](#testing)). Tester reports on the pull request.
-4. **Owner approval.** Merge only after the repository owner approves the pull request in a comment or review.
+4. **Review and approval.** When a pull request is ready, rebased on `main` and green, the author tells Tech Architect it is ready for review. Tech Architect reviews and merges only after that confirmation. The author replies to Tech Architect's comments on the pull request, including inline ones. Tech Architect reviews every pull request.
+   - **Routine pull requests** (no cost, architecture, performance or maintainability implications): Tech Architect approves and rebase-merges them. They don't wait for the repository owner and don't get `needs-kiran`.
+   - **Pull requests with cost, architecture, performance or maintainability implications**: Tech Architect posts its review and adds `needs-kiran`. They merge only after the repository owner approves them in a comment or review.
+   - Anything that runs in an app still needs Tester's pass (step 3) before it merges.
+   - If the branch is rebased after an approval, the author tells Tech Architect so it can re-check before merging.
 5. **Rebase-merge only.** Use **Rebase and merge**. Squash merges and merge commits are not allowed, so the logical commits land on `main` as they are. If `main` has moved, rebase the branch, wait for the checks again, then merge.
 
 ## Local toolchain

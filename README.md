@@ -205,6 +205,6 @@ Validation uses `xcprojformatter` on JSON `project.xcproj` files. If that format
 Read [CONTRIBUTING.md](CONTRIBUTING.md) before opening a pull request. It covers the trunk-based flow, Conventional Commits, Given-When-Then acceptance criteria, the `Follow-up to #N` rule, labels, review, and testing. New pull requests start from the [pull request template](.github/pull_request_template.md). In short:
 
 - Every change starts from an issue and goes through a pull request that says `Closes #N`. Nothing is committed or merged directly to `main`.
-- Branches are short-lived and rebased on `main`. Pull requests are rebase-merged after the owner approves, once the five checks pass.
+- Branches are short-lived and rebased on `main`. Pull requests are rebase-merged once the five checks pass and Tech Architect approves. Pull requests with cost, architecture, performance or maintainability implications also need the owner's approval.
 - Commits follow [Conventional Commits](https://www.conventionalcommits.org/en/v1.0.0/), such as `feat(theme): ...`, `fix: ...`, `chore(ci): ...` or `docs: ...`, and each pull request is a short series of logical commits.
 - Cursor Bugbot reviews pull requests, and Tester verifies app changes on the iOS and watchOS simulators and on macOS.
