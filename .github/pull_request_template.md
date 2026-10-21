@@ -1,3 +1,6 @@
+Author: <Role>
+
+<!-- Replace <Role> with Product Manager, UI Designer, Developer, Tester or Project Manager. Keep this as the first line, followed by a blank line. -->
 <!-- Title: a Conventional Commits summary, e.g. "feat(accounts): add the accounts list". -->
 
 Closes #
@@ -39,6 +42,7 @@ Closes #
 
 ## Checklist
 
+- [ ] The description starts with `Author: <Role>`
 - [ ] The pull request references its issue (`Closes #N`), and the issue's scope was not edited
 - [ ] Commits follow Conventional Commits and are logical, with fix-ups folded in
 - [ ] `mise run lint` and `mise run format-check` pass
