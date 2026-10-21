@@ -73,13 +73,9 @@ public struct Account: Identifiable, Hashable, Sendable, Codable {
         ) ?? now
     }
 
-    /// Limit minus debt, when this liability account asks to show available credit.
+    /// Available credit for a credit card with a limit and 'Show available credit' on. See `creditStatus(balance:)`.
     public func availableCredit(balance: Decimal) -> Decimal? {
-        guard type.isLiability, showAvailableCredit, let creditLimit else {
-            return nil
-        }
-        let debt = max(Decimal(0), -balance)
-        return creditLimit - debt
+        creditStatus(balance: balance)?.available
     }
 }
 
