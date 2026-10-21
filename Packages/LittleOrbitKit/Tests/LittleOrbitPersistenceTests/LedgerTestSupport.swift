@@ -38,6 +38,7 @@ func assertLedgerAcceptance(make: MakeRepository) throws {
     try assertCrossCurrencyTransfer(make: make)
     try assertBalanceIsExact(make: make)
     try assertBalanceCountsOnlyTransactionsDatedUpToToday(make: make)
+    try assertAtomicChangesAreAllOrNothing(make: make)
     try assertCreditCardOpeningBalanceReducesNetWorth(make: make)
     try assertNetWorthGroupsCurrenciesAndSkipsExcludedAccounts(make: make)
     try assertHiddenAccountStillCountsInNetWorth(make: make)
@@ -120,37 +121,6 @@ private func assertCrossCurrencyTransfer(make: MakeRepository) throws {
     )
     XCTAssertEqual(try repository.balance(of: states.id, today: ledgerToday), decimal("12.00"))
     XCTAssertEqual(try repository.balance(of: india.id, today: ledgerToday), decimal("-100.00"))
-}
-
-/// The repository uses the same current balance as the account list (D21, `AccountBalance`).
-@MainActor
-private func assertBalanceCountsOnlyTransactionsDatedUpToToday(make: MakeRepository) throws {
-    let repository = try make()
-    let account = try saveCash(in: repository, opening: "100")
-    let zone = "Asia/Kolkata"
-    let today = CalendarDay(year: 2026, month: 10, day: 20)
-    func noon(_ day: Int) -> Date {
-        var calendar = Calendar(identifier: .gregorian)
-        calendar.timeZone = TimeZone(identifier: zone)!
-        return calendar.date(from: DateComponents(year: 2026, month: 10, day: day, hour: 12))!
-    }
-    try repository.saveTransaction(
-        Transaction(type: .expense, amount: decimal("10"), date: noon(20), timeZoneID: zone, accountID: account.id)
-    )
-    try repository.saveTransaction(
-        Transaction(type: .expense, amount: decimal("30"), date: noon(21), timeZoneID: zone, accountID: account.id)
-    )
-    XCTAssertEqual(try repository.balance(of: account.id, today: today), decimal("90"))
-    XCTAssertEqual(try repository.netWorth(today: today)["USD"], decimal("90") as Decimal?)
-    let listing = try ListAccounts()(
-        accounts: try repository.accounts(),
-        transactions: try repository.transactions(),
-        showHidden: true,
-        today: today,
-    )
-    XCTAssertEqual(listing.assets.first?.balance, try repository.balance(of: account.id, today: today))
-    let tomorrow = CalendarDay(year: 2026, month: 10, day: 21)
-    XCTAssertEqual(try repository.balance(of: account.id, today: tomorrow), decimal("60"))
 }
 
 @MainActor
@@ -487,7 +457,7 @@ private func assertYenRejectsAFractionalAmount(make: MakeRepository) throws {
 }
 
 @MainActor
-private func saveCash(
+func saveCash(
     in repository: any LedgerRepository,
     name: String = "Cash",
     opening: String,

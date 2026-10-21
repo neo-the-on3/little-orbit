@@ -69,4 +69,5 @@ final class UnreadableAccountsRepository: LedgerRepository {
         try base.balance(of: accountID, today: today)
     }
     func netWorth(today: CalendarDay) throws -> [String: Decimal] { try base.netWorth(today: today) }
+    func atomically<T>(_ body: () throws -> T) throws -> T { try base.atomically(body) }
 }

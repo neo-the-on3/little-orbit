@@ -57,8 +57,10 @@ public protocol SaveAccountUseCase {
 public protocol DeleteAccountUseCase {
     /// The transactions and transfers a delete would remove (D19).
     func deletionImpact(of accountID: UUID) throws -> AccountDeletionImpact
-    /// Deletes the account with its transactions, transfers in or out, and their attachments (D19).
-    func delete(_ accountID: UUID) throws
+    /// Deletes the account with its transactions, transfers in or out, their attachments and splits, all or
+    /// none (D19), and returns copies, so recording `.removedAccount` makes it one Undo step (#93).
+    @discardableResult
+    func delete(_ accountID: UUID) throws -> RemovedAccount
 }
 
 @MainActor
@@ -250,8 +252,9 @@ public struct DefaultDeleteAccountUseCase: DeleteAccountUseCase {
         assess(accountID: accountID, transactions: try repository.transactions())
     }
 
-    public func delete(_ accountID: UUID) throws {
-        try repository.deleteAccount(id: accountID)
+    @discardableResult
+    public func delete(_ accountID: UUID) throws -> RemovedAccount {
+        try repository.atomically { try LedgerRemoval(repository: repository).account(accountID) }
     }
 }
 

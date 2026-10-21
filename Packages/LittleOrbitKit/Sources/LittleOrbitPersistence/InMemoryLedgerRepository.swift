@@ -112,4 +112,14 @@ public final class InMemoryLedgerRepository: LedgerRepository {
     public func netWorth(today: CalendarDay) throws -> [String: Decimal] {
         try AccountBalance.currentNetWorth(in: snapshot, today: today)
     }
+
+    public func atomically<T>(_ body: () throws -> T) throws -> T {
+        let saved = snapshot
+        do {
+            return try body()
+        } catch {
+            snapshot = saved
+            throw error
+        }
+    }
 }

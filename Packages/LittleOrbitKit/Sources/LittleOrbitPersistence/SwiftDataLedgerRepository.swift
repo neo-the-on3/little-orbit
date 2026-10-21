@@ -9,6 +9,8 @@
         private let container: ModelContainer
         private let context: ModelContext
         private let now: @MainActor () -> Date
+        /// While `atomically` runs, reads and writes use this snapshot, and one save at the end stores it.
+        private var batch: LedgerSnapshot?
 
         public init(context: ModelContext, now: @escaping @MainActor () -> Date = { Date() }) {
             self.container = context.container
@@ -125,11 +127,45 @@
             try AccountBalance.currentNetWorth(in: load(), today: today)
         }
 
+        public func atomically<T>(_ body: () throws -> T) throws -> T {
+            if let outer = batch {
+                // A nested change that fails is undone within the outer one, as in the in-memory store.
+                do {
+                    return try body()
+                } catch {
+                    batch = outer
+                    throw error
+                }
+            }
+            batch = try loadStored()
+            defer { batch = nil }
+            let result = try body()
+            if let batch {
+                try write(batch)
+            }
+            return result
+        }
+
         private func mutate(_ body: (LedgerSnapshot) throws -> LedgerSnapshot) throws {
             try persist(try body(try load()))
         }
 
         private func load() throws -> LedgerSnapshot {
+            if let batch {
+                return batch
+            }
+            return try loadStored()
+        }
+
+        private func persist(_ snapshot: LedgerSnapshot) throws {
+            if batch != nil {
+                batch = snapshot
+                return
+            }
+            try write(snapshot)
+        }
+
+        private func loadStored() throws -> LedgerSnapshot {
             LedgerSnapshot(
                 accounts: try fetch(LittleOrbitSchemaV1.AccountRecord.self).map { $0.makeAccount() },
                 transactions: try fetch(LittleOrbitSchemaV1.TransactionRecord.self).map { $0.makeTransaction() },
@@ -145,7 +181,18 @@
             try context.fetch(FetchDescriptor<T>())
         }
 
-        private func persist(_ snapshot: LedgerSnapshot) throws {
+        /// Writes the snapshot with one `save()`. On any error the context is rolled back, so nothing is half-written.
+        private func write(_ snapshot: LedgerSnapshot) throws {
+            do {
+                try apply(snapshot)
+                try context.save()
+            } catch {
+                context.rollback()
+                throw error
+            }
+        }
+
+        private func apply(_ snapshot: LedgerSnapshot) throws {
             let accounts = try fetch(LittleOrbitSchemaV1.AccountRecord.self)
             let transactions = try fetch(LittleOrbitSchemaV1.TransactionRecord.self)
             let categories = try fetch(LittleOrbitSchemaV1.CategoryRecord.self)
@@ -221,13 +268,6 @@
                 splits: splitRecords,
                 attachments: attachmentRecords,
             )
-
-            do {
-                try context.save()
-            } catch {
-                context.rollback()
-                throw error
-            }
         }
 
         private func link(
