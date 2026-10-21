@@ -73,9 +73,13 @@ public struct ListAccounts: Sendable {
         accounts: [Account],
         transactions: [Transaction],
         showHidden: Bool,
+        today: CalendarDay? = nil,
     ) throws -> AccountListing {
         let live = accounts.filter { $0.deletedAt == nil }
-        let snapshot = LedgerSnapshot(accounts: live, transactions: transactions)
+        // The current balance counts only transactions dated up to today (D21). `hasTransactions` still sees
+        // Upcoming ones, since they are real transactions (D114).
+        let current = today.map { TransactionTiming.dated(upTo: $0, transactions) } ?? transactions
+        let snapshot = LedgerSnapshot(accounts: live, transactions: current)
         let referenced = AccountReferences.accountIDs(in: transactions)
         var listing = AccountListing(
             hiddenCount: live.filter(\.isHidden).count,
