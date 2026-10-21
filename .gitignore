@@ -195,6 +195,9 @@ xcuserdata
 *.xcuserstate
 
 # Test results and coverage
+# JUnit XML from `mise run test` on Linux, and CI copies of those reports.
+test-results/
+
 *.xcresult
 *.xccovreport
 *.xccovarchive

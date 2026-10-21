@@ -56,7 +56,7 @@ swift build
 swift test
 ```
 
-The package builds on Linux. Domain rules and the in-memory repository are platform-independent, so `swift test` covers them here. The SwiftData store is compiled only for iOS, macOS, and watchOS (`#if canImport(SwiftData)`). How a later schema version migrates existing data is documented in [docs/persistence-migration.md](docs/persistence-migration.md). The apps themselves build in Xcode on macOS. On a Mac, run package tests with `mise run test` from the repository root so they use Xcode's Swift. See [Tooling](#tooling).
+The package builds on Linux. Domain rules and the in-memory repository are platform-independent, so `swift test` covers them here. The SwiftData store is compiled only for iOS, macOS, and watchOS (`#if canImport(SwiftData)`). How a later schema version migrates existing data is documented in [docs/persistence-migration.md](docs/persistence-migration.md). The apps themselves build in Xcode on macOS. On a Mac, run package tests with `mise run test` from the repository root so they use Xcode's Swift. On Linux, that task also writes JUnit XML under `test-results/`. See [Tooling](#tooling).
 
 ## Tooling
 
@@ -99,11 +99,13 @@ The first install builds `xcprojformatter` from that commit, so it needs network
 | `lint` | Linux and macOS | `swiftlint` when the tree contains Swift sources |
 | `format` | Linux and macOS | Linux: `swift-format format --in-place --recursive .`. macOS: `xcrun swift-format format --in-place --recursive .` |
 | `format-check` | Linux and macOS | Linux: `swift-format lint --strict --recursive .`. macOS: `xcrun swift-format lint --strict --recursive .` |
-| `test` | Linux and macOS | Linux: `swift test --package-path` for each `Package.swift`, using Swift 6.4.1. macOS: `xcrun swift test --package-path` for each `Package.swift` |
+| `test` | Linux and macOS | Linux: `swift test --package-path --parallel --xunit-output test-results/<package>.xml` for each `Package.swift`, using Swift 6.4.1. macOS: `xcrun swift test --package-path` for each `Package.swift` |
 | `build` | macOS only | `xcodebuild -version`, then `xcodebuild` for each shared scheme in `LittleOrbit.xcodeproj` |
 | `validate-project` | Linux and macOS | `xcprojformatter` on each `project.xcproj` |
 
 `lint` prints a note and succeeds when the tree has no Swift sources. `build` runs `xcodebuild -version` first and stops unless it reports Xcode 27.2 or newer. On Linux that check fails and the message points at `swift build` for shared package code. `test` stops when the tree has no `Package.swift`. On macOS, `test`, `format`, and `format-check` stop if `xcrun` cannot find the tool. `validate-project` succeeds and prints a short note when no `project.xcproj` exists yet.
+
+On Linux, `test` passes `--parallel` because Swift 6.4.1 writes XCTest cases into `--xunit-output` only for that runner. A serial run leaves an empty `*-swift-testing.xml` file ([swift-package-manager#9961](https://github.com/swiftlang/swift-package-manager/issues/9961)). The task fails if `test-results/<package>.xml` has no `<testcase>`. macOS stays serial. `test-results/` is gitignored.
 
 SwiftLint reads `.swiftlint.yml` and swift-format reads `.swift-format`. The task names stay `mise run lint`, `mise run format`, and `mise run format-check`.
 
