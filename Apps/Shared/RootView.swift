@@ -6,18 +6,33 @@ import SwiftUI
 
 struct RootView: View {
     var body: some View {
-        VStack(spacing: 12) {
+        VStack(spacing: Spacing.space3) {
             Text(LittleOrbitCore.placeholderTitle)
-                .font(.title2)
+                .font(.theme(Self.titleStyle))
+                .foregroundStyle(Color(ThemeColor.labelPrimary))
             Text("Placeholder")
-                .foregroundStyle(.secondary)
+                .foregroundStyle(Color(ThemeColor.labelSecondary))
             Text(linkedModules)
-                .font(.footnote)
-                .foregroundStyle(.tertiary)
+                .font(.theme(Self.footnoteStyle))
+                .foregroundStyle(Color(ThemeColor.labelTertiary))
                 .multilineTextAlignment(.center)
         }
-        .padding()
+        .padding(Spacing.space4)
+        .frame(maxWidth: .infinity, maxHeight: .infinity)
+        .background(Color(ThemeColor.bgPrimary))
     }
+
+    // Each platform uses its own Title 2 and Footnote styles from the design system.
+    #if os(macOS)
+        private static let titleStyle = Typography.MacOS.title2
+        private static let footnoteStyle = Typography.MacOS.footnote
+    #elseif os(watchOS)
+        private static let titleStyle = Typography.WatchOS.title2
+        private static let footnoteStyle = Typography.WatchOS.footnote
+    #else
+        private static let titleStyle = Typography.IOS.title2
+        private static let footnoteStyle = Typography.IOS.footnote
+    #endif
 
     private var linkedModules: String {
         [
