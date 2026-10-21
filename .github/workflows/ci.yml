@@ -23,6 +23,8 @@ concurrency:
 
 # contents: read checks out the repo. Cache save and restore use the runner
 # cache token, so this workflow does not grant actions: write. No secrets.
+# Job summaries append to GITHUB_STEP_SUMMARY. Artifact upload uses the
+# runner artifact token. Neither needs a broader GITHUB_TOKEN permission.
 permissions:
   contents: read
 
@@ -99,13 +101,24 @@ jobs:
             exit 0
           fi
 
-          mkdir -p test-results
-          for package_dir in "${packages[@]}"; do
-            name="$(basename "$package_dir")"
-            report="test-results/${name}.xml"
-            echo "swift test --package-path ${package_dir} --xunit-output ${report}"
-            swift test --package-path "$package_dir" --xunit-output "$report"
-          done
+          # mise run test writes test-results/<package>.xml. On Swift 6.4.1 that
+          # file contains XCTest cases only when the task passes --parallel.
+          mise run test
+
+      - name: Publish test summary
+        if: ${{ !cancelled() }}
+        run: |
+          set -euo pipefail
+          found=0
+          while IFS= read -r _; do
+            found=1
+            break
+          done < <(find . -name Package.swift -not -path '*/.*' | sort)
+          if [ "$found" -eq 1 ]; then
+            python3 .github/scripts/summarize-test-results.py --require test-results
+          else
+            python3 .github/scripts/summarize-test-results.py test-results
+          fi
 
       - name: Upload test reports
         if: ${{ !cancelled() }}
