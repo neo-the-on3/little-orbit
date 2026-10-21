@@ -14,6 +14,7 @@ let package = Package(
         .library(name: "LittleOrbitDomain", targets: ["LittleOrbitDomain"]),
         .library(name: "LittleOrbitPersistence", targets: ["LittleOrbitPersistence"]),
         .library(name: "LittleOrbitTheme", targets: ["LittleOrbitTheme"]),
+        .library(name: "LittleOrbitFeatures", targets: ["LittleOrbitFeatures"]),
     ],
     targets: [
         .target(name: "LittleOrbitCore"),
@@ -29,6 +30,10 @@ let package = Package(
             name: "LittleOrbitTheme",
             dependencies: ["LittleOrbitCore"],
         ),
+        .target(
+            name: "LittleOrbitFeatures",
+            dependencies: ["LittleOrbitDomain", "LittleOrbitTheme"],
+        ),
         .testTarget(
             name: "LittleOrbitCoreTests",
             dependencies: ["LittleOrbitCore"],
@@ -40,6 +45,10 @@ let package = Package(
         .testTarget(
             name: "LittleOrbitPersistenceTests",
             dependencies: ["LittleOrbitPersistence"],
+        ),
+        .testTarget(
+            name: "LittleOrbitFeaturesTests",
+            dependencies: ["LittleOrbitFeatures", "LittleOrbitPersistence"],
         ),
         .testTarget(
             name: "LittleOrbitThemeTests",
