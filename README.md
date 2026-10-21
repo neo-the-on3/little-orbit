@@ -125,7 +125,7 @@ swift build
 swift test
 ```
 
-The package builds on Linux. Domain rules and the in-memory repository are platform-independent, so `swift test` covers them here. The SwiftData store is compiled only for iOS, macOS, and watchOS (`#if canImport(SwiftData)`). How a later schema version migrates existing data is documented in [docs/persistence-migration.md](docs/persistence-migration.md). The apps themselves build in Xcode on macOS. On a Mac, run package tests with `mise run test` from the repository root so they use Xcode's Swift. On Linux, that task also writes JUnit XML under `test-results/`. See [Tooling](#tooling).
+The package builds on Linux. Domain rules and the in-memory repository are platform-independent, so `swift test` covers them here. The SwiftData store is compiled only for iOS, macOS, and watchOS (`#if canImport(SwiftData)`). How a later schema version migrates existing data is documented in [docs/persistence-migration.md](docs/persistence-migration.md). Design tokens from Figma live in `LittleOrbitTheme`; see [docs/design-tokens.md](docs/design-tokens.md). The apps themselves build in Xcode on macOS. On a Mac, run package tests with `mise run test` from the repository root so they use Xcode's Swift. On Linux, that task also writes JUnit XML under `test-results/`. See [Tooling](#tooling).
 
 ## Tooling
 
