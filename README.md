@@ -1,8 +1,46 @@
 # little-orbit
 
+Little Orbit is a personal finance app for macOS, iOS, and watchOS, built with SwiftUI and inspired by [Debit & Credit](https://debitandcredit.app). It tracks accounts, transactions, and categories, with data stored on the device.
+
+The project is early: the app targets, the shared domain model, the local SwiftData store, and the CI pipeline are in place, and the first screens are being built from the Figma designs. Work is tracked on the [project board](https://github.com/users/neo-the-on3/projects/1).
+
 SwiftUI app shell for iOS, macOS, and watchOS. The Xcode project stays thin: shared code lives in the local Swift package `Packages/LittleOrbitKit`.
 
 Open `LittleOrbit.xcodeproj` in Xcode 27.2 or later. The project file is `project.xcproj` (JSON). There is no `project.pbxproj`.
+
+## Links
+
+- Designs: UI work is built from the team's Figma design files (private; ask the maintainer for access).
+- Project board: [little-orbit](https://github.com/users/neo-the-on3/projects/1)
+- How to contribute: [CONTRIBUTING.md](CONTRIBUTING.md) (added in #80, the PR for #7)
+
+## Requirements
+
+| To | You need |
+| --- | --- |
+| Build and run the apps | A Mac with Xcode 27.2 or later. The JSON `project.xcproj` format needs Xcode 27.2. Install the iOS 27.2 and watchOS 27.2 simulator runtimes in Xcode > Settings > Components. |
+| Build and test the shared package, lint, and format | [mise](https://mise.jdx.dev/installing-mise.html) on macOS or Linux. mise installs SwiftLint, xcprojformatter, and (on Linux) Swift 6.4.1 from the pins in `mise.toml`. |
+| Sign anything | Nothing. Testing is simulator-only, so no Apple ID, team, certificate, or profile is needed. See [Signing](#signing) for optional device builds. |
+
+On Linux, install the system packages that swift.org's Swift toolchain needs before `mise install`. CI installs them in [`.github/actions/setup-mise/action.yml`](.github/actions/setup-mise/action.yml); install the same packages with your package manager, adjusting names for your distribution as that action does.
+
+## Quick start
+
+From a fresh clone:
+
+```sh
+# 1. Install mise (https://mise.jdx.dev/installing-mise.html), then:
+mise trust
+mise install
+
+# 2. Run the checks CI runs
+mise run lint
+mise run format-check
+mise run validate-project
+mise run test             # builds and tests Packages/LittleOrbitKit
+```
+
+That builds and tests the shared package on macOS or Linux. On a Mac, select Xcode 27.2 first (`sudo xcode-select -s /Applications/Xcode.app`), because `mise run test` uses Xcode's Swift there. To build the apps, see [Build and run the apps](#build-and-run-the-apps). Each task is described under [Tasks](#tasks).
 
 ## Layout
 
@@ -10,6 +48,12 @@ Open `LittleOrbit.xcodeproj` in Xcode 27.2 or later. The project file is `projec
 - `Apps/` — SwiftUI app entry points and the placeholder root view
 - `Packages/LittleOrbitKit` — `LittleOrbitCore`, `LittleOrbitDomain`, `LittleOrbitPersistence`, and `LittleOrbitTheme`, each with a test target
 - `Config/` — bundle IDs, deployment targets, and signing
+- `docs/` — design notes, such as [persistence-migration.md](docs/persistence-migration.md). The design token guide, `docs/design-tokens.md`, arrives once #79 merges.
+- `.github/` — the CI workflow and its setup action
+- `mise.toml`, `mise.lock` — tool pins and tasks
+- `.swiftlint.yml`, `.swift-format` — lint and format rules
+
+The packages follow MVVM with Clean layering. Dependencies point inward: Domain (plain Swift entities and rules) depends only on Core; Persistence (SwiftData) implements storage for Domain; Theme (design tokens) depends only on Core. The apps hold SwiftUI views and their view models.
 
 ## Platforms
 
