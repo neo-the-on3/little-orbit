@@ -15,9 +15,14 @@ The ledger lives in `Packages/LittleOrbitKit`. Domain types and rules are in `Li
 
 ## Store
 
-`StoreConfiguration` defaults to a local file and `StoreSyncMode.none`. `LittleOrbitStore.makeContainer` refuses any other sync mode and passes SwiftData's local-only database option. There is no CloudKit container, entitlement, or identifier in this package. Sync is a later change; the schema is shaped so that change does not have to rewrite V1.
+`StoreConfiguration` defaults to a local file and `StoreSyncMode.none`. The apps open it with `StoreConfiguration.appLocal()`, and `StoreLocation` picks the file (its folder is created on first open), never SwiftData's shared `default.store`:
 
-Each app keeps its own store. An App Group container is not configured here.
+1. If the app's Info.plist sets `LittleOrbitAppGroupIdentifier` and `FileManager.containerURL(forSecurityApplicationGroupIdentifier:)` returns a container for it, the store is `<group container>/LittleOrbit.store`.
+2. Otherwise it is `Application Support/<bundle id>/LittleOrbit.store`.
+
+The container lookup is injectable (`AppGroupContainerLookup`), so both branches are unit-tested on Linux. `LittleOrbitStore.makeContainer` refuses any other sync mode and passes SwiftData's local-only database option. There is no CloudKit container, entitlement, or identifier in this package. Sync is a later change; the schema is shaped so that change does not have to rewrite V1.
+
+No App Group is configured yet, so every build uses the Application Support fallback. Turning the group on needs the App Group entitlement and a provisioning profile (D154), plus the Info.plist key; the targets generate their Info.plist, so the key goes in an `INFOPLIST_FILE` merged with it. Moving an existing store into the group container is out of scope until then; nothing has shipped. On macOS, `containerURL(forSecurityApplicationGroupIdentifier:)` returns a URL even when the group isn't valid for the app (unlike iOS, which returns `nil`), so that change must also check on macOS that the container is accessible before choosing it.
 
 ## What V1 already contains
 

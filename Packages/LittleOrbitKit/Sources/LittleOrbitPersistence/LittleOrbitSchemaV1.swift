@@ -210,7 +210,7 @@
             if configuration.sync != .none {
                 throw StoreError.syncNotImplemented
             }
-            let modelConfiguration = modelConfiguration(for: configuration)
+            let modelConfiguration = try modelConfiguration(for: configuration)
             // The model-type initializer is what actually applies `LittleOrbitMigrationPlan`.
             return try ModelContainer(
                 for: LittleOrbitSchemaV1.AccountRecord.self,
@@ -233,14 +233,13 @@
             return SwiftDataLedgerRepository(container: container, now: now)
         }
 
-        private static func modelConfiguration(for configuration: StoreConfiguration) -> ModelConfiguration {
+        private static func modelConfiguration(for configuration: StoreConfiguration) throws -> ModelConfiguration {
             if configuration.inMemory {
                 return ModelConfiguration(isStoredInMemoryOnly: true, cloudKitDatabase: .none)
             }
-            if let fileURL = configuration.fileURL {
-                return ModelConfiguration(url: fileURL, cloudKitDatabase: .none)
-            }
-            return ModelConfiguration(cloudKitDatabase: .none)
+            // Never SwiftData's shared `default.store`: with no explicit URL, use the app folder.
+            let fileURL = try configuration.fileURL ?? StoreLocation.prepareStoreURL()
+            return ModelConfiguration(url: fileURL, cloudKitDatabase: .none)
         }
     }
 #endif
