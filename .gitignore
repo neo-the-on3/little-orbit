@@ -198,6 +198,9 @@ xcuserdata
 # JUnit XML from `mise run test` on Linux, and CI copies of those reports.
 test-results/
 
+# Bytecode from .github/scripts/summarize-test-results.py
+__pycache__/
+*.py[cod]
 *.xcresult
 *.xccovreport
 *.xccovarchive
