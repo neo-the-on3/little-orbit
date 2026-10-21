@@ -44,6 +44,7 @@ Closes #
 
 - [ ] The description starts with `Author: <Role>`
 - [ ] UI changes include a screenshot (simulator or CI capture)
+- [ ] No `@`-mentions in the description or commit messages (refer to teammates by role)
 - [ ] The pull request references its issue (`Closes #N`), and the issue's scope was not edited
 - [ ] Commits follow Conventional Commits and are logical, with fix-ups folded in
 - [ ] `mise run lint` and `mise run format-check` pass

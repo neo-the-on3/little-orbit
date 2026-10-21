@@ -40,6 +40,10 @@ The roles are `Product Manager`, `UI Designer`, `Developer`, `Tester`, `Project 
 
 When a GitHub comment, review, pull request or issue is about UI, attach a screenshot if you already have one, such as a simulator capture or a CI artifact. Don't export one from Figma just for this, because Figma calls come out of a shared budget.
 
+### No @-mentions
+
+Never write `@` followed by a name in a GitHub comment, review, pull request description, issue body or commit message. That includes role names like Tester or Developer and the owner's username. GitHub turns these into mentions of whoever owns that handle, which can ping strangers. Refer to a teammate by role in plain text, for example "Tester can recheck". If you need an `@` in code, wrap it in backticks. Comments written before this rule are not edited unless the repository owner asks.
+
 ## Trunk-based development
 
 - `main` is the trunk. It is always releasable and is protected.
