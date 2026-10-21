@@ -192,7 +192,7 @@ struct AccountFormViewModelTests {
         #expect(form.flipsSign)
         form.flipsSign = false
         #expect(form.save()?.openingBalance == 2_000)
-        #expect(try repository.balance(of: checking.id) == 2_000)
+        #expect(try repository.balance(of: checking.id, today: FeatureFixture.today) == 2_000)
     }
 
     @Test("Credit limit and Show available credit are saved for credit cards (D52)")

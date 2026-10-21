@@ -2,6 +2,8 @@ import Foundation
 
 /// Domain operations for the ledger. A repository persists the returned snapshot only after these succeed.
 public enum LedgerBook {
+    /// The balance counting every transaction, Upcoming ones included: the projected balance. For the
+    /// balance shown as current, use `AccountBalance.current(of:in:today:)` (D21).
     public static func balance(of accountID: UUID, in snapshot: LedgerSnapshot) throws -> Decimal {
         guard let account = snapshot.accounts.first(where: { $0.id == accountID && $0.deletedAt == nil }) else {
             throw LedgerValidationError.unknownAccount
@@ -35,6 +37,8 @@ public enum LedgerBook {
     }
 
     /// Per-currency totals of accounts with `includeInNetWorth`. Hidden accounts are included. Deleted ones are not.
+    /// Counts every transaction, Upcoming ones included; current net wealth is
+    /// `AccountBalance.currentNetWorth(in:today:)` (D21).
     public static func netWorth(in snapshot: LedgerSnapshot) throws -> [String: Decimal] {
         var totals: [String: Decimal] = [:]
         for account in snapshot.accounts where account.deletedAt == nil && account.includeInNetWorth {

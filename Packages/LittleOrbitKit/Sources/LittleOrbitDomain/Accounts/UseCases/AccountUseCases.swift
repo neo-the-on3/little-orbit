@@ -94,11 +94,22 @@ public struct AccountUseCases {
         self.reorderAccounts = reorderAccounts
     }
 
-    /// The default implementations over one repository.
-    public init(repository: any LedgerRepository, defaultCurrency: String = CurrencyCode.deviceDefault) {
+    /// The default implementations over one repository. `timeZone` and `now` decide which transactions are
+    /// still Upcoming (D21).
+    public init(
+        repository: any LedgerRepository,
+        defaultCurrency: String = CurrencyCode.deviceDefault,
+        timeZone: TimeZone = .current,
+        now: @escaping @MainActor () -> Date = { Date() },
+    ) {
         self.init(
-            listAccounts: DefaultListAccountsUseCase(repository: repository),
-            computeNetWealth: DefaultComputeNetWealthUseCase(repository: repository, defaultCurrency: defaultCurrency),
+            listAccounts: DefaultListAccountsUseCase(repository: repository, timeZone: timeZone, now: now),
+            computeNetWealth: DefaultComputeNetWealthUseCase(
+                repository: repository,
+                defaultCurrency: defaultCurrency,
+                timeZone: timeZone,
+                now: now,
+            ),
             loadAccountForm: DefaultLoadAccountFormUseCase(repository: repository),
             saveAccount: DefaultSaveAccountUseCase(repository: repository),
             deleteAccount: DefaultDeleteAccountUseCase(repository: repository),
@@ -113,13 +124,27 @@ public struct AccountUseCases {
 public struct DefaultListAccountsUseCase: ListAccountsUseCase {
     private let repository: any LedgerRepository
     private let list = ListAccounts()
+    private let timeZone: TimeZone
+    private let now: @MainActor () -> Date
 
-    public init(repository: any LedgerRepository) {
+    public init(
+        repository: any LedgerRepository,
+        timeZone: TimeZone = .current,
+        now: @escaping @MainActor () -> Date = { Date() },
+    ) {
         self.repository = repository
+        self.timeZone = timeZone
+        self.now = now
     }
 
+    /// Balances leave out Upcoming transactions until their day (D21).
     public func listAccounts(showHidden: Bool) throws -> AccountListing {
-        try list(accounts: repository.accounts(), transactions: repository.transactions(), showHidden: showHidden)
+        try list(
+            accounts: repository.accounts(),
+            transactions: repository.transactions(),
+            showHidden: showHidden,
+            today: TransactionTiming.today(now(), timeZone: timeZone),
+        )
     }
 }
 
@@ -127,14 +152,28 @@ public struct DefaultListAccountsUseCase: ListAccountsUseCase {
 public struct DefaultComputeNetWealthUseCase: ComputeNetWealthUseCase {
     private let repository: any LedgerRepository
     private let compute: ComputeNetWealth
+    private let timeZone: TimeZone
+    private let now: @MainActor () -> Date
 
-    public init(repository: any LedgerRepository, defaultCurrency: String = CurrencyCode.deviceDefault) {
+    public init(
+        repository: any LedgerRepository,
+        defaultCurrency: String = CurrencyCode.deviceDefault,
+        timeZone: TimeZone = .current,
+        now: @escaping @MainActor () -> Date = { Date() },
+    ) {
         self.repository = repository
         self.compute = ComputeNetWealth(defaultCurrency: defaultCurrency)
+        self.timeZone = timeZone
+        self.now = now
     }
 
+    /// Net wealth leaves out Upcoming transactions until their day (D21).
     public func netWealth() throws -> [CurrencyTotal] {
-        try compute(accounts: repository.accounts(), transactions: repository.transactions())
+        try compute(
+            accounts: repository.accounts(),
+            transactions: repository.transactions(),
+            today: TransactionTiming.today(now(), timeZone: timeZone),
+        )
     }
 }
 

@@ -7,6 +7,8 @@ import LittleOrbitPersistence
 @MainActor
 enum FeatureFixture {
     static let india = Locale(identifier: "en_IN")
+    /// A day after every transaction the fixtures create, so they all count as current (D21).
+    static let today = CalendarDay(year: 2100, month: 1, day: 1)
 
     /// The real account use cases over an in-memory repository, as the App wires them over SwiftData.
     static func useCases(_ repository: InMemoryLedgerRepository) -> AccountUseCases {

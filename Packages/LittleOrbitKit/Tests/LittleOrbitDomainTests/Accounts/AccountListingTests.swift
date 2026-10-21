@@ -8,7 +8,12 @@ struct AccountListingTests {
 
     @Test("Visible accounts are split into Assets and Credit in the user's order")
     func groupsAndOrder() throws {
-        let listing = try list(accounts: AccountFixture.all.reversed(), transactions: [], showHidden: false)
+        let listing = try list(
+            accounts: AccountFixture.all.reversed(),
+            transactions: [],
+            showHidden: false,
+            today: AccountFixture.today,
+        )
         #expect(
             listing.assets.map(\.account.name) == ["Everyday Savings", "Corner Wallet", "Holiday Fund", "Euro Pocket"]
         )
@@ -20,7 +25,12 @@ struct AccountListingTests {
 
     @Test("Show hidden lists hidden accounts in their own place (D109)")
     func showHidden() throws {
-        let listing = try list(accounts: AccountFixture.all, transactions: [], showHidden: true)
+        let listing = try list(
+            accounts: AccountFixture.all,
+            transactions: [],
+            showHidden: true,
+            today: AccountFixture.today,
+        )
         #expect(
             listing.assets.map(\.account.name) == [
                 "Everyday Savings", "Corner Wallet", "Long Term Fund", "Old Locker", "Holiday Fund", "Euro Pocket",
@@ -37,6 +47,7 @@ struct AccountListingTests {
             accounts: [card, wallet],
             transactions: [AccountFixture.expense(1_000, from: wallet)],
             showHidden: false,
+            today: AccountFixture.today,
         )
         let walletRow = try #require(listing.assets.first)
         #expect(walletRow.balance == Decimal(string: "650.50"))
@@ -56,20 +67,26 @@ struct AccountListingTests {
             accounts: [source, destination],
             transactions: [AccountFixture.transfer(500, from: source, to: destination)],
             showHidden: false,
+            today: AccountFixture.today,
         )
         #expect(listing.assets.allSatisfy { $0.hasTransactions })
     }
 
     @Test("No accounts is the first-run state")
     func empty() throws {
-        let listing = try list(accounts: [], transactions: [], showHidden: false)
+        let listing = try list(accounts: [], transactions: [], showHidden: false, today: AccountFixture.today)
         #expect(listing.isEmpty)
         #expect(listing.assets.isEmpty && listing.credit.isEmpty)
     }
 
     @Test("Only hidden accounts is not the first-run state")
     func onlyHidden() throws {
-        let listing = try list(accounts: [AccountFixture.longTermFund], transactions: [], showHidden: false)
+        let listing = try list(
+            accounts: [AccountFixture.longTermFund],
+            transactions: [],
+            showHidden: false,
+            today: AccountFixture.today,
+        )
         #expect(!listing.isEmpty)
         #expect(listing.hiddenCount == 1)
     }

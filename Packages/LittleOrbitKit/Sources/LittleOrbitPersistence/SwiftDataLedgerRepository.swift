@@ -117,12 +117,12 @@
             try mutate { try LedgerBook.deletingAttachment(id: id, in: $0) }
         }
 
-        public func balance(of accountID: UUID) throws -> Decimal {
-            try LedgerBook.balance(of: accountID, in: load())
+        public func balance(of accountID: UUID, today: CalendarDay) throws -> Decimal {
+            try AccountBalance.current(of: accountID, in: load(), today: today)
         }
 
-        public func netWorth() throws -> [String: Decimal] {
-            try LedgerBook.netWorth(in: load())
+        public func netWorth(today: CalendarDay) throws -> [String: Decimal] {
+            try AccountBalance.currentNetWorth(in: load(), today: today)
         }
 
         private func mutate(_ body: (LedgerSnapshot) throws -> LedgerSnapshot) throws {
