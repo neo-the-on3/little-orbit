@@ -240,6 +240,82 @@ jobs:
           echo "mise run test"
           mise run test
 
+      # Catches app bundles that build but are rejected at install time (#77).
+      # Simulators are chosen by UDID, never by name: a Mac can have two
+      # devices with the same name. Uses the simulator builds above in
+      # derived-data. Signing stays off; nothing here needs a signed build.
+      - name: Install apps on simulators
+        run: |
+          set -euo pipefail
+
+          project="LittleOrbit.xcodeproj"
+          products="derived-data/Build/Products"
+          if [ ! -d "$project" ]; then
+            echo "Install apps on simulators: skipped. Missing ${project}."
+            exit 0
+          fi
+
+          # Prints the UDID of an available simulator for a platform, preferring
+          # the 27.2 runtime and otherwise the newest 27.x runtime installed.
+          # Devices are sorted by name, then UDID, so the pick is stable.
+          pick_simulator() {
+            platform="$1"
+            name_prefix="$2"
+            xcrun simctl list devices available -j | python3 -c '
+          import json, re, sys
+
+          platform, name_prefix = sys.argv[1], sys.argv[2]
+          wanted = (27, 2)
+          runtimes = {}
+          for key, devices in json.load(sys.stdin)["devices"].items():
+              # Exact runtime id, optionally with a device-specific suffix such as
+              # iOS-27-2-iPhone19-4. Runtimes with the same version merge their devices.
+              match = re.fullmatch(
+                  r"com\.apple\.CoreSimulator\.SimRuntime\.%s-(\d+)-(\d+)(?:-.+)?" % re.escape(platform), key
+              )
+              if not match:
+                  continue
+              version = (int(match.group(1)), int(match.group(2)))
+              if version[0] != wanted[0]:
+                  continue
+              matching = [d for d in devices if d["name"].startswith(name_prefix)]
+              if matching:
+                  runtimes.setdefault(version, []).extend(matching)
+          if not runtimes:
+              sys.exit("error: no available %s 27.x simulator named %s*." % (platform, name_prefix))
+          version = wanted if wanted in runtimes else max(runtimes)
+          if version != wanted:
+              print("warning: no %s 27.2 runtime; using %d.%d." % ((platform,) + version), file=sys.stderr)
+          device = sorted(runtimes[version], key=lambda d: (d["name"], d["udid"]))[0]
+          print("%s %d.%d: %s (%s)" % ((platform,) + version + (device["name"], device["udid"])), file=sys.stderr)
+          print(device["udid"])
+          ' "$platform" "$name_prefix"
+          }
+
+          install_app() {
+            platform="$1"
+            name_prefix="$2"
+            app="$3"
+            if [ ! -d "$app" ]; then
+              echo "error: ${app} was not built." >&2
+              exit 1
+            fi
+            bundle_id="$(/usr/libexec/PlistBuddy -c 'Print :CFBundleIdentifier' "${app}/Info.plist")"
+            udid="$(pick_simulator "$platform" "$name_prefix")"
+
+            echo "xcrun simctl bootstatus ${udid} -b"
+            xcrun simctl bootstatus "$udid" -b
+            echo "xcrun simctl install ${udid} ${app}"
+            xcrun simctl install "$udid" "$app"
+            echo "xcrun simctl launch ${udid} ${bundle_id}"
+            xcrun simctl launch "$udid" "$bundle_id"
+            xcrun simctl terminate "$udid" "$bundle_id" || true
+            xcrun simctl shutdown "$udid" || true
+          }
+
+          install_app watchOS "Apple Watch" "${products}/Debug-watchsimulator/LittleOrbitWatch.app"
+          install_app iOS "iPhone" "${products}/Debug-iphonesimulator/LittleOrbit.app"
+
       - name: Upload test reports
         if: ${{ !cancelled() }}
         uses: actions/upload-artifact@cf430e030ddbb5b0abf93d22962f4752f3646cd9 # v7.0.2

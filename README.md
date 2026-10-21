@@ -119,9 +119,9 @@ The workflow uses the standard `ubuntu-latest` and `xcode-27` runners. It does n
 | `format-check` | `ubuntu-latest` | `mise run format-check` |
 | `Linux tests` | `ubuntu-latest` | `swift test` for each Swift package |
 | `validate-project` | `ubuntu-latest` | `mise run validate-project` |
-| `macOS build and test` | `xcode-27` | `xcodebuild build` for the three schemes, then `mise run test` |
+| `macOS build and test` | `xcode-27` | `xcodebuild build` for the three schemes, `mise run test`, then install and launch the watchOS and iOS apps on simulators |
 
-The shared schemes have no test action, so `xcodebuild test` is not used. The macOS job builds `LittleOrbit iOS`, `LittleOrbit macOS`, and `LittleOrbit watchOS`, then runs the package tests with Xcode's Swift.
+The shared schemes have no test action, so `xcodebuild test` is not used. The macOS job builds `LittleOrbit iOS`, `LittleOrbit macOS`, and `LittleOrbit watchOS`, then runs the package tests with Xcode's Swift. It then installs and launches the watchOS and iOS simulator builds, so an app that builds but can't install fails the job. Simulators are picked by UDID from `xcrun simctl list devices available -j` (27.2 runtime preferred), never by name, because a Mac can have two simulators with the same name.
 
 `Linux tests` succeeds without running `swift test` when the tree has no `Package.swift`. `macOS build and test` succeeds without building when `LittleOrbit.xcodeproj` or a `Package.swift` is missing. A failing lint, format check, package test, project check, or Apple build fails the corresponding job. Apple builds set `CODE_SIGNING_ALLOWED=NO`. Test reports are kept for 7 days.
 
