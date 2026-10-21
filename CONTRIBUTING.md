@@ -36,6 +36,10 @@ Taken up by Developer
 
 The roles are `Product Manager`, `UI Designer`, `Developer`, `Tester` and `Project Manager`. This applies whether you post with `gh`, the GitHub website or the Cursor app. Comments written before this rule are not edited. The repository owner's own comments, including approvals, don't need an author line.
 
+### Screenshots on UI posts
+
+When a GitHub comment, review, pull request or issue is about UI, attach a screenshot if you already have one, such as a simulator capture or a CI artifact. Don't export one from Figma just for this, because Figma calls come out of a shared budget.
+
 ## Trunk-based development
 
 - `main` is the trunk. It is always releasable and is protected.
