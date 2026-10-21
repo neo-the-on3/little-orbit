@@ -130,3 +130,7 @@ The shared app schemes have no test action, so the macOS job does not run `xcode
 ### Project format fallback
 
 Validation uses `xcprojformatter` on JSON `project.xcproj` files. If that format cannot be used, add XcodeGen with mise in the change that switches formats and record why.
+
+## Contributing
+
+Read [CONTRIBUTING.md](CONTRIBUTING.md) before opening a pull request. It covers the trunk-based flow, Conventional Commits, Given-When-Then acceptance criteria, the `Follow-up to #N` rule, labels, review, and testing. New pull requests start from the [pull request template](.github/pull_request_template.md).
