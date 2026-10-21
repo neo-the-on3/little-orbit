@@ -20,7 +20,6 @@ public final class AccountsViewModel {
     /// No accounts at all, hidden ones included.
     public private(set) var isFirstRun = true
     public var errorMessage: String?
-    public var deletePrompt: AccountDeletePrompt?
     /// iOS reorder mode, entered with the Edit button and left with Done (D151). It only reorders:
     /// hide, exclude and delete are off until it ends. macOS drags rows directly and never sets it.
     public var isReordering = false
@@ -155,42 +154,32 @@ public final class AccountsViewModel {
         }
     }
 
-    public func requestDelete(accountID: UUID) {
+    /// The delete confirmation for an account, with its counts; `nil` while reordering or if it can't be read.
+    /// Each window keeps the prompt it asked for in its own `AccountDeleteConfirmation` (#87 B3).
+    public func deletePrompt(accountID: UUID) -> AccountDeletePrompt? {
         guard allowsRowActions, let account = account(id: accountID) else {
-            return
+            return nil
         }
         do {
             let impact = try deleteAccount.deletionImpact(of: accountID)
-            deletePrompt = AccountDeletePrompt(account: account, impact: impact)
+            return AccountDeletePrompt(account: account, impact: impact)
         } catch {
             errorMessage = Self.message(for: error)
+            return nil
         }
     }
 
     /// Deletes the account with its transactions, transfers in or out, and their attachments (D19), and
     /// returns the change to record as one step, "Undo Delete Account …" (#93). `nil` if it failed.
-    @discardableResult
-    public func confirmDelete() -> TransactionChange? {
-        guard let prompt = deletePrompt else {
-            return nil
-        }
-        deletePrompt = nil
+    public func delete(_ prompt: AccountDeletePrompt) -> TransactionChange? {
         var change: TransactionChange?
         perform { change = .removedAccount(try deleteAccount.delete(prompt.accountID)) }
         return change
     }
 
     /// The safer default in the delete confirmation.
-    public func hideInsteadOfDeleting() {
-        guard let prompt = deletePrompt else {
-            return
-        }
-        deletePrompt = nil
+    public func hideInsteadOfDeleting(_ prompt: AccountDeletePrompt) {
         setHidden(true, accountID: prompt.accountID)
-    }
-
-    public func cancelDelete() {
-        deletePrompt = nil
     }
 
     private func perform(_ work: () throws -> Void) {

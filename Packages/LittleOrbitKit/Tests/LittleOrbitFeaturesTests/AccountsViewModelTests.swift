@@ -264,6 +264,7 @@ struct AccountsViewModelTests {
     func reorderModeOnlyReorders() throws {
         let repository = try FeatureFixture.repository()
         let model = model(repository)
+        let confirmation = AccountDeleteConfirmation(model: model)
         #expect(!model.isReordering)
         #expect(model.allowsRowActions)
         model.isReordering = true
@@ -271,8 +272,8 @@ struct AccountsViewModelTests {
         let id = try #require(model.assets.first?.id)
         model.setHidden(true, accountID: id)
         model.setExcluded(true, accountID: id)
-        model.requestDelete(accountID: id)
-        #expect(model.deletePrompt == nil)
+        confirmation.request(accountID: id)
+        #expect(confirmation.prompt == nil)
         #expect(try repository.accounts().first { $0.id == id }?.isHidden == false)
         #expect(try repository.accounts().first { $0.id == id }?.includeInNetWorth == true)
         model.move(in: .assets, fromOffsets: IndexSet(integer: 3), toOffset: 0)
@@ -287,6 +288,7 @@ struct AccountsViewModelTests {
     func deletePrompt() throws {
         let repository = try FeatureFixture.repository()
         let model = model(repository)
+        let confirmation = AccountDeleteConfirmation(model: model)
         let accounts = try repository.accounts()
         let savings = try #require(accounts.first { $0.name == "Everyday Savings" })
         let wallet = try #require(accounts.first { $0.name == "Corner Wallet" })
@@ -299,8 +301,8 @@ struct AccountsViewModelTests {
             )
         }
         model.load()
-        model.requestDelete(accountID: savings.id)
-        let prompt = try #require(model.deletePrompt)
+        confirmation.request(accountID: savings.id)
+        let prompt = try #require(confirmation.prompt)
         #expect(prompt.title == "Delete “Everyday Savings”?")
         #expect(
             prompt.message
@@ -315,10 +317,11 @@ struct AccountsViewModelTests {
     func cancel() throws {
         let repository = try FeatureFixture.repository()
         let model = model(repository)
+        let confirmation = AccountDeleteConfirmation(model: model)
         let id = try #require(model.assets.first?.id)
-        model.requestDelete(accountID: id)
-        model.cancelDelete()
-        #expect(model.deletePrompt == nil)
+        confirmation.request(accountID: id)
+        confirmation.cancel()
+        #expect(confirmation.prompt == nil)
         #expect(try repository.accounts().count == 7)
     }
 
@@ -326,11 +329,12 @@ struct AccountsViewModelTests {
     func hideInstead() throws {
         let repository = try FeatureFixture.repository()
         let model = model(repository)
+        let confirmation = AccountDeleteConfirmation(model: model)
         let id = try #require(model.assets.first?.id)
         let before = model.netWealthSummary
-        model.requestDelete(accountID: id)
-        model.hideInsteadOfDeleting()
-        #expect(model.deletePrompt == nil)
+        confirmation.request(accountID: id)
+        confirmation.hide()
+        #expect(confirmation.prompt == nil)
         #expect(try repository.accounts().count == 7)
         #expect(try repository.accounts().first { $0.id == id }?.isHidden == true)
         #expect(model.netWealthSummary == before)
@@ -340,6 +344,7 @@ struct AccountsViewModelTests {
     func confirm() throws {
         let repository = try FeatureFixture.repository()
         let model = model(repository)
+        let confirmation = AccountDeleteConfirmation(model: model)
         let accounts = try repository.accounts()
         let savings = try #require(accounts.first { $0.name == "Everyday Savings" })
         let holiday = try #require(accounts.first { $0.name == "Holiday Fund" })
@@ -354,11 +359,12 @@ struct AccountsViewModelTests {
         )
         model.load()
         #expect(model.assets.first?.balanceText == "₹24,000.00")
-        model.requestDelete(accountID: holiday.id)
+        confirmation.request(accountID: holiday.id)
         #expect(
-            model.deletePrompt?.message.hasPrefix("This deletes 1 transaction, including 1 transfer to or from") == true
+            confirmation.prompt?.message.hasPrefix("This deletes 1 transaction, including 1 transfer to or from")
+                == true
         )
-        model.confirmDelete()
+        confirmation.confirm()
         #expect(!model.assets.contains { $0.id == holiday.id })
         #expect(model.assets.first?.balanceText == "₹25,000.00")
         #expect(try repository.transactions().isEmpty)
@@ -367,10 +373,11 @@ struct AccountsViewModelTests {
     @Test("An account with no transactions says 0 and still offers Hide (S16)")
     func zeroTransactions() throws {
         let model = model(try FeatureFixture.repository())
+        let confirmation = AccountDeleteConfirmation(model: model)
         let id = try #require(model.assets.first?.id)
-        model.requestDelete(accountID: id)
-        #expect(model.deletePrompt?.message.hasPrefix("This deletes 0 transactions. Attachments") == true)
-        #expect(model.deletePrompt?.hideTitle == "Hide Account")
+        confirmation.request(accountID: id)
+        #expect(confirmation.prompt?.message.hasPrefix("This deletes 0 transactions. Attachments") == true)
+        #expect(confirmation.prompt?.hideTitle == "Hide Account")
     }
 
     @Test("Home badges count and cap; zero hides the badge (S57, S59, S84)")

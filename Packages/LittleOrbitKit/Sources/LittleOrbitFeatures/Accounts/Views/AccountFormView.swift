@@ -209,10 +209,8 @@
                 visibilitySection
                 if model.isEditing, case .edit(let id) = model.mode, let onDelete {
                     Section {
-                        Button("Delete Account…", role: .destructive) {
-                            dismiss()
-                            onDelete(id)
-                        }
+                        // The presenter confirms over this sheet and closes it after Hide or Delete (bug 3).
+                        Button("Delete Account…", role: .destructive) { onDelete(id) }
                     }
                 }
             }
@@ -251,10 +249,7 @@
                     .formStyle(.grouped)
                     HStack {
                         if model.isEditing, case .edit(let id) = model.mode, let onDelete {
-                            Button("Delete Account…", role: .destructive) {
-                                dismiss()
-                                onDelete(id)
-                            }
+                            Button("Delete Account…", role: .destructive) { onDelete(id) }
                         }
                         Spacer()
                         Button("Cancel") { dismiss() }
