@@ -9,7 +9,7 @@ struct NetWealthTests {
 
     @Test("The fixture totals ₹16,650.50 · €300.00 · $1,240.00, INR first")
     func fixtureTotals() throws {
-        let totals = try netWealth(accounts: AccountFixture.all, transactions: [])
+        let totals = try netWealth(accounts: AccountFixture.all, transactions: [], today: AccountFixture.today)
         #expect(
             totals == [
                 CurrencyTotal(currencyCode: "INR", amount: Decimal(string: "16650.50")!),
@@ -21,7 +21,7 @@ struct NetWealthTests {
 
     @Test("Other currencies follow the default in code order")
     func ordering() throws {
-        let totals = try netWealth(accounts: AccountFixture.all, transactions: [])
+        let totals = try netWealth(accounts: AccountFixture.all, transactions: [], today: AccountFixture.today)
         #expect(totals.map(\.currencyCode) == ["INR", "EUR", "USD"])
     }
 
@@ -29,7 +29,11 @@ struct NetWealthTests {
     func hiddenAndExcluded() throws {
         var locker = AccountFixture.oldLocker
         locker.isHidden = false
-        let totals = try netWealth(accounts: [AccountFixture.longTermFund, locker], transactions: [])
+        let totals = try netWealth(
+            accounts: [AccountFixture.longTermFund, locker],
+            transactions: [],
+            today: AccountFixture.today,
+        )
         #expect(totals == [CurrencyTotal(currencyCode: "INR", amount: 20_000)])
     }
 
@@ -37,25 +41,37 @@ struct NetWealthTests {
     func excludedCurrencyDisappears() throws {
         var holiday = AccountFixture.holidayFund
         holiday.includeInNetWorth = false
-        let totals = try netWealth(accounts: [AccountFixture.everydaySavings, holiday], transactions: [])
+        let totals = try netWealth(
+            accounts: [AccountFixture.everydaySavings, holiday],
+            transactions: [],
+            today: AccountFixture.today,
+        )
         #expect(totals.map(\.currencyCode) == ["INR"])
     }
 
     @Test("Credit cards count their balance, never the available credit (S77)")
     func creditUsesBalance() throws {
-        let totals = try netWealth(accounts: [AccountFixture.travelCard], transactions: [])
+        let totals = try netWealth(
+            accounts: [AccountFixture.travelCard],
+            transactions: [],
+            today: AccountFixture.today,
+        )
         #expect(totals == [CurrencyTotal(currencyCode: "INR", amount: -30_000)])
     }
 
     @Test("Transactions move the totals")
     func transactionsCount() throws {
         let wallet = AccountFixture.cornerWallet
-        let totals = try netWealth(accounts: [wallet], transactions: [AccountFixture.expense(1_000, from: wallet)])
+        let totals = try netWealth(
+            accounts: [wallet],
+            transactions: [AccountFixture.expense(1_000, from: wallet)],
+            today: AccountFixture.today,
+        )
         #expect(totals.first?.amount == Decimal(string: "650.50"))
     }
 
     @Test("No accounts has no totals")
     func empty() throws {
-        #expect(try netWealth(accounts: [], transactions: []).isEmpty)
+        #expect(try netWealth(accounts: [], transactions: [], today: AccountFixture.today).isEmpty)
     }
 }

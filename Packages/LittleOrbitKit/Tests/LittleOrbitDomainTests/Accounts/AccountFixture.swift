@@ -58,6 +58,9 @@ enum AccountFixture {
         sortOrder: 7,
     )
 
+    /// A day after every transaction the fixtures create (they're dated now), so they all count as current.
+    static let today = CalendarDay(year: 2100, month: 1, day: 1)
+
     static let all = [
         everydaySavings, cornerWallet, travelCard, longTermFund, oldLocker, holidayFund, euroPocket,
     ]

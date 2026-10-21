@@ -70,6 +70,10 @@ final class FakeLedgerRepository: LedgerRepository {
     func attachments(for transactionID: UUID?) throws -> [Attachment] { throw Unsupported() }
     func saveAttachment(_ attachment: Attachment) throws { throw Unsupported() }
     func deleteAttachment(id: UUID) throws { throw Unsupported() }
-    func balance(of accountID: UUID) throws -> Decimal { try LedgerBook.balance(of: accountID, in: snapshot) }
-    func netWorth() throws -> [String: Decimal] { try LedgerBook.netWorth(in: snapshot) }
+    func balance(of accountID: UUID, today: CalendarDay) throws -> Decimal {
+        try AccountBalance.current(of: accountID, in: snapshot, today: today)
+    }
+    func netWorth(today: CalendarDay) throws -> [String: Decimal] {
+        try AccountBalance.currentNetWorth(in: snapshot, today: today)
+    }
 }

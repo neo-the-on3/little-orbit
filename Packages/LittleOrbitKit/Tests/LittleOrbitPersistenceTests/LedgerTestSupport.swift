@@ -5,6 +5,9 @@ import XCTest
 
 let posix = Locale(identifier: "en_US_POSIX")
 
+/// A day after every transaction these tests create, so balances count all of them as current (D21).
+let ledgerToday = CalendarDay(year: 2100, month: 1, day: 1)
+
 typealias MakeRepository = @MainActor () throws -> any LedgerRepository
 
 func decimal(_ value: String, file: StaticString = #filePath, line: UInt = #line) -> Decimal {
@@ -34,6 +37,7 @@ func assertLedgerAcceptance(make: MakeRepository) throws {
     try assertSameTransferAccountIsRejected(make: make)
     try assertCrossCurrencyTransfer(make: make)
     try assertBalanceIsExact(make: make)
+    try assertBalanceCountsOnlyTransactionsDatedUpToToday(make: make)
     try assertCreditCardOpeningBalanceReducesNetWorth(make: make)
     try assertNetWorthGroupsCurrenciesAndSkipsExcludedAccounts(make: make)
     try assertHiddenAccountStillCountsInNetWorth(make: make)
@@ -114,8 +118,39 @@ private func assertCrossCurrencyTransfer(make: MakeRepository) throws {
             destinationAmount: decimal("12.00"),
         )
     )
-    XCTAssertEqual(try repository.balance(of: states.id), decimal("12.00"))
-    XCTAssertEqual(try repository.balance(of: india.id), decimal("-100.00"))
+    XCTAssertEqual(try repository.balance(of: states.id, today: ledgerToday), decimal("12.00"))
+    XCTAssertEqual(try repository.balance(of: india.id, today: ledgerToday), decimal("-100.00"))
+}
+
+/// The repository uses the same current balance as the account list (D21, `AccountBalance`).
+@MainActor
+private func assertBalanceCountsOnlyTransactionsDatedUpToToday(make: MakeRepository) throws {
+    let repository = try make()
+    let account = try saveCash(in: repository, opening: "100")
+    let zone = "Asia/Kolkata"
+    let today = CalendarDay(year: 2026, month: 10, day: 20)
+    func noon(_ day: Int) -> Date {
+        var calendar = Calendar(identifier: .gregorian)
+        calendar.timeZone = TimeZone(identifier: zone)!
+        return calendar.date(from: DateComponents(year: 2026, month: 10, day: day, hour: 12))!
+    }
+    try repository.saveTransaction(
+        Transaction(type: .expense, amount: decimal("10"), date: noon(20), timeZoneID: zone, accountID: account.id)
+    )
+    try repository.saveTransaction(
+        Transaction(type: .expense, amount: decimal("30"), date: noon(21), timeZoneID: zone, accountID: account.id)
+    )
+    XCTAssertEqual(try repository.balance(of: account.id, today: today), decimal("90"))
+    XCTAssertEqual(try repository.netWorth(today: today)["USD"], decimal("90") as Decimal?)
+    let listing = try ListAccounts()(
+        accounts: try repository.accounts(),
+        transactions: try repository.transactions(),
+        showHidden: true,
+        today: today,
+    )
+    XCTAssertEqual(listing.assets.first?.balance, try repository.balance(of: account.id, today: today))
+    let tomorrow = CalendarDay(year: 2026, month: 10, day: 21)
+    XCTAssertEqual(try repository.balance(of: account.id, today: tomorrow), decimal("60"))
 }
 
 @MainActor
@@ -128,7 +163,7 @@ private func assertBalanceIsExact(make: MakeRepository) throws {
     try repository.saveTransaction(
         Transaction(type: .income, amount: decimal("0.20"), accountID: account.id)
     )
-    XCTAssertEqual(try repository.balance(of: account.id), decimal("750.10"))
+    XCTAssertEqual(try repository.balance(of: account.id, today: ledgerToday), decimal("750.10"))
 }
 
 @MainActor
@@ -149,7 +184,7 @@ private func assertCreditCardOpeningBalanceReducesNetWorth(make: MakeRepository)
     try repository.saveAccount(card)
     let stored = try XCTUnwrap(try repository.accounts().first { $0.id == card.id })
     XCTAssertEqual(stored.openingBalance, decimal("-500"))
-    XCTAssertEqual(try repository.netWorth()["USD"], decimal("300") as Decimal?)
+    XCTAssertEqual(try repository.netWorth(today: ledgerToday)["USD"], decimal("300") as Decimal?)
 }
 
 @MainActor
@@ -164,7 +199,7 @@ private func assertNetWorthGroupsCurrenciesAndSkipsExcludedAccounts(
     try repository.saveAccount(included)
     try repository.saveAccount(excluded)
     try repository.saveAccount(india)
-    let worth = try repository.netWorth()
+    let worth = try repository.netWorth(today: ledgerToday)
     XCTAssertEqual(worth["USD"], decimal("40.00") as Decimal?)
     XCTAssertEqual(worth["INR"], decimal("10.50") as Decimal?)
     XCTAssertNil(worth["EUR"])
@@ -176,7 +211,7 @@ private func assertHiddenAccountStillCountsInNetWorth(make: MakeRepository) thro
     var hidden = Account(name: "Sock", currencyCode: "USD", openingBalance: decimal("8.00"))
     hidden.isHidden = true
     try repository.saveAccount(hidden)
-    XCTAssertEqual(try repository.netWorth()["USD"], decimal("8.00") as Decimal?)
+    XCTAssertEqual(try repository.netWorth(today: ledgerToday)["USD"], decimal("8.00") as Decimal?)
 }
 
 @MainActor
@@ -310,7 +345,7 @@ private func assertTransactionsBeforeOpeningDateStillCount(make: MakeRepository)
             accountID: account.id,
         )
     )
-    XCTAssertEqual(try repository.balance(of: account.id), decimal("6.00"))
+    XCTAssertEqual(try repository.balance(of: account.id, today: ledgerToday), decimal("6.00"))
 }
 
 @MainActor
@@ -321,7 +356,7 @@ private func assertDeletedRecordsAreHiddenFromQueries(make: MakeRepository) thro
     expense.deletedAt = Date(timeIntervalSince1970: 10)
     try repository.saveTransaction(expense)
     XCTAssertTrue(try repository.transactions().isEmpty)
-    XCTAssertEqual(try repository.balance(of: account.id), decimal("25.00"))
+    XCTAssertEqual(try repository.balance(of: account.id, today: ledgerToday), decimal("25.00"))
 }
 
 @MainActor

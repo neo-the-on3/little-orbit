@@ -65,6 +65,8 @@ final class UnreadableAccountsRepository: LedgerRepository {
     func saveAttachment(_ attachment: Attachment) throws { try base.saveAttachment(attachment) }
     func deleteAttachment(id: UUID) throws { try base.deleteAttachment(id: id) }
 
-    func balance(of accountID: UUID) throws -> Decimal { try base.balance(of: accountID) }
-    func netWorth() throws -> [String: Decimal] { try base.netWorth() }
+    func balance(of accountID: UUID, today: CalendarDay) throws -> Decimal {
+        try base.balance(of: accountID, today: today)
+    }
+    func netWorth(today: CalendarDay) throws -> [String: Decimal] { try base.netWorth(today: today) }
 }

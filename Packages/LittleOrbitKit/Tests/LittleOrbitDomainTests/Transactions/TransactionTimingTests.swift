@@ -55,4 +55,42 @@ struct TransactionTimingTests {
         )
         #expect(totals.first?.amount == 11_000)
     }
+
+    @MainActor
+    @Test("One balance: current leaves out Upcoming, projected counts it, and every caller agrees (D21)")
+    func oneDefinitionOfBalance() throws {
+        let today = F.day(2026, 10, 20)
+        let past = F.expense(500, on: F.date(2026, 10, 19))
+        let upcoming = F.expense(2_000, on: F.date(2026, 11, 20))
+        let snapshot = LedgerSnapshot(accounts: F.accounts, transactions: [past, upcoming])
+        let current = try AccountBalance.current(of: F.savingsID, in: snapshot, today: today)
+        #expect(current == 9_500)
+        #expect(try AccountBalance.projected(of: F.savingsID, in: snapshot) == 7_500)
+
+        let repository = try FakeLedgerRepository(accounts: F.accounts, transactions: [past, upcoming])
+        #expect(try repository.balance(of: F.savingsID, today: today) == current)
+        let listing = try ListAccounts()(
+            accounts: F.accounts,
+            transactions: [past, upcoming],
+            showHidden: true,
+            today: today,
+        )
+        #expect(listing.assets.first { $0.account.id == F.savingsID }?.balance == current)
+        let history = BuildAccountHistory()(
+            account: try #require(F.accounts.first { $0.id == F.savingsID }),
+            transactions: [past, upcoming],
+            today: today,
+        )
+        #expect(history.currentBalance == current)
+        #expect(history.balanceAfterUpcoming == 7_500)
+
+        let worth = try AccountBalance.currentNetWorth(in: snapshot, today: today)
+        #expect(try repository.netWorth(today: today) == worth)
+        let totals = try ComputeNetWealth(defaultCurrency: "INR")(
+            accounts: F.accounts,
+            transactions: [past, upcoming],
+            today: today,
+        )
+        #expect(totals.first { $0.currencyCode == "INR" }?.amount == worth["INR"])
+    }
 }

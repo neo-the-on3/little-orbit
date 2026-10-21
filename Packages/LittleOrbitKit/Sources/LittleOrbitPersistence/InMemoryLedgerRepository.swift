@@ -105,11 +105,11 @@ public final class InMemoryLedgerRepository: LedgerRepository {
         snapshot = try LedgerBook.deletingAttachment(id: id, in: snapshot)
     }
 
-    public func balance(of accountID: UUID) throws -> Decimal {
-        try LedgerBook.balance(of: accountID, in: snapshot)
+    public func balance(of accountID: UUID, today: CalendarDay) throws -> Decimal {
+        try AccountBalance.current(of: accountID, in: snapshot, today: today)
     }
 
-    public func netWorth() throws -> [String: Decimal] {
-        try LedgerBook.netWorth(in: snapshot)
+    public func netWorth(today: CalendarDay) throws -> [String: Decimal] {
+        try AccountBalance.currentNetWorth(in: snapshot, today: today)
     }
 }

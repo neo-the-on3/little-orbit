@@ -35,6 +35,8 @@ public protocol LedgerRepository: AnyObject {
     func saveAttachment(_ attachment: Attachment) throws
     func deleteAttachment(id: UUID) throws
 
-    func balance(of accountID: UUID) throws -> Decimal
-    func netWorth() throws -> [String: Decimal]
+    /// The current balance: transactions dated up to `today` (D21, `AccountBalance`).
+    func balance(of accountID: UUID, today: CalendarDay) throws -> Decimal
+    /// Per-currency current net wealth: transactions dated up to `today` (D21, `AccountBalance`).
+    func netWorth(today: CalendarDay) throws -> [String: Decimal]
 }
