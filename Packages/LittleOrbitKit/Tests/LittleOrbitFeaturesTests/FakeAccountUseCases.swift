@@ -70,8 +70,9 @@ final class FakeAccountUseCases {
 
     func deletionImpact(of accountID: UUID) throws -> AccountDeletionImpact { impact }
 
-    func delete(_ accountID: UUID) throws {
+    func delete(_ accountID: UUID) throws -> RemovedAccount {
         deletedIDs.append(accountID)
+        return RemovedAccount(account: Account(id: accountID), transactions: [])
     }
 
     func move(in group: AccountGroup, shown: [UUID], fromOffsets: IndexSet, toOffset: Int) throws {

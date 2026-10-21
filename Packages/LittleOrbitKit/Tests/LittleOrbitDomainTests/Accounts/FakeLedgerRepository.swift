@@ -1,16 +1,23 @@
 import Foundation
 import LittleOrbitDomain
 
-/// A fake `LedgerRepository` for the use-case tests: accounts and transactions in memory, through the same
-/// `LedgerBook` rules as the real stores. The rest of the port isn't used by the account use cases and throws.
+/// A fake `LedgerRepository` for the use-case tests: accounts, transactions, categories, payees, splits and
+/// attachments in memory, through the same `LedgerBook` rules as the real stores. The rest of the port isn't
+/// used by the use cases and throws. `failsAfterWrites` makes a write fail partway through a change, and
+/// `atomically` restores the snapshot like the real stores do.
 @MainActor
 final class FakeLedgerRepository: LedgerRepository {
     struct Unsupported: Error {}
     struct ReadFailure: Error {}
+    struct WriteFailure: Error {}
 
     private(set) var snapshot = LedgerSnapshot()
     private(set) var savedAccountIDs: [UUID] = []
     var failsReads = false
+    /// When set, transaction, split and attachment writes after this many fail.
+    var failsAfterWrites: Int?
+    private(set) var writes = 0
+    private(set) var atomicChanges = 0
     private var tick = 0.0
 
     init(accounts: [Account] = [], transactions: [Transaction] = []) throws {
@@ -21,6 +28,24 @@ final class FakeLedgerRepository: LedgerRepository {
             snapshot = try LedgerBook.savingTransaction(transaction, in: snapshot, now: now())
         }
         savedAccountIDs = []
+    }
+
+    private func write() throws {
+        if let limit = failsAfterWrites, writes >= limit {
+            throw WriteFailure()
+        }
+        writes += 1
+    }
+
+    func atomically<T>(_ body: () throws -> T) throws -> T {
+        atomicChanges += 1
+        let saved = snapshot
+        do {
+            return try body()
+        } catch {
+            snapshot = saved
+            throw error
+        }
     }
 
     private func now() -> Date {
@@ -51,24 +76,40 @@ final class FakeLedgerRepository: LedgerRepository {
         return snapshot.transactionsVisible()
     }
 
-    func saveTransaction(_ transaction: Transaction) throws { throw Unsupported() }
-    func deleteTransaction(id: UUID) throws { throw Unsupported() }
+    func saveTransaction(_ transaction: Transaction) throws {
+        try write()
+        snapshot = try LedgerBook.savingTransaction(transaction, in: snapshot, now: now())
+    }
+
+    func deleteTransaction(id: UUID) throws {
+        try write()
+        snapshot = try LedgerBook.deletingTransaction(id: id, in: snapshot)
+    }
+
     func recordScheduledOccurrence(_ transaction: Transaction) throws -> Transaction { throw Unsupported() }
-    func categories() throws -> [TransactionCategory] { throw Unsupported() }
+    func categories() throws -> [TransactionCategory] { snapshot.categoriesVisible() }
     func saveCategory(_ category: TransactionCategory) throws { throw Unsupported() }
     func deleteCategory(id: UUID, reassigningTo categoryID: UUID?) throws { throw Unsupported() }
-    func seedDefaultCategories() throws { throw Unsupported() }
-    func payees() throws -> [Payee] { throw Unsupported() }
-    func savePayee(_ payee: Payee) throws { throw Unsupported() }
+    func seedDefaultCategories() throws { snapshot = LedgerBook.seedDefaultCategories(in: snapshot, now: now()) }
+    func payees() throws -> [Payee] { snapshot.payeesVisible() }
+    func savePayee(_ payee: Payee) throws { snapshot = try LedgerBook.savingPayee(payee, in: snapshot, now: now()) }
     func deletePayee(id: UUID) throws { throw Unsupported() }
     func mergePayees(_ sourceID: UUID, into survivingID: UUID) throws { throw Unsupported() }
     func tags() throws -> [Tag] { throw Unsupported() }
     func saveTag(_ tag: Tag) throws { throw Unsupported() }
     func deleteTag(id: UUID) throws { throw Unsupported() }
-    func splits(for transactionID: UUID?) throws -> [TransactionSplit] { throw Unsupported() }
-    func replaceSplits(_ splits: [TransactionSplit], for transactionID: UUID) throws { throw Unsupported() }
-    func attachments(for transactionID: UUID?) throws -> [Attachment] { throw Unsupported() }
-    func saveAttachment(_ attachment: Attachment) throws { throw Unsupported() }
+    func splits(for transactionID: UUID?) throws -> [TransactionSplit] { snapshot.splitsVisible(for: transactionID) }
+    func replaceSplits(_ splits: [TransactionSplit], for transactionID: UUID) throws {
+        try write()
+        snapshot = try LedgerBook.replacingSplits(splits, for: transactionID, in: snapshot, now: now())
+    }
+    func attachments(for transactionID: UUID?) throws -> [Attachment] {
+        snapshot.attachmentsVisible(for: transactionID)
+    }
+    func saveAttachment(_ attachment: Attachment) throws {
+        try write()
+        snapshot = try LedgerBook.savingAttachment(attachment, in: snapshot, now: now())
+    }
     func deleteAttachment(id: UUID) throws { throw Unsupported() }
     func balance(of accountID: UUID, today: CalendarDay) throws -> Decimal {
         try AccountBalance.current(of: accountID, in: snapshot, today: today)

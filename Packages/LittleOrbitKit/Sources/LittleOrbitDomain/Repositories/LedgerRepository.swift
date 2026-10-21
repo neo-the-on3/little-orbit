@@ -39,4 +39,9 @@ public protocol LedgerRepository: AnyObject {
     func balance(of accountID: UUID, today: CalendarDay) throws -> Decimal
     /// Per-currency current net wealth: transactions dated up to `today` (D21, `AccountBalance`).
     func netWorth(today: CalendarDay) throws -> [String: Decimal]
+
+    /// Runs `body` as one all-or-nothing change: every write in it is kept, or, if `body` or the final save
+    /// throws, none is. Reads inside `body` see its earlier writes. A nested call joins the outer one; if
+    /// it throws, its own writes are undone, and the outer change keeps going only if its caller catches the error.
+    func atomically<T>(_ body: () throws -> T) throws -> T
 }
