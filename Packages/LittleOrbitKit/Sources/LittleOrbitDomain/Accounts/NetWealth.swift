@@ -24,8 +24,14 @@ public struct ComputeNetWealth: Sendable {
         self.defaultCurrency = CurrencyCode.normalize(defaultCurrency)
     }
 
-    public func callAsFunction(accounts: [Account], transactions: [Transaction]) throws -> [CurrencyTotal] {
-        let snapshot = LedgerSnapshot(accounts: accounts, transactions: transactions)
+    /// With `today`, only transactions dated up to today count (D21).
+    public func callAsFunction(
+        accounts: [Account],
+        transactions: [Transaction],
+        today: CalendarDay? = nil,
+    ) throws -> [CurrencyTotal] {
+        let current = today.map { TransactionTiming.dated(upTo: $0, transactions) } ?? transactions
+        let snapshot = LedgerSnapshot(accounts: accounts, transactions: current)
         let totals = try LedgerBook.netWorth(in: snapshot)
         return
             totals
