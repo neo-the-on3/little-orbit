@@ -1,10 +1,18 @@
+import LittleOrbitFeatures
 import SwiftUI
 
 @main
 struct LittleOrbitIOSApp: App {
+    /// Built once per launch by the composition root, here rather than in a view, then passed down.
+    private let accounts: Result<AccountsFeature, any Error>
+
+    init() {
+        accounts = AppComposition.make()
+    }
+
     var body: some Scene {
         WindowGroup {
-            RootView()
+            RootView(accounts: accounts)
         }
     }
 }
