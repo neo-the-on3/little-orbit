@@ -221,7 +221,7 @@ jobs:
             if [ -z "$package" ]; then
               echo "Missing Package.swift."
             fi
-            echo "Once both are in the tree, this job builds the three schemes with CODE_SIGNING_ALLOWED=NO, then runs mise run test (xcrun swift)."
+            echo "Once both are in the tree, this job builds the three schemes with CODE_SIGNING_ALLOWED=NO, runs mise run test (xcrun swift), then xcodebuild test on each Swift package."
             echo "  LittleOrbit iOS     - iOS Simulator, iPhone 17, OS 27.0"
             echo "  LittleOrbit macOS   - macOS (arm64)"
             echo "  LittleOrbit watchOS - watchOS Simulator, Apple Watch Series 12 (42mm), OS 27.0"
@@ -231,8 +231,9 @@ jobs:
           derived="derived-data"
 
           # The shared schemes' TestAction has no testables, so `xcodebuild test`
-          # exits 66: "Scheme ... is not currently configured for the test action."
-          # Build the apps here. Package tests use Xcode's Swift via mise.
+          # on those schemes exits 66: "Scheme ... is not currently configured for
+          # the test action." Build the apps here. Package tests use Xcode's Swift
+          # via mise, then xcodebuild test on the package writes an xcresult.
           run_scheme() {
             scheme="$1"
             destination="$2"
@@ -251,7 +252,70 @@ jobs:
           run_scheme "LittleOrbit watchOS" "platform=watchOS Simulator,name=Apple Watch Series 12 (42mm),OS=27.0"
 
           echo "mise run test"
-          mise run test
+          test_status=0
+          mise run test || test_status=$?
+
+          # swift test on macOS does not write an xcresult. xcodebuild test on the
+          # package scheme does. Run it even when mise run test failed so the
+          # bundle still records the failure.
+          root="$PWD"
+          mkdir -p test-results
+          while IFS= read -r manifest; do
+            package_root="$(dirname "$manifest")"
+            name="$(basename "$package_root")"
+            bundle="${root}/test-results/${name}.xcresult"
+            rm -rf "$bundle"
+            # A package with more than one product has no scheme named after the
+            # package. Xcode adds "<package>-Package", which tests every test
+            # target. A single-product package uses the package name.
+            if ! scheme="$(cd "$package_root" && xcodebuild -list -json | python3 -c '
+          import json, sys
+
+          name = sys.argv[1]
+          info = json.load(sys.stdin)
+          info = info.get("workspace") or info.get("project") or {}
+          schemes = info.get("schemes") or []
+          for candidate in (name + "-Package", name):
+              if candidate in schemes:
+                  print(candidate)
+                  sys.exit(0)
+          sys.exit("error: no %s-Package or %s scheme. Schemes: %s" % (name, name, ", ".join(schemes)))
+          ' "$name")"; then
+              test_status=1
+              continue
+            fi
+            echo "xcodebuild test -scheme ${scheme} -destination platform=macOS,arch=arm64 -resultBundlePath ${bundle}"
+            if ! (
+              cd "$package_root"
+              xcodebuild test \
+                -scheme "$scheme" \
+                -destination "platform=macOS,arch=arm64" \
+                -resultBundlePath "$bundle" \
+                -derivedDataPath "${root}/derived-data-${name}" \
+                CODE_SIGNING_ALLOWED=NO
+            ); then
+              test_status=1
+            fi
+          done < <(find . -name Package.swift -not -path '*/.*' | sort)
+
+          exit "$test_status"
+
+      - name: Publish test summary
+        if: ${{ !cancelled() }}
+        run: |
+          set -euo pipefail
+          found=0
+          if [ -d LittleOrbit.xcodeproj ]; then
+            while IFS= read -r _; do
+              found=1
+              break
+            done < <(find . -name Package.swift -not -path '*/.*' | sort)
+          fi
+          if [ "$found" -eq 1 ]; then
+            python3 .github/scripts/summarize-test-results.py --require test-results
+          else
+            python3 .github/scripts/summarize-test-results.py test-results
+          fi
 
       # Catches app bundles that build but are rejected at install time (#77).
       # Simulators are chosen by UDID, never by name: a Mac can have two
