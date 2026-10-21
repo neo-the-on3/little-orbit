@@ -19,7 +19,7 @@ Open `LittleOrbit.xcodeproj` in Xcode 27.2 or later. The project file is `projec
 | LittleOrbit macOS | LittleOrbit macOS | macOS 27.0 | `app.littleorbit.macos` | `LittleOrbitMac.app` |
 | LittleOrbit watchOS | LittleOrbit watchOS | watchOS 27.0 | `app.littleorbit.watchos` | `LittleOrbitWatch.app` |
 
-The on-screen name is **Little Orbit** on every platform. The watchOS app is standalone (it is not embedded in the iOS app) and runs in the watchOS simulator. Values live in `Config/`.
+The on-screen name is **Little Orbit** on every platform. The watchOS app is standalone (it is not embedded in the iOS app) and runs in the watchOS simulator. Its generated Info.plist sets `WKWatchOnly` (it has no iOS companion), not `WKRunsIndependentlyOfCompanionApp`. Values live in `Config/`.
 
 `Packages/LittleOrbitKit` declares the same iOS 27, macOS 27, and watchOS 27 floors (`// swift-tools-version: 6.4`).
 
