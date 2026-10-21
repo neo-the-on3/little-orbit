@@ -1,7 +1,8 @@
 import Foundation
-import LittleOrbitDomain
 
-/// Persistence boundary used by the apps. The in-memory store works everywhere. SwiftData is the on-device store.
+/// The storage port that the use cases depend on. It lives in Domain so nothing above Domain needs Persistence.
+///
+/// `LittleOrbitPersistence` implements it: the in-memory store works everywhere, SwiftData is the on-device store.
 @MainActor
 public protocol LedgerRepository: AnyObject {
     func accounts() throws -> [Account]
