@@ -24,6 +24,18 @@ This guide covers how work moves from an issue to `main`. It applies to everyone
 - When you pass a ticket to another role, comment **`Handed off to <role>: <reason>`** and switch the `role:*` label.
 - When you respond on an issue, do not change labels other than the ones these rules describe.
 
+### Author line
+
+Every bot posts through the repository owner's GitHub account, so the account alone doesn't show who wrote a post. Start every GitHub comment, pull request review, pull request description and new issue body with an author line, then a blank line, then the message:
+
+```text
+Author: Developer
+
+Taken up by Developer
+```
+
+The roles are `Product Manager`, `UI Designer`, `Developer`, `Tester` and `Project Manager`. This applies whether you post with `gh`, the GitHub website or the Cursor app. Comments written before this rule are not edited. The repository owner's own comments, including approvals, don't need an author line.
+
 ## Trunk-based development
 
 - `main` is the trunk. It is always releasable and is protected.
@@ -120,4 +132,4 @@ Shared code lives in the local Swift package `Packages/LittleOrbitKit`. The Xcod
 
 ## Pull request template
 
-New pull requests start from [`.github/pull_request_template.md`](.github/pull_request_template.md). Fill in every section and delete the ones that don't apply.
+New pull requests start from [`.github/pull_request_template.md`](.github/pull_request_template.md). Fill in every section and delete the ones that don't apply. Keep the `Author: <Role>` first line.
