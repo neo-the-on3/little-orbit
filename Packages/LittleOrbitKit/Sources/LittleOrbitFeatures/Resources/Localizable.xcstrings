@@ -1,0 +1,1072 @@
+{
+  "sourceLanguage": "en",
+  "strings": {
+    "%1$@ from %2$@ to %3$@": {
+      "comment": "An Undo or Redo name, delete toast or undo notice, with where it happened: a transfer's two accounts. %1$@ is the action, such as \"Edit Transfer\"; %2$@ and %3$@ are the From and To account names.",
+      "extractionState": "manual",
+      "localizations": {
+        "en": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "%1$@ from %2$@ to %3$@"
+          }
+        }
+      }
+    },
+    "%1$@ in %2$@": {
+      "comment": "An Undo or Redo name, delete toast or undo notice, with where it happened: one account. %1$@ is the action, such as \"Delete Transaction\"; %2$@ is the account name.",
+      "extractionState": "manual",
+      "localizations": {
+        "en": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "%1$@ in %2$@"
+          }
+        }
+      }
+    },
+    "%1$@ in %2$lld Accounts": {
+      "comment": "An Undo or Redo name, delete toast or undo notice, with where it happened: several accounts. %1$@ is the action, such as \"Delete 5 Transactions\"; %2$lld is the number of accounts.",
+      "extractionState": "manual",
+      "localizations": {
+        "en": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "%1$@ in %#@accounts@"
+          },
+          "substitutions": {
+            "accounts": {
+              "argNum": 2,
+              "formatSpecifier": "lld",
+              "variations": {
+                "plural": {
+                  "one": {
+                    "stringUnit": {
+                      "state": "translated",
+                      "value": "%arg Account"
+                    }
+                  },
+                  "other": {
+                    "stringUnit": {
+                      "state": "translated",
+                      "value": "%arg Accounts"
+                    }
+                  }
+                }
+              }
+            }
+          }
+        }
+      }
+    },
+    "%@ was changed in another window. Nothing was changed.": {
+      "comment": "Alert message: Undo or Redo of a record another window changed since. %@ is the transaction's payee or description, or an account name.",
+      "extractionState": "manual",
+      "localizations": {
+        "en": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "%@ was changed in another window. Nothing was changed."
+          }
+        }
+      }
+    },
+    "%@ was deleted in another window. Nothing was changed.": {
+      "comment": "Alert message: Undo or Redo of a record or account another window deleted. %@ is the transaction's payee or description, or the account name.",
+      "extractionState": "manual",
+      "localizations": {
+        "en": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "%@ was deleted in another window. Nothing was changed."
+          }
+        }
+      }
+    },
+    "%lld of these transactions were changed or deleted in another window. Nothing was changed.": {
+      "comment": "Alert message: a bulk Undo or Redo where more than one transaction was changed or deleted in another window, so nothing was changed. %lld is how many.",
+      "extractionState": "manual",
+      "localizations": {
+        "en": {
+          "variations": {
+            "plural": {
+              "one": {
+                "stringUnit": {
+                  "state": "translated",
+                  "value": "%lld of these transactions was changed or deleted in another window. Nothing was changed."
+                }
+              },
+              "other": {
+                "stringUnit": {
+                  "state": "translated",
+                  "value": "%lld of these transactions were changed or deleted in another window. Nothing was changed."
+                }
+              }
+            }
+          }
+        }
+      }
+    },
+    "Add %1$lld Transactions in %2$@": {
+      "comment": "Undo name: several transactions added at once in one account (D198). %1$lld is the number of transactions; %2$@ is the account name.",
+      "extractionState": "manual",
+      "localizations": {
+        "en": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Add %#@transactions@ in %2$@"
+          },
+          "substitutions": {
+            "transactions": {
+              "argNum": 1,
+              "formatSpecifier": "lld",
+              "variations": {
+                "plural": {
+                  "one": {
+                    "stringUnit": {
+                      "state": "translated",
+                      "value": "%arg Transaction"
+                    }
+                  },
+                  "other": {
+                    "stringUnit": {
+                      "state": "translated",
+                      "value": "%arg Transactions"
+                    }
+                  }
+                }
+              }
+            }
+          }
+        }
+      }
+    },
+    "Add %1$lld Transactions in %2$lld Accounts": {
+      "comment": "Undo name: several transactions added at once across accounts (D198, D166.4). %1$lld is the number of transactions; %2$lld is the number of accounts.",
+      "extractionState": "manual",
+      "localizations": {
+        "en": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Add %#@transactions@ in %#@accounts@"
+          },
+          "substitutions": {
+            "transactions": {
+              "argNum": 1,
+              "formatSpecifier": "lld",
+              "variations": {
+                "plural": {
+                  "one": {
+                    "stringUnit": {
+                      "state": "translated",
+                      "value": "%arg Transaction"
+                    }
+                  },
+                  "other": {
+                    "stringUnit": {
+                      "state": "translated",
+                      "value": "%arg Transactions"
+                    }
+                  }
+                }
+              }
+            },
+            "accounts": {
+              "argNum": 2,
+              "formatSpecifier": "lld",
+              "variations": {
+                "plural": {
+                  "one": {
+                    "stringUnit": {
+                      "state": "translated",
+                      "value": "%arg Account"
+                    }
+                  },
+                  "other": {
+                    "stringUnit": {
+                      "state": "translated",
+                      "value": "%arg Accounts"
+                    }
+                  }
+                }
+              }
+            }
+          }
+        }
+      }
+    },
+    "Add %lld Transactions": {
+      "comment": "Undo name: several transactions added at once.",
+      "extractionState": "manual",
+      "localizations": {
+        "en": {
+          "variations": {
+            "plural": {
+              "one": {
+                "stringUnit": {
+                  "state": "translated",
+                  "value": "Add %lld Transaction"
+                }
+              },
+              "other": {
+                "stringUnit": {
+                  "state": "translated",
+                  "value": "Add %lld Transactions"
+                }
+              }
+            }
+          }
+        }
+      }
+    },
+    "Can't Redo %@": {
+      "comment": "Alert title: a Redo that can't run because another window changed its records. %@ is the Redo name, such as \"Delete Transaction\".",
+      "extractionState": "manual",
+      "localizations": {
+        "en": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Can't Redo %@"
+          }
+        }
+      }
+    },
+    "Can't Undo %@": {
+      "comment": "Alert title: an Undo that can't run because another window changed its records. %@ is the Undo name, such as \"Edit Transaction\".",
+      "extractionState": "manual",
+      "localizations": {
+        "en": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Can't Undo %@"
+          }
+        }
+      }
+    },
+    "Couldn't Make the Change": {
+      "comment": "Alert title: an Undo, Redo or change failed, for example on a full disk. Nothing changed.",
+      "extractionState": "manual",
+      "localizations": {
+        "en": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Couldn't Make the Change"
+          }
+        }
+      }
+    },
+    "Couldn't read your accounts, so Undo may not say where this change was.": {
+      "comment": "Alert message: a change was saved and can be undone, but its accounts couldn't be read.",
+      "extractionState": "manual",
+      "localizations": {
+        "en": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Couldn't read your accounts, so Undo may not say where this change was."
+          }
+        }
+      }
+    },
+    "Delete %1$lld Transactions in %2$@": {
+      "comment": "Undo name: several transactions deleted at once in one account (D198). %1$lld is the number of transactions; %2$@ is the account name.",
+      "extractionState": "manual",
+      "localizations": {
+        "en": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Delete %#@transactions@ in %2$@"
+          },
+          "substitutions": {
+            "transactions": {
+              "argNum": 1,
+              "formatSpecifier": "lld",
+              "variations": {
+                "plural": {
+                  "one": {
+                    "stringUnit": {
+                      "state": "translated",
+                      "value": "%arg Transaction"
+                    }
+                  },
+                  "other": {
+                    "stringUnit": {
+                      "state": "translated",
+                      "value": "%arg Transactions"
+                    }
+                  }
+                }
+              }
+            }
+          }
+        }
+      }
+    },
+    "Delete %1$lld Transactions in %2$lld Accounts": {
+      "comment": "Undo name: several transactions deleted at once across accounts (D198, D166.4). %1$lld is the number of transactions; %2$lld is the number of accounts.",
+      "extractionState": "manual",
+      "localizations": {
+        "en": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Delete %#@transactions@ in %#@accounts@"
+          },
+          "substitutions": {
+            "transactions": {
+              "argNum": 1,
+              "formatSpecifier": "lld",
+              "variations": {
+                "plural": {
+                  "one": {
+                    "stringUnit": {
+                      "state": "translated",
+                      "value": "%arg Transaction"
+                    }
+                  },
+                  "other": {
+                    "stringUnit": {
+                      "state": "translated",
+                      "value": "%arg Transactions"
+                    }
+                  }
+                }
+              }
+            },
+            "accounts": {
+              "argNum": 2,
+              "formatSpecifier": "lld",
+              "variations": {
+                "plural": {
+                  "one": {
+                    "stringUnit": {
+                      "state": "translated",
+                      "value": "%arg Account"
+                    }
+                  },
+                  "other": {
+                    "stringUnit": {
+                      "state": "translated",
+                      "value": "%arg Accounts"
+                    }
+                  }
+                }
+              }
+            }
+          }
+        }
+      }
+    },
+    "Delete %lld Transactions": {
+      "comment": "Undo name: several transactions deleted at once.",
+      "extractionState": "manual",
+      "localizations": {
+        "en": {
+          "variations": {
+            "plural": {
+              "one": {
+                "stringUnit": {
+                  "state": "translated",
+                  "value": "Delete %lld Transaction"
+                }
+              },
+              "other": {
+                "stringUnit": {
+                  "state": "translated",
+                  "value": "Delete %lld Transactions"
+                }
+              }
+            }
+          }
+        }
+      }
+    },
+    "Delete Account %@": {
+      "comment": "Undo name: an account deleted, with its name.",
+      "extractionState": "manual",
+      "localizations": {
+        "en": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Delete Account %@"
+          }
+        }
+      }
+    },
+    "Delete Transaction": {
+      "comment": "Undo name: one transaction deleted.",
+      "extractionState": "manual",
+      "localizations": {
+        "en": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Delete Transaction"
+          }
+        }
+      }
+    },
+    "Delete Transaction in %@": {
+      "comment": "Undo name: one transaction deleted, with its account (D198). %@ is the account name.",
+      "extractionState": "manual",
+      "localizations": {
+        "en": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Delete Transaction in %@"
+          }
+        }
+      }
+    },
+    "Delete Transaction in %lld Accounts": {
+      "comment": "Undo name: one transaction deleted, moved between accounts (D198). %lld is the number of accounts.",
+      "extractionState": "manual",
+      "localizations": {
+        "en": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Delete Transaction in %#@accounts@"
+          },
+          "substitutions": {
+            "accounts": {
+              "argNum": 1,
+              "formatSpecifier": "lld",
+              "variations": {
+                "plural": {
+                  "one": {
+                    "stringUnit": {
+                      "state": "translated",
+                      "value": "%arg Account"
+                    }
+                  },
+                  "other": {
+                    "stringUnit": {
+                      "state": "translated",
+                      "value": "%arg Accounts"
+                    }
+                  }
+                }
+              }
+            }
+          }
+        }
+      }
+    },
+    "Delete Transfer from %1$@ to %2$@": {
+      "comment": "Undo name: one transfer deleted, with its two accounts (D198, D166.2). %1$@ is the source account, %2$@ the destination.",
+      "extractionState": "manual",
+      "localizations": {
+        "en": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Delete Transfer from %1$@ to %2$@"
+          }
+        }
+      }
+    },
+    "Delete Transfer in %@": {
+      "comment": "Undo name: one transfer deleted when only one of its accounts still exists (D198). %@ is the account name.",
+      "extractionState": "manual",
+      "localizations": {
+        "en": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Delete Transfer in %@"
+          }
+        }
+      }
+    },
+    "Delete Transfer in %lld Accounts": {
+      "comment": "Undo name: one transfer deleted that changed its accounts, counting every account before and after (D198, D166.3). %lld is the number of accounts.",
+      "extractionState": "manual",
+      "localizations": {
+        "en": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Delete Transfer in %#@accounts@"
+          },
+          "substitutions": {
+            "accounts": {
+              "argNum": 1,
+              "formatSpecifier": "lld",
+              "variations": {
+                "plural": {
+                  "one": {
+                    "stringUnit": {
+                      "state": "translated",
+                      "value": "%arg Account"
+                    }
+                  },
+                  "other": {
+                    "stringUnit": {
+                      "state": "translated",
+                      "value": "%arg Accounts"
+                    }
+                  }
+                }
+              }
+            }
+          }
+        }
+      }
+    },
+    "Deleted %@": {
+      "comment": "Off-screen notice after Redo deletes an account again. %@ is the account's name.",
+      "extractionState": "manual",
+      "localizations": {
+        "en": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Deleted %@"
+          }
+        }
+      }
+    },
+    "Deleted %lld transactions": {
+      "comment": "Off-screen notice after Undo or Redo deletes transactions in an account not on screen. %lld is how many; \" in <account>\" follows.",
+      "extractionState": "manual",
+      "localizations": {
+        "en": {
+          "variations": {
+            "plural": {
+              "one": {
+                "stringUnit": {
+                  "state": "translated",
+                  "value": "Deleted %lld transaction"
+                }
+              },
+              "other": {
+                "stringUnit": {
+                  "state": "translated",
+                  "value": "Deleted %lld transactions"
+                }
+              }
+            }
+          }
+        }
+      }
+    },
+    "Edit %1$lld Transactions in %2$@": {
+      "comment": "Undo name: several transactions edited at once in one account (D198). %1$lld is the number of transactions; %2$@ is the account name.",
+      "extractionState": "manual",
+      "localizations": {
+        "en": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Edit %#@transactions@ in %2$@"
+          },
+          "substitutions": {
+            "transactions": {
+              "argNum": 1,
+              "formatSpecifier": "lld",
+              "variations": {
+                "plural": {
+                  "one": {
+                    "stringUnit": {
+                      "state": "translated",
+                      "value": "%arg Transaction"
+                    }
+                  },
+                  "other": {
+                    "stringUnit": {
+                      "state": "translated",
+                      "value": "%arg Transactions"
+                    }
+                  }
+                }
+              }
+            }
+          }
+        }
+      }
+    },
+    "Edit %1$lld Transactions in %2$lld Accounts": {
+      "comment": "Undo name: several transactions edited at once across accounts (D198, D166.4). %1$lld is the number of transactions; %2$lld is the number of accounts.",
+      "extractionState": "manual",
+      "localizations": {
+        "en": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Edit %#@transactions@ in %#@accounts@"
+          },
+          "substitutions": {
+            "transactions": {
+              "argNum": 1,
+              "formatSpecifier": "lld",
+              "variations": {
+                "plural": {
+                  "one": {
+                    "stringUnit": {
+                      "state": "translated",
+                      "value": "%arg Transaction"
+                    }
+                  },
+                  "other": {
+                    "stringUnit": {
+                      "state": "translated",
+                      "value": "%arg Transactions"
+                    }
+                  }
+                }
+              }
+            },
+            "accounts": {
+              "argNum": 2,
+              "formatSpecifier": "lld",
+              "variations": {
+                "plural": {
+                  "one": {
+                    "stringUnit": {
+                      "state": "translated",
+                      "value": "%arg Account"
+                    }
+                  },
+                  "other": {
+                    "stringUnit": {
+                      "state": "translated",
+                      "value": "%arg Accounts"
+                    }
+                  }
+                }
+              }
+            }
+          }
+        }
+      }
+    },
+    "Edit %lld Transactions": {
+      "comment": "Undo name: several transactions edited at once.",
+      "extractionState": "manual",
+      "localizations": {
+        "en": {
+          "variations": {
+            "plural": {
+              "one": {
+                "stringUnit": {
+                  "state": "translated",
+                  "value": "Edit %lld Transaction"
+                }
+              },
+              "other": {
+                "stringUnit": {
+                  "state": "translated",
+                  "value": "Edit %lld Transactions"
+                }
+              }
+            }
+          }
+        }
+      }
+    },
+    "Edit Transaction": {
+      "comment": "Undo name: one transaction edited.",
+      "extractionState": "manual",
+      "localizations": {
+        "en": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Edit Transaction"
+          }
+        }
+      }
+    },
+    "Edit Transaction in %@": {
+      "comment": "Undo name: one transaction edited, with its account (D198). %@ is the account name.",
+      "extractionState": "manual",
+      "localizations": {
+        "en": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Edit Transaction in %@"
+          }
+        }
+      }
+    },
+    "Edit Transaction in %lld Accounts": {
+      "comment": "Undo name: one transaction edited, moved between accounts (D198). %lld is the number of accounts.",
+      "extractionState": "manual",
+      "localizations": {
+        "en": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Edit Transaction in %#@accounts@"
+          },
+          "substitutions": {
+            "accounts": {
+              "argNum": 1,
+              "formatSpecifier": "lld",
+              "variations": {
+                "plural": {
+                  "one": {
+                    "stringUnit": {
+                      "state": "translated",
+                      "value": "%arg Account"
+                    }
+                  },
+                  "other": {
+                    "stringUnit": {
+                      "state": "translated",
+                      "value": "%arg Accounts"
+                    }
+                  }
+                }
+              }
+            }
+          }
+        }
+      }
+    },
+    "Edit Transfer": {
+      "comment": "Undo name: one transfer edited.",
+      "extractionState": "manual",
+      "localizations": {
+        "en": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Edit Transfer"
+          }
+        }
+      }
+    },
+    "Edit Transfer from %1$@ to %2$@": {
+      "comment": "Undo name: one transfer edited, with its two accounts (D198, D166.2). %1$@ is the source account, %2$@ the destination.",
+      "extractionState": "manual",
+      "localizations": {
+        "en": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Edit Transfer from %1$@ to %2$@"
+          }
+        }
+      }
+    },
+    "Edit Transfer in %@": {
+      "comment": "Undo name: one transfer edited when only one of its accounts still exists (D198). %@ is the account name.",
+      "extractionState": "manual",
+      "localizations": {
+        "en": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Edit Transfer in %@"
+          }
+        }
+      }
+    },
+    "Edit Transfer in %lld Accounts": {
+      "comment": "Undo name: one transfer edited that changed its accounts, counting every account before and after (D198, D166.3). %lld is the number of accounts.",
+      "extractionState": "manual",
+      "localizations": {
+        "en": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Edit Transfer in %#@accounts@"
+          },
+          "substitutions": {
+            "accounts": {
+              "argNum": 1,
+              "formatSpecifier": "lld",
+              "variations": {
+                "plural": {
+                  "one": {
+                    "stringUnit": {
+                      "state": "translated",
+                      "value": "%arg Account"
+                    }
+                  },
+                  "other": {
+                    "stringUnit": {
+                      "state": "translated",
+                      "value": "%arg Accounts"
+                    }
+                  }
+                }
+              }
+            }
+          }
+        }
+      }
+    },
+    "New Account": {
+      "comment": "Undo name: an account added.",
+      "extractionState": "manual",
+      "localizations": {
+        "en": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "New Account"
+          }
+        }
+      }
+    },
+    "New Transaction": {
+      "comment": "Undo name: one transaction added.",
+      "extractionState": "manual",
+      "localizations": {
+        "en": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "New Transaction"
+          }
+        }
+      }
+    },
+    "New Transaction in %@": {
+      "comment": "Undo name: one transaction added, with its account (D198). %@ is the account name.",
+      "extractionState": "manual",
+      "localizations": {
+        "en": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "New Transaction in %@"
+          }
+        }
+      }
+    },
+    "New Transaction in %lld Accounts": {
+      "comment": "Undo name: one transaction added, moved between accounts (D198). %lld is the number of accounts.",
+      "extractionState": "manual",
+      "localizations": {
+        "en": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "New Transaction in %#@accounts@"
+          },
+          "substitutions": {
+            "accounts": {
+              "argNum": 1,
+              "formatSpecifier": "lld",
+              "variations": {
+                "plural": {
+                  "one": {
+                    "stringUnit": {
+                      "state": "translated",
+                      "value": "%arg Account"
+                    }
+                  },
+                  "other": {
+                    "stringUnit": {
+                      "state": "translated",
+                      "value": "%arg Accounts"
+                    }
+                  }
+                }
+              }
+            }
+          }
+        }
+      }
+    },
+    "New Transfer from %1$@ to %2$@": {
+      "comment": "Undo name: one transfer added, with its two accounts (D198, D166.2). %1$@ is the source account, %2$@ the destination.",
+      "extractionState": "manual",
+      "localizations": {
+        "en": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "New Transfer from %1$@ to %2$@"
+          }
+        }
+      }
+    },
+    "New Transfer in %@": {
+      "comment": "Undo name: one transfer added when only one of its accounts still exists (D198). %@ is the account name.",
+      "extractionState": "manual",
+      "localizations": {
+        "en": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "New Transfer in %@"
+          }
+        }
+      }
+    },
+    "New Transfer in %lld Accounts": {
+      "comment": "Undo name: one transfer added that changed its accounts, counting every account before and after (D198, D166.3). %lld is the number of accounts.",
+      "extractionState": "manual",
+      "localizations": {
+        "en": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "New Transfer in %#@accounts@"
+          },
+          "substitutions": {
+            "accounts": {
+              "argNum": 1,
+              "formatSpecifier": "lld",
+              "variations": {
+                "plural": {
+                  "one": {
+                    "stringUnit": {
+                      "state": "translated",
+                      "value": "%arg Account"
+                    }
+                  },
+                  "other": {
+                    "stringUnit": {
+                      "state": "translated",
+                      "value": "%arg Accounts"
+                    }
+                  }
+                }
+              }
+            }
+          }
+        }
+      }
+    },
+    "Redid %@": {
+      "comment": "VoiceOver announcement after Redo. %@ is the Redo name, such as \"Delete Transaction\".",
+      "extractionState": "manual",
+      "localizations": {
+        "en": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Redid %@"
+          }
+        }
+      }
+    },
+    "Restored %@": {
+      "comment": "Off-screen notice after Undo brings back a deleted account. %@ is the account's name.",
+      "extractionState": "manual",
+      "localizations": {
+        "en": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Restored %@"
+          }
+        }
+      }
+    },
+    "Restored %lld transactions": {
+      "comment": "Off-screen notice after Undo or Redo brings back transactions in an account not on screen. %lld is how many; \" in <account>\" follows.",
+      "extractionState": "manual",
+      "localizations": {
+        "en": {
+          "variations": {
+            "plural": {
+              "one": {
+                "stringUnit": {
+                  "state": "translated",
+                  "value": "Restored %lld transaction"
+                }
+              },
+              "other": {
+                "stringUnit": {
+                  "state": "translated",
+                  "value": "Restored %lld transactions"
+                }
+              }
+            }
+          }
+        }
+      }
+    },
+    "Something went wrong saving your change. Please try again.": {
+      "comment": "Error message: saving, deleting, undoing or redoing a transaction failed.",
+      "extractionState": "manual",
+      "localizations": {
+        "en": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Something went wrong saving your change. Please try again."
+          }
+        }
+      }
+    },
+    "The account": {
+      "comment": "Alert message subject when an account's name is unknown.",
+      "extractionState": "manual",
+      "localizations": {
+        "en": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "The account"
+          }
+        }
+      }
+    },
+    "The transaction": {
+      "comment": "Alert message subject when a transaction has no payee or description.",
+      "extractionState": "manual",
+      "localizations": {
+        "en": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "The transaction"
+          }
+        }
+      }
+    },
+    "The transfer": {
+      "comment": "Alert message subject: a transfer with no payee or description.",
+      "extractionState": "manual",
+      "localizations": {
+        "en": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "The transfer"
+          }
+        }
+      }
+    },
+    "This change was removed from Undo history.": {
+      "comment": "Alert line under the failure message: the failed Undo or Redo step was dropped (D193).",
+      "extractionState": "manual",
+      "localizations": {
+        "en": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "This change was removed from Undo history."
+          }
+        }
+      }
+    },
+    "Undid %@": {
+      "comment": "VoiceOver announcement after Undo. %@ is the Undo name, such as \"Delete Transaction in Household Card\".",
+      "extractionState": "manual",
+      "localizations": {
+        "en": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Undid %@"
+          }
+        }
+      }
+    },
+    "Updated %lld transactions": {
+      "comment": "Off-screen notice after Undo or Redo of an edit in an account not on screen. %lld is how many; \" in <account>\" follows.",
+      "extractionState": "manual",
+      "localizations": {
+        "en": {
+          "variations": {
+            "plural": {
+              "one": {
+                "stringUnit": {
+                  "state": "translated",
+                  "value": "Updated %lld transaction"
+                }
+              },
+              "other": {
+                "stringUnit": {
+                  "state": "translated",
+                  "value": "Updated %lld transactions"
+                }
+              }
+            }
+          }
+        }
+      }
+    },
+    "Your change was saved, but couldn't be read back, so it can't be undone.": {
+      "comment": "Alert message: a change was saved, but couldn't be read back, so it has no Undo step.",
+      "extractionState": "manual",
+      "localizations": {
+        "en": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Your change was saved, but couldn't be read back, so it can't be undone."
+          }
+        }
+      }
+    }
+  },
+  "version": "1.0"
+}

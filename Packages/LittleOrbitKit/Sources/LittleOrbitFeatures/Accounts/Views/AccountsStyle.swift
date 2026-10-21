@@ -9,6 +9,7 @@
             case .neutral: Color(ThemeColor.labelPrimary)
             case .positive: Color(ThemeColor.moneyPositive)
             case .negative: Color(ThemeColor.moneyNegative)
+            case .transfer: Color(ThemeColor.moneyTransfer)
             }
         }
     }

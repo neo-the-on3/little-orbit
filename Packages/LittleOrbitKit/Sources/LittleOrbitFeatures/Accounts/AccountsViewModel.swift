@@ -167,13 +167,17 @@ public final class AccountsViewModel {
         }
     }
 
-    /// Deletes the account with its transactions, transfers in or out, and their attachments (D19).
-    public func confirmDelete() {
+    /// Deletes the account with its transactions, transfers in or out, and their attachments (D19), and
+    /// returns the change to record as one step, "Undo Delete Account …" (#93). `nil` if it failed.
+    @discardableResult
+    public func confirmDelete() -> TransactionChange? {
         guard let prompt = deletePrompt else {
-            return
+            return nil
         }
         deletePrompt = nil
-        perform { try deleteAccount.delete(prompt.accountID) }
+        var change: TransactionChange?
+        perform { change = .removedAccount(try deleteAccount.delete(prompt.accountID)) }
+        return change
     }
 
     /// The safer default in the delete confirmation.

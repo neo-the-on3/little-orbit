@@ -304,7 +304,7 @@ struct AccountsViewModelTests {
         #expect(prompt.title == "Delete “Everyday Savings”?")
         #expect(
             prompt.message
-                == "This deletes 120 transactions, including 3 transfers to or from other accounts whose balances will change. Attachments are deleted too. This can't be undone. Hide it instead to keep everything; hidden accounts still count toward net wealth."
+                == "This deletes 120 transactions, including 3 transfers to or from other accounts whose balances will change. Attachments are deleted too. You can undo this. Hide it instead to keep everything; hidden accounts still count toward net wealth."
         )
         #expect(prompt.hideTitle == "Hide Account")
         #expect(prompt.deleteTitle == "Delete Account")
