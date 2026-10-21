@@ -4,6 +4,7 @@ import PackageDescription
 
 let package = Package(
     name: "LittleOrbitKit",
+    defaultLocalization: "en",
     platforms: [
         .iOS(.v27),
         .macOS(.v27),
@@ -33,6 +34,8 @@ let package = Package(
         .target(
             name: "LittleOrbitFeatures",
             dependencies: ["LittleOrbitDomain", "LittleOrbitTheme"],
+            // The String Catalog for text the view models build (`FeatureText`).
+            resources: [.process("Resources")],
         ),
         .testTarget(
             name: "LittleOrbitCoreTests",

@@ -196,7 +196,8 @@ public struct NetWealthLine: Identifiable, Equatable, Sendable {
     public var id: String { currencyCode }
 }
 
-/// The delete confirmation (D19): counts, the transfer warning, and Hide as the default action.
+/// The delete confirmation (D19): counts, the transfer warning, and Hide as the default action. Delete is
+/// never the default (D165.2). The delete is one Undo step in the app-wide history (#93).
 public struct AccountDeletePrompt: Identifiable, Equatable, Sendable {
     public var accountID: UUID
     public var title: String
@@ -219,6 +220,6 @@ public struct AccountDeletePrompt: Identifiable, Equatable, Sendable {
         }
         message =
             first
-            + ". Attachments are deleted too. This can't be undone. Hide it instead to keep everything; hidden accounts still count toward net wealth."
+            + ". Attachments are deleted too. You can undo this. Hide it instead to keep everything; hidden accounts still count toward net wealth."
     }
 }

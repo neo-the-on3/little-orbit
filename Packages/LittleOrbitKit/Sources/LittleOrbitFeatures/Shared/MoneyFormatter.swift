@@ -40,6 +40,8 @@ public enum AmountTone: Sendable, Equatable {
     case neutral
     case positive
     case negative
+    /// Transfers: `money/transfer`, never income or expense (D25).
+    case transfer
 }
 
 /// Count badges are hidden at 0 and cap at "99+" (D104).
