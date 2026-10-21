@@ -12,27 +12,41 @@ import SwiftUI
     /// never opens the store again. Views and view models only see the use-case protocols.
     @MainActor
     enum AppComposition {
-        static func make() -> Result<AccountsFeature, any Error> {
-            Result { () throws -> AccountsFeature in
+        static func make() -> Result<AppFeatures, any Error> {
+            Result { () throws -> AppFeatures in
                 // Application Support/<bundle id>/LittleOrbit.store (or an App Group container when one is
                 // configured), never default.store.
                 let repository = try LittleOrbitStore.makeRepository(configuration: .appLocal())
-                return AccountsFeature(useCases: AccountUseCases(repository: repository))
+                return AppFeatures(repository: repository)
             }
+        }
+    }
+
+    /// The features the root view shows, wired over one repository.
+    @MainActor
+    struct AppFeatures {
+        let accounts: AccountsFeature
+        let transactions: TransactionsFeature
+
+        init(repository: any LedgerRepository) {
+            let transactionUseCases = TransactionUseCases(repository: repository)
+            transactions = TransactionsFeature(useCases: transactionUseCases)
+            // Account delete returns its change; the screens record it in the transactions' history (#93).
+            accounts = AccountsFeature(useCases: AccountUseCases(repository: repository))
         }
     }
 
     /// Shows the Accounts home (iOS) or window (macOS) for what the composition root built.
     struct RootView: View {
-        let accounts: Result<AccountsFeature, any Error>
+        let features: Result<AppFeatures, any Error>
 
         var body: some View {
-            switch accounts {
-            case .success(let feature):
+            switch features {
+            case .success(let features):
                 #if os(macOS)
-                    AccountsSplitView(feature: feature)
+                    AccountsSplitView(feature: features.accounts, transactions: features.transactions)
                 #else
-                    AccountsHomeView(feature: feature)
+                    AccountsHomeView(feature: features.accounts, transactions: features.transactions)
                 #endif
             case .failure(let error):
                 ContentUnavailableView(
@@ -45,7 +59,7 @@ import SwiftUI
     }
 
     #Preview {
-        RootView(accounts: .success(AccountsFeature(useCases: AccountUseCases(repository: InMemoryLedgerRepository()))))
+        RootView(features: .success(AppFeatures(repository: InMemoryLedgerRepository())))
     }
 #else
     /// watchOS stays a placeholder until its own issue; Accounts on the watch is out of scope for #22.

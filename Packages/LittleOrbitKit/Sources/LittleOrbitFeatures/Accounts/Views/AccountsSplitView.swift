@@ -9,12 +9,33 @@
         @State private var model: AccountsViewModel
         @State private var selection: AccountsRoute? = .allTransactions
         @State private var formSheet: AccountFormSheet?
+        /// This window's own pending Delete Account prompt; never on the shared model (#87 B3).
+        @State private var deleteConfirmation: AccountDeleteConfirmation
+        /// This window's undo history; a new window starts with an empty one, and closing it drops it (D187.8).
+        @State private var undoSlot = WindowUndoSlot()
         private let feature: AccountsFeature
+        private let transactions: TransactionsFeature
 
-        /// `feature` comes from the composition root, which built it once with the injected use cases.
-        public init(feature: AccountsFeature) {
+        private var undoHistory: WindowUndoHistory {
+            undoSlot.history(from: transactions)
+        }
+
+        /// Both features come from the composition root, which built them once with the injected use cases.
+        public init(feature: AccountsFeature, transactions: TransactionsFeature) {
             self.feature = feature
+            self.transactions = transactions
             _model = State(initialValue: feature.accounts)
+            _deleteConfirmation = State(initialValue: AccountDeleteConfirmation(model: feature.accounts))
+        }
+
+        /// After an account delete: the selection leaves it, and the step goes into this window's history (#93,
+        /// D187.9). macOS
+        /// shows no toast (D164.1); the Edit menu has the Undo.
+        private func deleted(_ change: TransactionChange) {
+            if let id = change.accountIDs.first, selection == .account(id) {
+                selection = .allTransactions
+            }
+            undoHistory.record(change)
         }
 
         public var body: some View {
@@ -41,27 +62,30 @@
                         model.load()
                         selection = .account(account.id)
                     },
-                    onDelete: { model.requestDelete(accountID: $0) },
+                    onDelete: { deleteConfirmation.request(accountID: $0) },
                 )
-            }
-            .alert(
-                model.deletePrompt?.title ?? "",
-                isPresented: Binding(get: { model.deletePrompt != nil }, set: { _ in }),
-                presenting: model.deletePrompt,
-            ) { prompt in
-                Button(prompt.hideTitle) { model.hideInsteadOfDeleting() }
-                    .keyboardShortcut(.defaultAction)
-                Button(prompt.deleteTitle, role: .destructive) {
-                    if selection == .account(prompt.accountID) {
-                        selection = .allTransactions
-                    }
-                    model.confirmDelete()
+                // Delete Account… confirms over the sheet, as on iPad (Tester's #87 recheck).
+                .accountDeleteAlert(deleteConfirmation, model: model, onHidden: { formSheet = nil }) { _, change in
+                    formSheet = nil
+                    deleted(change)
                 }
-                Button(prompt.cancelTitle, role: .cancel) { model.cancelDelete() }
-            } message: { prompt in
-                Text(prompt.message)
+            }
+            // From the sidebar's context menu; the edit sheet shows its own.
+            .accountDeleteAlert(deleteConfirmation, model: model, isActive: formSheet == nil) { _, change in
+                deleted(change)
             }
             .task { model.load() }
+            // Balances follow any change to the shared store, from any window (#87 B1, D187.4).
+            .onChange(of: transactions.updates.revision) { model.load() }
+            // A screen that isn't one account shows no transactions yet, so the toast and notice say where (D165.1).
+            .onChange(of: selection, initial: true) {
+                if case .account = selection {
+                    return
+                }
+                undoHistory.setScreen(.list(visible: []))
+            }
+            // This window's own history; Show on the off-screen notice selects the account (D164.3).
+            .undoWindow(undoHistory) { selection = .account($0) }
         }
 
         // MARK: - Sidebar
@@ -144,7 +168,7 @@
                 model.setExcluded(!row.isExcluded, accountID: row.id)
             }
             Divider()
-            Button("Delete Account…", role: .destructive) { model.requestDelete(accountID: row.id) }
+            Button("Delete Account…", role: .destructive) { deleteConfirmation.request(accountID: row.id) }
         }
 
         @ViewBuilder private var netWealthFooter: some View {
@@ -174,9 +198,13 @@
             switch selection {
             case .account(let id):
                 if let row = model.row(id: id) {
-                    AccountDetailView(row: row) {
-                        formSheet = AccountFormSheet(model: feature.makeForm(.edit(id)))
-                    }
+                    AccountDetailView(
+                        row: row,
+                        transactions: transactions,
+                        onEdit: { formSheet = AccountFormSheet(model: feature.makeForm(.edit(id))) },
+                        onChange: { model.load() },
+                    )
+                    .id(id)
                 } else {
                     noSelection
                 }

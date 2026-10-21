@@ -8,18 +8,39 @@
     public struct AccountsHomeView: View {
         @State private var model: AccountsViewModel
         @State private var formSheet: AccountFormSheet?
-        @State private var transactionAccount: AccountRowModel?
+        /// This window's own pending Delete Account prompt; never on the shared model (#87 B3).
+        @State private var deleteConfirmation: AccountDeleteConfirmation
+        @State private var transactionSheet: TransactionFormSheet?
+        /// Show on the off-screen undo notice pushes an account (D164.3); nothing else navigates for undo.
+        @State private var path: [AccountsRoute] = []
+        /// This window's undo history; a new window starts with an empty one, and closing it drops it (D187.8).
+        @State private var undoSlot = WindowUndoSlot()
         @Environment(\.dynamicTypeSize) private var dynamicTypeSize
         private let feature: AccountsFeature
+        private let transactions: TransactionsFeature
 
-        /// `feature` comes from the composition root, which built it once with the injected use cases.
-        public init(feature: AccountsFeature) {
+        private var undoHistory: WindowUndoHistory {
+            undoSlot.history(from: transactions)
+        }
+
+        /// Both features come from the composition root, which built them once with the injected use cases.
+        public init(feature: AccountsFeature, transactions: TransactionsFeature) {
             self.feature = feature
+            self.transactions = transactions
             _model = State(initialValue: feature.accounts)
+            _deleteConfirmation = State(initialValue: AccountDeleteConfirmation(model: feature.accounts))
+        }
+
+        /// After an account delete: its page closes, back to the list, and the list shows the D164 toast with
+        /// Undo, which restores the account and its transactions in one step (UI Designer's D170, U3).
+        private func deleted(_ name: String, _ change: TransactionChange) {
+            path.removeAll { $0 == .account(change.accountIDs.first ?? UUID()) }
+            let step = undoHistory.record(change)
+            undoHistory.showToast(UndoToast.message(deletedAccount: name), for: step)
         }
 
         public var body: some View {
-            NavigationStack {
+            NavigationStack(path: $path) {
                 List {
                     homeSection
                     if model.isFirstRun {
@@ -38,40 +59,56 @@
                 .navigationTitle("Accounts")
                 .toolbar { toolbar }
                 .navigationDestination(for: AccountsRoute.self) { destination(for: $0) }
+                // The home list isn't one account and shows no transactions, so the toast and notice say where (D165.1).
+                .onAppear { undoHistory.setScreen(.list(visible: [])) }
+                // Back from an account on iPhone, the list is on screen again (D187.3).
+                .onChange(of: path) {
+                    if path.isEmpty {
+                        undoHistory.setScreen(.list(visible: []))
+                    }
+                }
+                // The account delete toast, above the bottom safe area (D164.2, D170 U3).
+                .safeAreaInset(edge: .bottom) {
+                    if let toast = undoHistory.toast, path.isEmpty {
+                        UndoToastView(
+                            toast: toast,
+                            onUndo: { undoHistory.undoToast() },
+                            onTimeout: { undoHistory.dismissToast() },
+                        )
+                        .padding(.bottom, Spacing.space2)
+                        .transition(.move(edge: .bottom).combined(with: .opacity))
+                    }
+                }
+                .animation(.default, value: undoHistory.toast)
             }
+            .undoWindow(undoHistory) { path = [.account($0)] }
             .sheet(item: $formSheet) { sheet in
                 AccountFormView(
                     model: sheet.model,
                     onSaved: { _ in model.load() },
-                    onDelete: { model.requestDelete(accountID: $0) },
+                    onDelete: { deleteConfirmation.request(accountID: $0) },
                 )
-            }
-            .sheet(item: $transactionAccount) { row in
-                NavigationStack {
-                    UpcomingFeatureView(
-                        title: "New Transaction",
-                        systemImage: "plus.circle",
-                        message: "Adding a transaction to \(row.name) arrives with the transaction entry sheet.",
-                    )
-                    .toolbar {
-                        ToolbarItem(placement: .cancellationAction) {
-                            Button("Cancel") { transactionAccount = nil }
-                        }
-                    }
+                // Delete Account… confirms over the sheet (Tester's #87 recheck, bug 3).
+                .accountDeleteAlert(deleteConfirmation, model: model, onHidden: { formSheet = nil }) { name, change in
+                    formSheet = nil
+                    deleted(name, change)
                 }
             }
-            .alert(
-                model.deletePrompt?.title ?? "",
-                isPresented: Binding(get: { model.deletePrompt != nil }, set: { _ in }),
-                presenting: model.deletePrompt,
-            ) { prompt in
-                Button(prompt.hideTitle) { model.hideInsteadOfDeleting() }
-                Button(prompt.deleteTitle, role: .destructive) { model.confirmDelete() }
-                Button(prompt.cancelTitle, role: .cancel) { model.cancelDelete() }
-            } message: { prompt in
-                Text(prompt.message)
+            .sheet(item: $transactionSheet) { sheet in
+                // #23: the entry sheet, opened from a row's swipe or context menu.
+                TransactionFormView(
+                    model: sheet.model,
+                    onSaved: { change in
+                        undoHistory.record(change)
+                        model.load()
+                    },
+                )
             }
+            // From a row's context menu or swipe; the edit sheet shows its own (bug 3).
+            .accountDeleteAlert(deleteConfirmation, model: model, isActive: formSheet == nil, onDeleted: deleted)
             .task { model.load() }
+            // Balances follow any change to the shared store, from any window (#87 B1, D187.4).
+            .onChange(of: transactions.updates.revision) { model.load() }
         }
 
         // MARK: - Sections
@@ -151,7 +188,9 @@
                         .swipeActions(edge: .leading) {
                             if model.allowsRowActions {
                                 Button {
-                                    transactionAccount = row
+                                    transactionSheet = TransactionFormSheet(
+                                        model: transactions.makeForm(.new(accountID: row.id))
+                                    )
                                 } label: {
                                     Label("Add Transaction", systemImage: "plus")
                                 }
@@ -187,7 +226,7 @@
                 Label("Edit Account", systemImage: "pencil")
             }
             Button {
-                transactionAccount = row
+                transactionSheet = TransactionFormSheet(model: transactions.makeForm(.new(accountID: row.id)))
             } label: {
                 Label("Add Transaction", systemImage: "plus")
             }
@@ -209,7 +248,7 @@
             }
             Divider()
             Button(role: .destructive) {
-                model.requestDelete(accountID: row.id)
+                deleteConfirmation.request(accountID: row.id)
             } label: {
                 Label("Delete Account…", systemImage: "trash")
             }
@@ -266,8 +305,11 @@
                 if let row = model.row(id: id) {
                     AccountDetailView(
                         row: row,
+                        transactions: transactions,
                         onEdit: { formSheet = AccountFormSheet(model: feature.makeForm(.edit(id))) },
+                        onChange: { model.load() },
                     )
+                    .id(id)
                 } else {
                     UpcomingFeatureView(
                         title: "Account",

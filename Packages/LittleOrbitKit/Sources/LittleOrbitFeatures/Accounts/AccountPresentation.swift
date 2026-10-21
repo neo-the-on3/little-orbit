@@ -197,7 +197,7 @@ public struct NetWealthLine: Identifiable, Equatable, Sendable {
 }
 
 /// The delete confirmation (D19): counts, the transfer warning, and Hide as the default action. Delete is
-/// never the default (D165.2). The delete is one Undo step in the app-wide history (#93).
+/// never the default (D165.2). The delete is one Undo step in that window's history (#93, D187.2).
 public struct AccountDeletePrompt: Identifiable, Equatable, Sendable {
     public var accountID: UUID
     public var title: String

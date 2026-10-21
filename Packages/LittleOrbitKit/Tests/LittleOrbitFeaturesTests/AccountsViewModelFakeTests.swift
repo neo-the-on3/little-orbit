@@ -47,6 +47,7 @@ struct AccountsViewModelFakeTests {
             totalCount: 2,
         )
         let model = model(fake)
+        let confirmation = AccountDeleteConfirmation(model: model)
         model.move(in: .assets, fromOffsets: IndexSet(integer: 1), toOffset: 0)
         #expect(
             fake.moves == [
@@ -55,9 +56,9 @@ struct AccountsViewModelFakeTests {
         )
         model.setHidden(true, accountID: second.id)
         #expect(fake.updatedIDs == [second.id])
-        model.requestDelete(accountID: first.id)
-        #expect(model.deletePrompt != nil)
-        model.confirmDelete()
+        confirmation.request(accountID: first.id)
+        #expect(confirmation.prompt != nil)
+        confirmation.confirm()
         #expect(fake.deletedIDs == [first.id])
     }
 }
