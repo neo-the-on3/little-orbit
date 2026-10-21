@@ -795,6 +795,18 @@
         }
       }
     },
+    "Mixed types": {
+      "comment": "Bulk edit: Category is off because the rows mix kinds.",
+      "extractionState": "manual",
+      "localizations": {
+        "en": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Mixed types"
+          }
+        }
+      }
+    },
     "New Account": {
       "comment": "Undo name: an account added.",
       "extractionState": "manual",
@@ -919,6 +931,18 @@
                 }
               }
             }
+          }
+        }
+      }
+    },
+    "Payee isn't applied to transfers": {
+      "comment": "Bulk edit: under Payee when the selection includes a transfer.",
+      "extractionState": "manual",
+      "localizations": {
+        "en": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Payee isn't applied to transfers"
           }
         }
       }
@@ -1051,6 +1075,18 @@
           "stringUnit": {
             "state": "translated",
             "value": "This change was removed from Undo history."
+          }
+        }
+      }
+    },
+    "Transfers don't have a category": {
+      "comment": "Bulk edit: Category is off because every row is a transfer.",
+      "extractionState": "manual",
+      "localizations": {
+        "en": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Transfers don't have a category"
           }
         }
       }
