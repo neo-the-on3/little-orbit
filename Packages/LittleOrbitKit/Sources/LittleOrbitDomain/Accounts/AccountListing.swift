@@ -36,17 +36,21 @@ public struct AccountListing: Equatable, Sendable {
     public var hiddenCount: Int
     /// Every account, hidden ones included.
     public var totalCount: Int
+    /// Whether any live transaction exists, for the home rows' empty subtitles.
+    public var hasAnyTransaction: Bool
 
     public init(
         assets: [AccountSummary] = [],
         credit: [AccountSummary] = [],
         hiddenCount: Int = 0,
         totalCount: Int = 0,
+        hasAnyTransaction: Bool = false,
     ) {
         self.assets = assets
         self.credit = credit
         self.hiddenCount = hiddenCount
         self.totalCount = totalCount
+        self.hasAnyTransaction = hasAnyTransaction
     }
 
     /// No accounts at all: the first-run state.
@@ -76,6 +80,7 @@ public struct ListAccounts: Sendable {
         var listing = AccountListing(
             hiddenCount: live.filter(\.isHidden).count,
             totalCount: live.count,
+            hasAnyTransaction: transactions.contains { $0.deletedAt == nil },
         )
         for account in AccountOrder.sorted(live) where showHidden || !account.isHidden {
             let balance = try LedgerBook.balance(of: account.id, in: snapshot)
