@@ -96,7 +96,7 @@ fi
 '''
 
 [tasks.test]
-description = "Run swift test for each Swift package (Linux: pinned Swift 6.4.1; macOS: xcrun swift)."
+description = "Run swift test for each Swift package (Linux: pinned Swift 6.4.1, parallel, JUnit in test-results/; macOS: xcrun swift)."
 run = '''
 #!/usr/bin/env bash
 set -euo pipefail
@@ -124,8 +124,25 @@ if [ -z "${packages[*]:-}" ]; then
 fi
 
 for package_dir in "${packages[@]}"; do
-  echo "${swift[*]} test --package-path ${package_dir}"
-  "${swift[@]}" test --package-path "$package_dir"
+  args=(test --package-path "$package_dir")
+  if [ "$(uname -s)" != "Darwin" ]; then
+    # Swift 6.4.1 writes XCTest cases into --xunit-output only for the parallel
+    # runner. A serial run leaves an empty *-swift-testing.xml file and no
+    # XCTest report (swiftlang/swift-package-manager#9961).
+    name="$(basename "$package_dir")"
+    mkdir -p test-results
+    report="test-results/${name}.xml"
+    args+=(--parallel --xunit-output "$report")
+  fi
+  echo "${swift[*]} ${args[*]}"
+  "${swift[@]}" "${args[@]}"
+  if [ "$(uname -s)" != "Darwin" ]; then
+    if [ ! -s "$report" ] || ! grep -q "<testcase" "$report"; then
+      echo "error: ${report} has no XCTest cases." >&2
+      echo "Swift 6.4.1 writes that file only when tests run with --parallel." >&2
+      exit 1
+    fi
+  fi
 done
 '''
 
