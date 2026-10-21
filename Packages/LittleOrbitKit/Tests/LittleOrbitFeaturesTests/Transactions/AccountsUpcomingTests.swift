@@ -40,4 +40,34 @@ struct AccountsUpcomingTests {
         later.load()
         #expect(later.row(id: F.savingsID)?.balanceText == "₹7,500.00")
     }
+
+    @Test("Undo from the home screen reverts a new transaction and refreshes balances")
+    func undoFromHome() throws {
+        let repository = try F.repository()
+        let model = AccountsViewModel(
+            useCases: AccountUseCases(
+                repository: repository,
+                defaultCurrency: "INR",
+                timeZone: F.zone,
+                now: { F.now },
+            ),
+            locale: F.india,
+        )
+        let form = TransactionFormViewModel(
+            useCases: TransactionUseCases(repository: repository),
+            mode: .new(accountID: F.walletID),
+            locale: F.india,
+            timeZone: F.zone,
+            now: { F.now },
+        )
+        form.press(.digit(5))
+        form.press(.digit(0))
+        let change = try #require(form.save())
+        model.load()
+        #expect(model.row(id: F.walletID)?.balanceText == "₹950.00")
+        let window = UndoTestSupport.undo(change, useCases: TransactionUseCases(repository: repository))
+        model.load()
+        #expect(window.history.canRedo)
+        #expect(model.row(id: F.walletID)?.balanceText == "₹1,000.00")
+    }
 }

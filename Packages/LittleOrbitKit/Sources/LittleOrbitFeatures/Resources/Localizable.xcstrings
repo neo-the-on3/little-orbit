@@ -59,6 +59,18 @@
         }
       }
     },
+    "%1$@, under %2$@": {
+      "comment": "VoiceOver value of the category picker for a subcategory, so its parent is heard: \"Groceries, under Food\". %1$@ is the subcategory, %2$@ its parent category.",
+      "extractionState": "manual",
+      "localizations": {
+        "en": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "%1$@, under %2$@"
+          }
+        }
+      }
+    },
     "%@ was changed in another window. Nothing was changed.": {
       "comment": "Alert message: Undo or Redo of a record another window changed since. %@ is the transaction's payee or description, or an account name.",
       "extractionState": "manual",
@@ -967,6 +979,30 @@
           "stringUnit": {
             "state": "translated",
             "value": "Something went wrong saving your change. Please try again."
+          }
+        }
+      }
+    },
+    "Text shortened to fit %lld characters": {
+      "comment": "Under the description field after a paste was cut to the character limit.",
+      "extractionState": "manual",
+      "localizations": {
+        "en": {
+          "variations": {
+            "plural": {
+              "one": {
+                "stringUnit": {
+                  "state": "translated",
+                  "value": "Text shortened to fit %lld character"
+                }
+              },
+              "other": {
+                "stringUnit": {
+                  "state": "translated",
+                  "value": "Text shortened to fit %lld characters"
+                }
+              }
+            }
           }
         }
       }
