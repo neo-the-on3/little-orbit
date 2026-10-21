@@ -182,7 +182,7 @@ SwiftLint reads `.swiftlint.yml` and swift-format reads `.swift-format`. The tas
 
 `.github/workflows/ci.yml` runs on pull requests and on pushes to `main`. Linux jobs install the tools in this `mise.toml` with mise. The macOS job selects Xcode 27.2 first, so `mise install` and `mise run test` use that Xcode (`xcrun swift`). Tool versions stay in this file.
 
-The workflow uses the standard `ubuntu-latest` and `xcode-27` runners. It does not set branch protection. On a pull request the checks are `CI / <job name>`. The status-check name to require later is the job name.
+The workflow uses the standard `ubuntu-latest` and `xcode-27` runners. On a pull request the checks are `CI / <job name>`. All five jobs below are required status checks on `main`, and a branch must be up to date with `main` before it merges.
 
 | Job name | Runner | What it runs |
 | --- | --- | --- |
@@ -202,4 +202,9 @@ Validation uses `xcprojformatter` on JSON `project.xcproj` files. If that format
 
 ## Contributing
 
-Read [CONTRIBUTING.md](CONTRIBUTING.md) before opening a pull request. It covers the trunk-based flow, Conventional Commits, Given-When-Then acceptance criteria, the `Follow-up to #N` rule, labels, review, and testing. New pull requests start from the [pull request template](.github/pull_request_template.md).
+Read [CONTRIBUTING.md](CONTRIBUTING.md) before opening a pull request. It covers the trunk-based flow, Conventional Commits, Given-When-Then acceptance criteria, the `Follow-up to #N` rule, labels, review, and testing. New pull requests start from the [pull request template](.github/pull_request_template.md). In short:
+
+- Every change starts from an issue and goes through a pull request that says `Closes #N`. Nothing is committed or merged directly to `main`.
+- Branches are short-lived and rebased on `main`. Pull requests are rebase-merged after the owner approves, once the five checks pass.
+- Commits follow [Conventional Commits](https://www.conventionalcommits.org/en/v1.0.0/), such as `feat(theme): ...`, `fix: ...`, `chore(ci): ...` or `docs: ...`, and each pull request is a short series of logical commits.
+- Cursor Bugbot reviews pull requests, and Tester verifies app changes on the iOS and watchOS simulators and on macOS.
