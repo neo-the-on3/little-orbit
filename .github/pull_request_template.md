@@ -32,7 +32,7 @@ Closes #
 
 ## Screenshots
 
-<!-- Light and Dark, and a large Dynamic Type size where it matters. Simulator screenshots are fine. -->
+<!-- Required for UI changes when you already have a capture: Light and Dark, and a large Dynamic Type size where it matters. Simulator or CI screenshots are fine; don't export from Figma just for this. -->
 
 ## Testing
 
@@ -43,6 +43,7 @@ Closes #
 ## Checklist
 
 - [ ] The description starts with `Author: <Role>`
+- [ ] UI changes include a screenshot (simulator or CI capture)
 - [ ] The pull request references its issue (`Closes #N`), and the issue's scope was not edited
 - [ ] Commits follow Conventional Commits and are logical, with fix-ups folded in
 - [ ] `mise run lint` and `mise run format-check` pass
