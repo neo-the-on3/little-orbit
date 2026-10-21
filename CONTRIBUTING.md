@@ -132,15 +132,17 @@ Shared code lives in the local Swift package `Packages/LittleOrbitKit`. The Xcod
 | Layer | Module | Holds | May depend on |
 | --- | --- | --- | --- |
 | Core | `LittleOrbitCore` | Small shared utilities | nothing |
-| Domain | `LittleOrbitDomain` | Entities and business rules in plain Swift, with no SwiftData or SwiftUI | Core |
-| Data | `LittleOrbitPersistence` | SwiftData records, mapping to domain types, repository implementations | Domain, Core |
+| Domain | `LittleOrbitDomain` | Entities, business rules, the `LedgerRepository` port, and use-case protocols with their default implementations, in plain Swift with no SwiftData or SwiftUI | Core |
+| Data | `LittleOrbitPersistence` | SwiftData records, mapping to domain types, and the `LedgerRepository` implementations (SwiftData and in-memory); the store location | Domain, Core |
+| Presentation | `LittleOrbitFeatures` | One folder per feature: `@Observable`, `@MainActor` view models, and SwiftUI views behind `canImport(SwiftUI)` | Domain, Theme, Core |
 | Presentation | `LittleOrbitTheme` | Design tokens and SwiftUI styling | Core |
-| Presentation | App targets in `Apps/` | SwiftUI views, one `@Observable`, `@MainActor` view model per screen | any module |
+| Composition root | App targets in `Apps/` | App entry points that open the store once and wire the concrete types together | any module |
 
-- Dependencies point inward. Domain never imports Persistence, SwiftData, or SwiftUI. Theme never imports Domain or Persistence.
-- Views read and write data through view models. View models talk to repository protocols, not to SwiftData directly, so storage can change later. Avoid `@Query` in views.
-- Add a thin use-case type only where there is real logic to hold.
-- Repository protocols belong in Domain. `LedgerRepository` currently lives in Persistence and moves to Domain in a follow-up. A `Features` module for view models arrives with the first screens.
+- Dependencies point inward. Domain never imports Persistence, SwiftData, or SwiftUI. Features never imports Persistence. Theme never imports Domain or Persistence.
+- View models depend only on use-case protocols (for example `ListAccountsUseCase` or `SaveAccountUseCase`), passed in through their initializers. They never see `LedgerRepository` or a concrete type. Avoid `@Query` in views.
+- Use cases hold the business logic and depend on the `LedgerRepository` protocol. Their `Default…` implementations live next to the protocols in Domain.
+- The App target is the composition root. It opens the store once at App level, builds the repository, the use cases and each feature's view models, and passes them down (see `AppComposition` in `Apps/Shared/RootView.swift`).
+- Tests: view models against fake use cases (or the real use cases over the in-memory repository), use cases against a fake repository.
 
 ## Pull request template
 
