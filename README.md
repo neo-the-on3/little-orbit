@@ -45,15 +45,15 @@ That builds and tests the shared package on macOS or Linux. On a Mac, select Xco
 ## Layout
 
 - `LittleOrbit.xcodeproj` — iOS, macOS, and watchOS app targets, plus shared schemes
-- `Apps/` — SwiftUI app entry points and the placeholder root view
-- `Packages/LittleOrbitKit` — `LittleOrbitCore`, `LittleOrbitDomain`, `LittleOrbitPersistence`, and `LittleOrbitTheme`, each with a test target
+- `Apps/` — SwiftUI app entry points and the composition root, which opens the store once and wires the use cases into the features
+- `Packages/LittleOrbitKit` — `LittleOrbitCore`, `LittleOrbitDomain`, `LittleOrbitPersistence`, `LittleOrbitFeatures`, and `LittleOrbitTheme`, each with a test target
 - `Config/` — bundle IDs, deployment targets, and signing
 - `docs/` — design notes, such as [persistence-migration.md](docs/persistence-migration.md). The design token guide, `docs/design-tokens.md`, arrives once #79 merges.
 - `.github/` — the CI workflow and its setup action
 - `mise.toml`, `mise.lock` — tool pins and tasks
 - `.swiftlint.yml`, `.swift-format` — lint and format rules
 
-The packages follow MVVM with Clean layering. Dependencies point inward: Domain (plain Swift entities and rules) depends only on Core; Persistence (SwiftData) implements storage for Domain; Theme (design tokens) depends only on Core. The apps hold SwiftUI views and their view models.
+The packages follow MVVM with Clean layering. Dependencies point inward: Domain (plain Swift entities, rules, the repository protocol, and the use cases) depends only on Core; Persistence (SwiftData) implements the repository for Domain; Features (view models and SwiftUI views) depends on Domain and Theme, never on Persistence; Theme (design tokens) depends only on Core. View models talk to use-case protocols that the App target injects. See [CONTRIBUTING.md](CONTRIBUTING.md#architecture-mvvm-with-clean-layering).
 
 ## Platforms
 
@@ -125,7 +125,7 @@ swift build
 swift test
 ```
 
-The package builds on Linux. Domain rules and the in-memory repository are platform-independent, so `swift test` covers them here. The SwiftData store is compiled only for iOS, macOS, and watchOS (`#if canImport(SwiftData)`). How a later schema version migrates existing data is documented in [docs/persistence-migration.md](docs/persistence-migration.md). Design tokens from Figma live in `LittleOrbitTheme`; see [docs/design-tokens.md](docs/design-tokens.md). The apps themselves build in Xcode on macOS. On a Mac, run package tests with `mise run test` from the repository root so they use Xcode's Swift. On Linux, that task also writes JUnit XML under `test-results/`. See [Tooling](#tooling).
+The package builds on Linux. Domain rules, the use cases, the view models and the in-memory repository are platform-independent, so `swift test` covers them here. The SwiftData store is compiled only for iOS, macOS, and watchOS (`#if canImport(SwiftData)`). How a later schema version migrates existing data is documented in [docs/persistence-migration.md](docs/persistence-migration.md). Design tokens from Figma live in `LittleOrbitTheme`; see [docs/design-tokens.md](docs/design-tokens.md). The apps themselves build in Xcode on macOS. On a Mac, run package tests with `mise run test` from the repository root so they use Xcode's Swift. On Linux, that task also writes JUnit XML under `test-results/`. See [Tooling](#tooling).
 
 ## Tooling
 
