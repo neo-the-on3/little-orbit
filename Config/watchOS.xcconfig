@@ -4,6 +4,10 @@
 // Standalone watchOS app. Deployment target 27.0. Bundle ID
 // app.littleorbit.watchos plus the optional LITTLEORBIT_BUNDLE_ID_SUFFIX
 // from Signing.xcconfig. Not embedded in the iOS app.
+//
+// The generated Info.plist marks the app Watch-only (WKWatchOnly) because it
+// has no iOS companion. WKRunsIndependentlyOfCompanionApp is for watch apps
+// that do have a companion, and simctl install rejects an app that sets both.
 
 PRODUCT_NAME = LittleOrbitWatch
 PRODUCT_BUNDLE_IDENTIFIER = app.littleorbit.watchos$(LITTLEORBIT_BUNDLE_ID_SUFFIX)
@@ -12,5 +16,5 @@ SDKROOT = watchos
 WATCHOS_DEPLOYMENT_TARGET = 27.0
 TARGETED_DEVICE_FAMILY = 4
 INFOPLIST_KEY_WKApplication = YES
-INFOPLIST_KEY_WKRunsIndependentlyOfCompanionApp = YES
+INFOPLIST_KEY_WKWatchOnly = YES
 LD_RUNPATH_SEARCH_PATHS = $(inherited) @executable_path/Frameworks
