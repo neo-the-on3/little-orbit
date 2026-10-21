@@ -59,6 +59,7 @@
         { "kind": "package", "package": "LittleOrbitKit", "product-name": "LittleOrbitDomain" },
         { "kind": "package", "package": "LittleOrbitKit", "product-name": "LittleOrbitPersistence" },
         { "kind": "package", "package": "LittleOrbitKit", "product-name": "LittleOrbitTheme" },
+        { "kind": "package", "package": "LittleOrbitKit", "product-name": "LittleOrbitFeatures" },
       ],
       "build-phases": [
         "compile-sources",
@@ -73,6 +74,10 @@
         }, {
           "package": "LittleOrbitKit",
           "product-name": "LittleOrbitDomain",
+          "build-phase": { "build-phase": "frameworks" },
+        }, {
+          "package": "LittleOrbitKit",
+          "product-name": "LittleOrbitFeatures",
           "build-phase": { "build-phase": "frameworks" },
         }, {
           "package": "LittleOrbitKit",
@@ -98,6 +103,7 @@
         { "kind": "package", "package": "LittleOrbitKit", "product-name": "LittleOrbitDomain" },
         { "kind": "package", "package": "LittleOrbitKit", "product-name": "LittleOrbitPersistence" },
         { "kind": "package", "package": "LittleOrbitKit", "product-name": "LittleOrbitTheme" },
+        { "kind": "package", "package": "LittleOrbitKit", "product-name": "LittleOrbitFeatures" },
       ],
       "build-phases": [
         "compile-sources",
@@ -112,6 +118,10 @@
         }, {
           "package": "LittleOrbitKit",
           "product-name": "LittleOrbitDomain",
+          "build-phase": { "build-phase": "frameworks" },
+        }, {
+          "package": "LittleOrbitKit",
+          "product-name": "LittleOrbitFeatures",
           "build-phase": { "build-phase": "frameworks" },
         }, {
           "package": "LittleOrbitKit",
