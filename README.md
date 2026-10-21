@@ -67,7 +67,32 @@ The on-screen name is **Little Orbit** on every platform. The watchOS app is sta
 
 `Packages/LittleOrbitKit` declares the same iOS 27, macOS 27, and watchOS 27 floors (`// swift-tools-version: 6.4`).
 
+## Build and run the apps
+
+On a Mac with Xcode 27.2:
+
+1. Open `LittleOrbit.xcodeproj`.
+2. Choose a scheme: `LittleOrbit iOS`, `LittleOrbit macOS`, or `LittleOrbit watchOS`.
+3. Choose a destination: an iPhone or iPad simulator on iOS 27.2, an Apple Watch simulator on watchOS 27.2, or My Mac.
+4. Run (⌘R). Simulator builds don't sign and Mac builds are ad-hoc signed, so no team is needed.
+
+From the command line, find a simulator's UDID and build for it. Use the UDID rather than the name, because a Mac can have two simulators with the same name.
+
+```sh
+xcrun simctl list devices available
+xcodebuild -project LittleOrbit.xcodeproj -scheme 'LittleOrbit iOS' \
+  -destination 'platform=iOS Simulator,id=<udid>' \
+  -derivedDataPath derived-data build CODE_SIGNING_ALLOWED=NO
+xcrun simctl boot <udid>
+xcrun simctl install <udid> derived-data/Build/Products/Debug-iphonesimulator/LittleOrbit.app
+xcrun simctl launch <udid> app.littleorbit.ios
+```
+
+For the watch app, use `-scheme 'LittleOrbit watchOS'`, `platform=watchOS Simulator,id=<udid>`, `Debug-watchsimulator/LittleOrbitWatch.app`, and `app.littleorbit.watchos`. For the Mac app, use `-scheme 'LittleOrbit macOS' -destination 'platform=macOS'`. `mise run build` builds every shared scheme with its default destination.
+
 ## Signing
+
+Device builds are optional; project testing uses simulators and macOS only.
 
 Signing is automatic (`CODE_SIGN_STYLE = Automatic`). `Config/Signing.xcconfig` leaves `LITTLEORBIT_DEVELOPMENT_TEAM` empty and sets `DEVELOPMENT_TEAM` from that variable for the iOS, macOS, and watchOS targets. No Team ID, certificate, or profile is committed.
 
