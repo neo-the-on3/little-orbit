@@ -172,8 +172,9 @@ import LittleOrbitDomain
                 try? file.close()
                 throw BackupError.unreadableFile
             }
+            let entries: [BackupArchiveEntry]
             do {
-                return try Self.entries(of: stream, reading: reading)
+                entries = try Self.entries(of: stream, reading: reading)
             } catch {
                 // The decoder reports a failed read as a bad archive, so the stream's own record decides.
                 if file.readFailed {
@@ -181,6 +182,12 @@ import LittleOrbitDomain
                 }
                 throw error
             }
+            // A header read that fails after the first entry ends the pass the way an unsafe entry does, with no
+            // error, so the record is checked on a normal return too (Tech Architect B5).
+            if file.readFailed {
+                throw BackupError.unreadableFile
+            }
+            return entries
         }
 
         private static func entries(

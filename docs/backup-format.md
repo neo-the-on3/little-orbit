@@ -185,7 +185,8 @@ A picked file that can't be read (an I/O or permission error, or one in iCloud D
 isn't damaged: it shows 'Couldn’t Open Backup', "The file couldn’t be read. Make sure it’s fully downloaded and try
 again. Your data hasn’t changed.", with only OK (D207.2). That covers any read or I/O error from opening the file to
 its last byte, such as iCloud Drive evicting it mid-read, in the check and in the restore's own pass. The reader
-records a failed read itself, since Apple Archive reports one the same way as a bad archive. A file that's read but
+records a failed read itself, since Apple Archive reports one the same way as a bad archive, or as the end of the
+entries when it lands on a header after the first one. A file that's read but
 fails the manifest, safety or checksum checks is damaged, and a newer format asks for an
 update, as above. A single-file JSON envelope from an earlier PR #99 build isn't an archive, so it's damaged.
 
