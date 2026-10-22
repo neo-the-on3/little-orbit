@@ -239,7 +239,14 @@
             }
             // Never SwiftData's shared `default.store`: with no explicit URL, use the app folder.
             let fileURL = try configuration.fileURL ?? StoreLocation.prepareStoreURL()
-            return ModelConfiguration(url: fileURL, cloudKitDatabase: .none)
+            // A read-only store can't create or migrate its file. An extension that runs before the app has
+            // created the store fails here instead of leaving an empty file. An extension that runs after an
+            // update but before the app has migrated the store must also fail, never migrate; #38 and #39
+            // handle that when the schema gets a second version.
+            if configuration.readOnly, !FileManager.default.fileExists(atPath: fileURL.path) {
+                throw StoreError.readOnlyStoreMissing
+            }
+            return ModelConfiguration(url: fileURL, allowsSave: !configuration.readOnly, cloudKitDatabase: .none)
         }
     }
 #endif

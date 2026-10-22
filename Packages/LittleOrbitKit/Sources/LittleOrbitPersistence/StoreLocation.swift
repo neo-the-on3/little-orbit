@@ -204,6 +204,29 @@ public enum StoreLocation {
         return ResolvedStoreLocation(url: url, kind: .applicationSupport(reason))
     }
 
+    /// The store in the App Group container only, for an extension that reads the app's store. An extension has
+    /// no use for its own Application Support folder, so there is no fallback: it throws
+    /// `StoreError.sharedStoreUnavailable` without the group and `StoreError.appGroupContainerUnavailable` when
+    /// the container can't be used.
+    public static func sharedStoreURL(
+        appGroupIdentifier: String? = StoreLocation.bundleAppGroupIdentifier,
+        groupContainer: AppGroupContainerLookup = .system,
+        entitlement: AppGroupEntitlementCheck = .system,
+        fileManager: FileManager = .default,
+    ) throws -> URL {
+        switch try appGroup(
+            identifier: appGroupIdentifier,
+            groupContainer: groupContainer,
+            entitlement: entitlement,
+            fileManager: fileManager,
+        ) {
+        case .available(let resolved):
+            return resolved.url
+        case .fallback(let reason):
+            throw StoreError.sharedStoreUnavailable(reason)
+        }
+    }
+
     /// The store URL with its folder created if missing, and the chosen location logged.
     public static func prepareStoreURL(
         applicationSupport: URL? = nil,
@@ -299,5 +322,24 @@ extension StoreConfiguration {
             fileManager: fileManager,
         )
         return StoreConfiguration(fileURL: url)
+    }
+
+    /// The app's store in the App Group container, opened read-only, for an extension such as a widget.
+    /// Throws `StoreError.sharedStoreUnavailable` without the group and `StoreError.appGroupContainerUnavailable`
+    /// when the container can't be used. Opening it before the app has created the store throws
+    /// `StoreError.readOnlyStoreMissing` and creates no file.
+    public static func sharedReadOnly(
+        appGroupIdentifier: String? = StoreLocation.bundleAppGroupIdentifier,
+        groupContainer: AppGroupContainerLookup = .system,
+        entitlement: AppGroupEntitlementCheck = .system,
+        fileManager: FileManager = .default,
+    ) throws -> StoreConfiguration {
+        let url = try StoreLocation.sharedStoreURL(
+            appGroupIdentifier: appGroupIdentifier,
+            groupContainer: groupContainer,
+            entitlement: entitlement,
+            fileManager: fileManager,
+        )
+        return StoreConfiguration(fileURL: url, readOnly: true)
     }
 }

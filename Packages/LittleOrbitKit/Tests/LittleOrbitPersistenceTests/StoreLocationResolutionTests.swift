@@ -181,6 +181,49 @@ struct StoreLocationResolutionTests {
         #expect(!AppGroupEntitlementCheck.system.isEntitled(Self.group))
     }
 
+    // MARK: - Extensions
+
+    @Test("Extension: the shared store is the app's group store, opened read-only")
+    func sharedReadOnly() throws {
+        defer { cleanUp() }
+        let configuration = try StoreConfiguration.sharedReadOnly(
+            appGroupIdentifier: Self.group,
+            groupContainer: lookup(container),
+            entitlement: .granted,
+        )
+        #expect(configuration.readOnly)
+        #expect(!configuration.inMemory)
+        #expect(configuration.sync == .none)
+        #expect(configuration.fileURL?.standardizedFileURL == (try resolve()).url.standardizedFileURL)
+    }
+
+    @Test("Extension without the group: it fails instead of reading an empty private store")
+    func sharedStoreUnavailable() {
+        defer { cleanUp() }
+        #expect(throws: StoreError.sharedStoreUnavailable(.notEntitled)) {
+            try StoreConfiguration.sharedReadOnly(
+                appGroupIdentifier: Self.group,
+                groupContainer: lookup(container),
+                entitlement: .denied,
+            )
+        }
+        #expect(throws: StoreError.sharedStoreUnavailable(.noAppGroupConfigured)) {
+            try StoreConfiguration.sharedReadOnly(appGroupIdentifier: nil, entitlement: .granted)
+        }
+    }
+
+    @Test("Extension entitled but without its container: it throws instead of reading another store")
+    func sharedContainerUnavailable() {
+        defer { cleanUp() }
+        #expect(throws: StoreError.appGroupContainerUnavailable(.noContainer)) {
+            try StoreConfiguration.sharedReadOnly(
+                appGroupIdentifier: Self.group,
+                groupContainer: .unavailable,
+                entitlement: .granted,
+            )
+        }
+    }
+
     @Test("The app's store opens for writing")
     func appLocalIsWritable() throws {
         defer { cleanUp() }
@@ -191,6 +234,7 @@ struct StoreLocationResolutionTests {
             groupContainer: lookup(container),
             entitlement: .granted,
         )
+        #expect(!configuration.readOnly)
         #expect(configuration.fileURL?.deletingLastPathComponent().lastPathComponent == "group")
     }
 }
