@@ -3,7 +3,7 @@ import Foundation
 /// Checking backups in full, and remembering what each check found (D196.3).
 extension BackupService {
     /// `check`'s result, with the backup's condition remembered: a damaged backup shows as 'Damaged' from then on
-    /// (D196.3).
+    /// (D196.3). A read error is `unreadableBackup` and remembers nothing, so the backup stays restorable (D208.2).
     nonisolated static func remembering<Value>(
         _ id: UUID,
         storage: any BackupStorage,
@@ -16,6 +16,9 @@ extension BackupService {
         } catch BackupError.damaged {
             remember([id: .damaged], storage: storage)
             throw BackupError.damaged
+        } catch let error where BackupReadFailure.isReadFailure(error) {
+            // A check that couldn't run marks nothing: the backup stays restorable (D208.2).
+            throw BackupError.unreadableBackup
         }
     }
 

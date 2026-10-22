@@ -618,6 +618,18 @@
         }
       }
     },
+    "Can’t Delete This Backup": {
+      "comment": "Alert title when Delete is confirmed while the backup is being exported, in this or another window (D208.1). Nothing is deleted. The only button is OK.",
+      "extractionState": "manual",
+      "localizations": {
+        "en": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Can’t Delete This Backup"
+          }
+        }
+      }
+    },
     "Can’t Redo %@": {
       "comment": "Alert title: a Redo that can't run because another window changed its records. %@ is the Redo name, such as \"Delete Transaction\".",
       "extractionState": "manual",
@@ -698,6 +710,18 @@
           "stringUnit": {
             "state": "translated",
             "value": "Change Payee"
+          }
+        }
+      }
+    },
+    "Couldn’t Delete Old Backups": {
+      "comment": "Alert title after lowering Recent Automatic Backups or Monthly Backups while one backup can’t be read, so nothing was deleted (D208.3). The only button is OK.",
+      "extractionState": "manual",
+      "localizations": {
+        "en": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Couldn’t Delete Old Backups"
           }
         }
       }
@@ -1472,6 +1496,18 @@
         }
       }
     },
+    "It’s being exported. Try again when the export has finished.": {
+      "comment": "Alert message under “Can’t Delete This Backup” (D208.1). “It” is the backup being deleted; nothing is deleted later either.",
+      "extractionState": "manual",
+      "localizations": {
+        "en": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "It’s being exported. Try again when the export has finished."
+          }
+        }
+      }
+    },
     "It’s removed from this %@. This can’t be undone.": {
       "comment": "Message of the confirmation before deleting one backup. %@ is the device.",
       "extractionState": "manual",
@@ -1564,6 +1600,30 @@
           "stringUnit": {
             "state": "translated",
             "value": "Last backup: %@. little-orbit backs up once a day after you change something."
+          }
+        }
+      }
+    },
+    "little-orbit couldn’t read one of your backups, so none were deleted. Try again later. Your setting hasn’t changed.": {
+      "comment": "Alert message under “Couldn’t Delete Old Backups” (D208.3). “Your setting” is the Keep value the user lowered; it goes back to the saved value.",
+      "extractionState": "manual",
+      "localizations": {
+        "en": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "little-orbit couldn’t read one of your backups, so none were deleted. Try again later. Your setting hasn’t changed."
+          }
+        }
+      }
+    },
+    "little-orbit couldn’t read this backup. Try again later. Your data hasn’t changed.": {
+      "comment": "Alert message under “Couldn’t Open Backup” when a backup stored on the device can’t be read while it’s checked for a restore (D208.2). The backup stays restorable. The only button is OK.",
+      "extractionState": "manual",
+      "localizations": {
+        "en": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "little-orbit couldn’t read this backup. Try again later. Your data hasn’t changed."
           }
         }
       }

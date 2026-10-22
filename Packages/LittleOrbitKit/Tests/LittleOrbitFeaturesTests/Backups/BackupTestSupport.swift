@@ -313,6 +313,10 @@ final class LockedFilesStorage: BackupStorage, @unchecked Sendable {
         lock.withLock { readsFail = true }
     }
 
+    func unlockFiles() {
+        lock.withLock { readsFail = false }
+    }
+
     func listing(id: UUID) throws -> BackupFolderListing {
         if lock.withLock({ readsFail }) {
             throw CocoaError(.fileReadNoPermission)

@@ -141,6 +141,9 @@ public protocol ExportBackupUseCase {
     func exportBackup(id: UUID, named name: String) async throws -> BackupExport
     /// Removes the export's file and its folder, once the save panel or share sheet closes, saved or not.
     func discardExport(_ export: BackupExport)
+    /// How many exports of the backup are being written now, in every window. Observable, so a window that reads
+    /// it updates when an export starts or ends; Delete is off while it's above zero (D208.1).
+    func exportCount(of id: UUID) -> Int
 }
 
 extension ExportBackupUseCase {

@@ -5,10 +5,9 @@ import Foundation
 public final class BackupService: AllBackupUseCases {
     public private(set) var isBusy = false
     /// The backups being written to an export file. Delete refuses them and cleanup keeps them until it runs again,
-    /// so a folder never goes mid-export (Tech Architect, non-blocking 3).
-    /// How many exports of each backup are running, so one window's export finishing never unlocks a backup
-    /// another window is still exporting.
-    private(set) var exporting: [UUID: Int] = [:]
+    /// so a folder never goes mid-export (Tech Architect, non-blocking 3). Each export counts, so one window's
+    /// export finishing never unlocks a backup another window is still exporting.
+    private let exports = BackupExportCounts()
 
     private let source: any LedgerBackupSource
     let storage: any BackupStorage
@@ -95,8 +94,8 @@ public final class BackupService: AllBackupUseCases {
             guard catalog.records.contains(where: { $0.id == id }) else {
                 throw BackupError.notFound
             }
-            guard exporting[id] == nil else {
-                throw BackupError.busy
+            guard exports.count(of: id) == 0 else {
+                throw BackupError.exporting
             }
             try storage.delete(id: id)
         }
@@ -121,11 +120,8 @@ public final class BackupService: AllBackupUseCases {
         let codec = self.codec
         let archiving = self.archiving
         let file = BackupExport.fileName(name, id: id)
-        exporting[id, default: 0] += 1
-        defer {
-            let left = (exporting[id] ?? 1) - 1
-            exporting[id] = left > 0 ? left : nil
-        }
+        exports.begin(id)
+        defer { exports.end(id) }
         let url = try await Self.detached(priority: .userInitiated) {
             let url = try storage.makeExportFolder().appendingPathComponent(file)
             do {
@@ -139,6 +135,19 @@ public final class BackupService: AllBackupUseCases {
             }
         }
         return BackupExport(file: url, record: record)
+    }
+
+    public func exportCount(of id: UUID) -> Int {
+        exports.count(of: id)
+    }
+
+    /// `work`, with a backup that can't be read reported as `cleanupBlocked`: nothing is deleted (R3, D208.3).
+    private static func blockingCleanup<Value>(_ work: () async throws -> Value) async throws -> Value {
+        do {
+            return try await work()
+        } catch let error where BackupReadFailure.isReadFailure(error) {
+            throw BackupError.cleanupBlocked
+        }
     }
 
     public func discardExport(_ export: BackupExport) {
@@ -204,19 +213,26 @@ public final class BackupService: AllBackupUseCases {
         guard !isBusy else {
             throw BackupError.busy
         }
-        let catalog = try await loadCatalog()
-        return BackupCleanupPlan(retention: retention, backups: try await toPrune(catalog.records, retention))
+        return try await Self.blockingCleanup {
+            let catalog = try await loadCatalog()
+            return BackupCleanupPlan(retention: retention, backups: try await toPrune(catalog.records, retention))
+        }
     }
 
     public func apply(_ plan: BackupCleanupPlan) async throws -> [BackupRecord] {
         try await exclusively {
-            settings.setRetention(plan.retention)
             guard !plan.backups.isEmpty else {
+                settings.setRetention(plan.retention)
                 return []
             }
-            let catalog = try await loadCatalog()
+            // What goes is worked out before N and M are saved, so a backup that can't be read leaves the setting
+            // as it was (D208.3).
             let counted = Set(plan.backups.map(\.id))
-            let deleted = try await toPrune(catalog.records, plan.retention).filter { counted.contains($0.id) }
+            let deleted = try await Self.blockingCleanup {
+                let catalog = try await loadCatalog()
+                return try await toPrune(catalog.records, plan.retention).filter { counted.contains($0.id) }
+            }
+            settings.setRetention(plan.retention)
             for record in deleted {
                 try? storage.delete(id: record.id)
             }
@@ -272,7 +288,7 @@ public final class BackupService: AllBackupUseCases {
             }
             .value
         // One being exported stays until the next cleanup.
-        return pruned.filter { exporting[$0.id] == nil }
+        return pruned.filter { exports.count(of: $0.id) == 0 }
     }
 
     func exclusively<T>(_ body: () async throws -> T) async throws -> T {

@@ -2,32 +2,6 @@ import Foundation
 import LittleOrbitDomain
 import Observation
 
-/// An alert the Backups screens show. Each one leaves the data unchanged.
-public struct BackupAlert: Identifiable, Equatable, Sendable {
-    public var id: String { title + message }
-    public var title: String
-    public var message: String
-
-    public static let damaged = BackupAlert(
-        title: BackupPresentation.damagedTitle,
-        message: BackupPresentation.damagedMessage,
-    )
-    public static let newerFormat = BackupAlert(
-        title: BackupPresentation.newerFormatTitle,
-        message: BackupPresentation.newerFormatMessage,
-    )
-    /// The Before restore backup didn't check out, so nothing was replaced (D63, B3, D207.1).
-    public static let beforeRestoreFailed = BackupAlert(
-        title: BackupPresentation.beforeRestoreFailedTitle,
-        message: BackupPresentation.beforeRestoreFailedMessage,
-    )
-    /// A picked file couldn't be read at all (D207.2). One that's read but fails a check is `damaged`.
-    public static let unreadableFile = BackupAlert(
-        title: BackupPresentation.unreadableFileTitle,
-        message: BackupPresentation.unreadableFileMessage,
-    )
-}
-
 /// An exported backup's file, with its suggested name, for `fileExporter`. The file is in the staging folder until
 /// the save panel or share sheet closes (B2).
 public struct BackupExportFile: Equatable, Sendable {
@@ -225,6 +199,12 @@ public final class BackupsViewModel {
             .alert(.beforeRestoreFailed)
         case .unreadableFile:
             .alert(.unreadableFile)
+        case .unreadableBackup:
+            .alert(.unreadableBackup)
+        case .cleanupBlocked:
+            .alert(.cleanupBlocked)
+        case .exporting:
+            .alert(.deleteWhileExporting)
         case .notEnoughStorage, .busy:
             .none
         default:
@@ -336,17 +316,36 @@ public final class BackupsViewModel {
 
     // MARK: Delete (D116.1): confirm, then App Lock
 
-    /// The row to confirm deleting, or `nil` while actions are off.
+    /// Whether the backup is being written to an export file, in any window. Read through the use case, so every
+    /// window showing it updates when an export starts and ends (D208.1).
+    public func isExporting(_ id: UUID) -> Bool {
+        useCases.export.exportCount(of: id) > 0
+    }
+
+    /// Delete Backup and Delete… are off while actions are off, and while the backup is being exported (D208.1).
+    public func deleteEnabled(for id: UUID) -> Bool {
+        actionsEnabled && !isExporting(id)
+    }
+
+    /// The row to confirm deleting, or `nil` while its Delete is off.
     public func deletePrompt(for id: UUID) -> BackupRowModel? {
-        guard actionsEnabled else {
+        guard deleteEnabled(for: id) else {
             return nil
         }
         return row(id)
     }
 
-    /// After the confirmation: App Lock, then the delete. Cancelling App Lock changes nothing.
+    /// After the confirmation: App Lock, then the delete. Cancelling App Lock changes nothing. A backup that another
+    /// window started exporting while the confirmation was open throws `exporting`, before App Lock is asked, and
+    /// nothing is deleted or queued (D208.1).
     public func delete(_ row: BackupRowModel) async throws {
-        guard actionsEnabled, await useCases.authentication.authenticate(for: .deleteBackup) else {
+        guard actionsEnabled else {
+            return
+        }
+        guard !isExporting(row.id) else {
+            throw BackupError.exporting
+        }
+        guard await useCases.authentication.authenticate(for: .deleteBackup) else {
             return
         }
         try await reloading { try await useCases.delete.deleteBackup(id: row.id) }
