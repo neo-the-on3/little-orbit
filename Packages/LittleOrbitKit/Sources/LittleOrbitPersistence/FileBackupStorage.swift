@@ -137,7 +137,7 @@ public final class FileBackupStorage: BackupStorage, @unchecked Sendable {
         }
         let manifestURL = url.appendingPathComponent(Self.manifestName)
         let manifest: Data? =
-            sizes[Self.manifestName] == nil ? nil : try Data(contentsOf: manifestURL)
+            sizes[Self.manifestName] == nil ? nil : try reading { try Data(contentsOf: manifestURL) }
         let created = try? fileManager.attributesOfItem(atPath: url.path)[.creationDate] as? Date
         return BackupFolderListing(manifest: manifest, fileSizes: sizes, createdAt: created, sizesKnown: sizesKnown)
     }
@@ -254,7 +254,7 @@ public final class FileBackupStorage: BackupStorage, @unchecked Sendable {
             guard attributes[.type] as? FileAttributeType == .typeRegular else {
                 continue
             }
-            files[relative] = try Data(contentsOf: URL(fileURLWithPath: path))
+            files[relative] = try reading { try Data(contentsOf: URL(fileURLWithPath: path)) }
         }
         return files
     }
@@ -396,7 +396,7 @@ struct StoredBackupFolder: BackupFileReading {
             return nil
         }
         // Mapped where the system can, so a large attachment isn't copied into memory just to be read.
-        return try Data(contentsOf: url, options: .mappedIfSafe)
+        return try reading { try Data(contentsOf: url, options: .mappedIfSafe) }
     }
 
     func stream(_ path: String, through body: (UnsafeRawBufferPointer) throws -> Void) throws -> Bool {

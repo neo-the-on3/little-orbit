@@ -68,7 +68,7 @@ enum FileChunkReader {
         chunkSize: Int,
         through body: (UnsafeRawBufferPointer) throws -> Void,
     ) throws {
-        let handle = try FileHandle(forReadingFrom: url)
+        let handle = try reading { try FileHandle(forReadingFrom: url) }
         defer { try? handle.close() }
         let buffer = UnsafeMutableRawBufferPointer.allocate(byteCount: chunkSize, alignment: 16)
         defer { buffer.deallocate() }
@@ -79,7 +79,7 @@ enum FileChunkReader {
             let count = read(handle.fileDescriptor, base, chunkSize)
             if count < 0 {
                 guard errno == EINTR else {
-                    throw POSIXError(POSIXErrorCode(rawValue: errno) ?? .EIO)
+                    throw BackupFileReadError(POSIXError(POSIXErrorCode(rawValue: errno) ?? .EIO))
                 }
                 continue
             }
@@ -96,6 +96,18 @@ enum FileChunkReader {
         #else
             Glibc.read(descriptor, bytes, count)
         #endif
+    }
+}
+
+/// `body`, which reads a backup's file, with whatever it throws marked as a read failure, whatever its code: opening
+/// a file without permission reports Cocoa's write code 513 (Tester finding 1).
+func reading<Value>(_ body: () throws -> Value) throws -> Value {
+    do {
+        return try body()
+    } catch let error as BackupFileReadError {
+        throw error
+    } catch {
+        throw BackupFileReadError(error)
     }
 }
 

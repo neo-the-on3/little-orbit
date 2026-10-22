@@ -379,14 +379,31 @@ public enum BackupArchiveSafety {
     }
 }
 
-/// Whether an error is a failure to read a file: the file system's or the OS's read errors, as the archive reader
-/// passes them on. Anything else, such as a full disk while unpacking, is not.
+/// An error from opening or reading one of a backup's files. The store wraps whatever the system threw while it
+/// was reading, so it's a read failure whatever its domain or code: opening a file without permission reports
+/// Cocoa's write code 513 (Tester finding 1 on 4c8b0b3).
+public struct BackupFileReadError: Error {
+    public var underlying: any Error
+
+    public init(_ underlying: any Error) {
+        self.underlying = underlying
+    }
+}
+
 enum BackupReadFailure {
+    /// Whether `error` means a file couldn't be read, so the backup isn't called damaged (D207.2, D208.2): any POSIX
+    /// error or one of Cocoa's read codes, as the archive reader passes them on. A stored backup's files are another
+    /// matter: the store wraps whatever opening or reading one of them threw in `BackupFileReadError`, so that, and
+    /// only that, counts whatever its code, including the write code 513 a file without read permission reports.
+    /// Write and permission codes from anything else, such as unpacking a picked file, stay what they are.
     static func isReadFailure(_ error: any Error) -> Bool {
-        if error is POSIXError || (error as NSError).domain == NSPOSIXErrorDomain {
+        if error is BackupFileReadError || error is POSIXError {
             return true
         }
         let nsError = error as NSError
+        if nsError.domain == NSPOSIXErrorDomain {
+            return true
+        }
         return nsError.domain == NSCocoaErrorDomain && readCodes.contains(CocoaError.Code(rawValue: nsError.code))
     }
 
