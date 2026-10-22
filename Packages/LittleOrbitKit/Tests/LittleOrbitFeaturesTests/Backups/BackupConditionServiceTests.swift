@@ -41,7 +41,7 @@ struct BackupConditionServiceTests {
         data[0] ^= 0x01
         try data.write(to: url)
 
-        await #expect(throws: BackupError.damaged) { try await harness.service.openBackup(.stored(backup.id)) }
+        await #expect(throws: BackupError.damaged) { try await harness.contents(.stored(backup.id)) }
         let listed = try #require(try await harness.service.overview().backups.first)
         #expect(listed.id == backup.id)
         #expect(listed.kind == .manual)
@@ -79,7 +79,7 @@ struct BackupConditionServiceTests {
         #expect(listed.formatVersion == 2)
         #expect(listed.kind == .manual)
         #expect(listed.createdAt == backup.createdAt)
-        await #expect(throws: BackupError.newerFormat) { try await harness.service.openBackup(.stored(backup.id)) }
+        await #expect(throws: BackupError.newerFormat) { try await harness.contents(.stored(backup.id)) }
         await #expect(throws: BackupError.newerFormat) { try await harness.service.exportBackup(id: backup.id) }
         #expect(try await harness.service.overview().backups.first?.condition == .newerFormat)
 
@@ -153,7 +153,7 @@ struct BackupConditionServiceTests {
         let model = window.model
         try await model.load()
         for (archive, error) in archives {
-            await #expect(throws: error) { try await harness.service.openBackup(.file(archive)) }
+            await #expect(throws: error) { try await harness.contents(.file(archive)) }
             await window.restoreFromFile(.data(archive))
             #expect(window.restorePrompt == nil)
             #expect(
@@ -174,16 +174,16 @@ struct BackupConditionServiceTests {
     func mimeRoundTrip() async throws {
         let harness = try BackupHarness()
         let backup = try await harness.service.backUpNow()
-        let export = try await harness.service.exportBackup(id: backup.id)
-        let mime = export.data.base64EncodedString(options: [.lineLength76Characters, .endLineWithCarriageReturn])
+        let export = try await harness.exportData(backup.id)
+        let mime = export.base64EncodedString(options: [.lineLength76Characters, .endLineWithCarriageReturn])
         let received = try #require(Data(base64Encoded: mime, options: .ignoreUnknownCharacters))
-        #expect(received == export.data)
+        #expect(received == export)
         #if canImport(CryptoKit)
             let hashing = CryptoKitBackupHashing()
-            #expect(hashing.sha256Hex(received) == hashing.sha256Hex(export.data))
+            #expect(hashing.sha256Hex(received) == hashing.sha256Hex(export))
         #endif
-        let contents = try await harness.service.openBackup(.file(received))
-        let stored = try await harness.service.openBackup(.stored(backup.id))
+        let contents = try await harness.contents(.file(received))
+        let stored = try await harness.contents(.stored(backup.id))
         #expect(contents == stored)
     }
 
@@ -192,7 +192,7 @@ struct BackupConditionServiceTests {
         let harness = try BackupHarness()
         let backup = try await harness.service.backUpNow()
         harness.settings.setRetention(BackupRetention(recentAutomatic: 10, monthlyMonths: 12))
-        let contents = try await harness.service.openBackup(.stored(backup.id))
+        let contents: BackupSource = .stored(backup.id)
         _ = try await harness.service.restore(contents) { _ in }
         #expect(harness.service.retention() == BackupRetention(recentAutomatic: 10, monthlyMonths: 12))
         let window = harness.window()
@@ -203,9 +203,9 @@ struct BackupConditionServiceTests {
 
         let latest = try #require(try await harness.service.overview().backups.first { $0.kind == .beforeRestore })
         let files = try harness.storage.read(id: latest.id)
-        let export = try await harness.service.exportBackup(id: latest.id)
+        let export = try await harness.exportData(latest.id)
         // Latin-1 decodes any bytes, so binary files are scanned too.
-        let texts = (files.paths.compactMap { files[$0] } + [export.data])
+        let texts = (files.paths.compactMap { files[$0] } + [export])
             .map { String(bytes: $0, encoding: .isoLatin1) ?? "" }
         for text in texts {
             for key in [

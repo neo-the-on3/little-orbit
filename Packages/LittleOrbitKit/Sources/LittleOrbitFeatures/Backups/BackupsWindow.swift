@@ -101,6 +101,7 @@ public final class BackupsWindow {
 
     public func export(_ prompt: BackupExportPrompt) async {
         exportPrompt = nil
+        finishExport()
         await run { pendingExport = try await model.exportFile(prompt) }
     }
 
@@ -108,8 +109,11 @@ public final class BackupsWindow {
         exportPrompt = nil
     }
 
-    /// The share sheet or save panel closed.
+    /// The share sheet or save panel closed, saved or cancelled: the export's file is removed (B2).
     public func finishExport() {
+        if let pendingExport {
+            model.discardExport(pendingExport)
+        }
         pendingExport = nil
     }
 

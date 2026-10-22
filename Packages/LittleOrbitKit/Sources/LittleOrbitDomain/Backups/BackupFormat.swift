@@ -20,6 +20,21 @@ public enum BackupFormat {
     public static let identifier = "little-orbit-backup"
     /// The exported single file (D195.7).
     public static let fileExtension = "littleorbit-backup"
+    /// The suffix of an export's own folder in the staging folder (B2).
+    public static let exportFolderSuffix = ".export"
+
+    /// Removes `file` and the export folder it's in, when its folder is one (`<uuid>.export`). Nothing else is
+    /// removed.
+    public static func removeExport(_ file: URL) {
+        let folder = file.deletingLastPathComponent()
+        let name = folder.lastPathComponent
+        guard name.hasSuffix(exportFolderSuffix),
+            UUID(uuidString: String(name.dropLast(exportFolderSuffix.count))) != nil
+        else {
+            return
+        }
+        try? FileManager.default.removeItem(at: folder)
+    }
     /// The exported type the apps declare, conforming to `public.data` (D195a.1, L19).
     public static let typeIdentifier = "app.littleorbit.backup"
     public static let currentVersion = 1

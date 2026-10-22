@@ -94,6 +94,11 @@ public protocol BackupStorage: Sendable {
     ) throws
     /// A new scratch folder for a picked file's attachments (B1).
     func makeScratch() throws -> any BackupScratchFolder
+    /// A new, empty folder for one export's file, outside the Backups folder: `Backups.staging/<uuid>.export`, so
+    /// the launch sweep removes one an interrupted export left (B2).
+    func makeExportFolder() throws -> URL
+    /// Removes an export's file with its folder. Anything not made by `makeExportFolder` is left alone.
+    func removeExport(_ file: URL)
     /// Removes the whole folder. It stops being listed before any of its files are removed (L17).
     func delete(id: UUID) throws
     func loadStatus() throws -> BackupStatus
@@ -122,6 +127,18 @@ extension BackupStorage {
 
     public func makeScratch() throws -> any BackupScratchFolder {
         BackupMemoryScratch()
+    }
+
+    /// A folder in the temporary directory, for stores with no staging folder of their own.
+    public func makeExportFolder() throws -> URL {
+        let url = FileManager.default.temporaryDirectory
+            .appendingPathComponent("\(UUID().uuidString)\(BackupFormat.exportFolderSuffix)", isDirectory: true)
+        try FileManager.default.createDirectory(at: url, withIntermediateDirectories: false)
+        return url
+    }
+
+    public func removeExport(_ file: URL) {
+        BackupFormat.removeExport(file)
     }
 }
 

@@ -41,7 +41,13 @@ format bump (#100).
 - Attachment bytes are never held whole (Tech Architect B1). A backup reads each attachment from the store one
   at a time, hashes it in 1 MB chunks, and writes its file in 1 MB chunks; one that's unchanged since the previous
   backup, by size and SHA-256, is cloned from that backup's file instead of read again. The rest of the ledger is
-  still loaded whole (#109). Export still builds the archive in memory (#109).
+  still loaded whole (#109).
+- Copying trusts the previous backup's manifest, not its bytes, so the check right after writing decides (Tech
+  Architect B3). If that check fails and anything was copied, the new backup is written again with nothing copied,
+  and the previous backup gets its full check, so a damaged file there is listed as 'Damaged' and never spreads.
+- The automatic backup when the app goes to the background runs inside an iOS background task. If the system ends
+  that time first, the backup is cancelled between chunks and its staging folder removed: nothing is listed, no
+  failure is shown, and the next backup runs as usual.
 - Deleting a backup moves its folder to `Backups.staging/<uuid>.deleting/` first, then removes it, so a cleanup
   that's interrupted never leaves part of a listed folder (L17).
 
@@ -108,7 +114,8 @@ Checks read a stored folder one file at a time and hash each file in 1 MB chunks
 backup: the check right after a backup is written, cleanup's full check, and the check before the Restore warning.
 The warning keeps only the manifest. When Restore is tapped, the Before restore backup is written first and the
 current data released, and only then is the backup read in full, checked again as it's decoded, and the data
-replaced in one save. Only the files the manifest lists are read.
+replaced in one save. Only the files the manifest lists are read. If the Before restore backup doesn't pass its
+check, or can't be checked, nothing is replaced and 'Couldn’t Restore' is shown (D63).
 
 A file in the folder that the manifest doesn't list, such as `.DS_Store`, is ignored.
 
@@ -136,6 +143,11 @@ supported-format) backup, whatever N and M are (L33, L43).
 An export is one `.littleorbit-backup` file: the backup's folder in an uncompressed Apple Archive (D195.7,
 D195a.1). The apps declare it as the exported type `app.littleorbit.backup`, which conforms to `public.data`; it
 isn't a package. It survives FAT, exFAT and email unchanged, since it's one plain file (L20).
+
+Export writes the archive to `Backups.staging/<uuid>.export/<file name>`, one file at a time in 1 MB chunks, and
+checks each file's size and SHA-256 against the manifest as it goes; a mismatch stops the export as damaged (Tech
+Architect B2). Only the files the manifest lists are included. The save panel and share sheet are handed that
+file's URL, never its bytes, and the file is removed once it's saved or cancelled, or at the next launch.
 
 `manifest.json` is the archive's first entry, so a reader reaches the format version before anything else. Apple
 Archive itself refuses to read past an entry with an absolute path or a `..` component. When that happens, the

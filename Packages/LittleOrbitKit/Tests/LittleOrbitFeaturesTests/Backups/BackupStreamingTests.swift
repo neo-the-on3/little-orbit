@@ -12,53 +12,10 @@ import Testing
 struct BackupStreamingTests {
     private static let size = BackupChunk.size * 5 / 2
 
-    private struct Fixture {
-        let source: StreamingSpySource
-        let storage: StreamingSpyStorage
-        let archiving: RecordingArchiving
-        let harness: BackupHarness
-        let attachments: [LedgerAttachment]
-    }
+    private typealias Fixture = StreamingFixture
 
     private func fixture() throws -> Fixture {
-        let repository = try FeatureFixture.repository()
-        let account = try #require(try repository.ledgerSnapshot().accounts.first)
-        var attachments: [LedgerAttachment] = []
-        for index in 0..<2 {
-            let spend = Transaction(amount: Decimal(index + 1), accountID: account.id)
-            try repository.saveTransaction(spend)
-            var bytes = Data(count: Self.size)
-            bytes.withUnsafeMutableBytes { raw in
-                for offset in stride(from: 0, to: raw.count, by: 997) {
-                    raw[offset] = UInt8(truncatingIfNeeded: offset + index)
-                }
-            }
-            let attachment = LedgerAttachment(
-                transactionID: spend.id,
-                fileName: "Scan \(index).pdf",
-                contentType: "application/pdf",
-                byteSize: Int64(bytes.count),
-                data: bytes,
-            )
-            try repository.saveAttachment(attachment)
-            attachments.append(attachment)
-        }
-        let source = StreamingSpySource(repository)
-        let storage = try StreamingSpyStorage()
-        let archiving = RecordingArchiving()
-        let harness = try BackupHarness(
-            repository: repository,
-            storage: storage,
-            archiving: archiving,
-            source: { _ in source },
-        )
-        return Fixture(
-            source: source,
-            storage: storage,
-            archiving: archiving,
-            harness: harness,
-            attachments: attachments,
-        )
+        try StreamingFixture(size: Self.size)
     }
 
     private func attachmentPath(_ id: UUID) -> String {
@@ -122,7 +79,8 @@ struct BackupStreamingTests {
         let export = try await fixture.harness.service.exportBackup(id: backup.id)
         let file = fixture.storage.folder.deletingLastPathComponent()
             .appendingPathComponent("picked-\(UUID().uuidString).littleorbit-backup")
-        try export.data.write(to: file)
+        try FileManager.default.copyItem(at: export.file, to: file)
+        fixture.harness.service.discardExport(export)
         defer { try? FileManager.default.removeItem(at: file) }
         try fixture.source.base.deleteAttachment(id: fixture.attachments[1].id)
         fixture.harness.advance(60)

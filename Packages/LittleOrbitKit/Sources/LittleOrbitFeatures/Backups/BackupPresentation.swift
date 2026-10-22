@@ -59,6 +59,11 @@ public struct BackupPresentation: Sendable {
     public static let damagedTitle = FeatureText.format("This Backup Is Damaged")
     public static let damagedMessage = FeatureText.format("It can’t be restored. Your data hasn’t changed.")
     public static let newerFormatTitle = FeatureText.format("Update little-orbit to Restore This Backup")
+    /// The restore stopped before replacing anything: its Before restore backup didn't pass its check (D63, B3).
+    public static let beforeRestoreFailedTitle = FeatureText.format("Couldn’t Restore")
+    public static let beforeRestoreFailedMessage = FeatureText.format(
+        "The backup of your current data didn’t pass its check, so nothing was replaced. Your data hasn’t changed."
+    )
     public static let newerFormatMessage = FeatureText.format(
         """
         This backup was made with a newer version of little-orbit. Your data hasn’t changed.

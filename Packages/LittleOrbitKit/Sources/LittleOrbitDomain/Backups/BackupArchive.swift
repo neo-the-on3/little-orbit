@@ -45,8 +45,13 @@ public enum BackupArchiveRead {
 /// (D195a.1). On Apple platforms `LittleOrbitPersistence` implements it with AppleArchive; it isn't available
 /// elsewhere. Nothing is ever extracted or written to disk.
 public protocol BackupArchiving: Sendable {
-    /// One archive holding every file of `files` at its relative path.
+    /// One archive holding every file of `files` at its relative path, in memory. Tests and crafted archives use
+    /// it; an export writes to a file with the method below.
     func archive(_ files: BackupSnapshotFiles) throws -> Data
+    /// A new archive file at `url`, which mustn't exist: `files` in order, each with a header of its listed size,
+    /// then its bytes streamed from `folder` in chunks, never held whole (B2). A file that isn't exactly its listed
+    /// size throws `damaged`. Errors from `folder` are rethrown; the caller removes what was written.
+    func archive(_ files: [BackupArchiveFile], from folder: any BackupFileReading, to url: URL) throws
     /// The entries of `archive`, in order, in one pass, extracting nothing. `reading` says, for each regular file
     /// by its stored path, whether to skip its bytes, keep them, or stream them. Throws `BackupError.damaged` for
     /// anything that isn't an archive, and the underlying error when the file can't be read at all.

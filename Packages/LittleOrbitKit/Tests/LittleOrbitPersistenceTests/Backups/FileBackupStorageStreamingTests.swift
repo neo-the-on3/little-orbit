@@ -37,14 +37,14 @@ private final class ChunkedBytes: BackupAttachmentReading, @unchecked Sendable {
 struct FileBackupStorageStreamingTests {
     private static let size = BackupChunk.size * 5 / 2
 
-    private func folder() -> URL {
+    func folder() -> URL {
         FileManager.default.temporaryDirectory.appendingPathComponent(
             "backups-\(UUID().uuidString)",
             isDirectory: true,
         )
     }
 
-    private func remove(_ folder: URL) {
+    func remove(_ folder: URL) {
         try? FileManager.default.removeItem(at: folder)
         try? FileManager.default.removeItem(at: URL(fileURLWithPath: folder.path + ".staging"))
     }
@@ -161,6 +161,39 @@ struct FileBackupStorageStreamingTests {
         #expect(try FileManager.default.contentsOfDirectory(atPath: storage.stagingURL.path).isEmpty)
 
         _ = try storage.makeScratch().create("attachments/B")
+        let relaunched = try FileBackupStorage(folder: folder)
+        #expect(try FileManager.default.contentsOfDirectory(atPath: relaunched.stagingURL.path).isEmpty)
+    }
+}
+
+extension FileBackupStorageStreamingTests {
+    @Test("An export's folder is in the staging folder, removed with its file, and swept at the next launch (B2)")
+    func exportFolder() throws {
+        let folder = folder()
+        defer { remove(folder) }
+        let storage = try FileBackupStorage(folder: folder)
+        let export = try storage.makeExportFolder()
+        #expect(export.lastPathComponent.hasSuffix(".export"))
+        #expect(
+            export.deletingLastPathComponent().standardizedFileURL.path == storage.stagingURL.standardizedFileURL.path
+        )
+        let file = export.appendingPathComponent("little-orbit 2026-10-22 0912.littleorbit-backup")
+        try Data("archive".utf8).write(to: file)
+        #expect(try storage.storedIDs().isEmpty)
+
+        // Only an export folder of this store is ever removed.
+        let outside = FileManager.default.temporaryDirectory.appendingPathComponent("\(UUID().uuidString).export")
+        try FileManager.default.createDirectory(at: outside, withIntermediateDirectories: true)
+        defer { try? FileManager.default.removeItem(at: outside) }
+        storage.removeExport(outside.appendingPathComponent("x"))
+        #expect(FileManager.default.fileExists(atPath: outside.path))
+        storage.removeExport(storage.folderURL(UUID()).appendingPathComponent("manifest.json"))
+
+        storage.removeExport(file)
+        #expect(!FileManager.default.fileExists(atPath: export.path))
+
+        let left = try storage.makeExportFolder()
+        try Data("archive".utf8).write(to: left.appendingPathComponent("a.littleorbit-backup"))
         let relaunched = try FileBackupStorage(folder: folder)
         #expect(try FileManager.default.contentsOfDirectory(atPath: relaunched.stagingURL.path).isEmpty)
     }

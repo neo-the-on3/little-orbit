@@ -74,6 +74,9 @@ import SwiftUI
     /// Shows the Accounts home (iOS) or window (macOS) for what the composition root built.
     struct RootView: View {
         let features: Result<AppFeatures, any Error>
+        /// Background time for the backup when the app goes to the background: the iOS app's UIKit adapter, `nil`
+        /// on macOS, where the app isn't suspended.
+        var backgroundActivity: (any BackgroundActivity)?
         @Environment(\.scenePhase) private var scenePhase
         #if os(iOS)
             @State private var isShowingSettings = false
@@ -84,11 +87,12 @@ import SwiftUI
             case .success(let features):
                 content(features)
                     // The automatic backup: at most once a day, at launch and when the app goes to the background
-                    // (D62). It skips itself when nothing changed.
+                    // (D62). It skips itself when nothing changed. In the background it runs inside a
+                    // background-time assertion and is cancelled cleanly if the time runs out.
                     .task { await features.backups.backUpAutomaticallyIfNeeded() }
                     .onChange(of: scenePhase) { _, phase in
                         if phase == .background {
-                            Task { await features.backups.backUpAutomaticallyIfNeeded() }
+                            features.backups.backUpInBackground(backgroundActivity)
                         }
                     }
             case .failure(let error):

@@ -102,7 +102,7 @@ struct BackupsWindowTests {
         let backup = try await harness.service.backUpNow()
         let url = FileManager.default.temporaryDirectory
             .appendingPathComponent("restore-\(UUID().uuidString).littleorbit-backup")
-        try await harness.service.exportBackup(id: backup.id).data.write(to: url)
+        try await harness.exportData(backup.id).write(to: url)
         defer { try? FileManager.default.removeItem(at: url) }
         try await window.model.load()
         await window.restoreFromFile(.file(url))

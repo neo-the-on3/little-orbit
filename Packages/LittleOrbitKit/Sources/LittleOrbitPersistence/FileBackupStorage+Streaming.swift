@@ -18,6 +18,27 @@ extension FileBackupStorage {
         return FileScratchFolder(url, prepare: { [self] in try prepare($0) })
     }
 
+    /// A new folder in the staging folder, `<uuid>.export`, for one export's archive file, with the default data
+    /// protection class on iOS (B2). The launch sweep removes one an interrupted export left (D197.4).
+    public func makeExportFolder() throws -> URL {
+        let url = stagingURL.appendingPathComponent(
+            "\(UUID().uuidString)\(BackupFormat.exportFolderSuffix)",
+            isDirectory: true,
+        )
+        try prepare(stagingURL)
+        try prepare(url)
+        return url
+    }
+
+    /// Removes an export's folder, only when it's one of this store's (`makeExportFolder`).
+    public func removeExport(_ file: URL) {
+        let staging = file.deletingLastPathComponent().deletingLastPathComponent()
+        guard staging.standardizedFileURL.path == stagingURL.standardizedFileURL.path else {
+            return
+        }
+        BackupFormat.removeExport(file)
+    }
+
     /// A new file at `url`, filled by `produce` one chunk at a time, with the default data protection class on iOS.
     static func streamFile(
         to url: URL,

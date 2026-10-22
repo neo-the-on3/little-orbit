@@ -38,11 +38,7 @@ import LittleOrbitDomain
                 try Self.writeFile(BackupFormat.manifestPath, manifest, to: encoder)
             }
             for folder in Self.folders(of: others) {
-                let header = ArchiveHeader()
-                header.append(.uint(key: Self.type, value: UInt64(ArchiveHeader.EntryType.directory.rawValue)))
-                header.append(.string(key: Self.path, value: folder))
-                header.append(.uint(key: Self.mode, value: 0o755))
-                try encoder.writeHeader(header)
+                try Self.writeFolder(folder, to: encoder)
             }
             for path in others {
                 try Self.writeFile(path, files[path] ?? Data(), to: encoder)
@@ -50,6 +46,74 @@ import LittleOrbitDomain
             try encoder.close()
             try stream.close()
             return memory.data
+        }
+
+        /// Streams the archive into a new file at `url`: each file's header with its listed size, then its bytes
+        /// with one `writeBlob` call per chunk from `folder`, so no file is held whole (B2). The manifest is the
+        /// caller's first file (L34).
+        public func archive(_ files: [BackupArchiveFile], from folder: any BackupFileReading, to url: URL) throws {
+            guard
+                let stream = ArchiveByteStream.fileStream(
+                    path: FilePath(url.path),
+                    mode: .writeOnly,
+                    options: [.create, .exclusiveCreate],
+                    permissions: FilePermissions(rawValue: 0o600),
+                )
+            else {
+                throw CocoaError(.fileWriteUnknown)
+            }
+            defer { try? stream.close() }
+            guard let encoder = ArchiveStream.encodeStream(writingTo: stream) else {
+                throw CocoaError(.fileWriteUnknown)
+            }
+            let others = files.filter { $0.path != BackupFormat.manifestPath }
+            for file in files where file.path == BackupFormat.manifestPath {
+                try Self.streamFile(file, from: folder, to: encoder)
+            }
+            for path in Self.folders(of: others.map(\.path)) {
+                try Self.writeFolder(path, to: encoder)
+            }
+            for file in others {
+                try Self.streamFile(file, from: folder, to: encoder)
+            }
+            try encoder.close()
+            try stream.close()
+        }
+
+        private static func writeFolder(_ path: String, to encoder: ArchiveStream) throws {
+            let header = ArchiveHeader()
+            header.append(.uint(key: Self.type, value: UInt64(ArchiveHeader.EntryType.directory.rawValue)))
+            header.append(.string(key: Self.path, value: path))
+            header.append(.uint(key: Self.mode, value: 0o755))
+            try encoder.writeHeader(header)
+        }
+
+        private static func streamFile(
+            _ file: BackupArchiveFile,
+            from folder: any BackupFileReading,
+            to encoder: ArchiveStream,
+        ) throws {
+            let header = ArchiveHeader()
+            header.append(.uint(key: Self.type, value: UInt64(ArchiveHeader.EntryType.regularFile.rawValue)))
+            header.append(.string(key: Self.path, value: file.path))
+            header.append(.uint(key: Self.mode, value: 0o644))
+            header.append(.blob(key: Self.data, size: UInt64(file.byteSize)))
+            try encoder.writeHeader(header)
+            var written: Int64 = 0
+            let found = try folder.stream(file.path) { chunk in
+                // Never past the size in the header: a file that grew is damaged, not a longer entry.
+                guard written + Int64(chunk.count) <= file.byteSize else {
+                    throw BackupError.damaged
+                }
+                try encoder.writeBlob(key: Self.data, from: chunk)
+                written += Int64(chunk.count)
+            }
+            guard found, written == file.byteSize else {
+                throw BackupError.damaged
+            }
+            if file.byteSize == 0 {
+                try Data().withUnsafeBytes { try encoder.writeBlob(key: Self.data, from: $0) }
+            }
         }
 
         private static func writeFile(_ path: String, _ bytes: Data, to encoder: ArchiveStream) throws {
