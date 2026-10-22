@@ -115,7 +115,7 @@ struct WindowUndoFailureTests {
         setup.window.settle()
 
         #expect(try setup.transactions() == before)
-        #expect(setup.history.alert?.title == "Couldn't Make the Change")
+        #expect(setup.history.alert?.title == "Couldn’t Undo Delete 2 Transactions in Everyday Savings")
         try Self.expectDropped(setup)
     }
 
@@ -133,6 +133,7 @@ struct WindowUndoFailureTests {
         setup.window.settle()
 
         #expect(try setup.transactions() == before, "Edit 2 Transactions isn't redone")
+        #expect(setup.history.alert?.title == "Couldn’t Redo Delete 2 Transactions in Everyday Savings")
         try Self.expectDropped(setup)
     }
 
@@ -151,6 +152,65 @@ struct WindowUndoFailureTests {
 
         #expect(try setup.transactions() == before)
         try Self.expectDropped(setup)
+    }
+
+    /// After a failed command, the next command the other way runs its stand-in and puts the failed step back,
+    /// a second one is swallowed, and typing then overtakes it, so its step is dropped too (D201.1).
+    @Test("D201.1: a failed Undo with a queued Redo dropped too still names the failed Undo")
+    func droppedRedoKeepsTheUndoTitle() throws {
+        let setup = try Self.withRedo()
+        let manager = setup.window.undoManager
+        let before = try setup.transactions()
+        manager.afterAction = {}
+        setup.disk.isFull = true
+        manager.undo()
+        setup.disk.isFull = false
+        manager.redo()
+        manager.redo()
+        manager.registerTyping()
+        setup.window.settle()
+
+        #expect(try setup.transactions() == before)
+        #expect(setup.history.alert?.title == "Couldn’t Undo Delete 2 Transactions in Everyday Savings")
+        #expect(setup.history.alert?.message == Self.removedMessage)
+    }
+
+    @Test("D201.1: a failed Redo with a queued Undo dropped too still names the failed Redo")
+    func droppedUndoKeepsTheRedoTitle() throws {
+        let setup = try Self.withRedo()
+        let manager = setup.window.undoManager
+        setup.history.undo()
+        let before = try setup.transactions()
+        manager.afterAction = {}
+        setup.disk.isFull = true
+        manager.redo()
+        setup.disk.isFull = false
+        manager.undo()
+        manager.undo()
+        manager.registerTyping()
+        setup.window.settle()
+
+        #expect(try setup.transactions() == before)
+        #expect(setup.history.alert?.title == "Couldn’t Redo Delete 2 Transactions in Everyday Savings")
+        #expect(setup.history.alert?.message == Self.removedMessage)
+    }
+
+    @Test("D201.1: a failed Undo with a queued Undo dropped when typing overtakes still names the failed step")
+    func droppedUndoKeepsTheFailedName() throws {
+        let setup = try Self.withRedo()
+        let manager = setup.window.undoManager
+        let before = try setup.transactions()
+        manager.afterAction = {}
+        setup.disk.isFull = true
+        manager.undo()
+        setup.disk.isFull = false
+        manager.undo()
+        manager.registerTyping()
+        setup.window.settle()
+
+        #expect(try setup.transactions() == before)
+        #expect(setup.history.alert?.title == "Couldn’t Undo Delete 2 Transactions in Everyday Savings")
+        #expect(setup.history.alert?.message == Self.removedMessage)
     }
 
     @Test("X8b: four queued commands (failed Undo, Undo, Redo, Redo) are all swallowed, with no dead entry")
@@ -266,7 +326,7 @@ struct WindowUndoFailureTests {
         )
         #expect(manager.redoNames.isEmpty, "Typing clears Redo, as on the real UndoManager")
         // Spot check (c): the alert says the failed step is gone.
-        #expect(setup.history.alert?.title == "Couldn't Make the Change")
+        #expect(setup.history.alert?.title == "Couldn’t Undo Delete 2 Transactions in Everyday Savings")
         #expect(setup.history.alert?.message == Self.removedMessage)
         #expect(setup.history.alert?.message.hasSuffix("This change was removed from Undo history.") == true)
     }
@@ -280,7 +340,7 @@ struct WindowUndoFailureTests {
 
         setup.disk.isFull = true
         setup.history.undo()
-        #expect(setup.history.alert?.title == "Couldn't Make the Change")
+        #expect(setup.history.alert?.title == "Couldn’t Undo Edit Transaction in Everyday Savings")
         #expect(try setup.transactions() == before, "Nothing changed or half changed")
         #expect(setup.history.undoTitle == "Edit Transaction in Everyday Savings")
         #expect(setup.history.redoTitle == "Delete 2 Transactions in Everyday Savings")
@@ -309,7 +369,7 @@ struct WindowUndoFailureTests {
 
         setup.disk.isFull = true
         setup.history.redo()
-        #expect(setup.history.alert?.title == "Couldn't Make the Change")
+        #expect(setup.history.alert?.title == "Couldn’t Redo Edit Transaction in Everyday Savings")
         #expect(try setup.transactions() == before)
         #expect(setup.history.redoTitle == "Edit Transaction in Everyday Savings")
         #expect(setup.history.undoTitle == "Delete Transaction in Everyday Savings")
@@ -343,7 +403,7 @@ struct WindowUndoFailureTests {
         try setup.disk.saveTransaction(other)
 
         setup.history.undo()
-        #expect(setup.history.alert?.title == "Can't Undo Edit Transaction in Everyday Savings")
+        #expect(setup.history.alert?.title == "Can’t Undo Edit Transaction in Everyday Savings")
         #expect(setup.history.undoTitle == "Delete Transaction in Everyday Savings")
         #expect(setup.history.redoTitle == "Delete 2 Transactions in Everyday Savings")
     }

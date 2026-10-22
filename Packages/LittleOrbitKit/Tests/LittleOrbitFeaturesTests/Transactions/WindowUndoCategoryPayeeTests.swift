@@ -132,7 +132,7 @@ struct WindowUndoCategoryPayeeTests {
         let revision = setup.updates.revision
 
         setup.first.history.undo()
-        #expect(setup.first.history.alert?.title == "Can't Undo Edit 3 Transactions in Everyday Savings")
+        #expect(setup.first.history.alert?.title == "Can’t Undo Edit 3 Transactions in Everyday Savings")
         #expect(
             setup.first.history.alert?.message == "Corner Bakery was changed in another window. Nothing was changed."
         )
@@ -154,7 +154,7 @@ struct WindowUndoCategoryPayeeTests {
         let before = try setup.repository.transactions()
 
         setup.first.history.undo()
-        #expect(setup.first.history.alert?.title == "Can't Undo Edit Transaction in Everyday Savings")
+        #expect(setup.first.history.alert?.title == "Can’t Undo Edit Transaction in Everyday Savings")
         #expect(
             setup.first.history.alert?.message
                 == "Maple Noodle Bar was changed in another window. Nothing was changed."

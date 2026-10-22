@@ -231,26 +231,26 @@
         }
       }
     },
-    "Can't Redo %@": {
+    "Can’t Redo %@": {
       "comment": "Alert title: a Redo that can't run because another window changed its records. %@ is the Redo name, such as \"Delete Transaction\".",
       "extractionState": "manual",
       "localizations": {
         "en": {
           "stringUnit": {
             "state": "translated",
-            "value": "Can't Redo %@"
+            "value": "Can’t Redo %@"
           }
         }
       }
     },
-    "Can't Undo %@": {
+    "Can’t Undo %@": {
       "comment": "Alert title: an Undo that can't run because another window changed its records. %@ is the Undo name, such as \"Edit Transaction\".",
       "extractionState": "manual",
       "localizations": {
         "en": {
           "stringUnit": {
             "state": "translated",
-            "value": "Can't Undo %@"
+            "value": "Can’t Undo %@"
           }
         }
       }
@@ -315,26 +315,50 @@
         }
       }
     },
-    "Couldn't Make the Change": {
-      "comment": "Alert title: an Undo, Redo or change failed, for example on a full disk. Nothing changed.",
+    "Couldn’t Make the Change": {
+      "comment": "Alert title after the user's own change: it was saved, but its accounts or its records couldn't be read back (D204). Not used for a failed Undo or Redo.",
       "extractionState": "manual",
       "localizations": {
         "en": {
           "stringUnit": {
             "state": "translated",
-            "value": "Couldn't Make the Change"
+            "value": "Couldn’t Make the Change"
           }
         }
       }
     },
-    "Couldn't read your accounts, so Undo may not say where this change was.": {
+    "Couldn’t Redo %@": {
+      "comment": "Alert title: a Redo failed with an error, for example on a full disk, and nothing changed (D201). %@ is the Redo name, such as \"New Transaction in Household Card\".",
+      "extractionState": "manual",
+      "localizations": {
+        "en": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Couldn’t Redo %@"
+          }
+        }
+      }
+    },
+    "Couldn’t Undo %@": {
+      "comment": "Alert title: an Undo failed with an error, for example on a full disk, and nothing changed (D201). %@ is the Undo name, such as \"Edit Transaction in Household Card\".",
+      "extractionState": "manual",
+      "localizations": {
+        "en": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Couldn’t Undo %@"
+          }
+        }
+      }
+    },
+    "Couldn’t read your accounts, so Undo may not say where this change was.": {
       "comment": "Alert message: a change was saved and can be undone, but its accounts couldn't be read.",
       "extractionState": "manual",
       "localizations": {
         "en": {
           "stringUnit": {
             "state": "translated",
-            "value": "Couldn't read your accounts, so Undo may not say where this change was."
+            "value": "Couldn’t read your accounts, so Undo may not say where this change was."
           }
         }
       }
@@ -995,14 +1019,14 @@
         }
       }
     },
-    "Payee isn't applied to transfers": {
+    "Payee isn’t applied to transfers": {
       "comment": "Bulk edit: under Payee when the selection includes a transfer.",
       "extractionState": "manual",
       "localizations": {
         "en": {
           "stringUnit": {
             "state": "translated",
-            "value": "Payee isn't applied to transfers"
+            "value": "Payee isn’t applied to transfers"
           }
         }
       }
@@ -1139,14 +1163,14 @@
         }
       }
     },
-    "Transfers don't have a category": {
+    "Transfers don’t have a category": {
       "comment": "Bulk edit: Category is off because every row is a transfer.",
       "extractionState": "manual",
       "localizations": {
         "en": {
           "stringUnit": {
             "state": "translated",
-            "value": "Transfers don't have a category"
+            "value": "Transfers don’t have a category"
           }
         }
       }
@@ -1187,14 +1211,14 @@
         }
       }
     },
-    "Your change was saved, but couldn't be read back, so it can't be undone.": {
+    "Your change was saved, but couldn’t be read back, so it can’t be undone.": {
       "comment": "Alert message: a change was saved, but couldn't be read back, so it has no Undo step.",
       "extractionState": "manual",
       "localizations": {
         "en": {
           "stringUnit": {
             "state": "translated",
-            "value": "Your change was saved, but couldn't be read back, so it can't be undone."
+            "value": "Your change was saved, but couldn’t be read back, so it can’t be undone."
           }
         }
       }

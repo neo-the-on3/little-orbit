@@ -64,7 +64,7 @@
                 Text("The amount and details you entered will be lost.")
             }
             .alert(
-                "Couldn't save",
+                "Couldn’t save",
                 isPresented: Binding(get: { model.errorMessage != nil }, set: { _ in }),
             ) {
                 Button("OK") { model.errorMessage = nil }

@@ -4,13 +4,13 @@ import LittleOrbitDomain
 /// The wording of the stale-step alert (D187.5, #93 X1–X6). The checks are by value, so a change made outside
 /// any window reads the same way.
 enum StaleText {
-    /// "Can't Undo Edit Transaction": the alert's title, with the step's name as the menu showed it.
+    /// "Can’t Undo Edit Transaction": the alert's title, with the step's name as the menu showed it.
     static func cantUndo(_ title: String) -> String {
-        FeatureText.string("Can't Undo \(title)", comment: "Alert title: an Undo that can't run. The Undo name.")
+        FeatureText.string("Can’t Undo \(title)", comment: "Alert title: an Undo that can't run. The Undo name.")
     }
 
     static func cantRedo(_ title: String) -> String {
-        FeatureText.string("Can't Redo \(title)", comment: "Alert title: a Redo that can't run. The Redo name.")
+        FeatureText.string("Can’t Redo \(title)", comment: "Alert title: a Redo that can't run. The Redo name.")
     }
 
     static func changed(_ name: String) -> String {

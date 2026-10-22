@@ -49,7 +49,7 @@ struct BulkEditViewModelTests {
         #expect(expenses.categoryNote == nil)
         #expect(expenses.payeeNote == nil)
         let transfers = model(repository, rows.filter { $0.type == .transfer }.map(\.id))
-        #expect(transfers.categoryNote == "Transfers don't have a category")
+        #expect(transfers.categoryNote == "Transfers don’t have a category")
         expenses.editsCategory = true
         expenses.categoryID = DefaultCategoryID.shopping
         _ = expenses.apply()
@@ -61,7 +61,7 @@ struct BulkEditViewModelTests {
         let rows = mixed()
         let repository = try F.repository(rows)
         let model = model(repository, rows.map(\.id))
-        #expect(model.payeeNote == "Payee isn't applied to transfers")
+        #expect(model.payeeNote == "Payee isn’t applied to transfers")
         model.editsPayee = true
         model.payeeText = "Corner Bakery"
         model.editsDate = true

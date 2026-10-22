@@ -82,7 +82,7 @@ struct TransactionAmountEntryTests {
         let model = model(try F.repository())
         model.expressionInput = "5/0"
         model.commitAmount()
-        #expect(model.amountError == "Can't divide by zero")
+        #expect(model.amountError == "Can’t divide by zero")
         #expect(!model.canSave)
         model.expressionInput = "5-8"
         model.commitAmount()

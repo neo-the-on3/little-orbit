@@ -84,7 +84,7 @@ struct WindowUndoTitleTests {
         edited.amount = 777
         try setup.repository.saveTransaction(edited)
         setup.history.undo()
-        #expect(setup.history.alert?.title == "Can't Undo Edit Transaction in Everyday Savings")
+        #expect(setup.history.alert?.title == "Can’t Undo Edit Transaction in Everyday Savings")
         setup.history.dismissAlert()
         #expect(setup.history.undoTitle == "Delete Transaction in Rewards Card")
         #expect(setup.window.undoManager.undoNames.last == "Delete Transaction in Rewards Card")

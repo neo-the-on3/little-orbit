@@ -43,23 +43,35 @@ enum UndoText {
         FeatureText.string("Redid \(title)", comment: "VoiceOver announcement after Redo. The Redo name.")
     }
 
-    static var failedTitle: String {
+    /// "Couldn’t Undo Edit Transaction in Household Card": an Undo failed with an error and the step is kept
+    /// (D201). Its own entry, apart from the title after a change (D204.2).
+    static func couldntUndo(_ title: String) -> String {
+        FeatureText.string("Couldn’t Undo \(title)", comment: "Alert title: an Undo failed. The Undo name.")
+    }
+
+    static func couldntRedo(_ title: String) -> String {
+        FeatureText.string("Couldn’t Redo \(title)", comment: "Alert title: a Redo failed. The Redo name.")
+    }
+
+    /// After the user's own change, when its accounts or records couldn't be read back (D204). Never used for a
+    /// failed Undo or Redo.
+    static var changeFailedTitle: String {
         FeatureText.string(
-            "Couldn't Make the Change",
-            comment: "Alert title: an Undo, Redo or change failed, for example on a full disk. Nothing changed.",
+            "Couldn’t Make the Change",
+            comment: "Alert title after the user's own change: its accounts or records couldn't be read back.",
         )
     }
 
     static var unreadablePlace: String {
         FeatureText.string(
-            "Couldn't read your accounts, so Undo may not say where this change was.",
+            "Couldn’t read your accounts, so Undo may not say where this change was.",
             comment: "Alert message: a change was saved and can be undone, but its accounts couldn't be read.",
         )
     }
 
     static var unreadableChange: String {
         FeatureText.string(
-            "Your change was saved, but couldn't be read back, so it can't be undone.",
+            "Your change was saved, but couldn’t be read back, so it can’t be undone.",
             comment: "Alert message: a change was saved, but couldn't be read back, so it has no Undo step.",
         )
     }

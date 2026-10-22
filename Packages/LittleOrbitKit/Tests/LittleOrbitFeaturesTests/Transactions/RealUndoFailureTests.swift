@@ -100,10 +100,11 @@
             _ setup: Setup,
             before: [Transaction],
             left: Int = 4,
+            title: String = "Couldn’t Undo Delete 2 Transactions in Everyday Savings",
             sourceLocation: SourceLocation = #_sourceLocation,
         ) throws {
             #expect(try setup.transactions() == before, "Nothing was applied", sourceLocation: sourceLocation)
-            #expect(setup.window.history.alert?.title == "Couldn't Make the Change", sourceLocation: sourceLocation)
+            #expect(setup.window.history.alert?.title == title, sourceLocation: sourceLocation)
             #expect(setup.window.history.alert?.message == Self.removedMessage, sourceLocation: sourceLocation)
             #expect(!setup.window.history.canUndo, "Off until the alert is dismissed", sourceLocation: sourceLocation)
             #expect(!setup.window.history.canRedo, sourceLocation: sourceLocation)
@@ -172,7 +173,12 @@
             setup.window.nextEvent()
             #expect(try setup.transactions().filter { $0.amount == 50 }.isEmpty, "Edit 2 Transactions isn't redone")
             // The failed step was "Delete 2 Transactions" again, this time on Redo, so its rows stay.
-            try assertDropped(setup, before: before, left: 6)
+            try assertDropped(
+                setup,
+                before: before,
+                left: 6,
+                title: "Couldn’t Redo Delete 2 Transactions in Everyday Savings",
+            )
         }
 
         @Test("X8b: three commands with no event between (failed Undo, Undo, Redo): all swallowed, no dead entry")
@@ -290,7 +296,7 @@
 
             setup.disk.isFull = true
             setup.window.undo()
-            #expect(setup.window.history.alert?.title == "Couldn't Make the Change")
+            #expect(setup.window.history.alert?.title == "Couldn’t Undo Edit Transaction in Everyday Savings")
             #expect(try setup.transactions() == before, "Nothing changed or half changed")
             #expect(setup.manager.undoActionName == "Edit Transaction in Everyday Savings")
             #expect(
@@ -328,7 +334,7 @@
 
             setup.disk.isFull = true
             setup.window.redo()
-            #expect(setup.window.history.alert?.title == "Couldn't Make the Change")
+            #expect(setup.window.history.alert?.title == "Couldn’t Redo Edit Transaction in Everyday Savings")
             #expect(try setup.transactions() == before)
             #expect(setup.manager.redoActionName == "Edit Transaction in Everyday Savings")
             #expect(setup.manager.undoActionName == "Delete Transaction in Everyday Savings")

@@ -18,6 +18,9 @@ import LittleOrbitDomain
 struct UndoFailureBlock {
     /// From a failure until its alert is dismissed.
     var isBlocked = false
+    /// The failure alert's title, built once from the step that failed and its direction (D201.1). Dropping
+    /// a queued command's step later keeps it.
+    var title = ""
     /// The failure alert's message, before any added line.
     var message = ""
     /// Stand-ins on the `UndoManager`, oldest first.
@@ -57,11 +60,13 @@ final class UndoStandIn {
 }
 
 extension WindowUndoHistory {
-    /// The step's Undo or Redo failed: "Couldn't Make the Change", and the history blocks until it's dismissed.
+    /// The step's Undo or Redo failed: "Couldn’t Undo <name>" or "Couldn’t Redo <name>" (D201), and the history
+    /// blocks until it's dismissed.
     func fail(_ step: Step, undoing: Bool, title: String, error: any Error) {
         failure.isBlocked = true
+        failure.title = Self.failedTitle(undoing: undoing, title)
         failure.message = AccountHistoryViewModel.message(for: error)
-        alert = UndoAlert(title: Self.failedTitle, message: failure.message)
+        alert = UndoAlert(title: failure.title, message: failure.message)
         addStandIn(for: step, backOnUndo: undoing, title: title, isFailedStep: true)
         refreshMenu()
     }
@@ -197,15 +202,20 @@ extension WindowUndoHistory {
         refreshMenu()
     }
 
-    /// Gives up a stand-in, and the step it holds; the alert says the change was removed (X8b). Once the alert
-    /// was dismissed, it isn't shown again.
+    /// Gives up a stand-in, and the step it holds; the alert says the change was removed (X8b), still titled
+    /// after the step that failed, whichever stand-in this is. Once the alert was dismissed, it isn't shown again.
     private func discard(_ standIn: UndoStandIn) {
         standIn.isDropped = true
         if failure.isBlocked, !failure.isDismissed {
             alert = UndoAlert(
-                title: Self.failedTitle,
+                title: failure.title,
                 message: failure.message + "\n" + UndoText.removedFromHistory,
             )
         }
+    }
+
+    /// The failure alert's title names the step, as the menu showed it (D201.1).
+    static func failedTitle(undoing: Bool, _ title: String) -> String {
+        undoing ? UndoText.couldntUndo(title) : UndoText.couldntRedo(title)
     }
 }

@@ -11,6 +11,7 @@ final class FakeTransactionUseCases {
     var historyError: (any Error)?
     var revertError: (any Error)?
     var impactError: (any Error)?
+    var outcomeError: (any Error)?
     /// When set, every step is stale for this reason.
     var staleReason: StaleReason?
     private(set) var saved: [[Transaction]] = []
@@ -47,7 +48,12 @@ final class FakeTransactionUseCases {
         return .removed([])
     }
 
-    func outcome(of change: TransactionChange) throws -> ChangeOutcome { ChangeOutcome() }
+    func outcome(of change: TransactionChange) throws -> ChangeOutcome {
+        if let outcomeError {
+            throw outcomeError
+        }
+        return ChangeOutcome()
+    }
 
     func check(_ change: TransactionChange, expecting outcome: ChangeOutcome) throws -> ChangeCheck {
         staleReason.map(ChangeCheck.stale) ?? .current
