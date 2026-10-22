@@ -2081,7 +2081,7 @@
       }
     },
     "Unknown": {
-      "comment": "Kind or version of a damaged backup whose manifest can’t be read.",
+      "comment": "What a damaged backup shows for a kind, version, date or size that can’t be read.",
       "extractionState": "manual",
       "localizations": {
         "en": {

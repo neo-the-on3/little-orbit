@@ -30,13 +30,16 @@ public struct BackupRecord: Identifiable, Hashable, Sendable, Codable {
     /// `nil` only for a damaged folder whose manifest was never read, so its kind isn't known.
     public var kind: BackupKind?
     /// The creation moment. Stored as an absolute time and shown in the device's current time zone (D133).
+    /// `BackupRecord.unknownDate` for a damaged folder with no readable date, so it sorts last (D202.1, L49).
     public var createdAt: Date
     /// 1 for the plain name, 2 for ' 2' and so on: fixed when the backup is made and never changed (D173.11, D174).
     public var nameIndex: Int
     /// 0 when it isn't known (a folder without a readable manifest).
     public var formatVersion: Int
-    /// The manifest total in bytes, attachments included: the same as the exported size (D116.5, S61, D195).
-    public var byteSize: Int64
+    /// The manifest total in bytes, attachments included: the same as the exported size (D116.5, S61, D195). For a
+    /// damaged folder whose manifest was never read, the total of its files' sizes; `nil` when that can't be
+    /// computed (D202.1, L48, L49).
+    public var byteSize: Int64?
     public var accountCount: Int
     public var transactionCount: Int
     public var attachmentCount: Int
@@ -53,7 +56,7 @@ public struct BackupRecord: Identifiable, Hashable, Sendable, Codable {
         createdAt: Date,
         nameIndex: Int = 1,
         formatVersion: Int = BackupFormat.currentVersion,
-        byteSize: Int64 = 0,
+        byteSize: Int64? = 0,
         accountCount: Int = 0,
         transactionCount: Int = 0,
         attachmentCount: Int = 0,
@@ -161,6 +164,17 @@ public struct BackupCatalog: Equatable, Sendable {
     /// two names can show the same time, but the order stays right.
     public var newestFirst: [BackupRecord] {
         records.sorted { ($0.createdAt, $0.nameIndex) > ($1.createdAt, $1.nameIndex) }
+    }
+}
+
+extension BackupRecord {
+    /// The date of a damaged folder whose creation date can't be read: before every real date, so the row sorts
+    /// last, and shown as "Unknown", never as a date (D202.1, L49).
+    public static let unknownDate = Date.distantPast
+
+    /// Whether `createdAt` is a real date.
+    public var isDateKnown: Bool {
+        createdAt != Self.unknownDate
     }
 }
 

@@ -334,7 +334,7 @@ public final class BackupsViewModel {
         let moment = now()
         return BackupExportPrompt(
             record: record,
-            dateText: presentation.date(record.createdAt, now: moment),
+            dateText: presentation.date(of: record, now: moment),
             summary: presentation.exportSummary(record, now: moment),
         )
     }

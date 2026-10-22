@@ -17,11 +17,19 @@ public struct BackupFolderListing: Equatable, Sendable {
     public var fileSizes: [String: Int64]
     /// When the folder was made, for a damaged folder whose manifest was never read.
     public var createdAt: Date?
+    /// `false` when a file's size couldn't be read; `fileSizes` then leaves it out (D202.1, L49).
+    public var sizesKnown: Bool
 
-    public init(manifest: Data?, fileSizes: [String: Int64], createdAt: Date? = nil) {
+    public init(manifest: Data?, fileSizes: [String: Int64], createdAt: Date? = nil, sizesKnown: Bool = true) {
         self.manifest = manifest
         self.fileSizes = fileSizes
         self.createdAt = createdAt
+        self.sizesKnown = sizesKnown
+    }
+
+    /// The total of the files' sizes, or `nil` when one couldn't be read.
+    public var totalSize: Int64? {
+        sizesKnown ? fileSizes.values.reduce(0, +) : nil
     }
 }
 
@@ -33,7 +41,8 @@ public protocol BackupStorage: Sendable {
     /// never listed (D195.6).
     func storedIDs() throws -> [UUID]
     /// A folder's manifest and file sizes, for the list. Throws `BackupError.notFound` when the folder is gone, and
-    /// the underlying error for a failed read (R3).
+    /// the underlying error for a failed read (R3). A file whose size can't be read is left out and marked by
+    /// `sizesKnown`, so one unreadable size never hides the whole list (D202.1).
     func listing(id: UUID) throws -> BackupFolderListing
     /// Every file in a backup folder, by relative path, all in memory. Only export uses it; checks and restores
     /// read through `files(id:)`.

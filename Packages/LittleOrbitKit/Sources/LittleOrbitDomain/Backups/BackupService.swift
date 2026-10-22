@@ -407,7 +407,13 @@ extension BackupService {
         guard let data = listing.manifest, let reading = try? codec.reading(manifest: data) else {
             var record =
                 known
-                ?? BackupRecord(id: id, kind: nil, createdAt: listing.createdAt ?? .distantPast, formatVersion: 0)
+                ?? BackupRecord(
+                    id: id,
+                    kind: nil,
+                    createdAt: listing.createdAt ?? BackupRecord.unknownDate,
+                    formatVersion: 0,
+                    byteSize: listing.totalSize,
+                )
             record.condition = .damaged
             return record
         }
@@ -416,10 +422,10 @@ extension BackupService {
             return BackupRecord(
                 id: id,
                 kind: hints.kind ?? known?.kind,
-                createdAt: hints.createdAt ?? known?.createdAt ?? listing.createdAt ?? .distantPast,
+                createdAt: hints.createdAt ?? known?.createdAt ?? listing.createdAt ?? BackupRecord.unknownDate,
                 nameIndex: hints.nameIndex ?? known?.nameIndex ?? 1,
                 formatVersion: hints.formatVersion,
-                byteSize: listing.fileSizes.values.reduce(0, +),
+                byteSize: listing.totalSize,
                 month: hints.month,
                 condition: .newerFormat,
             )

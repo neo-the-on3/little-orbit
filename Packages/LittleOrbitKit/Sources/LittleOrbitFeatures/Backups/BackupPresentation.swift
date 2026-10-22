@@ -85,7 +85,7 @@ public struct BackupPresentation: Sendable {
     /// A newer-format backup in the list, and the line its detail adds (D197.2, L35).
     public static let newerFormatNote = FeatureText.format("Made by a newer version of little-orbit.")
     public static let newerFormatDetail = FeatureText.format("Update little-orbit to restore it.")
-    /// The kind of a damaged folder whose manifest was never read.
+    /// What a damaged backup shows for a kind, version, date or size that can't be read (D200.1, D202.1).
     public static let unknownKind = FeatureText.format("Unknown")
     /// The Export sheet's one line, on every export (D182.4).
     public static let unencryptedWarning = FeatureText.format(
@@ -186,6 +186,11 @@ public struct BackupPresentation: Sendable {
         }
     }
 
+    /// A backup's date, or "Unknown" for a damaged folder with no readable date (D202.1, L49).
+    public func date(of record: BackupRecord, now: Date) -> String {
+        record.isDateKnown ? date(record.createdAt, now: now) : Self.unknownKind
+    }
+
     /// "Today, 9:12 AM", "Yesterday, 8:47 PM", otherwise "19 Oct 2026, 10:03 AM", in the current time zone (D133).
     public func date(_ date: Date, now: Date) -> String {
         var calendar = Calendar(identifier: .gregorian)
@@ -231,7 +236,7 @@ public struct BackupPresentation: Sendable {
     /// The Export sheet's summary of the selected backup, on iOS and macOS (R1, S64, S76, D186).
     public func exportSummary(_ record: BackupRecord, now: Date) -> String {
         var parts = [
-            FeatureText.format("Backup from %@", date(record.createdAt, now: now)),
+            FeatureText.format("Backup from %@", date(of: record, now: now)),
             Self.kind(record.kind),
             FeatureText.plural("%lld accounts", one: "%lld account", record.accountCount),
             FeatureText.plural("%lld transactions", one: "%lld transaction", record.transactionCount),
@@ -243,9 +248,9 @@ public struct BackupPresentation: Sendable {
     }
 
     public func row(_ record: BackupRecord, now: Date) -> BackupRowModel {
-        let title = date(record.createdAt, now: now)
+        let title = date(of: record, now: now)
         let kind = Self.kind(record.kind)
-        let sizeText = size(record.byteSize)
+        let sizeText = record.byteSize.map(size) ?? Self.unknownKind
         let countsText = counts(record.accountCount, record.transactionCount)
         let status: String? =
             switch record.condition {

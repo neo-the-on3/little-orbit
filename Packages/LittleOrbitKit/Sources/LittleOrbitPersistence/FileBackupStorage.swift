@@ -91,9 +91,15 @@ public final class FileBackupStorage: BackupStorage, @unchecked Sendable {
         }
         let base = url.standardizedFileURL.resolvingSymlinksInPath().path
         var sizes: [String: Int64] = [:]
+        var sizesKnown = true
         let enumerator = fileManager.enumerator(atPath: base)
         while let relative = enumerator?.nextObject() as? String {
-            let attributes = try fileManager.attributesOfItem(atPath: base + "/" + relative)
+            // A size that can't be read leaves the file out; the list shows "Unknown" for a never-read folder, and a
+            // backup whose manifest lists the file reads as damaged, as for a missing file (D202.1, L49).
+            guard let attributes = try? fileManager.attributesOfItem(atPath: base + "/" + relative) else {
+                sizesKnown = false
+                continue
+            }
             if attributes[.type] as? FileAttributeType == .typeRegular {
                 sizes[relative] = (attributes[.size] as? NSNumber)?.int64Value ?? 0
             }
@@ -102,7 +108,7 @@ public final class FileBackupStorage: BackupStorage, @unchecked Sendable {
         let manifest: Data? =
             sizes[Self.manifestName] == nil ? nil : try Data(contentsOf: manifestURL)
         let created = try? fileManager.attributesOfItem(atPath: url.path)[.creationDate] as? Date
-        return BackupFolderListing(manifest: manifest, fileSizes: sizes, createdAt: created)
+        return BackupFolderListing(manifest: manifest, fileSizes: sizes, createdAt: created, sizesKnown: sizesKnown)
     }
 
     /// Throws `notFound` when there's no such folder, and the underlying error for any other failed read.
