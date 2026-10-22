@@ -131,12 +131,28 @@ public final class FileBackupStorage: BackupStorage, @unchecked Sendable {
     }
 
     public func write(_ files: BackupSnapshotFiles, id: UUID, cloningFrom earlier: UUID?) throws {
+        try write(
+            files,
+            attachments: BackupAttachmentWrites(bytes: BackupLedgerAttachments(LedgerSnapshot())),
+            id: id,
+            cloningFrom: earlier,
+        )
+    }
+
+    /// Each attachment file is cloned from `earlier` when it's unchanged, or streamed from its bytes into a new
+    /// file in 1 MB chunks, so no attachment is ever held whole (B1).
+    public func write(
+        _ files: BackupSnapshotFiles,
+        attachments: BackupAttachmentWrites,
+        id: UUID,
+        cloningFrom earlier: UUID?,
+    ) throws {
         try locked {
             let temporary = staging.appendingPathComponent("\(id.uuidString).tmp", isDirectory: true)
             do {
                 try prepare(staging)
                 try prepare(folder)
-                try writeFolder(files, to: temporary, cloningFrom: earlier.map(folderURL))
+                try writeFolder(files, attachments: attachments, to: temporary, cloningFrom: earlier.map(folderURL))
                 try fileManager.moveItem(at: temporary, to: folderURL(id))
             } catch {
                 try? fileManager.removeItem(at: temporary)
@@ -211,11 +227,42 @@ public final class FileBackupStorage: BackupStorage, @unchecked Sendable {
         return files
     }
 
-    /// Writes `files` under `destination`, `manifest.json` last. A file that's the same in `earlier` is cloned.
-    private func writeFolder(_ files: BackupSnapshotFiles, to destination: URL, cloningFrom earlier: URL?) throws {
+    /// Writes `files` and the attachment files under `destination`, `manifest.json` last. A file that's the same
+    /// in `earlier` is cloned.
+    private func writeFolder(
+        _ files: BackupSnapshotFiles,
+        attachments: BackupAttachmentWrites,
+        to destination: URL,
+        cloningFrom earlier: URL?,
+    ) throws {
         try prepare(destination)
-        let ordered = files.paths.filter { $0 != Self.manifestName } + files.paths.filter { $0 == Self.manifestName }
-        for path in ordered {
+        try write(files.paths.filter { $0 != Self.manifestName }, of: files, to: destination, cloningFrom: earlier)
+        for (path, id) in attachments.ids.sorted(by: { $0.key < $1.key }) {
+            guard BackupFormat.isContained(path) else {
+                throw BackupError.damaged
+            }
+            let url = destination.appendingPathComponent(path)
+            try prepare(url.deletingLastPathComponent())
+            if attachments.unchanged.contains(path), let source = earlier?.appendingPathComponent(path),
+                Self.isRegularFile(source)
+            {
+                try Self.cloneOrCopy(from: source, to: url)
+            } else {
+                try Self.streamFile(to: url) { sink in
+                    _ = try attachments.bytes.stream(id, through: sink)
+                }
+            }
+        }
+        try write(files.paths.filter { $0 == Self.manifestName }, of: files, to: destination, cloningFrom: earlier)
+    }
+
+    private func write(
+        _ paths: [String],
+        of files: BackupSnapshotFiles,
+        to destination: URL,
+        cloningFrom earlier: URL?,
+    ) throws {
+        for path in paths {
             guard BackupFormat.isContained(path), let data = files[path] else {
                 throw BackupError.damaged
             }
@@ -248,7 +295,7 @@ public final class FileBackupStorage: BackupStorage, @unchecked Sendable {
 
     /// Creates a folder if it's missing, with the default data protection class on iOS. It isn't excluded from the
     /// device backup (D181).
-    private func prepare(_ url: URL) throws {
+    func prepare(_ url: URL) throws {
         #if os(iOS) || os(watchOS)
             let attributes: [FileAttributeKey: Any] = [
                 .protectionKey: FileProtectionType.completeUntilFirstUserAuthentication
@@ -324,11 +371,7 @@ struct StoredBackupFolder: BackupFileReading {
         guard let url = regularFile(path) else {
             return false
         }
-        let handle = try FileHandle(forReadingFrom: url)
-        defer { try? handle.close() }
-        while let chunk = try handle.read(upToCount: Self.chunkSize), !chunk.isEmpty {
-            try chunk.withUnsafeBytes(body)
-        }
+        try FileChunkReader.stream(url, chunkSize: Self.chunkSize, through: body)
         return true
     }
 

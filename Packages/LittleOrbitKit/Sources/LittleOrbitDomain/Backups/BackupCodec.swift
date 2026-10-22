@@ -12,6 +12,26 @@ public struct BackupCodec: Sendable {
     /// The folder for `contents`. The same data always gives the same bytes for every file but the manifest, so an
     /// unchanged file can be cloned from the previous backup (D195.1).
     public func encode(_ contents: BackupContents) throws -> BackupSnapshotFiles {
+        var entries: [UUID: BackupFileEntry] = [:]
+        for attachment in contents.attachments {
+            entries[attachment.id] = BackupFileEntry(
+                sha256: hashing.sha256Hex(attachment.data),
+                byteSize: Int64(attachment.data.count),
+            )
+        }
+        var files = try encode(contents, attachments: entries)
+        for attachment in contents.attachments {
+            files[Self.attachmentPath(attachment.id)] = attachment.data
+        }
+        return files
+    }
+
+    /// The folder's JSON files and its manifest, listing each attachment with its entry in `attachments`, worked
+    /// out while its bytes streamed past (B1). The attachment files themselves aren't included.
+    public func encode(
+        _ contents: BackupContents,
+        attachments: [UUID: BackupFileEntry],
+    ) throws -> BackupSnapshotFiles {
         let layout = Layout(contents.ledger)
         var files = BackupSnapshotFiles()
         let shared = SharedFile(
@@ -30,19 +50,23 @@ public struct BackupCodec: Sendable {
         for (path, year) in layout.years {
             files[path] = try Self.encoder.encode(year)
         }
-        for attachment in layout.attachmentBytes {
-            files[Self.attachmentPath(attachment.id)] = attachment.data
-        }
-        let entries = Dictionary(
+        var entries = Dictionary(
             uniqueKeysWithValues: files.files.map { path, data in
                 (path, BackupFileEntry(sha256: hashing.sha256Hex(data), byteSize: Int64(data.count)))
             }
         )
+        for attachment in layout.attachmentBytes {
+            entries[Self.attachmentPath(attachment.id)] = attachments[attachment.id] ?? emptyEntry
+        }
         let manifest = ManifestFile(
             format: BackupFormat.identifier,
             formatVersion: contents.manifest.formatVersion,
             backup: contents.manifest,
-            fingerprint: try fingerprint(of: contents.ledger, settings: contents.sharedSettings),
+            fingerprint: try fingerprint(
+                of: contents.ledger,
+                attachments: attachments,
+                settings: contents.sharedSettings,
+            ),
             files: entries,
         )
         files[BackupFormat.manifestPath] = try Self.encoder.encode(manifest)
@@ -54,7 +78,23 @@ public struct BackupCodec: Sendable {
     /// whole format-1 manifest (`damaged`, D182.3), every path stays inside the folder, and every listed file is there
     /// with its size and checksum (`damaged`, D195.2). Files the manifest doesn't list are ignored.
     public func decode(_ files: BackupSnapshotFiles) throws -> BackupContents {
-        let manifest = try verifiedManifest(files)
+        try decode(files, manifest: verifiedManifest(files), withBytes: true)
+    }
+
+    /// The contents of a folder already checked file by file (`verify`), from its manifest and JSON files only:
+    /// each attachment with its details, `data` empty (B1). Its bytes stay in the folder.
+    public func decodeDetails(_ files: BackupSnapshotFiles) throws -> BackupContents {
+        guard let data = files[BackupFormat.manifestPath] else {
+            throw BackupError.damaged
+        }
+        return try decode(files, manifest: decodedManifest(data), withBytes: false)
+    }
+
+    private func decode(
+        _ files: BackupSnapshotFiles,
+        manifest: ManifestFile,
+        withBytes: Bool,
+    ) throws -> BackupContents {
         do {
             let shared = try Self.decoder.decode(SharedFile.self, from: files[BackupFormat.sharedPath] ?? Data())
             var ledger = LedgerSnapshot(
@@ -70,9 +110,14 @@ public struct BackupCodec: Sendable {
                 records += year.attachments
             }
             ledger.attachments = try records.map { record in
-                guard let data = files[Self.attachmentPath(record.id)],
-                    manifest.files[Self.attachmentPath(record.id)] != nil
-                else {
+                let path = Self.attachmentPath(record.id)
+                guard manifest.files[path] != nil else {
+                    throw BackupError.damaged
+                }
+                guard withBytes else {
+                    return record.attachment(with: Data())
+                }
+                guard let data = files[path] else {
                     throw BackupError.damaged
                 }
                 return record.attachment(with: data)
@@ -142,10 +187,27 @@ public struct BackupCodec: Sendable {
 
     /// Identifies the data a ledger holds, ignoring when or how it was backed up (D116.3).
     public func fingerprint(of ledger: LedgerSnapshot, settings: BackupSharedSettings = .init()) throws -> String {
+        var entries: [UUID: BackupFileEntry] = [:]
+        for attachment in ledger.attachments {
+            entries[attachment.id] = BackupFileEntry(
+                sha256: hashing.sha256Hex(attachment.data),
+                byteSize: Int64(attachment.data.count),
+            )
+        }
+        return try fingerprint(of: ledger.withoutAttachmentBytes, attachments: entries, settings: settings)
+    }
+
+    /// The fingerprint of a ledger whose attachments come without bytes, from each one's entry worked out while
+    /// its bytes streamed past (B1). The same value `fingerprint(of:)` gives for the ledger with its bytes.
+    public func fingerprint(
+        of ledger: LedgerSnapshot,
+        attachments: [UUID: BackupFileEntry],
+        settings: BackupSharedSettings = .init(),
+    ) throws -> String {
         var canonical = BackupContents.canonical(ledger)
         // Each attachment counts by its SHA-256, not its bytes in the JSON, so a fingerprint never holds a copy of
         // the attachments (Tech Architect B1).
-        let attachmentHashes = canonical.attachments.map { hashing.sha256Hex($0.data) }
+        let attachmentHashes = canonical.attachments.map { (attachments[$0.id] ?? emptyEntry).sha256 }
         canonical.attachments = canonical.attachments.map { attachment in
             var metadata = attachment
             metadata.data = Data()
@@ -155,6 +217,26 @@ public struct BackupCodec: Sendable {
             Fingerprinted(ledger: canonical, attachmentHashes: attachmentHashes, sharedSettings: settings)
         )
         return hashing.sha256Hex(data)
+    }
+
+    /// Each attachment's size and SHA-256, its bytes streamed from `bytes` one attachment at a time (B1).
+    /// An attachment with no bytes counts as empty.
+    public func attachmentEntries(
+        of ledger: LedgerSnapshot,
+        reading bytes: any BackupAttachmentReading,
+    ) throws -> [UUID: BackupFileEntry] {
+        var entries: [UUID: BackupFileEntry] = [:]
+        for attachment in ledger.attachments {
+            let digest = BackupFileDigesting(makeDigest())
+            entries[attachment.id] =
+                try bytes.stream(attachment.id) { digest.update($0) } ? digest.finish() : emptyEntry
+        }
+        return entries
+    }
+
+    /// The entry of a file with no bytes.
+    var emptyEntry: BackupFileEntry {
+        BackupFileEntry(sha256: hashing.sha256Hex(Data()), byteSize: 0)
     }
 
     static func attachmentPath(_ id: UUID) -> String {
@@ -412,57 +494,4 @@ public struct BackupManifestHints: Equatable, Sendable {
     public var createdAt: Date?
     public var nameIndex: Int?
     public var month: String?
-}
-
-extension LedgerSnapshot: Encodable {
-    private enum CodingKeys: String, CodingKey {
-        case accounts, transactions, categories, payees, tags, splits, attachments
-    }
-
-    public func encode(to encoder: any Encoder) throws {
-        var container = encoder.container(keyedBy: CodingKeys.self)
-        try container.encode(accounts, forKey: .accounts)
-        try container.encode(transactions, forKey: .transactions)
-        try container.encode(categories, forKey: .categories)
-        try container.encode(payees, forKey: .payees)
-        try container.encode(tags, forKey: .tags)
-        try container.encode(splits, forKey: .splits)
-        try container.encode(attachments, forKey: .attachments)
-    }
-}
-
-/// What a newer manifest may still say, each field read only if it's there in format 1's shape.
-private struct NewerManifest: Decodable {
-    var formatVersion: Int
-    var backup: NewerManifestBackup?
-
-    init(from decoder: any Decoder) throws {
-        let container = try decoder.container(keyedBy: CodingKeys.self)
-        formatVersion = try container.decode(Int.self, forKey: .formatVersion)
-        backup = try? container.decodeIfPresent(NewerManifestBackup.self, forKey: .backup)
-    }
-
-    private enum CodingKeys: String, CodingKey {
-        case formatVersion, backup
-    }
-}
-
-/// A newer manifest's `backup` section, as far as format 1 can read it.
-private struct NewerManifestBackup: Decodable {
-    var kind: String?
-    var createdAt: Date?
-    var nameIndex: Int?
-    var month: String?
-
-    init(from decoder: any Decoder) throws {
-        let container = try decoder.container(keyedBy: CodingKeys.self)
-        kind = try? container.decodeIfPresent(String.self, forKey: .kind)
-        createdAt = try? container.decodeIfPresent(Date.self, forKey: .createdAt)
-        nameIndex = try? container.decodeIfPresent(Int.self, forKey: .nameIndex)
-        month = try? container.decodeIfPresent(String.self, forKey: .month)
-    }
-
-    private enum CodingKeys: String, CodingKey {
-        case kind, createdAt, nameIndex, month
-    }
 }

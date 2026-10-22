@@ -250,6 +250,30 @@
             deletedAt = attachment.deletedAt
         }
 
+        /// Everything but the bytes, which a restore sets from a file (B1).
+        func applyDetails(_ attachment: Attachment) {
+            id = attachment.id
+            fileName = attachment.fileName
+            contentType = attachment.contentType
+            createdAt = attachment.createdAt
+            updatedAt = attachment.updatedAt
+            deletedAt = attachment.deletedAt
+        }
+
+        /// The attachment without touching `data`, so its external-storage bytes aren't read (B1).
+        func makeAttachmentDetails() -> Attachment {
+            Attachment(
+                id: id,
+                transactionID: transaction?.id,
+                fileName: fileName,
+                contentType: contentType,
+                byteSize: byteSize,
+                createdAt: createdAt,
+                updatedAt: updatedAt,
+                deletedAt: deletedAt,
+            )
+        }
+
         func makeAttachment() -> Attachment {
             let payload = data ?? Data()
             return Attachment(

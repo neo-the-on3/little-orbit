@@ -66,4 +66,61 @@ extension BackupService {
             try? storage.saveStatus(status)
         }
     }
+
+    /// Which attachment files a new backup gets, and which of them are unchanged since `earlier`: the same size
+    /// and SHA-256 in its manifest, so they're cloned rather than written again (D195.1). The earlier folder's
+    /// files are checked when the new folder is read back.
+    nonisolated static func attachmentWrites(
+        _ ledger: LedgerSnapshot,
+        entries: [UUID: BackupFileEntry],
+        bytes: any BackupAttachmentReading,
+        earlier: UUID?,
+        storage: any BackupStorage,
+        codec: BackupCodec,
+    ) throws -> BackupAttachmentWrites {
+        let listed =
+            earlier.flatMap { id in
+                (try? storage.files(id: id).data(at: BackupFormat.manifestPath))
+                    .flatMap { $0 }
+                    .flatMap { try? codec.listedFiles(ofManifest: $0) }
+            } ?? [:]
+        var writes = BackupAttachmentWrites(bytes: bytes)
+        for attachment in ledger.attachments {
+            let path = BackupCodec.attachmentPath(attachment.id)
+            writes.ids[path] = attachment.id
+            if let entry = entries[attachment.id], listed[path] == entry {
+                writes.unchanged.insert(path)
+            }
+        }
+        return writes
+    }
+
+    /// A backup checked again, file by file, for a restore: a stored folder, or a picked file with its attachments
+    /// unpacked into a scratch folder the caller removes (B1).
+    func openForRestore(_ source: BackupSource) async throws -> (BackupOpened, (any BackupScratchFolder)?) {
+        let storage = self.storage
+        let codec = self.codec
+        let archiving = self.archiving
+        return
+            try await Task.detached(priority: .userInitiated) {
+                switch source {
+                case .stored(let id):
+                    let opened = try Self.remembering(id, storage: storage) {
+                        try codec.open(storage.files(id: id))
+                    }
+                    return (opened, nil)
+                case .archive(let archive):
+                    let scratch = try storage.makeScratch()
+                    do {
+                        let opened = try BackupArchiveImport(archiving: archiving, codec: codec)
+                            .open(archive, into: scratch)
+                        return (opened, scratch)
+                    } catch {
+                        scratch.remove()
+                        throw error
+                    }
+                }
+            }
+            .value
+    }
 }
