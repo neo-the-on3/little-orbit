@@ -167,12 +167,12 @@ public final class WindowUndoHistory {
             impact = try changes.impact(of: change)
         } catch {
             // The step still records; its name just can't say where the change was, so say so.
-            newAlert = UndoAlert(title: Self.failedTitle, message: Self.unreadablePlace)
+            newAlert = UndoAlert(title: Self.changeFailedTitle, message: Self.unreadablePlace)
         }
         // Without what the change left, Undo couldn't tell a stale step, so there is no step (D187.5).
         let outcome: ChangeOutcome? = try? changes.outcome(of: change)
         if outcome == nil {
-            newAlert = UndoAlert(title: Self.failedTitle, message: Self.unreadableChange)
+            newAlert = UndoAlert(title: Self.changeFailedTitle, message: Self.unreadableChange)
         }
         let step = Step(change: change, outcome: outcome ?? ChangeOutcome(), impact: impact)
         if let account = step.account {
@@ -195,7 +195,8 @@ public final class WindowUndoHistory {
         return step.id
     }
 
-    static var failedTitle: String { UndoText.failedTitle }
+    /// The title of the alerts after a change, never a failed Undo or Redo (D204).
+    static var changeFailedTitle: String { UndoText.changeFailedTitle }
     /// Shown when the accounts a change touched couldn't be read.
     static var unreadablePlace: String { UndoText.unreadablePlace }
     /// Shown when the change's records couldn't be read back, so it can't be checked and isn't kept.

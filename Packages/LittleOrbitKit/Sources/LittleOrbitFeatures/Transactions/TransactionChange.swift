@@ -46,7 +46,8 @@ public struct UndoNotice: Equatable, Sendable, Identifiable {
 /// or a failure such as a full disk, which keeps the step to try again.
 public struct UndoAlert: Equatable, Sendable, Identifiable {
     public var id = UUID()
-    /// "Can't Undo Edit Transaction", or "Couldn't Make the Change".
+    /// "Can’t Undo Edit Transaction" for a stale step, "Couldn’t Undo Edit Transaction" for a failure, or
+    /// "Couldn’t Make the Change" after a change.
     public var title: String
     /// "Corner Bakery was changed in another window. Nothing was changed."
     public var message: String

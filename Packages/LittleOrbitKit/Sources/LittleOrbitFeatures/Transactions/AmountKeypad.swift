@@ -221,7 +221,7 @@ struct AmountKeypad: Equatable {
     static func message(for error: AmountExpressionError) -> String {
         switch error {
         case .negativeResult: "Result is below zero"
-        case .divideByZero: "Can't divide by zero"
+        case .divideByZero: "Can’t divide by zero"
         case .malformed: "Check the sum and try again."
         case .tooManyDecimals(let allowed): "Use up to \(allowed) decimal places."
         case .outOfRange: "That amount is too large."

@@ -250,7 +250,7 @@ struct WindowUndoHistoryTests {
         window.history.record(.removed([RemovedTransaction(transaction: Transaction(type: .expense, amount: 1))]))
         fake.revertError = FakeTransactionUseCases.Failure()
         window.history.undo()
-        #expect(window.history.alert?.title == "Couldn't Make the Change")
+        #expect(window.history.alert?.title == "Couldn’t Undo Delete Transaction")
         #expect(fake.reverted.isEmpty)
         window.settle()
         #expect(window.history.undoTitle == "Delete Transaction", "The step is back")
@@ -271,7 +271,7 @@ struct WindowUndoHistoryTests {
         window.history.undo()
         fake.revertError = FakeTransactionUseCases.Failure()
         window.history.redo()
-        #expect(window.history.alert?.title == "Couldn't Make the Change")
+        #expect(window.history.alert?.title == "Couldn’t Redo Delete Transaction")
         window.settle()
         #expect(window.history.redoTitle == "Delete Transaction")
         #expect(!window.history.canUndo)
@@ -288,7 +288,11 @@ struct WindowUndoHistoryTests {
         let window = TestWindow(fake.useCases)
         window.history.record(.removed([RemovedTransaction(transaction: Transaction(type: .expense, amount: 1))]))
         #expect(window.history.undoTitle == "Delete Transaction")
-        #expect(window.history.alert?.message.hasPrefix("Couldn't read your accounts") == true)
+        // D204: its own title, never a failed Undo's or Redo's.
+        #expect(window.history.alert?.title == "Couldn’t Make the Change")
+        #expect(
+            window.history.alert?.message == "Couldn’t read your accounts, so Undo may not say where this change was."
+        )
         window.history.dismissAlert()
         #expect(window.history.alert == nil)
     }

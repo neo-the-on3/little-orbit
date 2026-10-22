@@ -24,10 +24,32 @@ struct UndoTextTests {
         #expect(UndoText.deletedAccount("Rewards Card") == "Deleted Rewards Card")
         #expect(UndoText.undid("Delete Transaction") == "Undid Delete Transaction")
         #expect(UndoText.redid("Delete Transaction") == "Redid Delete Transaction")
-        #expect(UndoText.failedTitle == "Couldn't Make the Change")
-        #expect(UndoText.unreadablePlace == "Couldn't read your accounts, so Undo may not say where this change was.")
-        #expect(UndoText.unreadableChange == "Your change was saved, but couldn't be read back, so it can't be undone.")
+        #expect(UndoText.changeFailedTitle == "Couldn’t Make the Change")
+        #expect(
+            UndoText.couldntUndo("Edit Transaction in Household Card")
+                == "Couldn’t Undo Edit Transaction in Household Card"
+        )
+        #expect(
+            UndoText.couldntRedo("New Transaction in Household Card")
+                == "Couldn’t Redo New Transaction in Household Card"
+        )
+        #expect(UndoText.unreadablePlace == "Couldn’t read your accounts, so Undo may not say where this change was.")
+        #expect(UndoText.unreadableChange == "Your change was saved, but couldn’t be read back, so it can’t be undone.")
         #expect(UndoText.saveFailed == "Something went wrong saving your change. Please try again.")
         #expect(UndoText.removedFromHistory == "This change was removed from Undo history.")
+    }
+
+    @Test("X8c, T16: a failure says Couldn’t Undo or Redo, a blocked step Can’t, and a change its own title")
+    func failureTitlesStayApart() {
+        let name = "Edit Transaction in Household Card"
+        #expect(StaleText.cantUndo(name) == "Can’t Undo \(name)")
+        #expect(StaleText.cantRedo(name) == "Can’t Redo \(name)")
+        let titles = [
+            StaleText.cantUndo(name), StaleText.cantRedo(name), UndoText.couldntUndo(name), UndoText.couldntRedo(name),
+            UndoText.changeFailedTitle,
+        ]
+        #expect(Set(titles).count == titles.count, "Five separate strings")
+        #expect(!UndoText.couldntUndo(name).contains("Make the Change"))
+        #expect(!UndoText.changeFailedTitle.contains(name))
     }
 }

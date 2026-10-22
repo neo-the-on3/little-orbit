@@ -100,7 +100,7 @@ public final class BulkEditViewModel {
             FeatureText.string("Mixed types", comment: "Bulk edit: Category is off because the rows mix kinds.")
         case .transfersOnly:
             FeatureText.string(
-                "Transfers don't have a category",
+                "Transfers don’t have a category",
                 comment: "Bulk edit: Category is off because every row is a transfer.",
             )
         }
@@ -144,7 +144,7 @@ public final class BulkEditViewModel {
             return nil
         }
         return FeatureText.string(
-            "Payee isn't applied to transfers",
+            "Payee isn’t applied to transfers",
             comment: "Bulk edit: under Payee when the selection includes a transfer.",
         )
     }

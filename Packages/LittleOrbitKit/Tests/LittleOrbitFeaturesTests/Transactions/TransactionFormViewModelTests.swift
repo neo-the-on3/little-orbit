@@ -122,7 +122,7 @@ struct TransactionFormViewModelTests {
         #expect(model.amountError == nil)
         #expect(model.amount == 3)
         type("/0=", into: model)
-        #expect(model.amountError == "Can't divide by zero")
+        #expect(model.amountError == "Can’t divide by zero")
         #expect(model.expressionText == "3 ÷ 0")
         #expect(!model.canSave)
     }

@@ -153,7 +153,7 @@
             edited.amount = 777
             try repository.saveTransaction(edited)
             window.undo()
-            #expect(window.history.alert?.title == "Can't Undo Edit Transaction in Everyday Savings")
+            #expect(window.history.alert?.title == "Can’t Undo Edit Transaction in Everyday Savings")
             window.history.dismissAlert()
             window.nextEvent()
             #expect(window.undoManager.undoActionName == "Delete Transaction in Rewards Card")
@@ -200,7 +200,7 @@
 
             first.undo()
             #expect(try repository.transactions().first { $0.id == corner.id }?.amount == 650)
-            #expect(first.history.alert?.title == "Can't Undo Edit Transaction in Everyday Savings")
+            #expect(first.history.alert?.title == "Can’t Undo Edit Transaction in Everyday Savings")
             #expect(!first.undoManager.canRedo)
             #expect(first.undoManager.undoActionName == "Delete Transaction in Everyday Savings")
             #expect(second.undoManager.undoActionName == "Edit Transaction in Everyday Savings")
@@ -222,7 +222,7 @@
             second.record(try useCases.saveTransactions.save([edited]))
 
             first.redo()
-            #expect(first.history.alert?.title == "Can't Redo Delete Transaction in Everyday Savings")
+            #expect(first.history.alert?.title == "Can’t Redo Delete Transaction in Everyday Savings")
             #expect(try repository.transactions().first { $0.id == corner.id }?.amount == 475)
             #expect(!first.undoManager.canRedo)
             #expect(
@@ -250,7 +250,7 @@
             second.record(try useCases.saveTransactions.save([edited]))
 
             first.undo()
-            #expect(first.history.alert?.title == "Can't Undo Edit Transaction in Everyday Savings")
+            #expect(first.history.alert?.title == "Can’t Undo Edit Transaction in Everyday Savings")
             #expect(!first.undoManager.canUndo)
             #expect(first.undoManager.canRedo)
             #expect(first.undoManager.redoActionName == "Delete Transaction in Everyday Savings")
@@ -266,7 +266,7 @@
             window.record(.removed([RemovedTransaction(transaction: Transaction(type: .expense, amount: 1))]))
             fake.revertError = FakeTransactionUseCases.Failure()
             window.undo()
-            #expect(window.history.alert?.title == "Couldn't Make the Change")
+            #expect(window.history.alert?.title == "Couldn’t Undo Delete Transaction")
             #expect(window.undoManager.undoActionName == "Delete Transaction")
 
             fake.revertError = nil
