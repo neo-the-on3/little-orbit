@@ -4,6 +4,9 @@ import Foundation
 @MainActor
 public final class BackupService: AllBackupUseCases {
     public private(set) var isBusy = false
+    /// The backups being written to an export file. Delete refuses them and cleanup keeps them until it runs again,
+    /// so a folder never goes mid-export (Tech Architect, non-blocking 3).
+    private(set) var exporting: Set<UUID> = []
 
     private let source: any LedgerBackupSource
     let storage: any BackupStorage
@@ -90,6 +93,9 @@ public final class BackupService: AllBackupUseCases {
             guard catalog.records.contains(where: { $0.id == id }) else {
                 throw BackupError.notFound
             }
+            guard !exporting.contains(id) else {
+                throw BackupError.busy
+            }
             try storage.delete(id: id)
         }
     }
@@ -113,6 +119,8 @@ public final class BackupService: AllBackupUseCases {
         let codec = self.codec
         let archiving = self.archiving
         let file = BackupExport.fileName(name, id: id)
+        exporting.insert(id)
+        defer { exporting.remove(id) }
         let url = try await Self.detached(priority: .userInitiated) {
             let url = try storage.makeExportFolder().appendingPathComponent(file)
             do {
@@ -247,7 +255,7 @@ public final class BackupService: AllBackupUseCases {
         let codec = self.codec
         let moment = now()
         let zone = timeZone()
-        return
+        let pruned =
             try await Task.detached(priority: .utility) {
                 let checked = try Self.checkedInFull(records, storage: storage, codec: codec)
                 return BackupPolicy.automaticBackupsToPrune(
@@ -258,6 +266,8 @@ public final class BackupService: AllBackupUseCases {
                 )
             }
             .value
+        // One being exported stays until the next cleanup.
+        return pruned.filter { !exporting.contains($0.id) }
     }
 
     func exclusively<T>(_ body: () async throws -> T) async throws -> T {

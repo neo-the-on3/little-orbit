@@ -127,6 +127,7 @@ public final class BackupsViewModel {
     private let announce: @MainActor (String) -> Void
     /// The background backup that's running, if any.
     @ObservationIgnored private var backgroundRun: BackgroundBackupRun?
+    @ObservationIgnored private var automaticRun: Task<Void, Never>?
 
     /// `announce` posts a VoiceOver announcement; the App passes `AccessibilityNotification.Announcement`.
     public init(
@@ -289,6 +290,10 @@ public final class BackupsViewModel {
             { [weak self] in
                 await self?.backUpAutomaticallyIfNeeded()
             },
+            expired: { [weak self] in
+                // The automatic backup running now, this one's or a launch backup it joined.
+                self?.automaticRun?.cancel()
+            },
             finished: { [weak self] in
                 self?.backgroundRun = nil
             },
@@ -296,15 +301,37 @@ public final class BackupsViewModel {
         return run.task
     }
 
-    /// The launch and background trigger (D62). Errors only update the failure line.
+    /// The launch and background trigger (D62). Errors only update the failure line. A call while one is running
+    /// waits for that one instead, so the background trigger's assertion covers a launch backup that's still going,
+    /// and cancelling the caller cancels it (Tech Architect, non-blocking 1).
     public func backUpAutomaticallyIfNeeded() async {
+        if let automaticRun {
+            await Self.joining(automaticRun)
+            return
+        }
         guard actionsEnabled else {
             return
         }
-        isBackingUp = true
-        _ = try? await useCases.make.backUpAutomaticallyIfNeeded()
-        isBackingUp = false
-        try? await load()
+        let run = Task { [weak self] in
+            guard let self else {
+                return
+            }
+            isBackingUp = true
+            _ = try? await useCases.make.backUpAutomaticallyIfNeeded()
+            isBackingUp = false
+            try? await load()
+            automaticRun = nil
+        }
+        automaticRun = run
+        await Self.joining(run)
+    }
+
+    private static func joining(_ run: Task<Void, Never>) async {
+        await withTaskCancellationHandler {
+            await run.value
+        } onCancel: {
+            run.cancel()
+        }
     }
 
     // MARK: Delete (D116.1): confirm, then App Lock

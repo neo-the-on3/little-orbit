@@ -47,7 +47,8 @@ format bump (#100).
   and the previous backup gets its full check, so a damaged file there is listed as 'Damaged' and never spreads.
 - The automatic backup when the app goes to the background runs inside an iOS background task. If the system ends
   that time first, the backup is cancelled between chunks and its staging folder removed: nothing is listed, no
-  failure is shown, and the next backup runs as usual.
+  failure is shown, and the next backup runs as usual. A launch backup still running when the app goes to the
+  background is the one that gets the time, and is cancelled the same way.
 - Deleting a backup moves its folder to `Backups.staging/<uuid>.deleting/` first, then removes it, so a cleanup
   that's interrupted never leaves part of a listed folder (L17).
 
@@ -148,7 +149,10 @@ isn't a package. It survives FAT, exFAT and email unchanged, since it's one plai
 Export writes the archive to `Backups.staging/<uuid>.export/<file name>`, one file at a time in 1 MB chunks, and
 checks each file's size and SHA-256 against the manifest as it goes; a mismatch stops the export as damaged (Tech
 Architect B2). Only the files the manifest lists are included. The save panel and share sheet are handed that
-file's URL, never its bytes, and the file is removed once it's saved or cancelled, or at the next launch.
+file's URL, never its bytes. The file is removed as soon as the panel closes, saved, cancelled or failed: SwiftUI
+sets `isPresented` to `false` before `onCompletion` or `onCancellation` runs, and that's what removes it (Tech
+Architect B4). One left by an interrupted app goes at the next launch. While a backup is being written to its export
+file, Delete refuses it and cleanup keeps it until it runs again.
 
 `manifest.json` is the archive's first entry, so a reader reaches the format version before anything else. Apple
 Archive itself refuses to read past an entry with an absolute path or a `..` component. When that happens, the
