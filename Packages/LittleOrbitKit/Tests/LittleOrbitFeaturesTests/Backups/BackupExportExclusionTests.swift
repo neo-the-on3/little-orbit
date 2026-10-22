@@ -50,9 +50,7 @@ private final class GatedArchiving: BackupArchiving, @unchecked Sendable {
 @Suite("Export blocks delete and prune of its backup", .serialized)
 struct BackupExportExclusionTests {
     private func wait(until condition: () -> Bool) async throws {
-        for _ in 0..<2_000 where !condition() {
-            try await Task.sleep(nanoseconds: 5_000_000)
-        }
+        await pollOnMainQueue(until: condition)
         #expect(condition())
     }
 

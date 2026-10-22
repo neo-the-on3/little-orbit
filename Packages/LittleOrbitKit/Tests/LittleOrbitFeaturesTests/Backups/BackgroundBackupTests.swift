@@ -39,9 +39,7 @@ struct BackgroundBackupTests {
 
     /// Waits, a little at a time, until `condition` holds.
     private func wait(until condition: () -> Bool) async throws {
-        for _ in 0..<2_000 where !condition() {
-            try await Task.sleep(nanoseconds: 5_000_000)
-        }
+        await pollOnMainQueue(until: condition)
         #expect(condition())
     }
 
