@@ -10,16 +10,24 @@ public final class AccountsFeature {
     private let defaultCurrency: String
     private let locale: Locale
 
+    /// `ledgerChanges` reloads the list after a restore replaced the ledger, so it never shows, or writes back,
+    /// the old data (#40).
     public init(
         useCases: AccountUseCases,
         plannedItems: any PlannedItemsSource = NoPlannedItems(),
         defaultCurrency: String = CurrencyCode.deviceDefault,
         locale: Locale = .current,
+        ledgerChanges: LedgerChanges? = nil,
     ) {
         self.useCases = useCases
         self.defaultCurrency = defaultCurrency
         self.locale = locale
-        self.accounts = AccountsViewModel(useCases: useCases, plannedItems: plannedItems, locale: locale)
+        let accounts = AccountsViewModel(useCases: useCases, plannedItems: plannedItems, locale: locale)
+        self.accounts = accounts
+        ledgerChanges?
+            .onReplacement { [weak accounts] in
+                accounts?.load()
+            }
     }
 
     /// A new form view model for one sheet.
