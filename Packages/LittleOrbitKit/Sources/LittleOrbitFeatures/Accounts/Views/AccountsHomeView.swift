@@ -18,15 +18,18 @@
         @Environment(\.dynamicTypeSize) private var dynamicTypeSize
         private let feature: AccountsFeature
         private let transactions: TransactionsFeature
+        private let onShowSettings: (() -> Void)?
 
         private var undoHistory: WindowUndoHistory {
             undoSlot.history(from: transactions)
         }
 
         /// Both features come from the composition root, which built them once with the injected use cases.
-        public init(feature: AccountsFeature, transactions: TransactionsFeature) {
+        /// `onShowSettings` adds the toolbar's Settings button (#40).
+        public init(feature: AccountsFeature, transactions: TransactionsFeature, onShowSettings: (() -> Void)? = nil) {
             self.feature = feature
             self.transactions = transactions
+            self.onShowSettings = onShowSettings
             _model = State(initialValue: feature.accounts)
             _deleteConfirmation = State(initialValue: AccountDeleteConfirmation(model: feature.accounts))
         }
@@ -255,6 +258,15 @@
         }
 
         @ToolbarContentBuilder private var toolbar: some ToolbarContent {
+            if let onShowSettings {
+                ToolbarItem(placement: .topBarLeading) {
+                    // The same toolbar on iPhone and iPad; VoiceOver reads "Settings" (UI Designer).
+                    Button(action: onShowSettings) {
+                        Label("Settings", systemImage: "gearshape")
+                    }
+                    .accessibilityLabel("Settings")
+                }
+            }
             if !model.isFirstRun {
                 ToolbarItem(placement: .topBarLeading) {
                     Button(model.isReordering ? "Done" : "Edit") {
