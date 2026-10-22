@@ -198,7 +198,8 @@
                         Button(BackupPresentation.deleteBackup, role: .destructive) {
                             window.requestDelete(id)
                         }
-                        .disabled(!model.actionsEnabled)
+                        // Off while the backup is being exported, in any window (D208.1).
+                        .disabled(!model.deleteEnabled(for: id))
                     } footer: {
                         Text(model.deleteFootnote(for: id))
                     }

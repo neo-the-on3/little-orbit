@@ -133,7 +133,8 @@
             Button(BackupPresentation.deleteEllipsis, role: .destructive) {
                 window.requestDelete(id)
             }
-            .disabled(!model.actionsEnabled)
+            // Off while the backup is being exported, in any window (D208.1). This covers the context menu too.
+            .disabled(!model.deleteEnabled(for: id))
         }
     }
 

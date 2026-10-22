@@ -70,6 +70,20 @@ public struct BackupPresentation: Sendable {
     public static let unreadableFileMessage = FeatureText.format(
         "The file couldn’t be read. Make sure it’s fully downloaded and try again. Your data hasn’t changed."
     )
+    /// A backup on the device couldn't be read for a restore (D208.2). Same title as a picked file's.
+    public static let unreadableBackupMessage = FeatureText.format(
+        "little-orbit couldn’t read this backup. Try again later. Your data hasn’t changed."
+    )
+    /// Lowering N or M found a backup that couldn't be read, so nothing was deleted or saved (R3, D208.3).
+    public static let cleanupBlockedTitle = FeatureText.format("Couldn’t Delete Old Backups")
+    public static let cleanupBlockedMessage = FeatureText.format(
+        "little-orbit couldn’t read one of your backups, so none were deleted. Try again later. Your setting hasn’t changed."
+    )
+    /// Delete was confirmed while another window was exporting that backup (D208.1).
+    public static let deleteWhileExportingTitle = FeatureText.format("Can’t Delete This Backup")
+    public static let deleteWhileExportingMessage = FeatureText.format(
+        "It’s being exported. Try again when the export has finished."
+    )
     public static let newerFormatMessage = FeatureText.format(
         """
         This backup was made with a newer version of little-orbit. Your data hasn’t changed.

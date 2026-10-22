@@ -197,4 +197,14 @@ public enum BackupError: Error, Equatable, Sendable {
     /// iCloud Drive placeholder. It's never called damaged: 'Couldn’t Open Backup' (D207.2). A file that's read but
     /// fails a check is `damaged`, and a newer format is `newerFormat`.
     case unreadableFile
+    /// A backup stored on the device couldn't be read while it was checked for a restore: an I/O or permission
+    /// error. It isn't marked damaged and stays restorable: 'Couldn’t Open Backup', with the stored backup's
+    /// message (D208.2).
+    case unreadableBackup
+    /// Lowering N or M found a backup that couldn't be read, so nothing was deleted and N and M weren't saved
+    /// (R3): 'Couldn’t Delete Old Backups' (D208.3). Automatic cleanup skips silently instead.
+    case cleanupBlocked
+    /// The backup is being written to an export file, so it can't be deleted now. Nothing is deleted or queued:
+    /// 'Can’t Delete This Backup' (D208.1).
+    case exporting
 }
