@@ -8,19 +8,27 @@
         /// The model's description.
         let text: String
         let axis: Axis
+        /// The label is hidden, as in bulk edit, where the hidden label alone names the field for VoiceOver.
+        /// An accessibilityLabel on top of a hidden label reads "Description, Description" (#110).
+        let hidesLabel: Bool
         /// Applies an edit and returns the text to show.
         let update: (String) -> String
         @State private var shown = ""
 
-        init(text: String, axis: Axis = .horizontal, update: @escaping (String) -> String) {
+        init(
+            text: String,
+            axis: Axis = .horizontal,
+            hidesLabel: Bool = false,
+            update: @escaping (String) -> String,
+        ) {
             self.text = text
             self.axis = axis
+            self.hidesLabel = hidesLabel
             self.update = update
         }
 
         var body: some View {
-            TextField("Description", text: $shown, prompt: Text("Description"), axis: axis)
-                .accessibilityLabel("Description")
+            field
                 .onAppear { shown = text }
                 .onChange(of: shown) { _, newValue in
                     let kept = update(newValue)
@@ -35,6 +43,15 @@
                         shown = newValue
                     }
                 }
+        }
+
+        @ViewBuilder private var field: some View {
+            let field = TextField("Description", text: $shown, prompt: Text("Description"), axis: axis)
+            if hidesLabel {
+                field.labelsHidden()
+            } else {
+                field.accessibilityLabel("Description")
+            }
         }
     }
 #endif

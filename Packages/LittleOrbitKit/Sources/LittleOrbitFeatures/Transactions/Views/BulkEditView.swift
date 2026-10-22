@@ -22,13 +22,16 @@
                 Text("Ticked fields change on all selected transactions. Amounts and types stay as they are.")
                     .font(.theme(Typography.MacOS.footnote))
                     .foregroundStyle(Color(ThemeColor.labelSecondary))
+                // Each toggle has its own VoiceOver name, "Change Payee", so it reads apart from its field. The
+                // fields keep their hidden labels, which VoiceOver still reads: "Payee", "Category, Groceries".
+                // With an accessibilityLabel on top of the hidden label, the tree showed "Payee, Payee" (#110).
                 Form {
                     categoryRow
                     HStack {
                         Toggle("Payee", isOn: $model.editsPayee)
+                            .accessibilityLabel(BulkEditText.changePayee)
                         TextField("Payee", text: $model.payeeText, prompt: Text("None"))
                             .labelsHidden()
-                            .accessibilityLabel("Payee")
                             .disabled(!model.editsPayee)
                     }
                     if let payeeNote = model.payeeNote {
@@ -36,9 +39,9 @@
                     }
                     HStack(alignment: .firstTextBaseline) {
                         Toggle("Description", isOn: $model.editsDetails)
+                            .accessibilityLabel(BulkEditText.changeDescription)
                         VStack(alignment: .leading) {
-                            LimitedDescriptionField(text: model.details) { model.updateDetails($0) }
-                                .labelsHidden()
+                            LimitedDescriptionField(text: model.details, hidesLabel: true) { model.updateDetails($0) }
                                 .disabled(!model.editsDetails)
                             if let footnote = model.detailsFootnote {
                                 note(footnote)
@@ -47,20 +50,20 @@
                     }
                     HStack {
                         Toggle("Date", isOn: $model.editsDate)
+                            .accessibilityLabel(BulkEditText.changeDate)
                         DatePicker("Date", selection: $model.date, displayedComponents: .date)
                             .labelsHidden()
-                            .accessibilityLabel("Date")
                             .disabled(!model.editsDate)
                     }
                     HStack {
                         Toggle("Account", isOn: $model.editsAccount)
+                            .accessibilityLabel(BulkEditText.changeAccount)
                         Picker("Account", selection: $model.accountID) {
                             ForEach(model.accountOptions) { option in
                                 Text(option.name).tag(Optional(option.id))
                             }
                         }
                         .labelsHidden()
-                        .accessibilityLabel("Account")
                         .disabled(!model.editsAccount)
                     }
                 }
@@ -88,6 +91,7 @@
         @ViewBuilder private var categoryRow: some View {
             HStack {
                 Toggle("Category", isOn: $model.editsCategory)
+                    .accessibilityLabel(BulkEditText.changeCategory)
                     .disabled(!model.isCategoryEnabled)
                 // As in the entry sheet: Labels with icons in a section per parent, the chosen value as text,
                 // and VoiceOver reads "Category, Groceries" (Tester's #87 blocker).
@@ -100,7 +104,6 @@
                     Text(model.categoryName)
                 }
                 .labelsHidden()
-                .accessibilityLabel("Category")
                 .accessibilityValue(model.categorySpokenValue)
                 .disabled(!model.isCategoryEnabled || !model.editsCategory)
             }

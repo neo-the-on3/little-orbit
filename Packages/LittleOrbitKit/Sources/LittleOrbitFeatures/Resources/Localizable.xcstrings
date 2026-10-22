@@ -255,6 +255,66 @@
         }
       }
     },
+    "Change Account": {
+      "comment": "Bulk edit: VoiceOver name of the toggle that turns on Account, so it reads apart from the Account field next to it.",
+      "extractionState": "manual",
+      "localizations": {
+        "en": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Change Account"
+          }
+        }
+      }
+    },
+    "Change Category": {
+      "comment": "Bulk edit: VoiceOver name of the toggle that turns on Category, so it reads apart from the Category field next to it.",
+      "extractionState": "manual",
+      "localizations": {
+        "en": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Change Category"
+          }
+        }
+      }
+    },
+    "Change Date": {
+      "comment": "Bulk edit: VoiceOver name of the toggle that turns on Date, so it reads apart from the Date field next to it.",
+      "extractionState": "manual",
+      "localizations": {
+        "en": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Change Date"
+          }
+        }
+      }
+    },
+    "Change Description": {
+      "comment": "Bulk edit: VoiceOver name of the toggle that turns on Description, so it reads apart from the Description field next to it.",
+      "extractionState": "manual",
+      "localizations": {
+        "en": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Change Description"
+          }
+        }
+      }
+    },
+    "Change Payee": {
+      "comment": "Bulk edit: VoiceOver name of the toggle that turns on Payee, so it reads apart from the Payee field next to it.",
+      "extractionState": "manual",
+      "localizations": {
+        "en": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Change Payee"
+          }
+        }
+      }
+    },
     "Couldn't Make the Change": {
       "comment": "Alert title: an Undo, Redo or change failed, for example on a full disk. Nothing changed.",
       "extractionState": "manual",
