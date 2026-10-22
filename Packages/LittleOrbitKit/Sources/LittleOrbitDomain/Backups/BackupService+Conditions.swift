@@ -105,7 +105,7 @@ extension BackupService {
         let codec = self.codec
         let archiving = self.archiving
         return
-            try await Task.detached(priority: .userInitiated) {
+            try await Task.detached(executorPreference: BackupWorkExecutor.shared, priority: .userInitiated) {
                 switch source {
                 case .stored(let id):
                     let opened = try Self.remembering(id, storage: storage) {

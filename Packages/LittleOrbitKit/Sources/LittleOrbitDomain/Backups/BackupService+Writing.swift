@@ -138,7 +138,7 @@ extension BackupService {
         priority: TaskPriority,
         _ work: @escaping @Sendable () throws -> Value,
     ) async throws -> Value {
-        let task = Task.detached(priority: priority) { try work() }
+        let task = Task.detached(executorPreference: BackupWorkExecutor.shared, priority: priority) { try work() }
         return try await withTaskCancellationHandler {
             try await task.value
         } onCancel: {

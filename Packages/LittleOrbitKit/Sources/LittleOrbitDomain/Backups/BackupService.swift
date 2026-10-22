@@ -185,7 +185,7 @@ public final class BackupService: AllBackupUseCases {
         let codec = self.codec
         let archiving = self.archiving
         return
-            try await Task.detached(priority: .userInitiated) {
+            try await Task.detached(executorPreference: BackupWorkExecutor.shared, priority: .userInitiated) {
                 switch source {
                 case .stored(let id):
                     return try Self.remembering(id, storage: storage) {
@@ -267,7 +267,7 @@ public final class BackupService: AllBackupUseCases {
         let bytes = try source.attachmentBytes()
         let codec = self.codec
         let fingerprint =
-            try await Task.detached(priority: .userInitiated) {
+            try await Task.detached(executorPreference: BackupWorkExecutor.shared, priority: .userInitiated) {
                 try codec.fingerprint(
                     of: restored,
                     attachments: codec.attachmentEntries(of: restored, reading: bytes),
@@ -284,7 +284,7 @@ public final class BackupService: AllBackupUseCases {
         let storage = self.storage
         let codec = self.codec
         return
-            try await Task.detached(priority: .userInitiated) {
+            try await Task.detached(executorPreference: BackupWorkExecutor.shared, priority: .userInitiated) {
                 try Self.catalog(storage: storage, codec: codec)
             }
             .value
@@ -299,7 +299,7 @@ public final class BackupService: AllBackupUseCases {
         let moment = now()
         let zone = timeZone()
         let pruned =
-            try await Task.detached(priority: .utility) {
+            try await Task.detached(executorPreference: BackupWorkExecutor.shared, priority: .utility) {
                 let checked = try Self.checkedInFull(records, storage: storage, codec: codec)
                 return BackupPolicy.automaticBackupsToPrune(
                     in: checked,
