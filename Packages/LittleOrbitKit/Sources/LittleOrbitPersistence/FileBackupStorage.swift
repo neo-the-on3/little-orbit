@@ -32,25 +32,31 @@ public final class FileBackupStorage: BackupStorage, @unchecked Sendable {
     private let lock = NSLock()
     var fileManager: FileManager { .default }
     let timeZone: @Sendable () -> TimeZone
+    /// The app's own `tmp`, where the save panel leaves its copies of an export; `nil` for none (Tester finding 3).
+    let systemTemporaryFolder: URL?
     /// Each backup's folder name, by its ID, as the last listing or write found it.
     let names = BackupFolderNames()
 
     /// `folder` is created if missing. `staging`, by default `<folder>.staging` next to it on the same volume, is
     /// where folders are built and deleted; what an interrupted backup or cleanup left there is removed now.
-    /// `timeZone` names new folders; it's the device's current one.
+    /// `timeZone` names new folders; it's the device's current one. `systemTemporaryFolder` is the app's `tmp`,
+    /// swept for the save panel's copies of an export now and by `removeSystemExportCopies()`.
     public init(
         folder: URL,
         staging: URL? = nil,
         timeZone: @escaping @Sendable () -> TimeZone = { .current },
+        systemTemporaryFolder: URL? = nil,
     ) throws {
         self.folder = folder
         self.timeZone = timeZone
+        self.systemTemporaryFolder = systemTemporaryFolder
         self.staging =
             staging
             ?? folder.deletingLastPathComponent()
             .appendingPathComponent("\(folder.lastPathComponent).staging", isDirectory: true)
         try prepare(folder)
         sweepLeftovers()
+        removeSystemExportCopies()
     }
 
     /// `Application Support/<bundle id>/Backups`, next to the private store location (#52 fallback).
@@ -66,7 +72,10 @@ public final class FileBackupStorage: BackupStorage, @unchecked Sendable {
         )
         let base = StoreLocation.storeURL(applicationSupport: support, bundleIdentifier: bundleIdentifier)
             .deletingLastPathComponent()
-        return try FileBackupStorage(folder: base.appendingPathComponent(folderName, isDirectory: true))
+        return try FileBackupStorage(
+            folder: base.appendingPathComponent(folderName, isDirectory: true),
+            systemTemporaryFolder: fileManager.temporaryDirectory,
+        )
     }
 
     /// The folder of a backup. For tests and diagnostics only; the app never shows it.

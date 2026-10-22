@@ -99,6 +99,9 @@ public protocol BackupStorage: Sendable {
     func makeExportFolder() throws -> URL
     /// Removes an export's file with its folder. Anything not made by `makeExportFolder` is left alone.
     func removeExport(_ file: URL)
+    /// Removes the copies of an export the system's save panel left in the app's own temporary folder, matched by
+    /// the export's file name only. Called when no export is open (Tester finding 3).
+    func removeSystemExportCopies()
     /// Removes the whole folder. It stops being listed before any of its files are removed (L17).
     func delete(id: UUID) throws
     func loadStatus() throws -> BackupStatus
@@ -106,6 +109,9 @@ public protocol BackupStorage: Sendable {
 }
 
 extension BackupStorage {
+    /// Stores with no save-panel copies to clean up.
+    public func removeSystemExportCopies() {}
+
     /// The whole folder in memory, for stores that have nothing better.
     public func files(id: UUID) throws -> any BackupFileReading {
         try read(id: id)

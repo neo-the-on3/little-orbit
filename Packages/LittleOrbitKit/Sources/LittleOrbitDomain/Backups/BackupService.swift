@@ -110,6 +110,10 @@ public final class BackupService: AllBackupUseCases {
         guard !isBusy else {
             throw BackupError.busy
         }
+        // The save panel's copies from an earlier export, once no window has a panel up (Tester finding 3).
+        if openExports.isEmpty {
+            storage.removeSystemExportCopies()
+        }
         // Held from the moment Export is chosen, before the list is read, until `discardExport`: after the save
         // panel's `onCompletion` or `onCancellation`, or a fallback, the next export or the window closing. Every
         // error on the way releases it. Nothing outlives a relaunch (D208.1, Tester finding 2).
@@ -165,6 +169,10 @@ public final class BackupService: AllBackupUseCases {
         storage.removeExport(export.file)
         if let id = openExports.removeValue(forKey: export.file) {
             exports.end(id)
+        }
+        // The save panel's own copy, once no other window's panel may still be reading one (Tester finding 3).
+        if openExports.isEmpty {
+            storage.removeSystemExportCopies()
         }
     }
 
