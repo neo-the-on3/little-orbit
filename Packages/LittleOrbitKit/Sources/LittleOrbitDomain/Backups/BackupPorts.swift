@@ -7,6 +7,35 @@ public protocol LedgerBackupSource: AnyObject {
     func ledgerSnapshot() throws -> LedgerSnapshot
     /// Replaces all data with `snapshot` in one save: it either completes fully or changes nothing (D63).
     func replaceLedger(with snapshot: LedgerSnapshot) throws
+    /// Every record, with each attachment's details but not its bytes: `data` is empty (Tech Architect B1). The
+    /// whole ledger is still loaded (#109); the attachments aren't.
+    func backupSnapshot() throws -> LedgerSnapshot
+    /// The attachments' bytes, read one attachment at a time, off the main actor (B1).
+    func attachmentBytes() throws -> any BackupAttachmentReading
+    /// `replaceLedger(with:)` for a `snapshot` without attachment bytes: each attachment's bytes come from
+    /// `attachments` as it's stored, so they're never all in memory (B1). Still one save (D63).
+    func replaceLedger(with snapshot: LedgerSnapshot, attachments: any BackupAttachmentReading) throws
+}
+
+/// For a source that holds everything in memory anyway, like `InMemoryLedgerRepository`.
+extension LedgerBackupSource {
+    public func backupSnapshot() throws -> LedgerSnapshot {
+        try ledgerSnapshot().withoutAttachmentBytes
+    }
+
+    public func attachmentBytes() throws -> any BackupAttachmentReading {
+        BackupLedgerAttachments(try ledgerSnapshot())
+    }
+
+    public func replaceLedger(with snapshot: LedgerSnapshot, attachments: any BackupAttachmentReading) throws {
+        var full = snapshot
+        full.attachments = try snapshot.attachments.map { attachment in
+            var filled = attachment
+            filled.data = try attachments.mappedData(for: attachment.id) ?? Data()
+            return filled
+        }
+        try replaceLedger(with: full)
+    }
 }
 
 /// What a backup folder holds, as the list reads it: its manifest, if there is one, and the size of each file.
@@ -55,6 +84,16 @@ public protocol BackupStorage: Sendable {
     /// backup `cloningFrom` may be an APFS clone of it; it's always a separate file (D195.1). Throws
     /// `BackupError.notEnoughStorage` when the disk is full, leaving no folder.
     func write(_ files: BackupSnapshotFiles, id: UUID, cloningFrom earlier: UUID?) throws
+    /// `write`, with the attachment files streamed from their bytes, or cloned from `earlier` when unchanged, one
+    /// at a time and never read whole (B1).
+    func write(
+        _ files: BackupSnapshotFiles,
+        attachments: BackupAttachmentWrites,
+        id: UUID,
+        cloningFrom earlier: UUID?,
+    ) throws
+    /// A new scratch folder for a picked file's attachments (B1).
+    func makeScratch() throws -> any BackupScratchFolder
     /// Removes the whole folder. It stops being listed before any of its files are removed (L17).
     func delete(id: UUID) throws
     func loadStatus() throws -> BackupStatus
@@ -66,10 +105,28 @@ extension BackupStorage {
     public func files(id: UUID) throws -> any BackupFileReading {
         try read(id: id)
     }
+
+    /// Every file in memory, for stores that have nothing better.
+    public func write(
+        _ files: BackupSnapshotFiles,
+        attachments: BackupAttachmentWrites,
+        id: UUID,
+        cloningFrom earlier: UUID?,
+    ) throws {
+        var all = files
+        for (path, data) in try attachments.files().files {
+            all[path] = data
+        }
+        try write(all, id: id, cloningFrom: earlier)
+    }
+
+    public func makeScratch() throws -> any BackupScratchFolder {
+        BackupMemoryScratch()
+    }
 }
 
 /// A backup folder's files by relative path, read one at a time: a stored folder, or files already in memory.
-public protocol BackupFileReading {
+public protocol BackupFileReading: Sendable {
     /// The whole file, or `nil` when it isn't there as a regular file.
     func data(at path: String) throws -> Data?
     /// Hands the file to `body` in chunks, in order, never holding it whole. `false` when it isn't there as a

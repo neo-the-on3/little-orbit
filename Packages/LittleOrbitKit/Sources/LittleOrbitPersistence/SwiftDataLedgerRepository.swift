@@ -178,6 +178,20 @@
         }
 
         private func loadStored() throws -> LedgerSnapshot {
+            try loadStored(attachments: fetch(LittleOrbitSchemaV1.AttachmentRecord.self).map { $0.makeAttachment() })
+        }
+
+        /// Every record, attachments without their bytes: the fetch leaves out `data`, so SwiftData never reads the
+        /// external-storage files (B1).
+        private func loadStoredDetails() throws -> LedgerSnapshot {
+            var descriptor = FetchDescriptor<LittleOrbitSchemaV1.AttachmentRecord>()
+            descriptor.propertiesToFetch = [
+                \.id, \.fileName, \.contentType, \.byteSize, \.createdAt, \.updatedAt, \.deletedAt,
+            ]
+            return try loadStored(attachments: context.fetch(descriptor).map { $0.makeAttachmentDetails() })
+        }
+
+        private func loadStored(attachments: [Attachment]) throws -> LedgerSnapshot {
             LedgerSnapshot(
                 accounts: try fetch(LittleOrbitSchemaV1.AccountRecord.self).map { $0.makeAccount() },
                 transactions: try fetch(LittleOrbitSchemaV1.TransactionRecord.self).map { $0.makeTransaction() },
@@ -185,7 +199,7 @@
                 payees: try fetch(LittleOrbitSchemaV1.PayeeRecord.self).map { $0.makePayee() },
                 tags: try fetch(LittleOrbitSchemaV1.TagRecord.self).map { $0.makeTag() },
                 splits: try fetch(LittleOrbitSchemaV1.TransactionSplitRecord.self).map { $0.makeSplit() },
-                attachments: try fetch(LittleOrbitSchemaV1.AttachmentRecord.self).map { $0.makeAttachment() },
+                attachments: attachments,
             )
         }
 
@@ -194,9 +208,9 @@
         }
 
         /// Writes the snapshot with one `save()`. On any error the context is rolled back, so nothing is half-written.
-        private func write(_ snapshot: LedgerSnapshot) throws {
+        private func write(_ snapshot: LedgerSnapshot, attachmentBytes: (any BackupAttachmentReading)? = nil) throws {
             do {
-                try apply(snapshot)
+                try apply(snapshot, attachmentBytes: attachmentBytes)
                 try context.save()
             } catch {
                 context.rollback()
@@ -204,7 +218,9 @@
             }
         }
 
-        private func apply(_ snapshot: LedgerSnapshot) throws {
+        /// With `attachmentBytes`, each attachment's bytes come from there, one at a time, as a file-backed value
+        /// where they're in a file; `snapshot`'s attachments then have none (B1).
+        private func apply(_ snapshot: LedgerSnapshot, attachmentBytes: (any BackupAttachmentReading)?) throws {
             let accounts = try fetch(LittleOrbitSchemaV1.AccountRecord.self)
             let transactions = try fetch(LittleOrbitSchemaV1.TransactionRecord.self)
             let categories = try fetch(LittleOrbitSchemaV1.CategoryRecord.self)
@@ -253,7 +269,14 @@
             let attachmentRecords = try upsert(snapshot.attachments, existing: attachments) {
                 LittleOrbitSchemaV1.AttachmentRecord()
             } apply: { record, attachment in
-                record.apply(attachment)
+                guard let attachmentBytes else {
+                    record.apply(attachment)
+                    return
+                }
+                record.applyDetails(attachment)
+                let data = try attachmentBytes.mappedData(for: attachment.id) ?? Data()
+                record.data = data
+                record.byteSize = Int64(data.count)
             }
 
             clearRelationships(
@@ -398,6 +421,64 @@
         /// is either fully replaced or unchanged (D63).
         public func replaceLedger(with snapshot: LedgerSnapshot) throws {
             try persist(snapshot)
+        }
+
+        public func backupSnapshot() throws -> LedgerSnapshot {
+            if let batch {
+                return batch.withoutAttachmentBytes
+            }
+            return try loadStoredDetails()
+        }
+
+        public func attachmentBytes() throws -> any BackupAttachmentReading {
+            SwiftDataAttachmentBytes(container: container)
+        }
+
+        /// One save, as `replaceLedger(with:)`. Each attachment's bytes go in from `attachments` as a memory-mapped
+        /// value of its file, the only way into an external-storage attribute: they aren't copied into memory, and
+        /// SwiftData writes them to its own file on save (B1).
+        public func replaceLedger(with snapshot: LedgerSnapshot, attachments: any BackupAttachmentReading) throws {
+            try write(snapshot, attachmentBytes: attachments)
+        }
+    }
+
+    /// The store's attachment bytes for a backup, one attachment at a time, each in its own short-lived context so
+    /// it's released before the next one is read (B1). SwiftData offers external-storage bytes only as one value,
+    /// so one attachment is in memory at a time, never more. Safe off the main actor.
+    public struct SwiftDataAttachmentBytes: BackupAttachmentReading {
+        let container: ModelContainer
+
+        public func stream(_ id: UUID, through body: (UnsafeRawBufferPointer) throws -> Void) throws -> Bool {
+            try autoreleasepool {
+                guard let data = try bytes(of: id) else {
+                    return false
+                }
+                try data.withUnsafeBytes { buffer in
+                    var offset = 0
+                    while offset < buffer.count {
+                        let end = min(offset + BackupChunk.size, buffer.count)
+                        try body(UnsafeRawBufferPointer(rebasing: buffer[offset..<end]))
+                        offset = end
+                    }
+                }
+                return true
+            }
+        }
+
+        public func mappedData(for id: UUID) throws -> Data? {
+            try bytes(of: id)
+        }
+
+        private func bytes(of id: UUID) throws -> Data? {
+            let context = ModelContext(container)
+            var descriptor = FetchDescriptor<LittleOrbitSchemaV1.AttachmentRecord>(
+                predicate: #Predicate { $0.id == id }
+            )
+            descriptor.fetchLimit = 1
+            guard let record = try context.fetch(descriptor).first else {
+                return nil
+            }
+            return record.data ?? Data()
         }
     }
 #endif

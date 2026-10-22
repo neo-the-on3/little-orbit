@@ -377,7 +377,7 @@ struct BackupCodecTests {
 }
 
 /// A folder in memory that records which files were read whole and which were streamed.
-final class CountingFolder: BackupFileReading {
+final class CountingFolder: BackupFileReading, @unchecked Sendable {
     private let files: BackupSnapshotFiles
     private(set) var wholePaths: [String] = []
     private(set) var streamedPaths: [String] = []

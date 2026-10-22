@@ -38,6 +38,10 @@ format bump (#100).
 - A file that's byte-for-byte the same in the previous backup is copied from it with `FileManager.copyItem`. On
   APFS that's a clone (copy-on-write), elsewhere a plain copy. Either way it's a separate file: a backup folder
   never has symlinks, hard links or shared files, and deleting any folder never affects another (D195.1).
+- Attachment bytes are never held whole (Tech Architect B1). A backup reads each attachment from the store one
+  at a time, hashes it in 1 MB chunks, and writes its file in 1 MB chunks; one that's unchanged since the previous
+  backup, by size and SHA-256, is cloned from that backup's file instead of read again. The rest of the ledger is
+  still loaded whole (#109). Export still builds the archive in memory (#109).
 - Deleting a backup moves its folder to `Backups.staging/<uuid>.deleting/` first, then removes it, so a cleanup
   that's interrupted never leaves part of a listed folder (L17).
 
@@ -153,8 +157,12 @@ failure (D197a.1, L40–L42):
 
 Nothing is unpacked or written, in a temporary folder or anywhere else, and the store isn't touched until all four
 pass. Only then do the Restore warning, the Before restore backup and the restore follow. The warning keeps no part
-of the file but its manifest. Restore reads the file again, runs the four steps again, and only then reads the
-files' bytes, once each, to decode them; a file changed since the warning is damaged.
+of the file but its manifest. Restore reads the file again and runs the four steps again. Only then does it read the
+manifest and JSON files to decode them, and unpack each attachment, in 1 MB chunks and hashed again on the way, into
+a scratch folder, `Backups.staging/<uuid>.restore/`; a file changed since the warning is damaged. The store takes
+each attachment from its file there, one at a time. The scratch folder is removed when the restore ends, and one
+left by an interrupted restore goes at the next launch. A restore from the list takes the attachments from the
+backup's own folder the same way.
 
 A picked file that can't be opened at all, such as one in iCloud Drive that isn't downloaded, isn't damaged: its
 read error is shown, in the generic error alert. A single-file JSON

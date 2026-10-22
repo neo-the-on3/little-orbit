@@ -47,4 +47,25 @@ extension BackupCodec {
         }
         return try decode(files)
     }
+
+    /// A stored folder for a restore: every listed file checked in chunks first (`verify`), then its JSON files
+    /// decoded. Attachment bytes are never read here; they're handed to the store one at a time from the folder's
+    /// files (B1).
+    public func open(_ folder: any BackupFileReading) throws -> BackupOpened {
+        _ = try verify(folder)
+        guard let manifest = try folder.data(at: BackupFormat.manifestPath) else {
+            throw BackupError.damaged
+        }
+        var files = BackupSnapshotFiles([BackupFormat.manifestPath: manifest])
+        for path in try listedPaths(ofManifest: manifest)
+        where BackupFormat.isContained(path) && !Self.isAttachmentPath(path) {
+            files[path] = try folder.data(at: path)
+        }
+        return BackupOpened(contents: try decodeDetails(files), attachments: BackupFolderAttachments(folder))
+    }
+
+    /// `attachments/<id>`.
+    static func isAttachmentPath(_ path: String) -> Bool {
+        path.hasPrefix(BackupFormat.attachmentsFolder + "/")
+    }
 }

@@ -136,12 +136,131 @@ public struct BackupArchiveImport: Sendable {
         return try codec.decode(BackupArchiveSafety.files(from: archiving.entries(of: archive) { _ in .data }))
     }
 
+    /// A picked file for a restore: `check`, then one more pass that reads the JSON files and unpacks each listed
+    /// attachment into `scratch` in chunks, hashing it on the way. Everything this pass read is checked again,
+    /// against this pass's own manifest, before it's used. Nothing is unpacked before all four steps pass
+    /// (D197a.1), and no attachment is ever held whole: the restore reads them one at a time from `scratch` (B1).
+    public func open(
+        _ archive: BackupArchiveSource,
+        into scratch: any BackupScratchFolder,
+        onStep: (BackupImportStep) -> Void = { _ in },
+    ) throws -> BackupOpened {
+        let listed = try check(archive, onStep: onStep).fileSizes
+        var unpacked = BackupUnpacking(scratch: scratch, codec: codec)
+        let entries = try archiving.entries(of: archive) { path in
+            let normalized = BackupArchiveSafety.normalized(path)
+            if normalized == BackupFormat.manifestPath {
+                return .data
+            }
+            guard listed[normalized] != nil else {
+                return .skip
+            }
+            return BackupCodec.isAttachmentPath(normalized) ? unpacked.read(normalized) : .data
+        }
+        try unpacked.finish()
+        try BackupArchiveSafety.check(entries)
+        var files = BackupSnapshotFiles()
+        var digests = unpacked.digests
+        for entry in entries {
+            guard case .file(let data?) = entry.kind else {
+                continue
+            }
+            let path = BackupArchiveSafety.normalized(entry.path)
+            files[path] = data
+            let digest = BackupFileDigesting(codec.makeDigest())
+            data.withUnsafeBytes { digest.update($0) }
+            digests[path] = digest.finish()
+        }
+        guard let manifest = files[BackupFormat.manifestPath] else {
+            throw BackupError.damaged
+        }
+        _ = try codec.verify(manifest: manifest, digests: digests)
+        return BackupOpened(contents: try codec.decodeDetails(files), attachments: BackupFolderAttachments(scratch))
+    }
+
     /// The checked contents of an archive in memory.
     public func contents(
         of archive: Data,
         onStep: (BackupImportStep) -> Void = { _ in },
     ) throws -> BackupContents {
         try contents(of: .data(archive), onStep: onStep)
+    }
+}
+
+/// Attachments unpacked into a scratch folder as an archive streams past, each hashed on the way (B1).
+struct BackupUnpacking {
+    let scratch: any BackupScratchFolder
+    let codec: BackupCodec
+    private var running: [String: BackupFileDigesting] = [:]
+    private var writers: [any BackupFileWriting] = []
+    private let failure = BackupFirstError()
+
+    init(scratch: any BackupScratchFolder, codec: BackupCodec) {
+        self.scratch = scratch
+        self.codec = codec
+    }
+
+    /// Streams the file at `path` into a new scratch file. A path seen twice isn't unpacked again; the safety
+    /// check refuses the archive afterwards.
+    mutating func read(_ path: String) -> BackupArchiveRead {
+        guard running[path] == nil else {
+            return .skip
+        }
+        let digest = BackupFileDigesting(codec.makeDigest())
+        running[path] = digest
+        let writer: any BackupFileWriting
+        do {
+            writer = try scratch.create(path)
+        } catch {
+            failure.record(error)
+            return .skip
+        }
+        writers.append(writer)
+        let failure = failure
+        return .stream { bytes in
+            digest.update(bytes)
+            failure.attempt { try writer.write(bytes) }
+        }
+    }
+
+    /// Closes every file, then throws the first write error, if any.
+    func finish() throws {
+        for writer in writers {
+            failure.attempt { try writer.close() }
+        }
+        try failure.rethrow()
+    }
+
+    var digests: [String: BackupFileEntry] {
+        running.mapValues { $0.finish() }
+    }
+}
+
+/// The first error of several steps that can't throw where they run.
+final class BackupFirstError {
+    private var error: (any Error)?
+
+    func record(_ error: any Error) {
+        if self.error == nil {
+            self.error = error
+        }
+    }
+
+    func attempt(_ body: () throws -> Void) {
+        guard error == nil else {
+            return
+        }
+        do {
+            try body()
+        } catch {
+            record(error)
+        }
+    }
+
+    func rethrow() throws {
+        if let error {
+            throw error
+        }
     }
 }
 

@@ -6,10 +6,10 @@ public final class BackupService: AllBackupUseCases {
     public private(set) var isBusy = false
 
     private let source: any LedgerBackupSource
-    private let storage: any BackupStorage
-    private let archiving: any BackupArchiving
+    let storage: any BackupStorage
+    let archiving: any BackupArchiving
     private let settings: any BackupSettingsStore
-    private let codec: BackupCodec
+    let codec: BackupCodec
     private let changes: LedgerChanges
     private let schemaVersion: String
     private let now: @MainActor () -> Date
@@ -48,8 +48,7 @@ public final class BackupService: AllBackupUseCases {
 
     public func backUpNow() async throws -> BackupRecord {
         try await exclusively {
-            let ledger = try source.ledgerSnapshot()
-            return try await makeBackup(.manual, of: ledger)
+            try await makeBackup(.manual, of: source.backupSnapshot(), bytes: source.attachmentBytes())
         }
     }
 
@@ -64,11 +63,14 @@ public final class BackupService: AllBackupUseCases {
             if BackupPolicy.hasAutomaticBackup(on: moment, timeZone: zone, in: catalog) {
                 return nil
             }
-            let ledger = try source.ledgerSnapshot()
+            let ledger = try source.backupSnapshot()
+            let bytes = try source.attachmentBytes()
             let codec = self.codec
-            let fingerprint =
+            // Each attachment hashed in chunks, one at a time; the backup below reuses the entries (B1).
+            let (entries, fingerprint) =
                 try await Task.detached(priority: .utility) {
-                    try codec.fingerprint(of: ledger)
+                    let entries = try codec.attachmentEntries(of: ledger, reading: bytes)
+                    return (entries, try codec.fingerprint(of: ledger, attachments: entries))
                 }
                 .value
             let needed = BackupPolicy.needsAutomaticBackup(
@@ -78,7 +80,7 @@ public final class BackupService: AllBackupUseCases {
                 currentFingerprint: fingerprint,
                 ledgerIsEmpty: BackupPolicy.isEmpty(ledger),
             )
-            return needed ? try await makeBackup(.automatic, of: ledger) : nil
+            return needed ? try await makeBackup(.automatic, of: ledger, bytes: bytes, entries: entries) : nil
         }
     }
 
@@ -159,17 +161,25 @@ public final class BackupService: AllBackupUseCases {
             .value
     }
 
-    /// The Before restore backup first, with the current data released once it's written. Only then is `source`
-    /// read in full and checked again, and the data replaced. At most one whole ledger is held at a time (B1).
+    /// The Before restore backup first. Only then is `source` checked again, file by file, and the data replaced.
+    /// Attachments go from file to store one at a time and are never all in memory: a stored backup's from its
+    /// folder, a picked file's from a scratch folder they're unpacked into after every check passes (B1).
     public func restore(
         _ source: BackupSource,
         progress: @MainActor (BackupRestoreStep) -> Void,
     ) async throws -> BackupRecord {
         try await exclusively {
             progress(.savingCurrentData)
-            let before = try await makeBackup(.beforeRestore, of: self.source.ledgerSnapshot())
+            let before = try await makeBackup(
+                .beforeRestore,
+                of: self.source.backupSnapshot(),
+                bytes: self.source.attachmentBytes(),
+            )
             progress(.replacingData)
-            try await replace(with: openBackup(source))
+            let (opened, scratch) = try await openForRestore(source)
+            defer { scratch?.remove() }
+            try self.source.replaceLedger(with: opened.contents.ledger, attachments: opened.attachments)
+            changes.ledgerReplaced()
             // The backup read is released by now, before the restored data is read back for the marker.
             try? await markRestored()
             progress(.finished)
@@ -184,7 +194,11 @@ public final class BackupService: AllBackupUseCases {
     ) async throws -> BackupRecord {
         try await exclusively {
             progress(.savingCurrentData)
-            let before = try await makeBackup(.beforeRestore, of: source.ledgerSnapshot())
+            let before = try await makeBackup(
+                .beforeRestore,
+                of: source.backupSnapshot(),
+                bytes: source.attachmentBytes(),
+            )
             progress(.replacingData)
             try replace(with: contents)
             try? await markRestored()
@@ -231,11 +245,15 @@ public final class BackupService: AllBackupUseCases {
     }
 
     private func markRestored() async throws {
-        let restored = try source.ledgerSnapshot()
+        let restored = try source.backupSnapshot()
+        let bytes = try source.attachmentBytes()
         let codec = self.codec
         let fingerprint =
             try await Task.detached(priority: .userInitiated) {
-                try codec.fingerprint(of: restored)
+                try codec.fingerprint(
+                    of: restored,
+                    attachments: codec.attachmentEntries(of: restored, reading: bytes),
+                )
             }
             .value
         var status = try storage.loadStatus()
@@ -287,7 +305,16 @@ public final class BackupService: AllBackupUseCases {
     /// Encodes and writes one backup folder off the main actor, then checks it as written (D196.3). Only after a
     /// restorable automatic backup is in place are old automatic backups pruned; a failed backup prunes nothing
     /// (D62, D195.6).
-    private func makeBackup(_ kind: BackupKind, of ledger: LedgerSnapshot) async throws -> BackupRecord {
+    ///
+    /// `ledger` comes without attachment bytes. Each attachment is hashed from `bytes` in chunks, unless `entries`
+    /// already has them, then written to the folder from `bytes` the same way, or cloned from the earlier backup
+    /// when its manifest has the same size and SHA-256 for it (B1, D195.1).
+    private func makeBackup(
+        _ kind: BackupKind,
+        of ledger: LedgerSnapshot,
+        bytes: any BackupAttachmentReading,
+        entries known: [UUID: BackupFileEntry]? = nil,
+    ) async throws -> BackupRecord {
         let catalog = try await loadCatalog()
         let createdAt = now()
         let nameIndex = BackupNaming.nameIndex(for: createdAt, existing: catalog.records)
@@ -315,8 +342,20 @@ public final class BackupService: AllBackupUseCases {
         do {
             written =
                 try await Task.detached(priority: .utility) {
-                    let files = try codec.encode(BackupContents(manifest: manifest, ledger: ledger))
-                    try storage.write(files, id: id, cloningFrom: earlier)
+                    let entries = try known ?? codec.attachmentEntries(of: ledger, reading: bytes)
+                    let files = try codec.encode(
+                        BackupContents(manifest: manifest, ledger: ledger),
+                        attachments: entries,
+                    )
+                    let writes = try Self.attachmentWrites(
+                        ledger,
+                        entries: entries,
+                        bytes: bytes,
+                        earlier: earlier,
+                        storage: storage,
+                        codec: codec,
+                    )
+                    try storage.write(files, attachments: writes, id: id, cloningFrom: earlier)
                     let summary = try codec.summary(ofManifest: files[BackupFormat.manifestPath] ?? Data())
                     // Checked right after it's written. `nil` when the check itself couldn't run.
                     let condition: BackupCondition?
