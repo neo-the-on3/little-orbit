@@ -1,11 +1,14 @@
 import Foundation
 import LittleOrbitDomain
 
-/// Backup folders in the app's own container: `Application Support/<bundle id>/Backups/<id>/`, plus `status.json`
-/// for the last failure and the restored state (D62, D195).
+/// Backup folders in the app's own container: `Application Support/<bundle id>/Backups/<yyyy-MM-dd-HH-mm>/`, plus
+/// `status.json` for the last failure and the restored state (D62, D195, D209).
 ///
-/// - Each backup is one folder named by its ID, never by its display name (D173.11, D195.1). The list is always
-///   built from the folders that exist; there's no catalog to fall out of step (D195.3).
+/// - Each backup is one folder named by when it was made, in the device's time zone then, with `-2`, `-3` and so
+///   on for a second backup in the same minute (D209). The name is never read back: a backup's identity is the
+///   `id` in its manifest, and its date, order and month come from the manifest too. The list is always built from
+///   the folders that exist, whatever they're called; there's no catalog to fall out of step (D195.3).
+///   Folders named by a backup ID, from earlier builds, are read as before.
 /// - A folder is built in the staging folder next to the Backups folder, `manifest.json` last, then renamed into
 ///   place, so only complete folders ever appear in the Backups folder (D195.6). A folder being deleted is renamed
 ///   into the staging folder first (L17). Only the staging folder is emptied at launch: a folder in the Backups
@@ -24,15 +27,24 @@ public final class FileBackupStorage: BackupStorage, @unchecked Sendable {
     static let statusName = "status.json"
     static let manifestName = BackupFormat.manifestPath
 
-    private let folder: URL
+    let folder: URL
     private let staging: URL
     private let lock = NSLock()
-    private var fileManager: FileManager { .default }
+    var fileManager: FileManager { .default }
+    let timeZone: @Sendable () -> TimeZone
+    /// Each backup's folder name, by its ID, as the last listing or write found it.
+    let names = BackupFolderNames()
 
     /// `folder` is created if missing. `staging`, by default `<folder>.staging` next to it on the same volume, is
     /// where folders are built and deleted; what an interrupted backup or cleanup left there is removed now.
-    public init(folder: URL, staging: URL? = nil) throws {
+    /// `timeZone` names new folders; it's the device's current one.
+    public init(
+        folder: URL,
+        staging: URL? = nil,
+        timeZone: @escaping @Sendable () -> TimeZone = { .current },
+    ) throws {
         self.folder = folder
+        self.timeZone = timeZone
         self.staging =
             staging
             ?? folder.deletingLastPathComponent()
@@ -59,7 +71,38 @@ public final class FileBackupStorage: BackupStorage, @unchecked Sendable {
 
     /// The folder of a backup. For tests and diagnostics only; the app never shows it.
     public func folderURL(_ id: UUID) -> URL {
-        folder.appendingPathComponent(id.uuidString, isDirectory: true)
+        if names.name(of: id) == nil {
+            _ = try? scan()
+        }
+        return folder.appendingPathComponent(names.name(of: id) ?? id.uuidString, isDirectory: true)
+    }
+
+    /// Every folder in the Backups folder, whatever it's called, with the ID it's known by: the manifest's `id`,
+    /// else the name of a folder named by an ID (earlier builds), else one made from the name, so a folder with no
+    /// readable manifest is still listed, as damaged (D196.3, D209). No date is ever read from a name.
+    private func scan() throws -> [UUID] {
+        var found: [UUID: String] = [:]
+        var order: [UUID] = []
+        let known = names.byName()
+        for name in try fileManager.contentsOfDirectory(atPath: folder.path).sorted() where !name.hasPrefix(".") {
+            let url = folder.appendingPathComponent(name, isDirectory: true)
+            var isDirectory: ObjCBool = false
+            guard fileManager.fileExists(atPath: url.path, isDirectory: &isDirectory), isDirectory.boolValue else {
+                continue
+            }
+            // A folder already known keeps its ID, so one whose manifest goes is still the same backup, now damaged.
+            var id =
+                known[name] ?? BackupFolderNames.manifestID(in: url) ?? UUID(uuidString: name)
+                ?? BackupFolderNames.id(for: name)
+            if found[id] != nil {
+                // A copy of another folder, manifest and all: listed on its own.
+                id = BackupFolderNames.id(for: name)
+            }
+            found[id] = name
+            order.append(id)
+        }
+        names.replace(with: found)
+        return order
     }
 
     /// The staging folder. For tests only.
@@ -68,19 +111,7 @@ public final class FileBackupStorage: BackupStorage, @unchecked Sendable {
     }
 
     public func storedIDs() throws -> [UUID] {
-        try locked {
-            try fileManager.contentsOfDirectory(atPath: folder.path)
-                .compactMap { name in
-                    var isDirectory: ObjCBool = false
-                    guard let id = UUID(uuidString: name), id.uuidString == name,
-                        fileManager.fileExists(atPath: folderURL(id).path, isDirectory: &isDirectory),
-                        isDirectory.boolValue
-                    else {
-                        return nil
-                    }
-                    return id
-                }
-        }
+        try locked { try scan() }
     }
 
     public func listing(id: UUID) throws -> BackupFolderListing {
@@ -153,7 +184,7 @@ public final class FileBackupStorage: BackupStorage, @unchecked Sendable {
                 try prepare(staging)
                 try prepare(folder)
                 try writeFolder(files, attachments: attachments, to: temporary, cloningFrom: earlier.map(folderURL))
-                try fileManager.moveItem(at: temporary, to: folderURL(id))
+                try moveIntoPlace(temporary, id: id, manifest: files[Self.manifestName])
             } catch {
                 try? fileManager.removeItem(at: temporary)
                 throw Self.isOutOfSpace(error) ? BackupError.notEnoughStorage : error
@@ -171,6 +202,7 @@ public final class FileBackupStorage: BackupStorage, @unchecked Sendable {
             try prepare(staging)
             let deleting = staging.appendingPathComponent("\(id.uuidString).deleting", isDirectory: true)
             try fileManager.moveItem(at: url, to: deleting)
+            names.remove(id)
             try? fileManager.removeItem(at: deleting)
         }
     }

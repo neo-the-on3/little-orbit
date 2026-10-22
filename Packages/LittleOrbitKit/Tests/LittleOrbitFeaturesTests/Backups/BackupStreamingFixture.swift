@@ -59,7 +59,7 @@ struct StreamingFixture {
 
     /// A backup's folder in the spy store's Backups folder.
     func backupFolder(_ id: UUID) -> URL {
-        storage.folder.appendingPathComponent(id.uuidString, isDirectory: true)
+        storage.base.folderURL(id)
     }
 
     /// Whether anything is left in the staging folder.
@@ -71,6 +71,13 @@ struct StreamingFixture {
     /// The backup folders in the Backups folder.
     var folders: [String] {
         ((try? FileManager.default.contentsOfDirectory(atPath: storage.folder.path)) ?? [])
-            .filter { UUID(uuidString: $0) != nil }
+            .filter { name in
+                var isDirectory: ObjCBool = false
+                return !name.hasPrefix(".")
+                    && FileManager.default.fileExists(
+                        atPath: storage.folder.appendingPathComponent(name).path,
+                        isDirectory: &isDirectory,
+                    ) && isDirectory.boolValue
+            }
     }
 }

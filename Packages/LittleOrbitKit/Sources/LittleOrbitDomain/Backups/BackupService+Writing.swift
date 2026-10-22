@@ -30,6 +30,7 @@ extension BackupService {
             attachments: ledger.attachmentsVisible().count,
         )
         let month = BackupMonth.string(for: createdAt, in: timeZone())
+        let id = UUID()
         let manifest = BackupManifest(
             kind: kind,
             createdAt: createdAt,
@@ -39,8 +40,8 @@ extension BackupService {
             transactionCount: visible.transactions,
             attachmentCount: visible.attachments,
             month: month,
+            id: id,
         )
-        let id = UUID()
         let codec = self.codec
         let storage = self.storage
         let bytes = BackupCancellableBytes(source)

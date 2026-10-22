@@ -65,11 +65,12 @@ struct BackupFolderServiceTests {
         try data.write(to: url)
     }
 
-    @Test("Each backup is a folder named by its ID, with the D195.1 layout (L1)")
+    @Test("Each backup is a folder named by its local date and time, with the D195.1 layout (L1, D209)")
     func folderLayout() async throws {
         let harness = try BackupHarness()
         let backup = try await harness.service.backUpNow()
-        #expect(try harness.storedFiles() == [backup.id.uuidString])
+        // 2026-10-22 09:12:05 in Kolkata, zero-padded (D209).
+        #expect(try harness.storedFiles() == ["2026-10-22-09-12"])
         let files = try harness.storage.read(id: backup.id)
         #expect(files.paths.contains("manifest.json"))
         #expect(files.paths.contains("shared.json"))
@@ -160,7 +161,7 @@ struct BackupFolderServiceTests {
             await #expect(throws: BackupError.damaged) { try await harness.contents(.file(data)) }
         }
         #expect(try harness.repository.ledgerSnapshot() == before)
-        #expect(try harness.storedFiles() == [backup.id.uuidString])
+        #expect(try harness.storedFiles() == [harness.backupFolder(backup.id).lastPathComponent])
     }
 
     @Test("N and M aren't in the backup, and a restore leaves them as they are (D195.4)")

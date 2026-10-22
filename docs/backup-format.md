@@ -8,12 +8,19 @@ format bump (#100).
 
 - `Application Support/<bundle id>/Backups/` in the app's own container, on this device only (D62).
 - Never in the App Group container (#52), so widgets and extensions can't read them, and never uploaded.
-- Each backup is a folder named by its ID: `Backups/<uuid>/`. The list in Settings > Backups is built from the
-  folders that exist, by reading each one's `manifest.json`. A folder deleted by hand just leaves the list
+- Each backup is a folder named by the local date and time it was made: `Backups/yyyy-MM-dd-HH-mm/`, zero-padded,
+  Gregorian, in the device's current time zone (D209, L60). A second backup in the same minute gets `-2`, then
+  `-3` and so on, chosen when it's moved into place; an existing folder is never overwritten or reused (L61). The
+  name is only a label: nothing reads a date from it. A backup's identity is the `id` in its manifest, which the
+  export lock, the selection and the Before restore backup refer to, and the list's order and retention (the last
+  N and each month's first) come from the manifest's `createdAt` (L62, L63). Folders from earlier builds named
+  `<uuid>/`, with no `id` in the manifest, are read by their name's ID and aren't renamed; the format stays
+  version 1. The list in Settings > Backups is built from the folders that exist, by reading each one's
+  `manifest.json`. A folder deleted by hand just leaves the list
   (D195.3). `status.json` next to the folders is only a cache: the last failure, the skip-after-restore marker, and
   what each backup was last known to be (kind, date and whether a full check found it damaged). Deleting it loses
   nothing that a backup needs.
-- Every folder named by an ID is listed. One whose manifest is missing or doesn't decode, or whose files don't
+- Every folder is listed, whatever its name, and judged by its manifest. One whose manifest is missing or doesn't decode, or whose files don't
   match their listed sizes or a full check, is listed as 'Damaged', with its kind and date from the cache when
   they're known (D196.3, L29, L37). One whose manifest declares a newer format is listed as "Made by a newer
   version of little-orbit." and never as damaged (D197.2, L35). Neither can be restored or exported, and both can
