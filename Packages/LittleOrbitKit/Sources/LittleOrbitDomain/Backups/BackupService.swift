@@ -369,6 +369,9 @@ extension BackupService {
                     createdAt: listing.createdAt ?? BackupRecord.unknownDate,
                     formatVersion: 0,
                     byteSize: listing.totalSize,
+                    accountCount: nil,
+                    transactionCount: nil,
+                    attachmentCount: nil,
                 )
             record.condition = .damaged
             return record
@@ -382,6 +385,10 @@ extension BackupService {
                 nameIndex: hints.nameIndex ?? known?.nameIndex ?? 1,
                 formatVersion: hints.formatVersion,
                 byteSize: listing.totalSize,
+                // A newer format's counts aren't read, so none are shown, not even an earlier read's.
+                accountCount: nil,
+                transactionCount: nil,
+                attachmentCount: nil,
                 month: hints.month,
                 condition: .newerFormat,
             )

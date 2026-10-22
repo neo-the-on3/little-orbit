@@ -125,9 +125,12 @@
                                     Text(row.detailLine)
                                         .font(.subheadline)
                                         .foregroundStyle(.secondary)
-                                    Text(row.countsText)
-                                        .font(.subheadline)
-                                        .foregroundStyle(.secondary)
+                                    // No line for counts that weren't read; the status line says why.
+                                    if let counts = row.countsText {
+                                        Text(counts)
+                                            .font(.subheadline)
+                                            .foregroundStyle(.secondary)
+                                    }
                                     if let status = row.statusText {
                                         Label(status, systemImage: "exclamationmark.triangle.fill")
                                             .font(.subheadline)
@@ -171,10 +174,10 @@
                         LabeledContent("Type", value: row.kindText)
                         LabeledContent("Size", value: row.sizeText)
                         LabeledContent("Format", value: BackupPresentation.version(row.formatVersion))
-                        LabeledContent("Accounts", value: row.accountCount.formatted())
-                        LabeledContent("Transactions", value: row.transactionCount.formatted())
-                        if row.attachmentCount > 0 {
-                            LabeledContent("Attachments", value: row.attachmentCount.formatted())
+                        LabeledContent("Accounts", value: row.detailAccountsText)
+                        LabeledContent("Transactions", value: row.detailTransactionsText)
+                        if let attachments = row.attachmentsText {
+                            LabeledContent("Attachments", value: attachments)
                         }
                     }
                     // A damaged or newer-format backup has no Restore… or Export… on iOS (L29, L35).

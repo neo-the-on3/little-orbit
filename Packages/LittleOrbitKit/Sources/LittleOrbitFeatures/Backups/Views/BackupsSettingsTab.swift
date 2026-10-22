@@ -70,8 +70,9 @@
                         }
                         TableColumn("Size", value: \.sizeText)
                         TableColumn("Format", value: \.formatText)
-                        TableColumn("Accounts") { row in Text(row.accountCount.formatted()) }
-                        TableColumn("Transactions") { row in Text(row.transactionCount.formatted()) }
+                        // Empty for counts that weren't read, never 0 (UI Designer).
+                        TableColumn("Accounts") { row in Text(row.accountsText ?? "") }
+                        TableColumn("Transactions") { row in Text(row.transactionsText ?? "") }
                     }
                     .frame(minHeight: 220)
                     .contextMenu(forSelectionType: UUID.self) { ids in
