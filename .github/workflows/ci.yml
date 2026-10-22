@@ -284,13 +284,19 @@ jobs:
               test_status=1
               continue
             fi
-            echo "xcodebuild test -scheme ${scheme} -destination platform=macOS,arch=arm64 -resultBundlePath ${bundle}"
+            echo "xcodebuild test -scheme ${scheme} -destination platform=macOS,arch=arm64 -resultBundlePath ${bundle} -test-timeouts-enabled YES"
+            # A hung test fails in minutes instead of running into the job's timeout: XCTest cases get 2 minutes
+            # each (5 at most), and the Swift Testing suites that wait on gates or the run loop carry
+            # .timeLimit(.minutes(2)).
             if ! (
               cd "$package_root"
               xcodebuild test \
                 -scheme "$scheme" \
                 -destination "platform=macOS,arch=arm64" \
                 -resultBundlePath "$bundle" \
+                -test-timeouts-enabled YES \
+                -default-test-execution-time-allowance 120 \
+                -maximum-test-execution-time-allowance 300 \
                 -derivedDataPath "${root}/derived-data-${name}" \
                 CODE_SIGNING_ALLOWED=NO
             ); then
