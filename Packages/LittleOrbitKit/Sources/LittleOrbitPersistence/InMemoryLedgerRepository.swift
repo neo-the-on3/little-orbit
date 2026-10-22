@@ -127,3 +127,14 @@ public final class InMemoryLedgerRepository: LedgerRepository {
         }
     }
 }
+
+/// Backups (#40): the whole ledger out, and replaced at once.
+extension InMemoryLedgerRepository: LedgerBackupSource {
+    public func ledgerSnapshot() throws -> LedgerSnapshot {
+        snapshot
+    }
+
+    public func replaceLedger(with snapshot: LedgerSnapshot) throws {
+        self.snapshot = snapshot
+    }
+}

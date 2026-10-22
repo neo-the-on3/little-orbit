@@ -1,0 +1,342 @@
+import Foundation
+import LittleOrbitDomain
+
+/// Backup folders in the app's own container: `Application Support/<bundle id>/Backups/<id>/`, plus `status.json`
+/// for the last failure and the restored state (D62, D195).
+///
+/// - Each backup is one folder named by its ID, never by its display name (D173.11, D195.1). The list is always
+///   built from the folders that exist; there's no catalog to fall out of step (D195.3).
+/// - A folder is built in the staging folder next to the Backups folder, `manifest.json` last, then renamed into
+///   place, so only complete folders ever appear in the Backups folder (D195.6). A folder being deleted is renamed
+///   into the staging folder first (L17). Only the staging folder is emptied at launch: a folder in the Backups
+///   folder is never treated as a leftover, and one without a valid manifest is listed as damaged (D196.3, D197.4).
+/// - A file that's byte-for-byte the same in the previous backup is copied from it with `FileManager.copyItem`,
+///   which makes an APFS clone where the volume supports it and a plain copy elsewhere. Either way it's a separate
+///   file with a link count of 1: no symlinks, no hard links (D195.1, L3, L6).
+/// - Never in the App Group container (#52), so extensions can't read backups, and never uploaded.
+/// - The folder stays in the system device backup (iCloud or computer) on every platform: until iCloud sync
+///   exists, that's the only off-device copy (Kiran, D181). Revisiting this belongs with #21.
+/// - On iOS and iPadOS every file and folder, the temporary ones included, gets the default data protection class,
+///   `completeUntilFirstUserAuthentication`, so automatic backups keep working while the device is locked (D180,
+///   R6). macOS relies on FileVault for protection at rest.
+public final class FileBackupStorage: BackupStorage, @unchecked Sendable {
+    public static let folderName = "Backups"
+    static let statusName = "status.json"
+    static let manifestName = BackupFormat.manifestPath
+
+    private let folder: URL
+    private let staging: URL
+    private let lock = NSLock()
+    private var fileManager: FileManager { .default }
+
+    /// `folder` is created if missing. `staging`, by default `<folder>.staging` next to it on the same volume, is
+    /// where folders are built and deleted; what an interrupted backup or cleanup left there is removed now.
+    public init(folder: URL, staging: URL? = nil) throws {
+        self.folder = folder
+        self.staging =
+            staging
+            ?? folder.deletingLastPathComponent()
+            .appendingPathComponent("\(folder.lastPathComponent).staging", isDirectory: true)
+        try prepare(folder)
+        sweepLeftovers()
+    }
+
+    /// `Application Support/<bundle id>/Backups`, next to the private store location (#52 fallback).
+    public static func appDefault(
+        bundleIdentifier: String? = Bundle.main.bundleIdentifier,
+        fileManager: FileManager = .default,
+    ) throws -> FileBackupStorage {
+        let support = try fileManager.url(
+            for: .applicationSupportDirectory,
+            in: .userDomainMask,
+            appropriateFor: nil,
+            create: true,
+        )
+        let base = StoreLocation.storeURL(applicationSupport: support, bundleIdentifier: bundleIdentifier)
+            .deletingLastPathComponent()
+        return try FileBackupStorage(folder: base.appendingPathComponent(folderName, isDirectory: true))
+    }
+
+    /// The folder of a backup. For tests and diagnostics only; the app never shows it.
+    public func folderURL(_ id: UUID) -> URL {
+        folder.appendingPathComponent(id.uuidString, isDirectory: true)
+    }
+
+    /// The staging folder. For tests only.
+    var stagingURL: URL {
+        staging
+    }
+
+    public func storedIDs() throws -> [UUID] {
+        try locked {
+            try fileManager.contentsOfDirectory(atPath: folder.path)
+                .compactMap { name in
+                    var isDirectory: ObjCBool = false
+                    guard let id = UUID(uuidString: name), id.uuidString == name,
+                        fileManager.fileExists(atPath: folderURL(id).path, isDirectory: &isDirectory),
+                        isDirectory.boolValue
+                    else {
+                        return nil
+                    }
+                    return id
+                }
+        }
+    }
+
+    public func listing(id: UUID) throws -> BackupFolderListing {
+        let url = folderURL(id)
+        var isDirectory: ObjCBool = false
+        guard fileManager.fileExists(atPath: url.path, isDirectory: &isDirectory), isDirectory.boolValue else {
+            throw BackupError.notFound
+        }
+        let base = url.standardizedFileURL.resolvingSymlinksInPath().path
+        var sizes: [String: Int64] = [:]
+        let enumerator = fileManager.enumerator(atPath: base)
+        while let relative = enumerator?.nextObject() as? String {
+            let attributes = try fileManager.attributesOfItem(atPath: base + "/" + relative)
+            if attributes[.type] as? FileAttributeType == .typeRegular {
+                sizes[relative] = (attributes[.size] as? NSNumber)?.int64Value ?? 0
+            }
+        }
+        let manifestURL = url.appendingPathComponent(Self.manifestName)
+        let manifest: Data? =
+            sizes[Self.manifestName] == nil ? nil : try Data(contentsOf: manifestURL)
+        let created = try? fileManager.attributesOfItem(atPath: url.path)[.creationDate] as? Date
+        return BackupFolderListing(manifest: manifest, fileSizes: sizes, createdAt: created)
+    }
+
+    /// Throws `notFound` when there's no such folder, and the underlying error for any other failed read.
+    public func read(id: UUID) throws -> BackupSnapshotFiles {
+        let url = folderURL(id)
+        var isDirectory: ObjCBool = false
+        guard fileManager.fileExists(atPath: url.path, isDirectory: &isDirectory), isDirectory.boolValue else {
+            throw BackupError.notFound
+        }
+        return try Self.readFolder(url)
+    }
+
+    public func files(id: UUID) throws -> any BackupFileReading {
+        let url = folderURL(id)
+        var isDirectory: ObjCBool = false
+        guard fileManager.fileExists(atPath: url.path, isDirectory: &isDirectory), isDirectory.boolValue else {
+            throw BackupError.notFound
+        }
+        return StoredBackupFolder(url)
+    }
+
+    public func write(_ files: BackupSnapshotFiles, id: UUID, cloningFrom earlier: UUID?) throws {
+        try locked {
+            let temporary = staging.appendingPathComponent("\(id.uuidString).tmp", isDirectory: true)
+            do {
+                try prepare(staging)
+                try prepare(folder)
+                try writeFolder(files, to: temporary, cloningFrom: earlier.map(folderURL))
+                try fileManager.moveItem(at: temporary, to: folderURL(id))
+            } catch {
+                try? fileManager.removeItem(at: temporary)
+                throw Self.isOutOfSpace(error) ? BackupError.notEnoughStorage : error
+            }
+        }
+    }
+
+    public func delete(id: UUID) throws {
+        try locked {
+            let url = folderURL(id)
+            guard fileManager.fileExists(atPath: url.path) else {
+                return
+            }
+            // Renamed first, in one step, so a cleanup killed midway leaves no part of a listed folder (L17).
+            try prepare(staging)
+            let deleting = staging.appendingPathComponent("\(id.uuidString).deleting", isDirectory: true)
+            try fileManager.moveItem(at: url, to: deleting)
+            try? fileManager.removeItem(at: deleting)
+        }
+    }
+
+    public func loadStatus() throws -> BackupStatus {
+        locked {
+            let url = folder.appendingPathComponent(Self.statusName)
+            guard fileManager.fileExists(atPath: url.path) else {
+                return BackupStatus()
+            }
+            // A status that doesn't decode only loses the failure note and the skip-after-restore marker.
+            return (try? JSONDecoder().decode(BackupStatus.self, from: Data(contentsOf: url))) ?? BackupStatus()
+        }
+    }
+
+    public func saveStatus(_ status: BackupStatus) throws {
+        try locked {
+            let encoder = JSONEncoder()
+            encoder.outputFormatting = [.sortedKeys]
+            let url = folder.appendingPathComponent(Self.statusName)
+            let temporary = staging.appendingPathComponent("\(UUID().uuidString).tmp")
+            do {
+                try prepare(staging)
+                try prepare(folder)
+                try encoder.encode(status).write(to: temporary, options: Self.writingOptions)
+                if fileManager.fileExists(atPath: url.path) {
+                    _ = try fileManager.replaceItemAt(url, withItemAt: temporary)
+                } else {
+                    try fileManager.moveItem(at: temporary, to: url)
+                }
+            } catch {
+                try? fileManager.removeItem(at: temporary)
+                throw error
+            }
+        }
+    }
+
+    /// Every regular file under `url` by relative path. Symlinks and anything else that isn't a regular file are
+    /// left out, so a listed path that isn't a real file in the folder reads as missing.
+    static func readFolder(_ url: URL) throws -> BackupSnapshotFiles {
+        let base = url.standardizedFileURL.resolvingSymlinksInPath().path
+        guard let enumerator = FileManager.default.enumerator(atPath: base) else {
+            throw BackupError.notFound
+        }
+        var files = BackupSnapshotFiles()
+        while let relative = enumerator.nextObject() as? String {
+            let path = base + "/" + relative
+            let attributes = try FileManager.default.attributesOfItem(atPath: path)
+            guard attributes[.type] as? FileAttributeType == .typeRegular else {
+                continue
+            }
+            files[relative] = try Data(contentsOf: URL(fileURLWithPath: path))
+        }
+        return files
+    }
+
+    /// Writes `files` under `destination`, `manifest.json` last. A file that's the same in `earlier` is cloned.
+    private func writeFolder(_ files: BackupSnapshotFiles, to destination: URL, cloningFrom earlier: URL?) throws {
+        try prepare(destination)
+        let ordered = files.paths.filter { $0 != Self.manifestName } + files.paths.filter { $0 == Self.manifestName }
+        for path in ordered {
+            guard BackupFormat.isContained(path), let data = files[path] else {
+                throw BackupError.damaged
+            }
+            let url = destination.appendingPathComponent(path)
+            try prepare(url.deletingLastPathComponent())
+            if let source = earlier?.appendingPathComponent(path), path != Self.manifestName,
+                Self.hasSameBytes(source, as: data)
+            {
+                try Self.cloneOrCopy(from: source, to: url)
+            } else {
+                try data.write(to: url, options: Self.writingOptions)
+            }
+        }
+    }
+
+    /// An APFS clone of `source` where the volume supports one, a plain copy otherwise. Never a link (L6).
+    static func cloneOrCopy(from source: URL, to destination: URL) throws {
+        try FileManager.default.copyItem(at: source, to: destination)
+    }
+
+    private static func hasSameBytes(_ url: URL, as data: Data) -> Bool {
+        guard let attributes = try? FileManager.default.attributesOfItem(atPath: url.path),
+            attributes[.type] as? FileAttributeType == .typeRegular,
+            (attributes[.size] as? NSNumber)?.intValue == data.count
+        else {
+            return false
+        }
+        return (try? Data(contentsOf: url)) == data
+    }
+
+    /// Creates a folder if it's missing, with the default data protection class on iOS. It isn't excluded from the
+    /// device backup (D181).
+    private func prepare(_ url: URL) throws {
+        #if os(iOS) || os(watchOS)
+            let attributes: [FileAttributeKey: Any] = [
+                .protectionKey: FileProtectionType.completeUntilFirstUserAuthentication
+            ]
+        #else
+            let attributes: [FileAttributeKey: Any]? = nil
+        #endif
+        try fileManager.createDirectory(at: url, withIntermediateDirectories: true, attributes: attributes)
+    }
+
+    /// Empties the staging folder: what an interrupted backup or cleanup left behind. Runs once, before any write
+    /// of this launch. Nothing in the Backups folder is touched (D197.4).
+    private func sweepLeftovers() {
+        let names = (try? fileManager.contentsOfDirectory(atPath: staging.path)) ?? []
+        for name in names {
+            try? fileManager.removeItem(at: staging.appendingPathComponent(name))
+        }
+    }
+
+    static var writingOptions: Data.WritingOptions {
+        #if os(iOS) || os(watchOS)
+            [.withoutOverwriting, .completeFileProtectionUntilFirstUserAuthentication]
+        #else
+            [.withoutOverwriting]
+        #endif
+    }
+
+    static func isOutOfSpace(_ error: any Error) -> Bool {
+        if let backup = error as? BackupError {
+            return backup == .notEnoughStorage
+        }
+        if let cocoa = error as? CocoaError, cocoa.code == .fileWriteOutOfSpace {
+            return true
+        }
+        let nsError = error as NSError
+        if nsError.domain == NSPOSIXErrorDomain && nsError.code == Int(ENOSPC) {
+            return true
+        }
+        if let underlying = nsError.userInfo[NSUnderlyingErrorKey] as? NSError {
+            return isOutOfSpace(underlying)
+        }
+        return false
+    }
+
+    private func locked<T>(_ body: () throws -> T) rethrows -> T {
+        lock.lock()
+        defer { lock.unlock() }
+        return try body()
+    }
+}
+
+/// One stored backup folder, read a file at a time (B1.2). Only real regular files inside the folder count: a
+/// path through a symlink, or to anything that isn't a regular file, reads as missing, the same as `readFolder`.
+struct StoredBackupFolder: BackupFileReading {
+    /// The size of each chunk a streamed file is read in.
+    static let chunkSize = 1 << 20
+
+    private let base: String
+
+    init(_ url: URL) {
+        base = url.standardizedFileURL.resolvingSymlinksInPath().path
+    }
+
+    func data(at path: String) throws -> Data? {
+        guard let url = regularFile(path) else {
+            return nil
+        }
+        // Mapped where the system can, so a large attachment isn't copied into memory just to be read.
+        return try Data(contentsOf: url, options: .mappedIfSafe)
+    }
+
+    func stream(_ path: String, through body: (UnsafeRawBufferPointer) throws -> Void) throws -> Bool {
+        guard let url = regularFile(path) else {
+            return false
+        }
+        let handle = try FileHandle(forReadingFrom: url)
+        defer { try? handle.close() }
+        while let chunk = try handle.read(upToCount: Self.chunkSize), !chunk.isEmpty {
+            try chunk.withUnsafeBytes(body)
+        }
+        return true
+    }
+
+    private func regularFile(_ path: String) -> URL? {
+        guard BackupFormat.isContained(path) else {
+            return nil
+        }
+        let url = URL(fileURLWithPath: base + "/" + path).standardizedFileURL
+        guard url.resolvingSymlinksInPath().path == url.path,
+            let attributes = try? FileManager.default.attributesOfItem(atPath: url.path),
+            attributes[.type] as? FileAttributeType == .typeRegular
+        else {
+            return nil
+        }
+        return url
+    }
+}
