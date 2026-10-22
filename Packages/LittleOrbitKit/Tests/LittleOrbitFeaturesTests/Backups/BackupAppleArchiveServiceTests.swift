@@ -17,16 +17,16 @@ import Testing
         func exportAndImport() async throws {
             let harness = try harness()
             let backup = try await harness.service.backUpNow()
-            let export = try await harness.service.exportBackup(id: backup.id)
-            let entries = try harness.archiving.entries(of: export.data)
+            let export = try await harness.exportData(backup.id)
+            let entries = try harness.archiving.entries(of: export)
             #expect(try BackupArchiveSafety.files(from: entries) == (try harness.storage.read(id: backup.id)))
-            let mime = export.data.base64EncodedString(options: .lineLength76Characters)
+            let mime = export.base64EncodedString(options: .lineLength76Characters)
             let received = try #require(Data(base64Encoded: mime, options: .ignoreUnknownCharacters))
             let hashing = CryptoKitBackupHashing()
-            #expect(hashing.sha256Hex(received) == hashing.sha256Hex(export.data))
+            #expect(hashing.sha256Hex(received) == hashing.sha256Hex(export))
             #expect(
-                try await harness.service.openBackup(.file(received))
-                    == (try await harness.service.openBackup(.stored(backup.id)))
+                try await harness.contents(.file(received))
+                    == (try await harness.contents(.stored(backup.id)))
             )
         }
 
@@ -52,7 +52,7 @@ import Testing
             let backup = try await harness.service.backUpNow()
             let before = try harness.repository.ledgerSnapshot()
             let sample = try newerDotDotSample()
-            await #expect(throws: BackupError.newerFormat) { try await harness.service.openBackup(.file(sample)) }
+            await #expect(throws: BackupError.newerFormat) { try await harness.contents(.file(sample)) }
 
             let window = harness.window()
             let model = window.model

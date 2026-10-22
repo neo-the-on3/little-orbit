@@ -55,7 +55,7 @@ struct BackupFolderServiceTests {
         let remaining = try await harness.service.overview().backups
         #expect(Set(remaining.map(\.id)) == Set(made.map(\.id)))
         #expect(remaining.filter { $0.condition == .damaged }.count == 3)
-        let restorable = try await harness.service.openBackup(.stored(made[0].id))
+        let restorable = try await harness.contents(.stored(made[0].id))
         #expect(!restorable.accounts.isEmpty)
     }
 
@@ -92,7 +92,7 @@ struct BackupFolderServiceTests {
         let second = try await harness.service.backUpNow()
         try FileManager.default.removeItem(at: harness.backupFolder(first.id))
         #expect(try await harness.service.overview().backups.map(\.id) == [second.id])
-        let contents = try await harness.service.openBackup(.stored(second.id))
+        let contents = try await harness.contents(.stored(second.id))
         #expect(contents.accounts.count == FeatureFixture.all().count)
     }
 
@@ -102,13 +102,13 @@ struct BackupFolderServiceTests {
         let backup = try await harness.service.backUpNow()
         let folder = harness.backupFolder(backup.id)
         try Data([1, 2, 3]).write(to: folder.appendingPathComponent(".DS_Store"))
-        _ = try await harness.service.openBackup(.stored(backup.id))
+        _ = try await harness.contents(.stored(backup.id))
 
         try damage(folder.appendingPathComponent("shared.json"))
         let before = try harness.repository.ledgerSnapshot()
-        await #expect(throws: BackupError.damaged) { try await harness.service.openBackup(.stored(backup.id)) }
+        await #expect(throws: BackupError.damaged) { try await harness.contents(.stored(backup.id)) }
         try FileManager.default.removeItem(at: folder.appendingPathComponent("shared.json"))
-        await #expect(throws: BackupError.damaged) { try await harness.service.openBackup(.stored(backup.id)) }
+        await #expect(throws: BackupError.damaged) { try await harness.contents(.stored(backup.id)) }
         #expect(try harness.repository.ledgerSnapshot() == before)
     }
 
@@ -127,7 +127,7 @@ struct BackupFolderServiceTests {
         #expect(backups.map(\.createdAt) == [second.createdAt, first.createdAt])
         // Its size from the last good read, not 0 or the folder's remaining files (D202.1, L47).
         #expect(backups.map(\.byteSize) == [second.byteSize, first.byteSize])
-        await #expect(throws: BackupError.damaged) { try await harness.service.openBackup(.stored(first.id)) }
+        await #expect(throws: BackupError.damaged) { try await harness.contents(.stored(first.id)) }
         await #expect(throws: BackupError.damaged) { try await harness.service.exportBackup(id: second.id) }
         // Delete still works.
         try await harness.service.deleteBackup(id: first.id)
@@ -157,7 +157,7 @@ struct BackupFolderServiceTests {
         ]
         for archive in archives {
             let data = try FakeBackupArchiving.crafted(archive)
-            await #expect(throws: BackupError.damaged) { try await harness.service.openBackup(.file(data)) }
+            await #expect(throws: BackupError.damaged) { try await harness.contents(.file(data)) }
         }
         #expect(try harness.repository.ledgerSnapshot() == before)
         #expect(try harness.storedFiles() == [backup.id.uuidString])
@@ -176,7 +176,7 @@ struct BackupFolderServiceTests {
             ]
         )
         harness.settings.setRetention(BackupRetention(recentAutomatic: 3, monthlyMonths: 2))
-        let contents = try await harness.service.openBackup(.stored(backup.id))
+        let contents: BackupSource = .stored(backup.id)
         _ = try await harness.service.restore(contents) { _ in }
         #expect(harness.service.retention() == BackupRetention(recentAutomatic: 3, monthlyMonths: 2))
     }

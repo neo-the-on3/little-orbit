@@ -79,8 +79,12 @@ final class StreamingSpySource: LedgerBackupSource {
     }
 
     func attachmentBytes() throws -> any BackupAttachmentReading {
-        LoggedAttachmentBytes(base: BackupLedgerAttachments(try base.ledgerSnapshot()), log: backupReads)
+        let logged = LoggedAttachmentBytes(base: BackupLedgerAttachments(try base.ledgerSnapshot()), log: backupReads)
+        return HookedAttachmentBytes(base: logged, hooks: hooks)
     }
+
+    /// What each backup read of an attachment does besides reading it.
+    let hooks = StreamHooks()
 
     func replaceLedger(with snapshot: LedgerSnapshot, attachments: any BackupAttachmentReading) throws {
         restoredSnapshotBytes.append(snapshot.attachments.map(\.data.count))
@@ -149,6 +153,9 @@ final class StreamingSpyStorage: BackupStorage, @unchecked Sendable {
         }
         try base.write(files, attachments: attachments, id: id, cloningFrom: earlier)
     }
+
+    func makeExportFolder() throws -> URL { try base.makeExportFolder() }
+    func removeExport(_ file: URL) { base.removeExport(file) }
 
     func makeScratch() throws -> any BackupScratchFolder {
         let scratch = ScratchLog(try base.makeScratch())
@@ -242,9 +249,17 @@ struct RecordingArchiving: BackupArchiving {
 
     let base = FakeBackupArchiving()
     let log = Log()
+    let written = WrittenLog()
 
     func archive(_ files: BackupSnapshotFiles) throws -> Data {
         try base.archive(files)
+    }
+
+    /// Records the files in order and each chunk read from `folder`. The fake's own format is then built in
+    /// memory, as only the fake does.
+    func archive(_ files: [BackupArchiveFile], from folder: any BackupFileReading, to url: URL) throws {
+        written.files(files.map(\.path))
+        try base.archive(files, from: WrittenLog.Folder(base: folder, log: written), to: url)
     }
 
     func entries(
@@ -265,6 +280,105 @@ struct RecordingArchiving: BackupArchiving {
                     body(UnsafeRawBufferPointer(rebasing: buffer[offset..<end]))
                     offset = end
                 }
+            }
+        }
+    }
+}
+
+/// Called for every backup read of an attachment, in order from 1, off the main actor: a test can hold a read
+/// (`gate`) or change its bytes (`flipped`), as bytes changing between the hash and the write would.
+final class StreamHooks: @unchecked Sendable {
+    private let lock = NSLock()
+    private var count = 0
+    private var flippedCalls: Set<Int> = []
+    private var gatedCall: Int?
+    private let started = DispatchSemaphore(value: 0)
+    private let proceed = DispatchSemaphore(value: 0)
+    private var startedFlag = false
+
+    /// The `call`th read has its first byte changed.
+    func flip(_ call: Int) {
+        lock.withLock { _ = flippedCalls.insert(call) }
+    }
+
+    /// The `call`th read waits, before its first chunk, until `release()`.
+    func gate(_ call: Int) {
+        lock.withLock { gatedCall = call }
+    }
+
+    var hasReachedGate: Bool { lock.withLock { startedFlag } }
+    var calls: Int { lock.withLock { count } }
+
+    func release() {
+        proceed.signal()
+    }
+
+    /// Whether this read is flipped. Waits here when it's the gated one.
+    fileprivate func next() -> Bool {
+        let (gated, flipped) = lock.withLock { () -> (Bool, Bool) in
+            count += 1
+            return (count == gatedCall, flippedCalls.contains(count))
+        }
+        if gated {
+            lock.withLock { startedFlag = true }
+            proceed.wait()
+        }
+        return flipped
+    }
+}
+
+struct HookedAttachmentBytes: BackupAttachmentReading {
+    let base: any BackupAttachmentReading
+    let hooks: StreamHooks
+
+    func stream(_ id: UUID, through body: (UnsafeRawBufferPointer) throws -> Void) throws -> Bool {
+        var flip = hooks.next()
+        return try base.stream(id) { chunk in
+            guard flip, !chunk.isEmpty else {
+                try body(chunk)
+                return
+            }
+            flip = false
+            var copy = Data(chunk)
+            copy[copy.startIndex] ^= 0xFF
+            try copy.withUnsafeBytes { try body($0) }
+        }
+    }
+
+    func mappedData(for id: UUID) throws -> Data? {
+        try base.mappedData(for: id)
+    }
+}
+
+/// What an export read from the backup folder: the files in archive order, every chunk's size, and any file read
+/// whole.
+final class WrittenLog: @unchecked Sendable {
+    private let lock = NSLock()
+    private var order: [[String]] = []
+    private var chunks: [Int] = []
+    private var whole: [String] = []
+
+    var archived: [[String]] { lock.withLock { order } }
+    var largestChunk: Int { lock.withLock { chunks.max() ?? 0 } }
+    var readWhole: [String] { lock.withLock { whole } }
+
+    func files(_ paths: [String]) {
+        lock.withLock { order.append(paths) }
+    }
+
+    struct Folder: BackupFileReading {
+        let base: any BackupFileReading
+        let log: WrittenLog
+
+        func data(at path: String) throws -> Data? {
+            log.lock.withLock { log.whole.append(path) }
+            return try base.data(at: path)
+        }
+
+        func stream(_ path: String, through body: (UnsafeRawBufferPointer) throws -> Void) throws -> Bool {
+            try base.stream(path) { chunk in
+                log.lock.withLock { log.chunks.append(chunk.count) }
+                try body(chunk)
             }
         }
     }

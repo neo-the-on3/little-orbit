@@ -63,6 +63,19 @@ struct BackupRestoreUndoTests {
         first.settle()
         second.settle()
         #expect(try Set(repository.transactions().map(\.id)) == Set(rows.map(\.id)))
+
+        // The block really ended: a new edit after the restore can be undone, in both windows, including the one
+        // whose Undo had failed.
+        let windows = [(first, TransactionUseCases(repository: disk)), (second, useCases)]
+        for (index, (window, cases)) in windows.enumerated() {
+            window.history.record(try cases.changes.remove(ids: [rows[index].id]))
+            #expect(window.history.canUndo)
+            #expect(!(try repository.transactions().contains { $0.id == rows[index].id }))
+            window.undoManager.undo()
+            window.settle()
+            #expect(window.history.alert == nil)
+            #expect(try repository.transactions().contains { $0.id == rows[index].id })
+        }
     }
 }
 

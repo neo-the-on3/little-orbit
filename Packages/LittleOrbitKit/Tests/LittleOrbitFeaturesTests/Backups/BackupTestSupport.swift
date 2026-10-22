@@ -16,6 +16,7 @@ final class BackupHarness {
     let changes = LedgerChanges()
     let settings = MemoryBackupSettings()
     let archiving: any BackupArchiving
+    let hashing: any BackupHashing
     let service: BackupService
 
     /// 2026-10-22 09:12:05 IST.
@@ -30,6 +31,8 @@ final class BackupHarness {
         source: ((InMemoryLedgerRepository) -> any LedgerBackupSource)? = nil,
     ) throws {
         self.archiving = archiving ?? FakeBackupArchiving()
+        let hashing = hashing ?? FakeBackupHashing()
+        self.hashing = hashing
         let repository = try repository ?? FeatureFixture.repository()
         self.repository = repository
         folder = FileManager.default.temporaryDirectory
@@ -42,7 +45,7 @@ final class BackupHarness {
             storage: self.storage,
             archiving: self.archiving,
             settings: settings,
-            hashing: hashing ?? FakeBackupHashing(),
+            hashing: hashing,
             changes: changes,
             schemaVersion: "1.0.0",
             now: { clock.now },
@@ -52,6 +55,26 @@ final class BackupHarness {
 
     var now: Date {
         clock.now
+    }
+
+    /// A backup's whole contents, checked first the way a restore is, so a failed check is remembered. The app has
+    /// no such call: a restore hands attachments to the store one at a time (B1).
+    func contents(_ source: BackupSource) async throws -> BackupContents {
+        _ = try await service.checkBackup(source)
+        let codec = BackupCodec(hashing: hashing)
+        switch source {
+        case .stored(let id):
+            return try codec.decode(reading: storage.files(id: id))
+        case .archive(let archive):
+            return try BackupArchiveImport(archiving: archiving, codec: codec).contents(of: archive)
+        }
+    }
+
+    /// An export's bytes, read from its file, which is then removed as the panel would.
+    func exportData(_ id: UUID) async throws -> Data {
+        let export = try await service.exportBackup(id: id)
+        defer { service.discardExport(export) }
+        return try Data(contentsOf: export.file)
     }
 
     func advance(_ seconds: TimeInterval) {

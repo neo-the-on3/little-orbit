@@ -190,4 +190,7 @@ public enum BackupError: Error, Equatable, Sendable {
     case busy
     /// The backup isn't in the list any more.
     case notFound
+    /// The Before restore backup didn't check out as restorable, so the restore stopped with the data unchanged
+    /// (D63, B3).
+    case beforeRestoreFailed
 }

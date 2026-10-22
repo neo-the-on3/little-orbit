@@ -16,17 +16,27 @@ public struct BackupAlert: Identifiable, Equatable, Sendable {
         title: BackupPresentation.newerFormatTitle,
         message: BackupPresentation.newerFormatMessage,
     )
+    /// The Before restore backup didn't check out, so nothing was replaced (D63, B3).
+    public static let beforeRestoreFailed = BackupAlert(
+        title: BackupPresentation.beforeRestoreFailedTitle,
+        message: BackupPresentation.beforeRestoreFailedMessage,
+    )
 }
 
-/// An exported backup with its suggested name, for `fileExporter`.
+/// An exported backup's file, with its suggested name, for `fileExporter`. The file is in the staging folder until
+/// the save panel or share sheet closes (B2).
 public struct BackupExportFile: Equatable, Sendable {
-    public var data: Data
+    public var export: BackupExport
     /// `little-orbit YYYY-MM-DD HHmm[ n].littleorbit-backup`.
     public var fileName: String
 
-    public init(data: Data, fileName: String) {
-        self.data = data
+    public init(export: BackupExport, fileName: String) {
+        self.export = export
         self.fileName = fileName
+    }
+
+    public var url: URL {
+        export.file
     }
 }
 
@@ -110,6 +120,8 @@ public final class BackupsViewModel {
     private let useCases: BackupUseCases
     private let now: @MainActor () -> Date
     private let announce: @MainActor (String) -> Void
+    /// The background backup that's running, if any.
+    @ObservationIgnored private var backgroundRun: BackgroundBackupRun?
 
     /// `announce` posts a VoiceOver announcement; the App passes `AccessibilityNotification.Announcement`.
     public init(
@@ -203,6 +215,8 @@ public final class BackupsViewModel {
             .alert(.damaged)
         case .newerFormat:
             .alert(.newerFormat)
+        case .beforeRestoreFailed:
+            .alert(.beforeRestoreFailed)
         case .notEnoughStorage, .busy:
             .none
         default:
@@ -253,6 +267,26 @@ public final class BackupsViewModel {
             throw failure
         }
         try await load()
+    }
+
+    /// The background trigger (D62): `backUpAutomaticallyIfNeeded` inside a background-time assertion, cancelled
+    /// cleanly if the time runs out (`BackgroundBackupRun`). One at a time. Returns the task, for tests to await.
+    @discardableResult
+    public func backUpInBackground(_ activity: (any BackgroundActivity)?) -> Task<Void, Never>? {
+        guard backgroundRun == nil else {
+            return nil
+        }
+        let run = BackgroundBackupRun(activity: activity)
+        backgroundRun = run
+        run.start(
+            { [weak self] in
+                await self?.backUpAutomaticallyIfNeeded()
+            },
+            finished: { [weak self] in
+                self?.backgroundRun = nil
+            },
+        )
+        return run.task
     }
 
     /// The launch and background trigger (D62). Errors only update the failure line.
@@ -345,8 +379,14 @@ public final class BackupsViewModel {
         guard actionsEnabled else {
             return nil
         }
-        let export = try await useCases.export.exportBackup(id: prompt.record.id)
-        return BackupExportFile(data: export.data, fileName: presentation.fileName(for: export.record))
+        let fileName = presentation.fileName(for: prompt.record)
+        let export = try await useCases.export.exportBackup(id: prompt.record.id, named: fileName)
+        return BackupExportFile(export: export, fileName: fileName)
+    }
+
+    /// Removes an export's file once its save panel or share sheet has closed, saved or cancelled (B2).
+    public func discardExport(_ file: BackupExportFile) {
+        useCases.export.discardExport(file.export)
     }
 
     // MARK: Restore (D63, D116.2, D182.1): App Lock, the warning, the Before restore backup, then progress

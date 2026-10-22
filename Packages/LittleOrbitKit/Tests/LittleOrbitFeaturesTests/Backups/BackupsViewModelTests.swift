@@ -121,7 +121,7 @@ struct BackupsViewModelTests {
         let window = harness.window(authentication: lock)
         let model = window.model
         let backup = try await harness.service.backUpNow()
-        let file = try await harness.service.exportBackup(id: backup.id).data
+        let file = try await harness.exportData(backup.id)
         try await model.load()
         await window.restoreFromFile(.data(file))
         #expect(lock.purposes == [.restoreBackup])
@@ -167,7 +167,7 @@ struct BackupsViewModelTests {
         let window = harness.window(authentication: lock)
         let model = window.model
         let backup = try await harness.service.backUpNow()
-        let plain = try await harness.service.exportBackup(id: backup.id).data
+        let plain = try await harness.exportData(backup.id)
         let file = source == "fixture" ? try oldEncryptedSample() : try addingEncryptionSection(to: plain)
         let ledger = try harness.repository.ledgerSnapshot()
         try await model.load()
@@ -187,7 +187,7 @@ struct BackupsViewModelTests {
         let window = harness.window()
         let model = window.model
         let backup = try await harness.service.backUpNow()
-        let export = try await harness.service.exportBackup(id: backup.id).data
+        let export = try await harness.exportData(backup.id)
         let file = try rewritingManifest(of: export) { $0["formatVersion"] = 99 }
         await window.restoreFromFile(.data(file))
         #expect(window.alert == .newerFormat)
@@ -227,11 +227,20 @@ struct BackupsViewModelTests {
         #expect(window.exportPrompt == nil)
         let file = try #require(window.pendingExport)
         #expect(file.fileName == "little-orbit 2026-10-22 0912.littleorbit-backup")
-        let files = try BackupArchiveSafety.files(from: harness.archiving.entries(of: file.data))
+        // A file of its own in the staging folder, handed over by URL, never as bytes (B2).
+        #expect(file.url.lastPathComponent == file.fileName)
+        let staging = URL(fileURLWithPath: harness.folder.path + ".staging").standardizedFileURL.path
+        #expect(file.url.deletingLastPathComponent().deletingLastPathComponent().standardizedFileURL.path == staging)
+        let files = try BackupArchiveSafety.files(from: harness.archiving.entries(of: Data(contentsOf: file.url)))
         let manifest = try #require(files["manifest.json"])
         let object = try #require(JSONSerialization.jsonObject(with: manifest) as? [String: Any])
         #expect(object["encryption"] == nil)
         #expect(object["formatVersion"] as? Int == 1)
+        // Saved or cancelled, the file and its folder go when the panel closes.
+        window.finishExport()
+        #expect(window.pendingExport == nil)
+        #expect(!FileManager.default.fileExists(atPath: file.url.deletingLastPathComponent().path))
+        #expect(((try? FileManager.default.contentsOfDirectory(atPath: staging)) ?? []).isEmpty)
     }
 
     @Test(

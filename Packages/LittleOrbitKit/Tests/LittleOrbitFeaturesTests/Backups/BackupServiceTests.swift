@@ -30,7 +30,7 @@ struct BackupServiceTests {
         try harness.repository.saveTransaction(Transaction(amount: 999, accountID: accounts[0].id))
         try harness.repository.deleteAccount(id: accounts[1].id)
 
-        let contents = try await harness.service.openBackup(.stored(backup.id))
+        let contents: BackupSource = .stored(backup.id)
         var steps: [BackupRestoreStep] = []
         let before = try await harness.service.restore(contents) { steps.append($0) }
 
@@ -51,10 +51,10 @@ struct BackupServiceTests {
         try harness.repository.saveTransaction(Transaction(amount: 50, accountID: account.id))
         let edited = try harness.repository.balance(of: account.id, today: FeatureFixture.today)
 
-        let old = try await harness.service.openBackup(.stored(backup.id))
+        let old: BackupSource = .stored(backup.id)
         let before = try await harness.service.restore(old) { _ in }
         harness.advance(60)
-        let undo = try await harness.service.openBackup(.stored(before.id))
+        let undo: BackupSource = .stored(before.id)
         _ = try await harness.service.restore(undo) { _ in }
 
         #expect(try harness.repository.balance(of: account.id, today: FeatureFixture.today) == edited)
@@ -67,7 +67,7 @@ struct BackupServiceTests {
         try harness.repository.saveTransaction(
             Transaction(amount: 10, accountID: try #require(try harness.repository.accounts().first).id)
         )
-        let contents = try await harness.service.openBackup(.stored(backup.id))
+        let contents: BackupSource = .stored(backup.id)
         _ = try await harness.service.restore(contents) { _ in }
         harness.advance(86_400)
         #expect(try await harness.service.backUpAutomaticallyIfNeeded() == nil)
@@ -129,10 +129,10 @@ struct BackupServiceTests {
     func plainExport() async throws {
         let harness = try BackupHarness()
         let backup = try await harness.service.backUpNow()
-        let export = try await harness.service.exportBackup(id: backup.id)
-        let files = try BackupArchiveSafety.files(from: harness.archiving.entries(of: export.data))
+        let export = try await harness.exportData(backup.id)
+        let files = try BackupArchiveSafety.files(from: harness.archiving.entries(of: export))
         #expect(files == (try harness.storage.read(id: backup.id)))
-        let contents = try await harness.service.openBackup(.file(export.data))
+        let contents = try await harness.contents(.file(export))
         #expect(contents.accounts.count == FeatureFixture.all().count)
         // Opening a file writes nothing (D197a.1).
         #expect(try harness.storedFiles() == [backup.id.uuidString])
@@ -146,7 +146,7 @@ struct BackupServiceTests {
         let harness = try BackupHarness()
         let before = try harness.repository.ledgerSnapshot()
         let sample = try oldEncryptedSample()
-        await #expect(throws: BackupError.damaged) { try await harness.service.openBackup(.file(sample)) }
+        await #expect(throws: BackupError.damaged) { try await harness.contents(.file(sample)) }
         #expect(try harness.repository.ledgerSnapshot() == before)
     }
 
@@ -155,7 +155,7 @@ struct BackupServiceTests {
         let harness = try BackupHarness()
         let before = try harness.repository.ledgerSnapshot()
         await #expect(throws: BackupError.damaged) {
-            try await harness.service.openBackup(.file(Data("not a backup".utf8)))
+            try await harness.contents(.file(Data("not a backup".utf8)))
         }
         #expect(try harness.repository.ledgerSnapshot() == before)
     }
@@ -202,7 +202,7 @@ struct BackupServiceTests {
         accounts.accounts.load()
         #expect(accounts.accounts.assets.count + accounts.accounts.credit.count == before + 1)
 
-        let contents = try await harness.service.openBackup(.stored(backup.id))
+        let contents: BackupSource = .stored(backup.id)
         _ = try await harness.service.restore(contents) { _ in }
 
         #expect(harness.changes.replacements == 1)
@@ -214,7 +214,7 @@ struct BackupServiceTests {
         let harness = try BackupHarness(source: { FailingReplaceSource($0) })
         let backup = try await harness.service.backUpNow()
         let before = try harness.repository.ledgerSnapshot()
-        let contents = try await harness.service.openBackup(.stored(backup.id))
+        let contents: BackupSource = .stored(backup.id)
         await #expect(throws: CocoaError.self) { try await harness.service.restore(contents) { _ in } }
         #expect(try harness.repository.ledgerSnapshot() == before)
         #expect(try await harness.service.overview().backups.map(\.kind) == [.beforeRestore, .manual])
@@ -232,7 +232,7 @@ struct BackupServiceTests {
             Account(name: "Unsaved", type: .cash, currencyCode: "INR", openingBalance: 1, sortOrder: 99)
         )
         let current = try harness.repository.ledgerSnapshot()
-        let contents = try await harness.service.openBackup(.stored(backup.id))
+        let contents: BackupSource = .stored(backup.id)
         storage.fill()
         await #expect(throws: BackupError.notEnoughStorage) { try await harness.service.restore(contents) { _ in } }
         #expect(try harness.repository.ledgerSnapshot() == current)

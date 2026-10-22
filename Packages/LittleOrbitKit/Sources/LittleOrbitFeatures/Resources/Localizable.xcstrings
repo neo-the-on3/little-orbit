@@ -750,6 +750,18 @@
         }
       }
     },
+    "Couldn’t Restore": {
+      "comment": "Alert title when a restore stopped before replacing anything, because the backup of the current data made first didn’t pass its check.",
+      "extractionState": "manual",
+      "localizations": {
+        "en": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Couldn’t Restore"
+          }
+        }
+      }
+    },
     "Current data saved as a Before restore backup": {
       "comment": "Restore progress step under the progress bar.",
       "extractionState": "manual",
@@ -1944,6 +1956,18 @@
           "stringUnit": {
             "state": "translated",
             "value": "The account"
+          }
+        }
+      }
+    },
+    "The backup of your current data didn’t pass its check, so nothing was replaced. Your data hasn’t changed.": {
+      "comment": "Alert message under “Couldn’t Restore”.",
+      "extractionState": "manual",
+      "localizations": {
+        "en": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "The backup of your current data didn’t pass its check, so nothing was replaced. Your data hasn’t changed."
           }
         }
       }

@@ -8,12 +8,12 @@ public final class BackupService: AllBackupUseCases {
     private let source: any LedgerBackupSource
     let storage: any BackupStorage
     let archiving: any BackupArchiving
-    private let settings: any BackupSettingsStore
+    let settings: any BackupSettingsStore
     let codec: BackupCodec
     private let changes: LedgerChanges
-    private let schemaVersion: String
-    private let now: @MainActor () -> Date
-    private let timeZone: @MainActor () -> TimeZone
+    let schemaVersion: String
+    let now: @MainActor () -> Date
+    let timeZone: @MainActor () -> TimeZone
 
     public init(
         source: any LedgerBackupSource,
@@ -66,13 +66,13 @@ public final class BackupService: AllBackupUseCases {
             let ledger = try source.backupSnapshot()
             let bytes = try source.attachmentBytes()
             let codec = self.codec
-            // Each attachment hashed in chunks, one at a time; the backup below reuses the entries (B1).
-            let (entries, fingerprint) =
-                try await Task.detached(priority: .utility) {
-                    let entries = try codec.attachmentEntries(of: ledger, reading: bytes)
-                    return (entries, try codec.fingerprint(of: ledger, attachments: entries))
-                }
-                .value
+            let cancellable = BackupCancellableBytes(bytes)
+            // Each attachment hashed in chunks, one at a time; the backup below reuses the entries (B1). Cancelling
+            // the task, as the background expiry does, stops it between chunks.
+            let (entries, fingerprint) = try await Self.detached(priority: .utility) {
+                let entries = try codec.attachmentEntries(of: ledger, reading: cancellable)
+                return (entries, try codec.fingerprint(of: ledger, attachments: entries))
+            }
             let needed = BackupPolicy.needsAutomaticBackup(
                 now: moment,
                 timeZone: zone,
@@ -94,7 +94,10 @@ public final class BackupService: AllBackupUseCases {
         }
     }
 
-    public func exportBackup(id: UUID) async throws -> BackupExport {
+    /// The archive is written to its own file in the staging folder, a chunk at a time, every file hashed on the
+    /// way and checked against the manifest, so nothing is held whole (B2). The caller hands it to the save panel or
+    /// share sheet, then calls `discardExport`. A failed or cancelled export leaves no file.
+    public func exportBackup(id: UUID, named name: String) async throws -> BackupExport {
         guard !isBusy else {
             throw BackupError.busy
         }
@@ -109,14 +112,24 @@ public final class BackupService: AllBackupUseCases {
         let storage = self.storage
         let codec = self.codec
         let archiving = self.archiving
-        let data =
-            try await Task.detached(priority: .userInitiated) {
-                let files = try storage.read(id: id)
-                _ = try Self.remembering(id, storage: storage) { try codec.verify(files) }
-                return try archiving.archive(files)
+        let file = BackupExport.fileName(name, id: id)
+        let url = try await Self.detached(priority: .userInitiated) {
+            let url = try storage.makeExportFolder().appendingPathComponent(file)
+            do {
+                try Self.remembering(id, storage: storage) {
+                    try codec.archive(storage.files(id: id), with: archiving, to: url)
+                }
+                return url
+            } catch {
+                storage.removeExport(url)
+                throw error
             }
-            .value
-        return BackupExport(data: data, record: record)
+        }
+        return BackupExport(file: url, record: record)
+    }
+
+    public func discardExport(_ export: BackupExport) {
+        storage.removeExport(export.file)
     }
 
     /// Checks a backup for the Restore warning, off the main actor, keeping nothing but its manifest (B1). A stored
@@ -141,27 +154,8 @@ public final class BackupService: AllBackupUseCases {
             .value
     }
 
-    /// The whole backup, checked, off the main actor: a stored folder's listed files only, or a picked file after
-    /// `checkBackup`'s steps. Writes nothing.
-    public func openBackup(_ source: BackupSource) async throws -> BackupContents {
-        let storage = self.storage
-        let codec = self.codec
-        let archiving = self.archiving
-        return
-            try await Task.detached(priority: .userInitiated) {
-                switch source {
-                case .stored(let id):
-                    return try Self.remembering(id, storage: storage) {
-                        try codec.decode(reading: storage.files(id: id))
-                    }
-                case .archive(let archive):
-                    return try BackupArchiveImport(archiving: archiving, codec: codec).contents(of: archive)
-                }
-            }
-            .value
-    }
-
-    /// The Before restore backup first. Only then is `source` checked again, file by file, and the data replaced.
+    /// The Before restore backup first, and only if it's restorable is `source` checked again, file by file, and
+    /// the data replaced; otherwise this throws `beforeRestoreFailed` with the data unchanged (D63, B3).
     /// Attachments go from file to store one at a time and are never all in memory: a stored backup's from its
     /// folder, a picked file's from a scratch folder they're unpacked into after every check passes (B1).
     public func restore(
@@ -170,10 +164,12 @@ public final class BackupService: AllBackupUseCases {
     ) async throws -> BackupRecord {
         try await exclusively {
             progress(.savingCurrentData)
+            // D63: the data is only replaced once its Before restore backup checked out as restorable (B3).
             let before = try await makeBackup(
                 .beforeRestore,
                 of: self.source.backupSnapshot(),
                 bytes: self.source.attachmentBytes(),
+                requiringCheck: true,
             )
             progress(.replacingData)
             let (opened, scratch) = try await openForRestore(source)
@@ -185,35 +181,6 @@ public final class BackupService: AllBackupUseCases {
             progress(.finished)
             return before
         }
-    }
-
-    /// Restores contents already read, for callers that have them.
-    public func restore(
-        _ contents: BackupContents,
-        progress: @MainActor (BackupRestoreStep) -> Void,
-    ) async throws -> BackupRecord {
-        try await exclusively {
-            progress(.savingCurrentData)
-            let before = try await makeBackup(
-                .beforeRestore,
-                of: source.backupSnapshot(),
-                bytes: source.attachmentBytes(),
-            )
-            progress(.replacingData)
-            try replace(with: contents)
-            try? await markRestored()
-            progress(.finished)
-            return before
-        }
-    }
-
-    /// Replaces all data in one save. Only the skip-after-restore marker is left after this: if it can't be saved,
-    /// the restore still succeeded, and the next automatic backup is just not skipped.
-    private func replace(with contents: BackupContents) throws {
-        try source.replaceLedger(with: contents.ledger)
-        // The data is replaced now: every screen reloads. (#87: the app-wide undo history is cleared from the same
-        // signal once it exists; see AppComposition.)
-        changes.ledgerReplaced()
     }
 
     public func retention() -> BackupRetention {
@@ -262,7 +229,7 @@ public final class BackupService: AllBackupUseCases {
     }
 
     /// The backups, from the folders that exist (D195.3), read off the main actor. See `BackupService.catalog`.
-    private func loadCatalog() async throws -> BackupCatalog {
+    func loadCatalog() async throws -> BackupCatalog {
         let storage = self.storage
         let codec = self.codec
         return
@@ -275,7 +242,7 @@ public final class BackupService: AllBackupUseCases {
     /// What `retention` prunes from `records` now. Every backup that isn't of a newer format is checked in full
     /// first, so a damaged one is never counted, never a keeper and never pruned, and only undamaged ones count as
     /// restorable (D196.3, L30–L33). If a folder can't be read at all, this throws and nothing is pruned (R3).
-    private func toPrune(_ records: [BackupRecord], _ retention: BackupRetention) async throws -> [BackupRecord] {
+    func toPrune(_ records: [BackupRecord], _ retention: BackupRetention) async throws -> [BackupRecord] {
         let storage = self.storage
         let codec = self.codec
         let moment = now()
@@ -293,116 +260,13 @@ public final class BackupService: AllBackupUseCases {
             .value
     }
 
-    private func exclusively<T>(_ body: () async throws -> T) async throws -> T {
+    func exclusively<T>(_ body: () async throws -> T) async throws -> T {
         guard !isBusy else {
             throw BackupError.busy
         }
         isBusy = true
         defer { isBusy = false }
         return try await body()
-    }
-
-    /// Encodes and writes one backup folder off the main actor, then checks it as written (D196.3). Only after a
-    /// restorable automatic backup is in place are old automatic backups pruned; a failed backup prunes nothing
-    /// (D62, D195.6).
-    ///
-    /// `ledger` comes without attachment bytes. Each attachment is hashed from `bytes` in chunks, unless `entries`
-    /// already has them, then written to the folder from `bytes` the same way, or cloned from the earlier backup
-    /// when its manifest has the same size and SHA-256 for it (B1, D195.1).
-    private func makeBackup(
-        _ kind: BackupKind,
-        of ledger: LedgerSnapshot,
-        bytes: any BackupAttachmentReading,
-        entries known: [UUID: BackupFileEntry]? = nil,
-    ) async throws -> BackupRecord {
-        let catalog = try await loadCatalog()
-        let createdAt = now()
-        let nameIndex = BackupNaming.nameIndex(for: createdAt, existing: catalog.records)
-        let visible = (
-            accounts: ledger.accountsVisible().count,
-            transactions: ledger.transactionsVisible().count,
-            attachments: ledger.attachmentsVisible().count,
-        )
-        let month = BackupMonth.string(for: createdAt, in: timeZone())
-        let manifest = BackupManifest(
-            kind: kind,
-            createdAt: createdAt,
-            nameIndex: nameIndex,
-            schemaVersion: schemaVersion,
-            accountCount: visible.accounts,
-            transactionCount: visible.transactions,
-            attachmentCount: visible.attachments,
-            month: month,
-        )
-        let id = UUID()
-        let codec = self.codec
-        let storage = self.storage
-        let earlier = catalog.restorable.newestFirst.first?.id
-        let written: (summary: BackupFolderSummary, condition: BackupCondition?)
-        do {
-            written =
-                try await Task.detached(priority: .utility) {
-                    let entries = try known ?? codec.attachmentEntries(of: ledger, reading: bytes)
-                    let files = try codec.encode(
-                        BackupContents(manifest: manifest, ledger: ledger),
-                        attachments: entries,
-                    )
-                    let writes = try Self.attachmentWrites(
-                        ledger,
-                        entries: entries,
-                        bytes: bytes,
-                        earlier: earlier,
-                        storage: storage,
-                        codec: codec,
-                    )
-                    try storage.write(files, attachments: writes, id: id, cloningFrom: earlier)
-                    let summary = try codec.summary(ofManifest: files[BackupFormat.manifestPath] ?? Data())
-                    // Checked right after it's written. `nil` when the check itself couldn't run.
-                    let condition: BackupCondition?
-                    do {
-                        // File by file, never a second copy of what was just written (B1.2).
-                        _ = try codec.verify(storage.files(id: id))
-                        condition = .restorable
-                    } catch BackupError.damaged {
-                        condition = .damaged
-                    } catch {
-                        condition = nil
-                    }
-                    return (summary, condition)
-                }
-                .value
-        } catch BackupError.notEnoughStorage {
-            var status = (try? storage.loadStatus()) ?? BackupStatus()
-            status.lastFailure = .notEnoughStorage
-            try? storage.saveStatus(status)
-            throw BackupError.notEnoughStorage
-        }
-        let record = BackupRecord(
-            id: id,
-            kind: kind,
-            createdAt: createdAt,
-            nameIndex: nameIndex,
-            byteSize: written.summary.byteSize,
-            accountCount: visible.accounts,
-            transactionCount: visible.transactions,
-            attachmentCount: visible.attachments,
-            fingerprint: written.summary.fingerprint,
-            month: month,
-            condition: written.condition ?? .restorable,
-        )
-        if var status = try? storage.loadStatus() {
-            status.lastFailure = nil
-            status.known[id] = record
-            try? storage.saveStatus(status)
-        }
-        if kind == .automatic, written.condition == .restorable,
-            let pruned = try? await toPrune(catalog.records + [record], settings.retention())
-        {
-            for old in pruned {
-                try? storage.delete(id: old.id)
-            }
-        }
-        return record
     }
 }
 

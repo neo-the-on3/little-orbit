@@ -30,12 +30,20 @@ public struct BackupOverview: Equatable, Sendable {
 /// A backup as one `.littleorbit-backup` file, ready to save where the user chooses (D195.7). The view model names
 /// it from `record`.
 public struct BackupExport: Equatable, Sendable {
-    public var data: Data
+    /// The archive, alone in a folder of its own in the staging folder, never in the Backups folder (B2). It's
+    /// removed by `discardExport`, or at the next launch if the app stopped first.
+    public var file: URL
     public var record: BackupRecord
 
-    public init(data: Data, record: BackupRecord) {
-        self.data = data
+    public init(file: URL, record: BackupRecord) {
+        self.file = file
         self.record = record
+    }
+
+    /// `name` as the file's name when it's one plain file name, otherwise `<backup id>.littleorbit-backup`.
+    static func fileName(_ name: String, id: UUID) -> String {
+        let plain = !name.isEmpty && !name.contains("/") && name != "." && name != ".." && !name.hasPrefix(".")
+        return plain ? name : "\(id.uuidString).\(BackupFormat.fileExtension)"
     }
 }
 
@@ -129,7 +137,17 @@ public protocol DeleteBackupUseCase {
 public protocol ExportBackupUseCase {
     /// The file for one restorable backup, checked first. Format 1 files aren't encrypted (D182). A damaged or
     /// newer-format backup throws `damaged` or `newerFormat` (D196.3, D197.2).
-    func exportBackup(id: UUID) async throws -> BackupExport
+    /// The file is written in chunks and named `name`, alone in a folder of its own that only it uses (B2).
+    func exportBackup(id: UUID, named name: String) async throws -> BackupExport
+    /// Removes the export's file and its folder, once the save panel or share sheet closes, saved or not.
+    func discardExport(_ export: BackupExport)
+}
+
+extension ExportBackupUseCase {
+    /// `exportBackup(id:named:)`, named by the backup's ID.
+    public func exportBackup(id: UUID) async throws -> BackupExport {
+        try await exportBackup(id: id, named: "\(id.uuidString).\(BackupFormat.fileExtension)")
+    }
 }
 
 @MainActor
@@ -150,10 +168,10 @@ public protocol RestoreBackupUseCase {
     /// D197a.1): a stored folder file by file, a picked file in one streamed pass after the manifest, with every
     /// file hashed in chunks (B1). Returns what the Restore warning names. Throws `damaged` or `newerFormat`.
     func checkBackup(_ source: BackupSource) async throws -> BackupManifest
-    /// Reads and checks a backup and returns all of it, attachments included. Writes nothing.
-    func openBackup(_ source: BackupSource) async throws -> BackupContents
     /// Makes a Before restore backup of the current data, then reads `source` again, checks it and replaces all
-    /// data with it in one save. If any step fails, the data is unchanged. Returns the Before restore backup.
+    /// data with it in one save. If any step fails, the data is unchanged; if the Before restore backup isn't
+    /// restorable, it throws `beforeRestoreFailed` before reading `source` (D63, B3). Returns the Before restore
+    /// backup.
     func restore(
         _ source: BackupSource,
         progress: @MainActor (BackupRestoreStep) -> Void,

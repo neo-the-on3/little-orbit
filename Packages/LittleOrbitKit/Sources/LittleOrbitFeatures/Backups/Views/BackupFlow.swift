@@ -13,22 +13,24 @@
         }
     }
 
-    /// The bytes of an exported backup, for the system save panel or Files.
+    /// An exported backup's file, for the system save panel or Files. It's handed over by URL and never read into
+    /// memory (B2). It's never opened: the apps declare no document types (D197.3).
     struct BackupFileDocument: FileDocument {
         static var readableContentTypes: [UTType] { [.littleOrbitBackup] }
 
-        var data: Data
+        let url: URL
 
-        init(data: Data) {
-            self.data = data
+        init(url: URL) {
+            self.url = url
         }
 
         init(configuration: ReadConfiguration) throws {
-            data = configuration.file.regularFileContents ?? Data()
+            throw CocoaError(.fileReadUnsupportedScheme)
         }
 
         func fileWrapper(configuration: WriteConfiguration) throws -> FileWrapper {
-            FileWrapper(regularFileWithContents: data)
+            // Without `.immediate`, the wrapper refers to the file instead of reading it in.
+            try FileWrapper(url: url, options: [])
         }
     }
 
@@ -75,7 +77,7 @@
                 }
                 .fileExporter(
                     isPresented: isPresented(\.pendingExport),
-                    document: window.pendingExport.map { BackupFileDocument(data: $0.data) },
+                    document: window.pendingExport.map { BackupFileDocument(url: $0.url) },
                     contentType: .littleOrbitBackup,
                     defaultFilename: window.pendingExport.map {
                         String($0.fileName.dropLast(BackupFormat.fileExtension.count + 1))
