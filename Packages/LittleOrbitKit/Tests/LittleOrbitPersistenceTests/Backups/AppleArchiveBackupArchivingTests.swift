@@ -174,6 +174,48 @@ import Testing
             }
         }
 
+        @Test("A read error at any point of a large file, between entries too, is unreadable, never damaged (B5)")
+        func readErrorAnywhere() throws {
+            // Larger than the decoder's buffer, so it's read in several blocks and a failure can land on the header
+            // read after the first entry.
+            let large = BackupSnapshotFiles([
+                "manifest.json": Data("{}".utf8),
+                "attachments/A": Data(repeating: 1, count: 3 << 20),
+                "attachments/B": Data(repeating: 2, count: 3 << 20),
+                "shared.json": Data("{}".utf8),
+            ])
+            let url = FileManager.default.temporaryDirectory.appendingPathComponent("large-\(UUID().uuidString)")
+            try archiving.archive(large).write(to: url)
+            defer { try? FileManager.default.removeItem(at: url) }
+            let size = try #require(try FileManager.default.attributesOfItem(atPath: url.path)[.size] as? Int)
+            #expect(try AppleArchiveBackupArchiving.entries(ofFileAt: url) { _ in .skip }.count == 5)
+            for limit in stride(from: 0, to: size, by: 1 << 16) {
+                for read: BackupArchiveRead in [.skip, .stream { _ in }] {
+                    #expect(throws: BackupError.unreadableFile, "failing after \(limit) bytes") {
+                        try AppleArchiveBackupArchiving.entries(ofFileAt: url, failingAfter: limit) { _ in read }
+                    }
+                }
+            }
+        }
+
+        @Test("An unsafe path with no read error still ends the pass as before, and the import refuses it (L21, L40)")
+        func unsafePathFile() throws {
+            let unsafe = try archiving.archive(
+                BackupSnapshotFiles(["manifest.json": Data("{}".utf8), "/abs.json": Data(), "z.json": Data()])
+            )
+            let url = FileManager.default.temporaryDirectory.appendingPathComponent("unsafe-\(UUID().uuidString)")
+            try unsafe.write(to: url)
+            defer { try? FileManager.default.removeItem(at: url) }
+            let entries = try AppleArchiveBackupArchiving.entries(ofFileAt: url) { _ in .data }
+            #expect(entries.first == BackupArchiveEntry(path: "manifest.json", kind: .file(Data("{}".utf8))))
+            #expect(entries.last == BackupArchiveEntry(path: "", kind: .other))
+            let importer = BackupArchiveImport(
+                archiving: archiving,
+                codec: BackupCodec(hashing: CryptoKitBackupHashing()),
+            )
+            #expect(throws: BackupError.damaged) { try importer.check(.file(url)) }
+        }
+
         @Test("A picked file that's read in full but fails its checksum is damaged, not unreadable")
         func checksumMismatchFile() throws {
             let codec = BackupCodec(hashing: CryptoKitBackupHashing())
