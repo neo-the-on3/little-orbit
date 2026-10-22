@@ -88,8 +88,9 @@
         }
 
         /// D169 (#82 B10): the figure never breaks mid-number. The line stays whole when it fits; otherwise it
-        /// breaks before "available" or after "Over limit by", and the figure keeps its own line, scaling down
-        /// to 0.7 only if it alone is wider than the label (Edit mode at AX-XXXL). Text without a figure wraps.
+        /// breaks before "available" or after "Over limit by", and the figure keeps its own line at the size of its
+        /// words. It scales down, to 0.7 at most, only if it alone is wider than the label (Edit mode at AX-XXXL,
+        /// D170 B11, #95). Text without a figure wraps.
         @ViewBuilder
         private var stackedSubtitle: some View {
             let subtitle = row.subtitle(inTypeSection: inTypeSection)
@@ -97,23 +98,33 @@
                 ViewThatFits(in: .horizontal) {
                     subtitleText(subtitle.text, isWarning: subtitle.isWarning)
                         .lineLimit(1)
-                    VStack(alignment: .leading, spacing: 0) {
-                        if !parts.before.isEmpty {
-                            subtitleText(parts.before, isWarning: subtitle.isWarning)
-                                .fixedSize(horizontal: false, vertical: true)
-                        }
-                        subtitleText(parts.figure, isWarning: subtitle.isWarning)
-                            .lineLimit(1)
-                            .minimumScaleFactor(0.7)
-                        if !parts.after.isEmpty {
-                            subtitleText(parts.after, isWarning: subtitle.isWarning)
-                                .fixedSize(horizontal: false, vertical: true)
-                        }
-                    }
+                    stacked(parts, isWarning: subtitle.isWarning, minimumScale: 1)
+                    stacked(parts, isWarning: subtitle.isWarning, minimumScale: 0.7)
                 }
             } else {
                 subtitleText(subtitle.text, isWarning: subtitle.isWarning)
                     .fixedSize(horizontal: false, vertical: true)
+            }
+        }
+
+        /// The subtitle broken around its figure, which keeps its own line.
+        private func stacked(
+            _ parts: AccountSubtitle.FigureParts,
+            isWarning: Bool,
+            minimumScale: CGFloat,
+        ) -> some View {
+            VStack(alignment: .leading, spacing: 0) {
+                if !parts.before.isEmpty {
+                    subtitleText(parts.before, isWarning: isWarning)
+                        .fixedSize(horizontal: false, vertical: true)
+                }
+                subtitleText(parts.figure, isWarning: isWarning)
+                    .lineLimit(1)
+                    .minimumScaleFactor(minimumScale)
+                if !parts.after.isEmpty {
+                    subtitleText(parts.after, isWarning: isWarning)
+                        .fixedSize(horizontal: false, vertical: true)
+                }
             }
         }
 
