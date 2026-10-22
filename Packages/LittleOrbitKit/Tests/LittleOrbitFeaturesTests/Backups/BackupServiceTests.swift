@@ -135,7 +135,7 @@ struct BackupServiceTests {
         let contents = try await harness.contents(.file(export))
         #expect(contents.accounts.count == FeatureFixture.all().count)
         // Opening a file writes nothing (D197a.1).
-        #expect(try harness.storedFiles() == [backup.id.uuidString])
+        #expect(try harness.storedFiles() == [harness.backupFolder(backup.id).lastPathComponent])
         #expect(
             try FileManager.default.contentsOfDirectory(atPath: harness.folder.path).allSatisfy { !$0.hasPrefix(".") }
         )

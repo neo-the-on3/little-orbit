@@ -12,7 +12,8 @@ final class BackupHarness {
     let folder: URL
     let storage: any BackupStorage
     let clock = BackupClock()
-    let zone = TimeZone(identifier: "Asia/Kolkata") ?? .gmt
+    let zone: TimeZone
+    private let zones: BackupZones
     let changes = LedgerChanges()
     let settings = MemoryBackupSettings()
     let archiving: any BackupArchiving
@@ -29,7 +30,9 @@ final class BackupHarness {
         archiving: (any BackupArchiving)? = nil,
         hashing: (any BackupHashing)? = nil,
         source: ((InMemoryLedgerRepository) -> any LedgerBackupSource)? = nil,
+        zone: TimeZone = TimeZone(identifier: "Asia/Kolkata") ?? .gmt,
     ) throws {
+        self.zone = zone
         self.archiving = archiving ?? FakeBackupArchiving()
         let hashing = hashing ?? FakeBackupHashing()
         self.hashing = hashing
@@ -37,9 +40,10 @@ final class BackupHarness {
         self.repository = repository
         folder = FileManager.default.temporaryDirectory
             .appendingPathComponent("backup-tests-\(UUID().uuidString)", isDirectory: true)
-        self.storage = try storage ?? FileBackupStorage(folder: folder)
+        let zones = BackupZones(zone)
+        self.zones = zones
+        self.storage = try storage ?? FileBackupStorage(folder: folder, timeZone: { zones.current })
         let clock = clock
-        let zone = zone
         service = BackupService(
             source: source?(repository) ?? repository,
             storage: self.storage,
@@ -49,8 +53,13 @@ final class BackupHarness {
             changes: changes,
             schemaVersion: "1.0.0",
             now: { clock.now },
-            timeZone: { zone },
+            timeZone: { zones.current },
         )
+    }
+
+    /// The device's time zone changes, as when travelling; backups made from now on use it.
+    func move(to zone: TimeZone) {
+        zones.current = zone
     }
 
     var now: Date {
@@ -81,14 +90,24 @@ final class BackupHarness {
         clock.now += seconds
     }
 
-    /// The backup folders, named by ID.
+    /// The backup folders, by name: every folder in the Backups folder (D209).
     func storedFiles() throws -> [String] {
         try FileManager.default.contentsOfDirectory(atPath: folder.path)
-            .filter { UUID(uuidString: $0) != nil }
+            .filter { name in
+                var isDirectory: ObjCBool = false
+                return !name.hasPrefix(".")
+                    && FileManager.default.fileExists(
+                        atPath: folder.appendingPathComponent(name).path,
+                        isDirectory: &isDirectory,
+                    ) && isDirectory.boolValue
+            }
+            .sorted()
     }
 
+    /// The backup's folder, by its date-and-time name (D209), or by its ID for one a test made by hand.
     func backupFolder(_ id: UUID) -> URL {
-        folder.appendingPathComponent(id.uuidString, isDirectory: true)
+        (storage as? FileBackupStorage)?.folderURL(id)
+            ?? folder.appendingPathComponent(id.uuidString, isDirectory: true)
     }
 
     func viewModel(
@@ -118,6 +137,21 @@ final class BackupHarness {
     deinit {
         try? FileManager.default.removeItem(at: folder)
         try? FileManager.default.removeItem(at: URL(fileURLWithPath: folder.path + ".staging"))
+    }
+}
+
+/// The device's current time zone, read off the main actor too.
+final class BackupZones: @unchecked Sendable {
+    private let lock = NSLock()
+    private var zone: TimeZone
+
+    init(_ zone: TimeZone) {
+        self.zone = zone
+    }
+
+    var current: TimeZone {
+        get { lock.withLock { zone } }
+        set { lock.withLock { zone = newValue } }
     }
 }
 

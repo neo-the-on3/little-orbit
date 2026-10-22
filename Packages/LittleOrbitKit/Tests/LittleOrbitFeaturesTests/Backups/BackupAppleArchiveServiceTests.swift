@@ -62,7 +62,7 @@ import Testing
             #expect(window.restorePrompt == nil)
 
             #expect(try harness.repository.ledgerSnapshot() == before)
-            #expect(try harness.storedFiles() == [backup.id.uuidString])
+            #expect(try harness.storedFiles() == [harness.backupFolder(backup.id).lastPathComponent])
             #expect(try await harness.service.overview().backups.map(\.id) == [backup.id])
             for folder in [
                 harness.folder, harness.folder.deletingLastPathComponent(), FileManager.default.temporaryDirectory,

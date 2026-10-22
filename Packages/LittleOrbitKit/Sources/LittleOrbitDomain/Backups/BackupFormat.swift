@@ -127,6 +127,10 @@ public struct BackupManifest: Equatable, Sendable, Codable {
     /// `YYYY-MM` in the device's time zone when the backup was made. Cleanup uses it as the backup's month and
     /// never recomputes it (D196.2, L26, L27).
     public var month: String?
+    /// The backup's identity, which the export lock, the selection, the status cache and the Before restore backup
+    /// use. Its folder's name is only when it was made, and is never read back (D209). `nil` in manifests from
+    /// earlier builds, whose folders are named by this ID.
+    public var id: UUID?
 
     public init(
         formatVersion: Int = BackupFormat.currentVersion,
@@ -139,6 +143,7 @@ public struct BackupManifest: Equatable, Sendable, Codable {
         attachmentCount: Int,
         sections: [BackupSection] = BackupSection.populated,
         month: String? = nil,
+        id: UUID? = nil,
     ) {
         self.formatVersion = formatVersion
         self.kind = kind
@@ -150,6 +155,7 @@ public struct BackupManifest: Equatable, Sendable, Codable {
         self.attachmentCount = attachmentCount
         self.sections = sections
         self.month = month
+        self.id = id
     }
 }
 

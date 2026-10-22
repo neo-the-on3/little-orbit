@@ -68,7 +68,7 @@ struct FileBackupStorageTests {
         #expect(try names(storage.stagingURL).isEmpty)
     }
 
-    @Test("Every folder named by an ID is listed, with a manifest or not; nothing else is (D196.3, L29)")
+    @Test("Every folder is listed whatever its name, with a manifest or not; files aren't (D196.3, L29, D209)")
     func storedIDs() throws {
         let folder = folder()
         defer { remove(folder) }
@@ -82,11 +82,19 @@ struct FileBackupStorageTests {
         try Data("shared".utf8).write(to: noManifest.appendingPathComponent("shared.json"))
         try Data("note".utf8).write(to: folder.appendingPathComponent("notes.txt"))
         try Data("old".utf8).write(to: folder.appendingPathComponent(UUID().uuidString))
+        let lowercased = UUID()
         try FileManager.default.createDirectory(
-            at: folder.appendingPathComponent(UUID().uuidString.lowercased()),
+            at: folder.appendingPathComponent(lowercased.uuidString.lowercased()),
             withIntermediateDirectories: true,
         )
-        #expect(Set(try storage.storedIDs()) == [id, noManifestID])
+        try FileManager.default.createDirectory(
+            at: folder.appendingPathComponent("Copied by hand"),
+            withIntermediateDirectories: true,
+        )
+        let ids = try storage.storedIDs()
+        #expect(ids.count == 4)
+        #expect(Set(ids).isSuperset(of: [id, noManifestID, lowercased]))
+        #expect(try storage.storedIDs() == ids)
         let listing = try storage.listing(id: noManifestID)
         #expect(listing.manifest == nil)
         #expect(listing.fileSizes == ["shared.json": 6])
