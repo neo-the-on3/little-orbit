@@ -6,7 +6,9 @@ public final class BackupService: AllBackupUseCases {
     public private(set) var isBusy = false
     /// The backups being written to an export file. Delete refuses them and cleanup keeps them until it runs again,
     /// so a folder never goes mid-export (Tech Architect, non-blocking 3).
-    private(set) var exporting: Set<UUID> = []
+    /// How many exports of each backup are running, so one window's export finishing never unlocks a backup
+    /// another window is still exporting.
+    private(set) var exporting: [UUID: Int] = [:]
 
     private let source: any LedgerBackupSource
     let storage: any BackupStorage
@@ -93,7 +95,7 @@ public final class BackupService: AllBackupUseCases {
             guard catalog.records.contains(where: { $0.id == id }) else {
                 throw BackupError.notFound
             }
-            guard !exporting.contains(id) else {
+            guard exporting[id] == nil else {
                 throw BackupError.busy
             }
             try storage.delete(id: id)
@@ -119,8 +121,11 @@ public final class BackupService: AllBackupUseCases {
         let codec = self.codec
         let archiving = self.archiving
         let file = BackupExport.fileName(name, id: id)
-        exporting.insert(id)
-        defer { exporting.remove(id) }
+        exporting[id, default: 0] += 1
+        defer {
+            let left = (exporting[id] ?? 1) - 1
+            exporting[id] = left > 0 ? left : nil
+        }
         let url = try await Self.detached(priority: .userInitiated) {
             let url = try storage.makeExportFolder().appendingPathComponent(file)
             do {
@@ -267,7 +272,7 @@ public final class BackupService: AllBackupUseCases {
             }
             .value
         // One being exported stays until the next cleanup.
-        return pruned.filter { !exporting.contains($0.id) }
+        return pruned.filter { exporting[$0.id] == nil }
     }
 
     func exclusively<T>(_ body: () async throws -> T) async throws -> T {

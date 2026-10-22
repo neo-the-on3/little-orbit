@@ -8,9 +8,9 @@ import Testing
     import SwiftUI
 #endif
 
-/// The export's file goes when the save panel closes, in SwiftUI's order: `isPresented` is set to `false` first,
-/// then `onCompletion` on a save or `onCancellation` on a cancel (Tech Architect B4). Nothing calls
-/// `finishExport()` by hand here.
+/// The export's file goes when the save panel is done, in SwiftUI's order: `isPresented` is set to `false` first,
+/// which only closes the panel, then `onCompletion` on a save or `onCancellation` on a cancel removes the file
+/// (Tech Architect B4). Nothing calls `finishExport()` by hand here.
 @MainActor
 @Suite("Export file on dismissal (B4)")
 struct BackupExportDismissalTests {
@@ -51,30 +51,68 @@ struct BackupExportDismissalTests {
         #expect(window.errorMessage == nil)
     }
 
-    @Test("Saved: isPresented goes false, then onCompletion runs; the file is removed")
+    /// After SwiftUI's setter alone: the panel is closed, and the file is still there for the panel to finish with.
+    private func expectClosedWithFile(_ file: BackupExportFile) {
+        #expect(!window.isExportPresented)
+        #expect(window.pendingExport == file)
+        #expect(FileManager.default.fileExists(atPath: file.url.path))
+    }
+
+    @Test("Saved: isPresented goes false, then onCompletion runs; the file goes only in onCompletion")
     func saved() async throws {
         let file = try await exported()
         window.isExportPresented = false
-        // The file is already gone when onCompletion runs, which must cope with that.
-        #expect(!FileManager.default.fileExists(atPath: file.url.path))
+        expectClosedWithFile(file)
         window.exportCompleted(.success(FileManager.default.temporaryDirectory.appendingPathComponent("saved")))
         expectRemoved(file)
     }
 
-    @Test("Cancelled: isPresented goes false, then onCancellation runs; the file is removed")
+    @Test("Cancelled: isPresented goes false, then onCancellation runs; the file goes only in onCancellation")
     func cancelled() async throws {
         let file = try await exported()
         window.isExportPresented = false
+        expectClosedWithFile(file)
         window.exportCancelled()
         expectRemoved(file)
     }
 
-    @Test("A failed save removes the file too")
+    @Test("A failed save: isPresented goes false, then onCompletion with the error; the file goes")
     func failed() async throws {
         let file = try await exported()
         window.isExportPresented = false
+        expectClosedWithFile(file)
         window.exportCompleted(.failure(CocoaError(.fileWriteOutOfSpace)))
         expectRemoved(file)
+    }
+
+    @Test("The setter alone keeps the file; the next export removes it first")
+    func setterAloneThenNextExport() async throws {
+        let first = try await exported()
+        window.isExportPresented = false
+        window.isExportPresented = false
+        expectClosedWithFile(first)
+        let second = try await exported()
+        #expect(!FileManager.default.fileExists(atPath: first.url.deletingLastPathComponent().path))
+        #expect(FileManager.default.fileExists(atPath: second.url.path))
+        window.exportCancelled()
+        expectRemoved(second)
+    }
+
+    @Test("A window that closes with an export file still there removes it")
+    func windowCloses() async throws {
+        var closing: BackupsWindow? = harness.window()
+        weak var released = closing
+        let backup = try await harness.service.backUpNow()
+        try await closing?.model.load()
+        await closing?.requestExport(backup.id)
+        await closing?.export(try #require(closing?.exportPrompt))
+        let file = try #require(closing?.pendingExport)
+        closing?.isExportPresented = false
+        #expect(FileManager.default.fileExists(atPath: file.url.path))
+        closing = nil
+        #expect(released == nil)
+        #expect(!FileManager.default.fileExists(atPath: file.url.deletingLastPathComponent().path))
+        #expect(stagingIsEmpty)
     }
 
     @Test("Either callback alone removes the file, and a second call does nothing")
@@ -93,6 +131,7 @@ struct BackupExportDismissalTests {
     func presentedKeepsFile() async throws {
         let file = try await exported()
         window.isExportPresented = true
+        #expect(window.isExportPresented)
         #expect(FileManager.default.fileExists(atPath: file.url.path))
         window.exportCancelled()
         expectRemoved(file)
@@ -105,11 +144,14 @@ struct BackupExportDismissalTests {
             let presented = BackupFlowModifier.exportPresented(window)
             #expect(presented.wrappedValue)
             presented.wrappedValue = false
+            #expect(!presented.wrappedValue)
+            expectClosedWithFile(file)
             window.exportCompleted(.success(FileManager.default.temporaryDirectory))
             expectRemoved(file)
 
             let cancelled = try await exported()
             presented.wrappedValue = false
+            expectClosedWithFile(cancelled)
             window.exportCancelled()
             expectRemoved(cancelled)
         }

@@ -20,8 +20,10 @@ public final class BackupsWindow {
     public var restorePrompt: BackupRestorePrompt?
     public var deletePrompt: BackupRowModel?
     public var exportPrompt: BackupExportPrompt?
-    /// The file to hand to the share sheet or save panel.
-    public var pendingExport: BackupExportFile?
+    /// The file to hand to the save panel. It stays until the panel's `onCompletion` or `onCancellation` has run.
+    public private(set) var pendingExport: BackupExportFile?
+    /// Whether the save panel is up. Closing it only clears this; the file stays until a callback (B4).
+    private var isShowingExportPanel = false
     /// 'Delete N Backups?' after this window lowered N or M (D195.5, L12).
     public var prunePrompt: BackupPrunePrompt?
     /// iOS: the toast "Backup restored · Before restore backup saved", after this window's restore.
@@ -36,6 +38,14 @@ public final class BackupsWindow {
 
     public init(model: BackupsViewModel) {
         self.model = model
+    }
+
+    /// The window closed: an export file neither callback removed goes with it (B4). The launch sweep covers an app
+    /// that's killed.
+    isolated deinit {
+        if let pendingExport {
+            model.discardExport(pendingExport)
+        }
     }
 
     /// Whether this window shows the restore progress screen.
@@ -102,7 +112,10 @@ public final class BackupsWindow {
     public func export(_ prompt: BackupExportPrompt) async {
         exportPrompt = nil
         finishExport()
-        await run { pendingExport = try await model.exportFile(prompt) }
+        await run {
+            pendingExport = try await model.exportFile(prompt)
+            isShowingExportPanel = true
+        }
     }
 
     public func cancelExport() {
@@ -115,26 +128,30 @@ public final class BackupsWindow {
             model.discardExport(pendingExport)
         }
         pendingExport = nil
+        isShowingExportPanel = false
     }
 
-    /// `fileExporter`'s `isPresented`. SwiftUI sets it to `false` when the save panel closes: before `onCompletion`
-    /// on a save, and with `onCancellation` on a cancel. The file has been copied by then, so that's when it's
-    /// removed (Tech Architect B4). iOS and macOS both export through `fileExporter`; there's no other share path.
+    /// `fileExporter`'s `isPresented`. SwiftUI sets it to `false` when the save panel closes, before `onCompletion`
+    /// on a save and with `onCancellation` on a cancel. Setting it only closes the panel: Apple doesn't say the bytes
+    /// have reached the destination by then, and the panel's `FileWrapper` reads the file lazily, so the file stays
+    /// until a callback (Tech Architect B4). iOS and macOS both export through `fileExporter`; there's no other
+    /// share path.
     public var isExportPresented: Bool {
-        get { pendingExport != nil }
+        get { isShowingExportPanel && pendingExport != nil }
         set {
             if !newValue {
-                finishExport()
+                isShowingExportPanel = false
             }
         }
     }
 
-    /// `fileExporter`'s `onCompletion`, after `isExportPresented` was set to `false`. Saved or not, the file goes.
+    /// `fileExporter`'s `onCompletion`, after the operation. Saved or not, the file goes. If neither callback runs,
+    /// the next export, the window closing, or the launch sweep removes it.
     public func exportCompleted(_ result: Result<URL, any Error>) {
         finishExport()
     }
 
-    /// `fileExporter`'s `onCancellation`, after `isExportPresented` was set to `false`.
+    /// `fileExporter`'s `onCancellation`, after the panel was cancelled.
     public func exportCancelled() {
         finishExport()
     }
