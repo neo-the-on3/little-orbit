@@ -11,10 +11,13 @@
         @State private var transactionAccount: AccountRowModel?
         @Environment(\.dynamicTypeSize) private var dynamicTypeSize
         private let feature: AccountsFeature
+        private let onShowSettings: (() -> Void)?
 
         /// `feature` comes from the composition root, which built it once with the injected use cases.
-        public init(feature: AccountsFeature) {
+        /// `onShowSettings` adds the toolbar's Settings button (#40).
+        public init(feature: AccountsFeature, onShowSettings: (() -> Void)? = nil) {
             self.feature = feature
+            self.onShowSettings = onShowSettings
             _model = State(initialValue: feature.accounts)
         }
 
@@ -216,6 +219,15 @@
         }
 
         @ToolbarContentBuilder private var toolbar: some ToolbarContent {
+            if let onShowSettings {
+                ToolbarItem(placement: .topBarLeading) {
+                    // The same toolbar on iPhone and iPad; VoiceOver reads "Settings" (UI Designer).
+                    Button(action: onShowSettings) {
+                        Label("Settings", systemImage: "gearshape")
+                    }
+                    .accessibilityLabel("Settings")
+                }
+            }
             if !model.isFirstRun {
                 ToolbarItem(placement: .topBarLeading) {
                     Button(model.isReordering ? "Done" : "Edit") {
