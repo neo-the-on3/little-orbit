@@ -7,7 +7,7 @@ import Testing
 /// D209: backup folders are named `yyyy-MM-dd-HH-mm` in the device's time zone, but nothing reads a date from a
 /// name. Identity is the manifest's ID, and order and retention come from its `createdAt` (L60–L63).
 @MainActor
-@Suite("Backup folders: names by local date and time (D209)")
+@Suite("Backup folders: names by local date and time (D209)", .timeLimit(.minutes(2)))
 struct BackupFolderNamingTests {
     private static let newYork = TimeZone(identifier: "America/New_York") ?? .gmt
     private static let losAngeles = TimeZone(identifier: "America/Los_Angeles") ?? .gmt

@@ -8,7 +8,7 @@
     /// Each window's history on its own real `UndoManager`, as the macOS Edit menu, Cmd-Z and the iOS shake
     /// alert read it (#93: D161, D187, D198). Runs in the macOS CI job.
     @MainActor
-    @Suite("Undo names on a real UndoManager", .serialized)
+    @Suite("Undo names on a real UndoManager", .serialized, .timeLimit(.minutes(2)))
     struct TransactionUndoNameTests {
         typealias F = TransactionFeatureFixture  // swiftlint:disable:this type_name
 

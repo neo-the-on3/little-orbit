@@ -7,7 +7,7 @@ import Testing
 /// D202.1 (L48, L49): a damaged folder that was never listed with a readable manifest. Its date is the folder's,
 /// its size the total of its files, and "Unknown" stands in for either when it can't be read.
 @MainActor
-@Suite("Backup list: a damaged folder that was never read")
+@Suite("Backup list: a damaged folder that was never read", .timeLimit(.minutes(2)))
 struct BackupNeverReadTests {
     private let presentation = BackupPresentation(
         locale: Locale(identifier: "en_US"),

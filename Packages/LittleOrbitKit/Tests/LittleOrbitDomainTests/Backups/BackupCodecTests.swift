@@ -3,7 +3,7 @@ import LittleOrbitDomain
 import Testing
 
 /// D63, D96.1, D116.4, D182 and Kiran's backup layout: each backup is a self-contained folder, plain in format 1.
-@Suite("Backup codec")
+@Suite("Backup codec", .timeLimit(.minutes(2)))
 struct BackupCodecTests {
     private let codec = BackupCodec(hashing: FakeBackupHashing())
     private let created = Date(timeIntervalSince1970: 1_792_640_525.123_456)

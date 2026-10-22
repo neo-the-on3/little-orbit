@@ -8,7 +8,7 @@ import Testing
 /// underneath. Any error from reading a backup's files, whatever its code, is a read failure: Couldn’t Open Backup
 /// on restore (D208.2), Couldn’t Delete Old Backups when N or M is lowered (D208.3), and never 'Damaged'.
 @MainActor
-@Suite("Backups that can't be read for lack of permission (D208.2, D208.3)", .serialized)
+@Suite("Backups that can't be read for lack of permission (D208.2, D208.3)", .serialized, .timeLimit(.minutes(2)))
 struct BackupPermissionReadTests {
     /// Cocoa's error for `FileHandle(forReadingFrom:)` on a file it may not open, on Apple platforms.
     private static let writeCodeDenial = NSError(

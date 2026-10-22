@@ -12,7 +12,7 @@ import Testing
 /// which only closes the panel, then `onCompletion` on a save or `onCancellation` on a cancel removes the file
 /// (Tech Architect B4). Nothing calls `finishExport()` by hand here.
 @MainActor
-@Suite("Export file on dismissal (B4)")
+@Suite("Export file on dismissal (B4)", .timeLimit(.minutes(2)))
 struct BackupExportDismissalTests {
     private let harness: BackupHarness
     private let window: BackupsWindow

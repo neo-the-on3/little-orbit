@@ -6,7 +6,7 @@ import Testing
 /// Tech Architect B2: an export is written to a file of its own in the staging folder, each listed file streamed
 /// from the backup folder in chunks and checked against the manifest on the way, and removed afterwards.
 @MainActor
-@Suite("Export writes a file")
+@Suite("Export writes a file", .timeLimit(.minutes(2)))
 struct BackupExportFileTests {
     private static let size = BackupChunk.size * 5 / 2
 

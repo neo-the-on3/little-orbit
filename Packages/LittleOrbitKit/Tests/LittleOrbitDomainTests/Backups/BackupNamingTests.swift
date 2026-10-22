@@ -3,7 +3,7 @@ import LittleOrbitDomain
 import Testing
 
 /// D173.11 and D174: the name index fixed when a backup is made. The file name itself is formatted in Features.
-@Suite("Backup naming")
+@Suite("Backup naming", .timeLimit(.minutes(2)))
 struct BackupNamingTests {
     /// 2026-10-22 09:12:05 IST.
     private let morning = Date(timeIntervalSince1970: 1_792_640_525)

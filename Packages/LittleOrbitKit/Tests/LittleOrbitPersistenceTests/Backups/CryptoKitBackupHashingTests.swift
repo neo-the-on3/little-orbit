@@ -4,7 +4,7 @@ import Testing
 @testable import LittleOrbitPersistence
 
 #if canImport(CryptoKit)
-    @Suite("CryptoKit backup hashing")
+    @Suite("CryptoKit backup hashing", .timeLimit(.minutes(2)))
     struct CryptoKitBackupHashingTests {
         @Test("SHA-256 as lowercase hex")
         func knownValue() {

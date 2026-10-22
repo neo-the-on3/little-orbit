@@ -42,7 +42,7 @@ import Testing
     }
 
     /// B2: an export streams each file into an Apple Archive file, one `writeBlob` per chunk, never holding a file.
-    @Suite("Apple Archive export file")
+    @Suite("Apple Archive export file", .timeLimit(.minutes(2)))
     struct AppleArchiveExportFileTests {
         private let archiving = AppleArchiveBackupArchiving()
         private let files = BackupSnapshotFiles([

@@ -45,7 +45,7 @@ private struct UnexpectedReaderError: LocalizedError {
 /// but fails the manifest, safety or checksum checks is 'This Backup Is Damaged' (D195a, D196); a newer format is
 /// D197's update alert. Each leaves the data unchanged, and none is the generic error alert.
 @MainActor
-@Suite("Picked file alerts (D207.2)")
+@Suite("Picked file alerts (D207.2)", .timeLimit(.minutes(2)))
 struct BackupPickedFileAlertTests {
     private let harness: BackupHarness
     private let folder: URL

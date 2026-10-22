@@ -11,7 +11,7 @@ import Testing
 
 #if canImport(AppleArchive)
     /// D195a.1, L18, L19: the exported file is the folder in one uncompressed Apple Archive, read in memory.
-    @Suite("Apple Archive backup file")
+    @Suite("Apple Archive backup file", .timeLimit(.minutes(2)))
     struct AppleArchiveBackupArchivingTests {
         private let archiving = AppleArchiveBackupArchiving()
         private let files = BackupSnapshotFiles([

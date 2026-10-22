@@ -8,7 +8,7 @@ import Testing
 /// cloned instead of read, and a restore hands each attachment to the store from a file, one at a time. Each
 /// attachment here is 2.5 chunks, so a whole one would show as a larger chunk.
 @MainActor
-@Suite("Backups stream attachments")
+@Suite("Backups stream attachments", .timeLimit(.minutes(2)))
 struct BackupStreamingTests {
     private static let size = BackupChunk.size * 5 / 2
 

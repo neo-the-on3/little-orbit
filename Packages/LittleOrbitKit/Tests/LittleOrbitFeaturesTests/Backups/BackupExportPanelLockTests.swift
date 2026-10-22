@@ -6,7 +6,7 @@ import Testing
 /// Tester finding 2 on 4c8b0b3 (D208.1): the export lock lasts from Export until the save panel's `onCompletion`
 /// or `onCancellation`, not just while the file is written, and every fallback cleanup releases it too.
 @MainActor
-@Suite("Export lock lasts until the save panel closes (D208.1)")
+@Suite("Export lock lasts until the save panel closes (D208.1)", .timeLimit(.minutes(2)))
 struct BackupExportPanelLockTests {
     private struct Windows {
         let harness: BackupHarness

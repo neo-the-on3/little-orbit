@@ -5,7 +5,7 @@ import Testing
 
 /// A stored backup that can't be read (D208.2), and cleanup while one can't be read (R3, D208.3).
 @MainActor
-@Suite("Stored backups that can't be read (D208.2, D208.3)")
+@Suite("Stored backups that can't be read (D208.2, D208.3)", .timeLimit(.minutes(2)))
 struct BackupD208ReadTests {
     private let folder = FileManager.default.temporaryDirectory
         .appendingPathComponent("backup-tests-\(UUID().uuidString)", isDirectory: true)

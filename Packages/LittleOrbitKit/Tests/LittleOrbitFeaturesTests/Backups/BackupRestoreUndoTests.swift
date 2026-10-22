@@ -7,7 +7,7 @@ import Testing
 /// A restore replaces the whole ledger, so no window may undo or redo a step made against the old data (D187.2,
 /// Tech Architect N6): `LedgerUpdates.follow` clears every window's history from the backup service's signal.
 @MainActor
-@Suite("Restore and undo history")
+@Suite("Restore and undo history", .timeLimit(.minutes(2)))
 struct BackupRestoreUndoTests {
     typealias F = TransactionFeatureFixture  // swiftlint:disable:this type_name
 

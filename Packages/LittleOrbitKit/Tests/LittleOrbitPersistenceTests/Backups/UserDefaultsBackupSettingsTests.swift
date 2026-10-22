@@ -5,7 +5,7 @@ import Testing
 @testable import LittleOrbitPersistence
 
 /// D195.4: N and M are app settings on this device.
-@Suite("Backup settings")
+@Suite("Backup settings", .timeLimit(.minutes(2)))
 struct UserDefaultsBackupSettingsTests {
     private func defaults() throws -> (UserDefaults, String) {
         let name = "backup-settings-\(UUID().uuidString)"

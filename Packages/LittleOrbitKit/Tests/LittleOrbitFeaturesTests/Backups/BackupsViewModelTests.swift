@@ -6,7 +6,7 @@ import Testing
 
 /// The Backups screen's flows (D63, D116.1, D116.2, D118.5, D182).
 @MainActor
-@Suite("Backups view model")
+@Suite("Backups view model", .timeLimit(.minutes(2)))
 struct BackupsViewModelTests {
     @Test("Empty until the first backup, then newest first with the last-backup line")
     func listing() async throws {

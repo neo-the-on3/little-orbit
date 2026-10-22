@@ -8,7 +8,7 @@ import Testing
 /// same as #87's B3 `AccountDeleteConfirmation`). What one window asks for or confirms never shows in the other;
 /// the other sees only the shared list change.
 @MainActor
-@Suite("Backups windows")
+@Suite("Backups windows", .timeLimit(.minutes(2)))
 struct BackupsWindowTests {
     private func twoWindows(_ harness: BackupHarness) -> (BackupsWindow, BackupsWindow) {
         let model = harness.viewModel()
@@ -124,7 +124,7 @@ struct BackupsWindowTests {
 
 /// Backups, checks and restores never read a stored folder whole: only Export does (Tech Architect B1.2).
 @MainActor
-@Suite("Backup memory")
+@Suite("Backup memory", .timeLimit(.minutes(2)))
 struct BackupMemoryTests {
     @Test("Backing up, the cleanup and restoring a stored backup read file by file, never the whole folder")
     func noWholeFolderReads() async throws {

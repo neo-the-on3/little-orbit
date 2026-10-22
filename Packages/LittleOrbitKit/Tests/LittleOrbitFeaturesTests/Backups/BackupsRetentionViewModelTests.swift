@@ -6,7 +6,7 @@ import Testing
 
 /// D195.5 and L11–L14: the Keep steppers, the 'Delete N Backups?' alert, App Lock and the cleanup.
 @MainActor
-@Suite("Backups view model: Keep")
+@Suite("Backups view model: Keep", .timeLimit(.minutes(2)))
 struct BackupsRetentionViewModelTests {
     /// The harness with `count` automatic backups, one a day from 23 Oct.
     private func harness(backups count: Int) async throws -> BackupHarness {

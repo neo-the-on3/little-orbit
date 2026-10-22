@@ -3,7 +3,7 @@ import LittleOrbitDomain
 import Testing
 
 /// D195.2, D195.7, L3, L4: the path rules for a picked archive, before anything is extracted.
-@Suite("Backup archive safety")
+@Suite("Backup archive safety", .timeLimit(.minutes(2)))
 struct BackupArchiveSafetyTests {
     private func file(_ path: String, _ text: String = "x") -> BackupArchiveEntry {
         BackupArchiveEntry(path: path, kind: .file(Data(text.utf8)))
