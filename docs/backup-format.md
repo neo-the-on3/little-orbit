@@ -159,9 +159,25 @@ Architect B2). Only the files the manifest lists are included. The save panel an
 file's URL, never its bytes. The file is removed when the panel is done, saved, cancelled or failed, in
 `onCompletion` or `onCancellation` (Tech Architect B4). SwiftUI's `isPresented` going `false` only closes the panel,
 since the panel's `FileWrapper` reads the file lazily. If neither callback runs, the next export, the window closing,
-or the next launch removes it. While a backup is being written to an export file, even by two windows at once, Delete
-refuses it and cleanup keeps it until it runs again. Each export counts, so the backup stays locked until the last
-export of it ends.
+or the next launch removes it. From Export until the panel's `onCompletion` or `onCancellation`, so for as long as
+the panel is up, the backup is locked: Delete is off in every window, a delete already confirming is refused with
+"Can’t Delete This Backup", and cleanup keeps it until it runs again (D208.1). The lock is released in the same
+places the file is removed: the callbacks, the next export, and the window closing; it's held in memory, so a
+relaunch starts with none. Each export counts, even from two windows at once, so the backup stays locked until the
+last export of it ends.
+
+The system's save panel needs its own copy. SwiftUI's `fileExporter` writes the document to
+`tmp/<uuid>/<file name>` in the app's container and doesn't remove it (seen on iPhone after Cancel and on iPad after
+Save). The app removes those copies after `onCompletion` and `onCancellation`, at the next export and at launch,
+whenever no export's panel is open. Only regular files named the way an export is named
+(`little-orbit YYYY-MM-DD HHmm[ n].littleorbit-backup`, or `<uuid>.littleorbit-backup`), in `tmp` itself or directly in
+a `<uuid>` folder there, are removed, with the `<uuid>` folder once it's empty; nothing else in `tmp` is touched. Any
+copy the system keeps outside the app's container, for example in the destination provider's own storage, is out of
+the app's reach and out of scope.
+
+A read or permission error from any of a stored backup's files, whatever its code (opening a file without permission
+reports Cocoa's write code 513), is a read failure, never 'Damaged': Restore… shows "Couldn’t Open Backup" and
+lowering N or M shows "Couldn’t Delete Old Backups" with the setting unchanged (D208.2, D208.3).
 
 `manifest.json` is the archive's first entry, so a reader reaches the format version before anything else. Apple
 Archive itself refuses to read past an entry with an absolute path or a `..` component. When that happens, the
