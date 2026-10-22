@@ -81,6 +81,7 @@ final class StoreLocationTests: XCTestCase {
             bundleIdentifier: "com.example.littleorbit",
             appGroupIdentifier: "group.com.example.littleorbit",
             groupContainer: lookup(["group.com.example.littleorbit": container]),
+            entitlement: .granted,
         )
         XCTAssertEqual(
             url.standardizedFileURL,
@@ -89,19 +90,20 @@ final class StoreLocationTests: XCTestCase {
         XCTAssertTrue(FileManager.default.fileExists(atPath: container.path))
     }
 
-    func testFallsBackToApplicationSupportWhenTheGroupHasNoContainer() throws {
+    func testAnEntitledBuildWithoutItsGroupContainerThrowsInsteadOfFallingBack() {
         let support = root.appendingPathComponent("support", isDirectory: true)
-        let url = try StoreLocation.prepareStoreURL(
-            applicationSupport: support,
-            bundleIdentifier: "com.example.littleorbit",
-            appGroupIdentifier: "group.com.example.littleorbit",
-            groupContainer: .unavailable,
-        )
-        XCTAssertEqual(
-            url.standardizedFileURL,
-            StoreLocation.storeURL(applicationSupport: support, bundleIdentifier: "com.example.littleorbit")
-                .standardizedFileURL,
-        )
+        XCTAssertThrowsError(
+            try StoreLocation.prepareStoreURL(
+                applicationSupport: support,
+                bundleIdentifier: "com.example.littleorbit",
+                appGroupIdentifier: "group.com.example.littleorbit",
+                groupContainer: .unavailable,
+                entitlement: .granted,
+            )
+        ) { error in
+            XCTAssertEqual(error as? StoreError, .appGroupContainerUnavailable(.noContainer))
+        }
+        XCTAssertFalse(FileManager.default.fileExists(atPath: support.path))
     }
 
     func testNoOrBlankGroupIDNeverAsksForAContainer() {
@@ -134,6 +136,7 @@ final class StoreLocationTests: XCTestCase {
             bundleIdentifier: "com.example.littleorbit",
             appGroupIdentifier: "group.com.example.littleorbit",
             groupContainer: lookup(["group.com.example.littleorbit": container]),
+            entitlement: .granted,
         )
         XCTAssertEqual(configuration.fileURL?.deletingLastPathComponent().lastPathComponent, "group")
     }

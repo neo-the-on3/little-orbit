@@ -35,4 +35,7 @@ public struct StoreConfiguration: Sendable, Equatable {
 public enum StoreError: Error, Equatable, Sendable {
     /// `StoreSyncMode` has no implemented sync path. CloudKit stays off until a later change.
     case syncNotImplemented
+    /// The app is entitled to its App Group, but the container is missing or can't be written. The store isn't
+    /// opened, so no second, empty store is created in Application Support.
+    case appGroupContainerUnavailable(AppGroupContainerFailure)
 }
