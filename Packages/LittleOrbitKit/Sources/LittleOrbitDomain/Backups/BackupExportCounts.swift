@@ -1,7 +1,7 @@
 import Foundation
 import Observation
 
-/// How many exports of each backup are being written to a file now. It's observable, so every window that shows a
+/// How many exports of each backup are open now: from Export until the save panel closes. It's observable, so every window that shows a
 /// backup follows it through `ExportBackupUseCase.exportCount(of:)` (D208.1).
 @MainActor
 @Observable

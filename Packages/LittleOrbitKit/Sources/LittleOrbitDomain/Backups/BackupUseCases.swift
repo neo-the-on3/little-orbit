@@ -139,10 +139,12 @@ public protocol ExportBackupUseCase {
     /// newer-format backup throws `damaged` or `newerFormat` (D196.3, D197.2).
     /// The file is written in chunks and named `name`, alone in a folder of its own that only it uses (B2).
     func exportBackup(id: UUID, named name: String) async throws -> BackupExport
-    /// Removes the export's file and its folder, once the save panel or share sheet closes, saved or not.
+    /// Removes the export's file and its folder, once the save panel or share sheet closes, saved or not, and
+    /// releases the export's lock on its backup. Safe to call more than once.
     func discardExport(_ export: BackupExport)
-    /// How many exports of the backup are being written now, in every window. Observable, so a window that reads
-    /// it updates when an export starts or ends; Delete is off while it's above zero (D208.1).
+    /// How many exports of the backup are open now, in every window: from Export until `discardExport`, so through
+    /// the save panel. Observable, so a window that reads it updates when an export starts or ends; Delete is off
+    /// while it's above zero (D208.1).
     func exportCount(of id: UUID) -> Int
 }
 

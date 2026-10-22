@@ -8,6 +8,8 @@ public final class BackupService: AllBackupUseCases {
     /// so a folder never goes mid-export (Tech Architect, non-blocking 3). Each export counts, so one window's
     /// export finishing never unlocks a backup another window is still exporting.
     private let exports = BackupExportCounts()
+    /// Each export handed out and not yet discarded, with its backup's ID.
+    private var openExports: [URL: UUID] = [:]
 
     private let source: any LedgerBackupSource
     let storage: any BackupStorage
@@ -108,33 +110,41 @@ public final class BackupService: AllBackupUseCases {
         guard !isBusy else {
             throw BackupError.busy
         }
-        let catalog = try await loadCatalog()
-        guard let record = catalog.records.first(where: { $0.id == id }) else {
-            throw BackupError.notFound
-        }
-        // Export… is unavailable for a damaged or newer-format backup (D196.3, D197.2).
-        guard record.isRestorable else {
-            throw record.condition == .newerFormat ? BackupError.newerFormat : BackupError.damaged
-        }
-        let storage = self.storage
-        let codec = self.codec
-        let archiving = self.archiving
-        let file = BackupExport.fileName(name, id: id)
+        // Held from the moment Export is chosen, before the list is read, until `discardExport`: after the save
+        // panel's `onCompletion` or `onCancellation`, or a fallback, the next export or the window closing. Every
+        // error on the way releases it. Nothing outlives a relaunch (D208.1, Tester finding 2).
         exports.begin(id)
-        defer { exports.end(id) }
-        let url = try await Self.detached(priority: .userInitiated) {
-            let url = try storage.makeExportFolder().appendingPathComponent(file)
-            do {
-                try Self.remembering(id, storage: storage) {
-                    try codec.archive(storage.files(id: id), with: archiving, to: url)
-                }
-                return url
-            } catch {
-                storage.removeExport(url)
-                throw error
+        do {
+            let catalog = try await loadCatalog()
+            guard let record = catalog.records.first(where: { $0.id == id }) else {
+                throw BackupError.notFound
             }
+            // Export… is unavailable for a damaged or newer-format backup (D196.3, D197.2).
+            guard record.isRestorable else {
+                throw record.condition == .newerFormat ? BackupError.newerFormat : BackupError.damaged
+            }
+            let storage = self.storage
+            let codec = self.codec
+            let archiving = self.archiving
+            let file = BackupExport.fileName(name, id: id)
+            let url = try await Self.detached(priority: .userInitiated) {
+                let url = try storage.makeExportFolder().appendingPathComponent(file)
+                do {
+                    try Self.remembering(id, storage: storage) {
+                        try codec.archive(storage.files(id: id), with: archiving, to: url)
+                    }
+                    return url
+                } catch {
+                    storage.removeExport(url)
+                    throw error
+                }
+            }
+            openExports[url] = id
+            return BackupExport(file: url, record: record)
+        } catch {
+            exports.end(id)
+            throw error
         }
-        return BackupExport(file: url, record: record)
     }
 
     public func exportCount(of id: UUID) -> Int {
@@ -150,8 +160,12 @@ public final class BackupService: AllBackupUseCases {
         }
     }
 
+    /// Removes the export's file and releases its lock, once: a second call for the same export changes nothing.
     public func discardExport(_ export: BackupExport) {
         storage.removeExport(export.file)
+        if let id = openExports.removeValue(forKey: export.file) {
+            exports.end(id)
+        }
     }
 
     /// Checks a backup for the Restore warning, off the main actor, keeping nothing but its manifest (B1). A stored
