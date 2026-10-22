@@ -263,11 +263,14 @@ public struct BackupPresentation: Sendable {
         var parts = [
             FeatureText.format("Backup from %@", date(of: record, now: now)),
             Self.kind(record.kind),
-            FeatureText.plural("%lld accounts", one: "%lld account", record.accountCount),
-            FeatureText.plural("%lld transactions", one: "%lld transaction", record.transactionCount),
         ]
-        if record.attachmentCount > 0 {
-            parts.append(FeatureText.plural("%lld attachments", one: "%lld attachment", record.attachmentCount))
+        // Only a restorable backup is exported, so its counts were read; one that wasn't is left out all the same.
+        if let accounts = record.accountCount, let transactions = record.transactionCount {
+            parts.append(FeatureText.plural("%lld accounts", one: "%lld account", accounts))
+            parts.append(FeatureText.plural("%lld transactions", one: "%lld transaction", transactions))
+        }
+        if let attachments = record.attachmentCount, attachments > 0 {
+            parts.append(FeatureText.plural("%lld attachments", one: "%lld attachment", attachments))
         }
         return parts.joined(separator: " · ")
     }
@@ -276,7 +279,13 @@ public struct BackupPresentation: Sendable {
         let title = date(of: record, now: now)
         let kind = Self.kind(record.kind)
         let sizeText = record.byteSize.map(size) ?? Self.unknownKind
-        let countsText = counts(record.accountCount, record.transactionCount)
+        // Counts that weren't read are never shown, not even as 0 (UI Designer, comment 6353639065).
+        let read: (accounts: Int, transactions: Int)? =
+            if let accounts = record.accountCount, let transactions = record.transactionCount {
+                (accounts, transactions)
+            } else {
+                nil
+            }
         let status: String? =
             switch record.condition {
             case .restorable: nil
@@ -296,17 +305,16 @@ public struct BackupPresentation: Sendable {
             kindText: kind,
             sizeText: sizeText,
             formatText: Self.format(record.formatVersion),
-            countsText: countsText,
+            countsText: read.map { counts($0.accounts, $0.transactions) },
+            accountsText: read.map { number($0.accounts) },
+            transactionsText: read.map { number($0.transactions) },
+            detailAccountsText: read.map { number($0.accounts) } ?? Self.unknownKind,
+            detailTransactionsText: read.map { number($0.transactions) } ?? Self.unknownKind,
+            attachmentsText: record.attachmentCount.flatMap { $0 > 0 ? number($0) : nil },
             detailLine: [kind, sizeText, Self.format(record.formatVersion)].joined(separator: " · "),
-            accessibilityLabel: ([title, Self.kindBackup(record.kind)] + (status.map { [$0] } ?? []) + [
-                sizeText,
-                FeatureText.format(
-                    "%1$@, %2$@",
-                    FeatureText.plural("%lld accounts", one: "%lld account", record.accountCount),
-                    FeatureText.plural("%lld transactions", one: "%lld transaction", record.transactionCount),
-                ),
-            ])
-            .joined(separator: ", "),
+            accessibilityLabel: ([title, Self.kindBackup(record.kind)] + (status.map { [$0] } ?? []) + [sizeText]
+                + (read.map { [spokenCounts($0.accounts, $0.transactions)] } ?? []))
+                .joined(separator: ", "),
             accountCount: record.accountCount,
             transactionCount: record.transactionCount,
             attachmentCount: record.attachmentCount,
@@ -315,6 +323,20 @@ public struct BackupPresentation: Sendable {
             statusText: status,
             explanation: explanation,
         )
+    }
+
+    /// "5 accounts, 120 transactions", for VoiceOver.
+    private func spokenCounts(_ accounts: Int, _ transactions: Int) -> String {
+        FeatureText.format(
+            "%1$@, %2$@",
+            FeatureText.plural("%lld accounts", one: "%lld account", accounts),
+            FeatureText.plural("%lld transactions", one: "%lld transaction", transactions),
+        )
+    }
+
+    /// A count as the detail and the macOS cells show it, "1,200", in the presentation's locale.
+    func number(_ count: Int) -> String {
+        count.formatted(.number.locale(locale))
     }
 }
 
@@ -327,17 +349,25 @@ public struct BackupRowModel: Identifiable, Equatable, Sendable {
     public var kindText: String
     public var sizeText: String
     public var formatText: String
-    /// "5 accounts · 120 transactions".
-    public var countsText: String
+    /// "5 accounts · 120 transactions". `nil` when the counts weren't read, so the iOS list drops the line.
+    public var countsText: String?
+    /// The macOS Accounts and Transactions cells, "5" and "120". `nil` when not read: the cell is left empty.
+    public var accountsText: String?
+    public var transactionsText: String?
+    /// The iOS detail's Accounts and Transactions, or D200.1's "Unknown" when they weren't read.
+    public var detailAccountsText: String
+    public var detailTransactionsText: String
+    /// The iOS detail's Attachments row, `nil` to leave it out: none, or the count wasn't read (S61, S72).
+    public var attachmentsText: String?
     /// "Automatic · 1.8 MB · Format 1".
     public var detailLine: String
     /// "Today, 9:12 AM, Automatic backup, 1.8 MB, 5 accounts, 120 transactions" (S35), with "Damaged" or the
     /// newer-format note after the kind (L29, L35).
     public var accessibilityLabel: String
-    public var accountCount: Int
-    public var transactionCount: Int
-    /// The detail hides its Attachments row when this is 0 (S61, S72).
-    public var attachmentCount: Int
+    /// `nil` when not read.
+    public var accountCount: Int?
+    public var transactionCount: Int?
+    public var attachmentCount: Int?
     public var formatVersion: Int
     public var condition: BackupCondition
     /// 'Damaged' or "Made by a newer version of little-orbit.", shown in the list (L29, L35). `nil` when restorable.

@@ -40,9 +40,12 @@ public struct BackupRecord: Identifiable, Hashable, Sendable, Codable {
     /// damaged folder whose manifest was never read, the total of its files' sizes; `nil` when that can't be
     /// computed (D202.1, L48, L49).
     public var byteSize: Int64?
-    public var accountCount: Int
-    public var transactionCount: Int
-    public var attachmentCount: Int
+    /// The counts from the manifest. `nil` when they weren't read: a damaged folder whose manifest was never read,
+    /// or a newer format's manifest. A damaged backup keeps the counts from its last good read (D202.1). A count
+    /// that wasn't read is never shown as 0 (UI Designer, comment 6353639065).
+    public var accountCount: Int?
+    public var transactionCount: Int?
+    public var attachmentCount: Int?
     /// Identifies the ledger the backup holds, to tell whether it still reflects the current data (D116.3).
     public var fingerprint: String
     /// `YYYY-MM` in the device's time zone when the backup was made, from the manifest (D196.2). `nil` when the
@@ -57,9 +60,9 @@ public struct BackupRecord: Identifiable, Hashable, Sendable, Codable {
         nameIndex: Int = 1,
         formatVersion: Int = BackupFormat.currentVersion,
         byteSize: Int64? = 0,
-        accountCount: Int = 0,
-        transactionCount: Int = 0,
-        attachmentCount: Int = 0,
+        accountCount: Int? = 0,
+        transactionCount: Int? = 0,
+        attachmentCount: Int? = 0,
         fingerprint: String = "",
         month: String? = nil,
         condition: BackupCondition = .restorable,
