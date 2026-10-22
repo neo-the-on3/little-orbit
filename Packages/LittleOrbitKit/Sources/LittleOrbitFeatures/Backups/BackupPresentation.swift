@@ -87,6 +87,13 @@ public struct BackupPresentation: Sendable {
     public static let unknownKind = "Unknown"
     /// The Export sheet's one line, on every export (D182.4).
     public static let unencryptedWarning = "This file isn’t encrypted and contains all your financial data."
+    /// The note's SF Symbol, shown in the warning colour (UI Designer, frames 277:4915 and 277:4581).
+    public static let unencryptedWarningSymbol = "exclamationmark.triangle.fill"
+    /// What VoiceOver says for the warning icon, before the note.
+    public static let warning = "Warning"
+    /// The note as one VoiceOver element: "Warning, This file isn’t encrypted and contains all your financial
+    /// data." (UI Designer, after Tester's 6335997896.)
+    public static let unencryptedWarningAccessibilityLabel = "\(warning), \(unencryptedWarning)"
     public static let restoreInterruptedNote =
         "Keep little-orbit open. If the restore is interrupted, your data stays exactly as it was before."
 

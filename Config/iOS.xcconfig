@@ -7,6 +7,9 @@
 PRODUCT_NAME = LittleOrbit
 PRODUCT_BUNDLE_IDENTIFIER = app.littleorbit.ios$(LITTLEORBIT_BUNDLE_ID_SUFFIX)
 INFOPLIST_KEY_CFBundleDisplayName = Little Orbit
+// The exported .littleorbit-backup type (D195a.1, L19). Generated keys are merged into it. No document types:
+// opening a backup from Files or Finder is the follow-up to #40 (D197.3, L39).
+INFOPLIST_FILE = Config/LittleOrbit-Info.plist
 SDKROOT = iphoneos
 IPHONEOS_DEPLOYMENT_TARGET = 27.0
 TARGETED_DEVICE_FAMILY = 1,2

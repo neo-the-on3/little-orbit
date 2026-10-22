@@ -205,6 +205,12 @@ struct BackupPresentationTests {
         #expect(BackupPresentation.exportConfirm == "Export")
         #expect(BackupPresentation.exportEllipsis == "Export…")
         #expect(BackupPresentation.exportTitle == "Export Backup")
+        #expect(BackupPresentation.unencryptedWarningSymbol == "exclamationmark.triangle.fill")
+        #expect(BackupPresentation.warning == "Warning")
+        #expect(
+            BackupPresentation.unencryptedWarningAccessibilityLabel
+                == "Warning, This file isn’t encrypted and contains all your financial data."
+        )
     }
 
     @Test("The Export summary matches the frames, with singular and plural counts (D186)")

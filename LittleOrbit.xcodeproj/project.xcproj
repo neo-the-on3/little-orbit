@@ -27,6 +27,7 @@
       "kind": "group",
       "path": "Config",
       "children": [
+        { "path": "LittleOrbit-Info.plist" },
         { "path": "Shared.xcconfig" },
         { "path": "Signing.xcconfig" },
         { "path": "Signing.local.xcconfig.example" },
