@@ -1,6 +1,19 @@
 {
   "sourceLanguage": "en",
   "strings": {
+    "%1$@ %2$@": {
+      "comment": "Two sentences in a row: %1$@ is the first, %2$@ the second (backup footnote and Keep footer, or newer-format note and its detail).",
+      "extractionState": "manual",
+      "generatesSymbol": false,
+      "localizations": {
+        "en": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "%1$@ %2$@"
+          }
+        }
+      }
+    },
     "%1$@ from %2$@ to %3$@": {
       "comment": "An Undo or Redo name, delete toast or undo notice, with where it happened: a transfer's two accounts. %1$@ is the action, such as \"Edit Transfer\"; %2$@ and %3$@ are the From and To account names.",
       "extractionState": "manual",
@@ -59,6 +72,31 @@
         }
       }
     },
+    "%1$@ · %2$@": {
+      "comment": "A backup's account count (%1$@) and transaction count (%2$@).",
+      "extractionState": "manual",
+      "localizations": {
+        "en": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "%1$@ · %2$@"
+          }
+        }
+      }
+    },
+    "%1$@, %2$@": {
+      "comment": "Two parts joined with a comma: a backup's day and time (%1$@ the day, %2$@ the time), or its account and transaction counts as VoiceOver reads them.",
+      "extractionState": "manual",
+      "generatesSymbol": false,
+      "localizations": {
+        "en": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "%1$@, %2$@"
+          }
+        }
+      }
+    },
     "%1$@, under %2$@": {
       "comment": "VoiceOver value of the category picker for a subcategory, so its parent is heard: \"Groceries, under Food\". %1$@ is the subcategory, %2$@ its parent category.",
       "extractionState": "manual",
@@ -95,6 +133,78 @@
         }
       }
     },
+    "%lld Months": {
+      "comment": "Monthly Backups stepper value. %lld is the number of months (1–24).",
+      "extractionState": "manual",
+      "localizations": {
+        "en": {
+          "variations": {
+            "plural": {
+              "one": {
+                "stringUnit": {
+                  "state": "translated",
+                  "value": "%lld Month"
+                }
+              },
+              "other": {
+                "stringUnit": {
+                  "state": "translated",
+                  "value": "%lld Months"
+                }
+              }
+            }
+          }
+        }
+      }
+    },
+    "%lld accounts": {
+      "comment": "A backup's account count.",
+      "extractionState": "manual",
+      "localizations": {
+        "en": {
+          "variations": {
+            "plural": {
+              "one": {
+                "stringUnit": {
+                  "state": "translated",
+                  "value": "%lld account"
+                }
+              },
+              "other": {
+                "stringUnit": {
+                  "state": "translated",
+                  "value": "%lld accounts"
+                }
+              }
+            }
+          }
+        }
+      }
+    },
+    "%lld attachments": {
+      "comment": "A backup's attachment count, in the Export summary.",
+      "extractionState": "manual",
+      "localizations": {
+        "en": {
+          "variations": {
+            "plural": {
+              "one": {
+                "stringUnit": {
+                  "state": "translated",
+                  "value": "%lld attachment"
+                }
+              },
+              "other": {
+                "stringUnit": {
+                  "state": "translated",
+                  "value": "%lld attachments"
+                }
+              }
+            }
+          }
+        }
+      }
+    },
     "%lld of these transactions were changed or deleted in another window. Nothing was changed.": {
       "comment": "Alert message: a bulk Undo or Redo where more than one transaction was changed or deleted in another window, so nothing was changed. %lld is how many.",
       "extractionState": "manual",
@@ -112,6 +222,30 @@
                 "stringUnit": {
                   "state": "translated",
                   "value": "%lld of these transactions were changed or deleted in another window. Nothing was changed."
+                }
+              }
+            }
+          }
+        }
+      }
+    },
+    "%lld transactions": {
+      "comment": "A backup's transaction count.",
+      "extractionState": "manual",
+      "localizations": {
+        "en": {
+          "variations": {
+            "plural": {
+              "one": {
+                "stringUnit": {
+                  "state": "translated",
+                  "value": "%lld transaction"
+                }
+              },
+              "other": {
+                "stringUnit": {
+                  "state": "translated",
+                  "value": "%lld transactions"
                 }
               }
             }
@@ -227,6 +361,259 @@
                 }
               }
             }
+          }
+        }
+      }
+    },
+    "All data on this %1$@ will be replaced with this backup (%2$@). Your current data is saved first as a Before restore backup, so you can go back. App Lock, Hide amounts, report exclusions and theme on this %1$@ don’t change.": {
+      "comment": "Warning before a restore. %1$@ is the device; %2$@ is the backup's summary, such as “Today, 9:12 AM · 3 accounts · 120 transactions”.",
+      "extractionState": "manual",
+      "localizations": {
+        "en": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "All data on this %1$@ will be replaced with this backup (%2$@). Your current data is saved first as a Before restore backup, so you can go back. App Lock, Hide amounts, report exclusions and theme on this %1$@ don’t change."
+          }
+        }
+      }
+    },
+    "Any backup can be deleted. Delete asks you to confirm, and asks for Face ID or the app passcode first when App Lock is on.": {
+      "comment": "Backup detail footnote on a device with Face ID; the Keep footer follows.",
+      "extractionState": "manual",
+      "localizations": {
+        "en": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Any backup can be deleted. Delete asks you to confirm, and asks for Face ID or the app passcode first when App Lock is on."
+          }
+        }
+      }
+    },
+    "Any backup can be deleted. Delete asks you to confirm, and asks for Optic ID or the app passcode first when App Lock is on.": {
+      "comment": "Backup detail footnote on a device with Optic ID; the Keep footer follows.",
+      "extractionState": "manual",
+      "localizations": {
+        "en": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Any backup can be deleted. Delete asks you to confirm, and asks for Optic ID or the app passcode first when App Lock is on."
+          }
+        }
+      }
+    },
+    "Any backup can be deleted. Delete asks you to confirm, and asks for Touch ID or the app passcode first when App Lock is on.": {
+      "comment": "Backup detail footnote on a device with Touch ID; the Keep footer follows.",
+      "extractionState": "manual",
+      "localizations": {
+        "en": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Any backup can be deleted. Delete asks you to confirm, and asks for Touch ID or the app passcode first when App Lock is on."
+          }
+        }
+      }
+    },
+    "Any backup can be deleted. Delete asks you to confirm, and asks for the app passcode first when App Lock is on.": {
+      "comment": "Backup detail footnote on a device with no biometry; the Keep footer follows.",
+      "extractionState": "manual",
+      "localizations": {
+        "en": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Any backup can be deleted. Delete asks you to confirm, and asks for the app passcode first when App Lock is on."
+          }
+        }
+      }
+    },
+    "Automatic": {
+      "comment": "Kind of a backup made automatically.",
+      "extractionState": "manual",
+      "localizations": {
+        "en": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Automatic"
+          }
+        }
+      }
+    },
+    "Automatic backup": {
+      "comment": "What VoiceOver says for an automatic backup's kind.",
+      "extractionState": "manual",
+      "localizations": {
+        "en": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Automatic backup"
+          }
+        }
+      }
+    },
+    "Automatic daily backups, Back Up Now, export and restore. Backups stay on this %@.": {
+      "comment": "Footer of the Backups row in Settings > Advanced. %@ is the device.",
+      "extractionState": "manual",
+      "localizations": {
+        "en": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Automatic daily backups, Back Up Now, export and restore. Backups stay on this %@."
+          }
+        }
+      }
+    },
+    "Back Up Now": {
+      "comment": "Button that makes a manual backup now, in the Backups screen and the macOS Backups tab.",
+      "extractionState": "manual",
+      "localizations": {
+        "en": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Back Up Now"
+          }
+        }
+      }
+    },
+    "Backup": {
+      "comment": "Title of the iOS backup detail screen.",
+      "extractionState": "manual",
+      "localizations": {
+        "en": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Backup"
+          }
+        }
+      }
+    },
+    "Backup complete": {
+      "comment": "VoiceOver announcement when Back Up Now finishes.",
+      "extractionState": "manual",
+      "localizations": {
+        "en": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Backup complete"
+          }
+        }
+      }
+    },
+    "Backup failed": {
+      "comment": "VoiceOver announcement when Back Up Now fails for a reason other than storage.",
+      "extractionState": "manual",
+      "localizations": {
+        "en": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Backup failed"
+          }
+        }
+      }
+    },
+    "Backup from %@": {
+      "comment": "First part of the Export summary. %@ is the backup's date.",
+      "extractionState": "manual",
+      "localizations": {
+        "en": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Backup from %@"
+          }
+        }
+      }
+    },
+    "Backup in progress": {
+      "comment": "VoiceOver announcement when Back Up Now starts.",
+      "extractionState": "manual",
+      "generatesSymbol": false,
+      "localizations": {
+        "en": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Backup in progress"
+          }
+        }
+      }
+    },
+    "Backup in progress…": {
+      "comment": "Shown while Back Up Now runs.",
+      "extractionState": "manual",
+      "localizations": {
+        "en": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Backup in progress…"
+          }
+        }
+      }
+    },
+    "Backup restored · Before restore backup saved": {
+      "comment": "iOS toast after a restore.",
+      "extractionState": "manual",
+      "localizations": {
+        "en": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Backup restored · Before restore backup saved"
+          }
+        }
+      }
+    },
+    "Backup restored. Your previous data is saved as a Before restore backup (%@).": {
+      "comment": "macOS Backups tab line after a restore. %@ is the Before restore backup's date.",
+      "extractionState": "manual",
+      "localizations": {
+        "en": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Backup restored. Your previous data is saved as a Before restore backup (%@)."
+          }
+        }
+      }
+    },
+    "Backups stay on this %@ and are never uploaded. Export one to keep a copy somewhere else.": {
+      "comment": "iOS Backups screen footer. %@ is the device: iPhone or iPad.",
+      "extractionState": "manual",
+      "localizations": {
+        "en": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Backups stay on this %@ and are never uploaded. Export one to keep a copy somewhere else."
+          }
+        }
+      }
+    },
+    "Backups stay on this %@, inside little-orbit’s own container, and are never uploaded. Export one to keep a copy somewhere else.": {
+      "comment": "macOS Backups tab footer. %@ is the device: Mac.",
+      "extractionState": "manual",
+      "localizations": {
+        "en": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Backups stay on this %@, inside little-orbit’s own container, and are never uploaded. Export one to keep a copy somewhere else."
+          }
+        }
+      }
+    },
+    "Before restore": {
+      "comment": "Kind of a backup saved just before a restore.",
+      "extractionState": "manual",
+      "localizations": {
+        "en": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Before restore"
+          }
+        }
+      }
+    },
+    "Before restore backup": {
+      "comment": "What VoiceOver says for a Before restore backup's kind.",
+      "extractionState": "manual",
+      "localizations": {
+        "en": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Before restore backup"
           }
         }
       }
@@ -363,6 +750,30 @@
         }
       }
     },
+    "Current data saved as a Before restore backup": {
+      "comment": "Restore progress step under the progress bar.",
+      "extractionState": "manual",
+      "localizations": {
+        "en": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Current data saved as a Before restore backup"
+          }
+        }
+      }
+    },
+    "Damaged": {
+      "comment": "Status of a damaged backup in the list.",
+      "extractionState": "manual",
+      "localizations": {
+        "en": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Damaged"
+          }
+        }
+      }
+    },
     "Delete %1$lld Transactions in %2$@": {
       "comment": "Undo name: several transactions deleted at once in one account (D198). %1$lld is the number of transactions; %2$@ is the account name.",
       "extractionState": "manual",
@@ -451,6 +862,55 @@
         }
       }
     },
+    "Delete %lld Backups": {
+      "comment": "Destructive button when lowering Keep deletes automatic backups. %lld is how many.",
+      "extractionState": "manual",
+      "generatesSymbol": false,
+      "localizations": {
+        "en": {
+          "variations": {
+            "plural": {
+              "one": {
+                "stringUnit": {
+                  "state": "translated",
+                  "value": "Delete %lld Backup"
+                }
+              },
+              "other": {
+                "stringUnit": {
+                  "state": "translated",
+                  "value": "Delete %lld Backups"
+                }
+              }
+            }
+          }
+        }
+      }
+    },
+    "Delete %lld Backups?": {
+      "comment": "Title of the confirmation when lowering Keep deletes automatic backups. %lld is how many.",
+      "extractionState": "manual",
+      "localizations": {
+        "en": {
+          "variations": {
+            "plural": {
+              "one": {
+                "stringUnit": {
+                  "state": "translated",
+                  "value": "Delete %lld Backup?"
+                }
+              },
+              "other": {
+                "stringUnit": {
+                  "state": "translated",
+                  "value": "Delete %lld Backups?"
+                }
+              }
+            }
+          }
+        }
+      }
+    },
     "Delete %lld Transactions": {
       "comment": "Undo name: several transactions deleted at once.",
       "extractionState": "manual",
@@ -483,6 +943,30 @@
           "stringUnit": {
             "state": "translated",
             "value": "Delete Account %@"
+          }
+        }
+      }
+    },
+    "Delete Backup": {
+      "comment": "Destructive button that confirms deleting one backup.",
+      "extractionState": "manual",
+      "localizations": {
+        "en": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Delete Backup"
+          }
+        }
+      }
+    },
+    "Delete This Backup?": {
+      "comment": "Title of the confirmation before deleting one backup.",
+      "extractionState": "manual",
+      "localizations": {
+        "en": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Delete This Backup?"
           }
         }
       }
@@ -635,6 +1119,18 @@
                 }
               }
             }
+          }
+        }
+      }
+    },
+    "Delete…": {
+      "comment": "Button on a backup that asks to delete it.",
+      "extractionState": "manual",
+      "localizations": {
+        "en": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Delete…"
           }
         }
       }
@@ -879,6 +1375,211 @@
         }
       }
     },
+    "Export": {
+      "comment": "The iOS Export sheet’s confirm button; the share sheet follows directly, so no ellipsis.",
+      "extractionState": "manual",
+      "generatesSymbol": false,
+      "localizations": {
+        "en": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Export"
+          }
+        }
+      }
+    },
+    "Export Backup": {
+      "comment": "Title of the Export sheet.",
+      "extractionState": "manual",
+      "localizations": {
+        "en": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Export Backup"
+          }
+        }
+      }
+    },
+    "Export…": {
+      "comment": "Button on a backup that opens the Export sheet (macOS, and the iOS backup detail).",
+      "extractionState": "manual",
+      "localizations": {
+        "en": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Export…"
+          }
+        }
+      }
+    },
+    "Format %lld": {
+      "comment": "A backup's format in the list. %lld is the format version.",
+      "extractionState": "manual",
+      "localizations": {
+        "en": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Format %lld"
+          }
+        }
+      }
+    },
+    "Format unknown": {
+      "comment": "Format of a damaged backup whose manifest can’t be read.",
+      "extractionState": "manual",
+      "localizations": {
+        "en": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Format unknown"
+          }
+        }
+      }
+    },
+    "It can’t be restored. Your data hasn’t changed.": {
+      "comment": "Alert message under “This Backup Is Damaged”.",
+      "extractionState": "manual",
+      "localizations": {
+        "en": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "It can’t be restored. Your data hasn’t changed."
+          }
+        }
+      }
+    },
+    "It’s removed from this %@. This can’t be undone.": {
+      "comment": "Message of the confirmation before deleting one backup. %@ is the device.",
+      "extractionState": "manual",
+      "localizations": {
+        "en": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "It’s removed from this %@. This can’t be undone."
+          }
+        }
+      }
+    },
+    "Keep": {
+      "comment": "Header of the retention settings section.",
+      "extractionState": "manual",
+      "localizations": {
+        "en": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Keep"
+          }
+        }
+      }
+    },
+    "Keep little-orbit open. If the restore is interrupted, your data stays exactly as it was before.": {
+      "comment": "Note on the restore progress screen.",
+      "extractionState": "manual",
+      "localizations": {
+        "en": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Keep little-orbit open. If the restore is interrupted, your data stays exactly as it was before."
+          }
+        }
+      }
+    },
+    "Keeping fewer automatic backups deletes %lld of them now. Manual and Before restore backups aren’t affected.": {
+      "comment": "Message of the confirmation when lowering Keep deletes automatic backups. %lld is how many.",
+      "extractionState": "manual",
+      "localizations": {
+        "en": {
+          "variations": {
+            "plural": {
+              "one": {
+                "stringUnit": {
+                  "state": "translated",
+                  "value": "Keeping fewer automatic backups deletes %lld of them now. Manual and Before restore backups aren’t affected."
+                }
+              },
+              "other": {
+                "stringUnit": {
+                  "state": "translated",
+                  "value": "Keeping fewer automatic backups deletes %lld of them now. Manual and Before restore backups aren’t affected."
+                }
+              }
+            }
+          }
+        }
+      }
+    },
+    "Last backup failed: not enough storage. Free up space on this %@, then click Back Up Now. No older backup was removed.": {
+      "comment": "macOS: the last backup failed for lack of storage. %@ is the device: Mac.",
+      "extractionState": "manual",
+      "localizations": {
+        "en": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Last backup failed: not enough storage. Free up space on this %@, then click Back Up Now. No older backup was removed."
+          }
+        }
+      }
+    },
+    "Last backup failed: not enough storage. Free up space on this %@, then tap Back Up Now. No older backup was removed.": {
+      "comment": "iOS: the last backup failed for lack of storage. %@ is the device: iPhone or iPad.",
+      "extractionState": "manual",
+      "localizations": {
+        "en": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Last backup failed: not enough storage. Free up space on this %@, then tap Back Up Now. No older backup was removed."
+          }
+        }
+      }
+    },
+    "Last backup: %@. little-orbit backs up once a day after you change something.": {
+      "comment": "Line above the Backups list. %@ is the last backup's date, such as “Today, 9:12 AM”.",
+      "extractionState": "manual",
+      "localizations": {
+        "en": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Last backup: %@. little-orbit backs up once a day after you change something."
+          }
+        }
+      }
+    },
+    "Made by a newer version of little-orbit.": {
+      "comment": "Status of a backup made by a newer app version, in the list.",
+      "extractionState": "manual",
+      "localizations": {
+        "en": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Made by a newer version of little-orbit."
+          }
+        }
+      }
+    },
+    "Manual": {
+      "comment": "Kind of a backup made with Back Up Now.",
+      "extractionState": "manual",
+      "localizations": {
+        "en": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Manual"
+          }
+        }
+      }
+    },
+    "Manual backup": {
+      "comment": "What VoiceOver says for a manual backup's kind.",
+      "extractionState": "manual",
+      "localizations": {
+        "en": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Manual backup"
+          }
+        }
+      }
+    },
     "Mixed types": {
       "comment": "Bulk edit: Category is off because the rows mix kinds.",
       "extractionState": "manual",
@@ -887,6 +1588,18 @@
           "stringUnit": {
             "state": "translated",
             "value": "Mixed types"
+          }
+        }
+      }
+    },
+    "Monthly Backups": {
+      "comment": "Stepper label: for how many months the first automatic backup of each month is kept (0–24).",
+      "extractionState": "manual",
+      "localizations": {
+        "en": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Monthly Backups"
           }
         }
       }
@@ -1019,6 +1732,30 @@
         }
       }
     },
+    "No Backups Yet": {
+      "comment": "Title of the Backups list when there are no backups.",
+      "extractionState": "manual",
+      "localizations": {
+        "en": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "No Backups Yet"
+          }
+        }
+      }
+    },
+    "Off": {
+      "comment": "Monthly Backups stepper value at 0.",
+      "extractionState": "manual",
+      "localizations": {
+        "en": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Off"
+          }
+        }
+      }
+    },
     "Payee isn’t applied to transfers": {
       "comment": "Bulk edit: under Payee when the selection includes a transfer.",
       "extractionState": "manual",
@@ -1031,6 +1768,18 @@
         }
       }
     },
+    "Recent Automatic Backups": {
+      "comment": "Stepper label: how many recent automatic backups are kept (1–30).",
+      "extractionState": "manual",
+      "localizations": {
+        "en": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Recent Automatic Backups"
+          }
+        }
+      }
+    },
     "Redid %@": {
       "comment": "VoiceOver announcement after Redo. %@ is the Redo name, such as \"Delete Transaction\".",
       "extractionState": "manual",
@@ -1039,6 +1788,54 @@
           "stringUnit": {
             "state": "translated",
             "value": "Redid %@"
+          }
+        }
+      }
+    },
+    "Replacing data…": {
+      "comment": "Restore progress step under the progress bar.",
+      "extractionState": "manual",
+      "localizations": {
+        "en": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Replacing data…"
+          }
+        }
+      }
+    },
+    "Restore This Backup?": {
+      "comment": "Title of the warning before a restore.",
+      "extractionState": "manual",
+      "localizations": {
+        "en": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Restore This Backup?"
+          }
+        }
+      }
+    },
+    "Restore from Backup…": {
+      "comment": "macOS File menu item that opens the Backups tab with its file panel.",
+      "extractionState": "manual",
+      "localizations": {
+        "en": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Restore from Backup…"
+          }
+        }
+      }
+    },
+    "Restore from File…": {
+      "comment": "Button that picks an exported backup file to restore (iOS Backups screen and macOS Backups tab).",
+      "extractionState": "manual",
+      "localizations": {
+        "en": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Restore from File…"
           }
         }
       }
@@ -1075,6 +1872,30 @@
                 }
               }
             }
+          }
+        }
+      }
+    },
+    "Restore…": {
+      "comment": "Button on a backup that asks to restore it.",
+      "extractionState": "manual",
+      "localizations": {
+        "en": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Restore…"
+          }
+        }
+      }
+    },
+    "Restoring Backup": {
+      "comment": "Title of the restore progress screen.",
+      "extractionState": "manual",
+      "localizations": {
+        "en": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Restoring Backup"
           }
         }
       }
@@ -1127,6 +1948,18 @@
         }
       }
     },
+    "The first automatic backup is made after you change something. You can also back up now or restore from a backup file.": {
+      "comment": "The macOS Backups tab when there are no backups.",
+      "extractionState": "manual",
+      "localizations": {
+        "en": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "The first automatic backup is made after you change something. You can also back up now or restore from a backup file."
+          }
+        }
+      }
+    },
     "The transaction": {
       "comment": "Alert message subject when a transaction has no payee or description.",
       "extractionState": "manual",
@@ -1151,6 +1984,42 @@
         }
       }
     },
+    "This Backup Is Damaged": {
+      "comment": "Alert title when a backup or backup file can’t be restored because it’s damaged.",
+      "extractionState": "manual",
+      "localizations": {
+        "en": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "This Backup Is Damaged"
+          }
+        }
+      }
+    },
+    "This backup is damaged and can’t be restored. Some of its files are missing or have changed.": {
+      "comment": "Damaged backup detail: why Restore and Export are unavailable.",
+      "extractionState": "manual",
+      "localizations": {
+        "en": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "This backup is damaged and can’t be restored. Some of its files are missing or have changed."
+          }
+        }
+      }
+    },
+    "This backup was made with a newer version of little-orbit. Your data hasn’t changed.": {
+      "comment": "Alert message under “Update little-orbit to Restore This Backup”.",
+      "extractionState": "manual",
+      "localizations": {
+        "en": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "This backup was made with a newer version of little-orbit. Your data hasn’t changed."
+          }
+        }
+      }
+    },
     "This change was removed from Undo history.": {
       "comment": "Alert line under the failure message: the failed Undo or Redo step was dropped (D193).",
       "extractionState": "manual",
@@ -1159,6 +2028,30 @@
           "stringUnit": {
             "state": "translated",
             "value": "This change was removed from Undo history."
+          }
+        }
+      }
+    },
+    "This file isn’t encrypted and contains all your financial data.": {
+      "comment": "The Export sheet’s warning line, on every export.",
+      "extractionState": "manual",
+      "localizations": {
+        "en": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "This file isn’t encrypted and contains all your financial data."
+          }
+        }
+      }
+    },
+    "Today, %@": {
+      "comment": "A backup's date today. %@ is the time, such as 9:12 AM.",
+      "extractionState": "manual",
+      "localizations": {
+        "en": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Today, %@"
           }
         }
       }
@@ -1187,6 +2080,54 @@
         }
       }
     },
+    "Unknown": {
+      "comment": "Kind or version of a damaged backup whose manifest can’t be read.",
+      "extractionState": "manual",
+      "localizations": {
+        "en": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Unknown"
+          }
+        }
+      }
+    },
+    "Unknown backup": {
+      "comment": "What VoiceOver says for a damaged backup whose kind can’t be read.",
+      "extractionState": "manual",
+      "localizations": {
+        "en": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Unknown backup"
+          }
+        }
+      }
+    },
+    "Update little-orbit to Restore This Backup": {
+      "comment": "Alert title when a backup was made by a newer version of the app.",
+      "extractionState": "manual",
+      "localizations": {
+        "en": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Update little-orbit to Restore This Backup"
+          }
+        }
+      }
+    },
+    "Update little-orbit to restore it.": {
+      "comment": "Line the detail adds after “Made by a newer version of little-orbit.”",
+      "extractionState": "manual",
+      "localizations": {
+        "en": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Update little-orbit to restore it."
+          }
+        }
+      }
+    },
     "Updated %lld transactions": {
       "comment": "Off-screen notice after Undo or Redo of an edit in an account not on screen. %lld is how many; \" in <account>\" follows.",
       "extractionState": "manual",
@@ -1211,6 +2152,54 @@
         }
       }
     },
+    "Version %lld": {
+      "comment": "A backup's format version in its detail. %lld is the version number.",
+      "extractionState": "manual",
+      "localizations": {
+        "en": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Version %lld"
+          }
+        }
+      }
+    },
+    "Warning": {
+      "comment": "What VoiceOver says for the Export sheet’s warning icon.",
+      "extractionState": "manual",
+      "localizations": {
+        "en": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Warning"
+          }
+        }
+      }
+    },
+    "Warning, This file isn’t encrypted and contains all your financial data.": {
+      "comment": "The Export sheet’s warning icon and line, read by VoiceOver as one element.",
+      "extractionState": "manual",
+      "localizations": {
+        "en": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Warning, This file isn’t encrypted and contains all your financial data."
+          }
+        }
+      }
+    },
+    "Yesterday, %@": {
+      "comment": "A backup's date yesterday. %@ is the time.",
+      "extractionState": "manual",
+      "localizations": {
+        "en": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Yesterday, %@"
+          }
+        }
+      }
+    },
     "Your change was saved, but couldn’t be read back, so it can’t be undone.": {
       "comment": "Alert message: a change was saved, but couldn't be read back, so it has no Undo step.",
       "extractionState": "manual",
@@ -1219,6 +2208,102 @@
           "stringUnit": {
             "state": "translated",
             "value": "Your change was saved, but couldn’t be read back, so it can’t be undone."
+          }
+        }
+      }
+    },
+    "little-orbit backs up once a day after you change something.": {
+      "comment": "When automatic backups run.",
+      "extractionState": "manual",
+      "localizations": {
+        "en": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "little-orbit backs up once a day after you change something."
+          }
+        }
+      }
+    },
+    "little-orbit keeps your %1$lld most recent automatic backups and the first automatic backup of each month for %2$lld months. Manual and Before restore backups are kept until you delete them.": {
+      "comment": "Keep footer. %1$lld is the Recent Automatic Backups count and %2$lld the Monthly Backups count, both 2 or more.",
+      "extractionState": "manual",
+      "localizations": {
+        "en": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "little-orbit keeps your %1$lld most recent automatic backups and the first automatic backup of each month for %2$lld months. Manual and Before restore backups are kept until you delete them."
+          }
+        }
+      }
+    },
+    "little-orbit keeps your %lld most recent automatic backups and the first automatic backup of this month. Manual and Before restore backups are kept until you delete them.": {
+      "comment": "Keep footer, Monthly Backups 1 month. %lld is the Recent Automatic Backups count, 2 or more.",
+      "extractionState": "manual",
+      "localizations": {
+        "en": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "little-orbit keeps your %lld most recent automatic backups and the first automatic backup of this month. Manual and Before restore backups are kept until you delete them."
+          }
+        }
+      }
+    },
+    "little-orbit keeps your %lld most recent automatic backups. Manual and Before restore backups are kept until you delete them.": {
+      "comment": "Keep footer, Monthly Backups off. %lld is the Recent Automatic Backups count, 2 or more.",
+      "extractionState": "manual",
+      "localizations": {
+        "en": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "little-orbit keeps your %lld most recent automatic backups. Manual and Before restore backups are kept until you delete them."
+          }
+        }
+      }
+    },
+    "little-orbit keeps your most recent automatic backup and the first automatic backup of each month for %lld months. Manual and Before restore backups are kept until you delete them.": {
+      "comment": "Keep footer: 1 recent automatic backup. %lld is the Monthly Backups count, 2 or more.",
+      "extractionState": "manual",
+      "localizations": {
+        "en": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "little-orbit keeps your most recent automatic backup and the first automatic backup of each month for %lld months. Manual and Before restore backups are kept until you delete them."
+          }
+        }
+      }
+    },
+    "little-orbit keeps your most recent automatic backup and the first automatic backup of this month. Manual and Before restore backups are kept until you delete them.": {
+      "comment": "Keep footer: 1 recent automatic backup, Monthly Backups 1 month.",
+      "extractionState": "manual",
+      "localizations": {
+        "en": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "little-orbit keeps your most recent automatic backup and the first automatic backup of this month. Manual and Before restore backups are kept until you delete them."
+          }
+        }
+      }
+    },
+    "little-orbit keeps your most recent automatic backup. Manual and Before restore backups are kept until you delete them.": {
+      "comment": "Keep footer: 1 recent automatic backup, Monthly Backups off.",
+      "extractionState": "manual",
+      "localizations": {
+        "en": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "little-orbit keeps your most recent automatic backup. Manual and Before restore backups are kept until you delete them."
+          }
+        }
+      }
+    },
+    "little-orbit makes a backup once a day after you change something. Backups stay on this %@.": {
+      "comment": "The iOS Backups screen when there are no backups. %@ is the device: iPhone or iPad.",
+      "extractionState": "manual",
+      "localizations": {
+        "en": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "little-orbit makes a backup once a day after you change something. Backups stay on this %@."
           }
         }
       }

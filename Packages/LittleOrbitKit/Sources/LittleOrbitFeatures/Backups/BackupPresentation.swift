@@ -4,8 +4,9 @@ import LittleOrbitDomain
 /// Copy and formatting for the Backups screens (#40), shared by iOS and macOS. Titles and buttons use title case;
 /// body text, messages and footnotes use sentence case (D118.4, D173.10). No amount is ever shown (D62).
 ///
-/// The sentences are English for now. They move to `Localizable.xcstrings` with positional arguments in the
-/// app-wide localization follow-up, once #87's `FeatureText.format` pattern is on main (N1).
+/// Every sentence is one whole entry in the String Catalog (`Resources/Localizable.xcstrings`), read through
+/// `FeatureText`, with positional arguments and catalog plurals where a translation needs them. The English text
+/// is Product Manager's wording.
 public struct BackupPresentation: Sendable {
     public var locale: Locale
     public var timeZone: TimeZone
@@ -30,169 +31,91 @@ public struct BackupPresentation: Sendable {
         device.name
     }
 
-    /// "tap" on iPhone and iPad, "click" on Mac (UI Designer, frame 168:2566).
-    private var pressVerb: String {
-        device == .mac ? "click" : "tap"
-    }
-
     // MARK: Buttons and titles (D173.10)
 
-    public static let backUpNow = "Back Up Now"
-    public static let restoreFromFile = "Restore from File…"
-    public static let restoreFromBackupMenu = "Restore from Backup…"
-    public static let restoreEllipsis = "Restore…"
-    public static let exportEllipsis = "Export…"
+    public static let backUpNow = FeatureText.format("Back Up Now")
+    public static let restoreFromFile = FeatureText.format("Restore from File…")
+    public static let restoreFromBackupMenu = FeatureText.format("Restore from Backup…")
+    public static let restoreEllipsis = FeatureText.format("Restore…")
+    public static let exportEllipsis = FeatureText.format("Export…")
     /// The iOS Export sheet's navigation-bar button: no ellipsis, since the share sheet follows directly
     /// (UI Designer, frame 277:4915). macOS keeps "Export…" (277:4581).
-    public static let exportConfirm = "Export"
-    public static let deleteBackup = "Delete Backup"
-    public static let deleteEllipsis = "Delete…"
-    public static let backupInProgress = "Backup in progress…"
+    public static let exportConfirm = FeatureText.format("Export")
+    public static let deleteBackup = FeatureText.format("Delete Backup")
+    public static let deleteEllipsis = FeatureText.format("Delete…")
+    public static let backupInProgress = FeatureText.format("Backup in progress…")
     /// VoiceOver announcements for Back Up Now (D179.2, UI Designer). A full disk announces
     /// `notEnoughStorageMessage` instead of the finish.
-    public static let backupStartedAnnouncement = "Backup in progress"
-    public static let backupFinishedAnnouncement = "Backup complete"
-    public static let backupFailedAnnouncement = "Backup failed"
+    public static let backupStartedAnnouncement = FeatureText.format("Backup in progress")
+    public static let backupFinishedAnnouncement = FeatureText.format("Backup complete")
+    public static let backupFailedAnnouncement = FeatureText.format("Backup failed")
     /// The iOS backup detail's title; the date is in its Date row (UI Designer, frame 165:504).
-    public static let detailTitle = "Backup"
+    public static let detailTitle = FeatureText.format("Backup")
     /// The restore steps under the progress bar (UI Designer, frames 165:1028 and 169:5070).
-    public static let savedCurrentDataStep = "Current data saved as a Before restore backup"
-    public static let replacingDataStep = "Replacing data…"
+    public static let savedCurrentDataStep = FeatureText.format("Current data saved as a Before restore backup")
+    public static let replacingDataStep = FeatureText.format("Replacing data…")
     /// Exported file names start with this (D116.4).
     public static let fileNamePrefix = "little-orbit"
-    public static let damagedTitle = "This Backup Is Damaged"
-    public static let damagedMessage = "It can’t be restored. Your data hasn’t changed."
-    public static let newerFormatTitle = "Update little-orbit to Restore This Backup"
-    public static let newerFormatMessage =
-        "This backup was made with a newer version of little-orbit. Your data hasn’t changed."
-    public static let restoreTitle = "Restore This Backup?"
-    public static let restoringTitle = "Restoring Backup"
-    public static let restoredToast = "Backup restored · Before restore backup saved"
-    public static let deleteTitle = "Delete This Backup?"
-    public static let emptyTitle = "No Backups Yet"
-    public static let exportTitle = "Export Backup"
+    public static let damagedTitle = FeatureText.format("This Backup Is Damaged")
+    public static let damagedMessage = FeatureText.format("It can’t be restored. Your data hasn’t changed.")
+    public static let newerFormatTitle = FeatureText.format("Update little-orbit to Restore This Backup")
+    public static let newerFormatMessage = FeatureText.format(
+        """
+        This backup was made with a newer version of little-orbit. Your data hasn’t changed.
+        """
+    )
+    public static let restoreTitle = FeatureText.format("Restore This Backup?")
+    public static let restoringTitle = FeatureText.format("Restoring Backup")
+    public static let restoredToast = FeatureText.format("Backup restored · Before restore backup saved")
+    public static let deleteTitle = FeatureText.format("Delete This Backup?")
+    public static let emptyTitle = FeatureText.format("No Backups Yet")
+    public static let exportTitle = FeatureText.format("Export Backup")
     /// The retention section (L11): standard Stepper rows, as UI Designer approved.
-    public static let keepHeader = "Keep"
-    public static let recentAutomaticBackups = "Recent Automatic Backups"
-    public static let monthlyBackups = "Monthly Backups"
-    public static let monthlyOff = "Off"
+    public static let keepHeader = FeatureText.format("Keep")
+    public static let recentAutomaticBackups = FeatureText.format("Recent Automatic Backups")
+    public static let monthlyBackups = FeatureText.format("Monthly Backups")
+    public static let monthlyOff = FeatureText.format("Off")
     /// A damaged backup in the list and its detail (D196.3, L29).
-    public static let damagedLabel = "Damaged"
-    public static let damagedExplanation =
-        "This backup is damaged and can’t be restored. Some of its files are missing or have changed."
+    public static let damagedLabel = FeatureText.format("Damaged")
+    public static let damagedExplanation = FeatureText.format(
+        """
+        This backup is damaged and can’t be restored. Some of its files are missing or have changed.
+        """
+    )
     /// A newer-format backup in the list, and the line its detail adds (D197.2, L35).
-    public static let newerFormatNote = "Made by a newer version of little-orbit."
-    public static let newerFormatDetail = "Update little-orbit to restore it."
+    public static let newerFormatNote = FeatureText.format("Made by a newer version of little-orbit.")
+    public static let newerFormatDetail = FeatureText.format("Update little-orbit to restore it.")
     /// The kind of a damaged folder whose manifest was never read.
-    public static let unknownKind = "Unknown"
+    public static let unknownKind = FeatureText.format("Unknown")
     /// The Export sheet's one line, on every export (D182.4).
-    public static let unencryptedWarning = "This file isn’t encrypted and contains all your financial data."
+    public static let unencryptedWarning = FeatureText.format(
+        """
+        This file isn’t encrypted and contains all your financial data.
+        """
+    )
     /// The note's SF Symbol, shown in the warning colour (UI Designer, frames 277:4915 and 277:4581).
     public static let unencryptedWarningSymbol = "exclamationmark.triangle.fill"
     /// What VoiceOver says for the warning icon, before the note.
-    public static let warning = "Warning"
+    public static let warning = FeatureText.format("Warning")
     /// The note as one VoiceOver element: "Warning, This file isn’t encrypted and contains all your financial
     /// data." (UI Designer, after Tester's 6335997896.)
-    public static let unencryptedWarningAccessibilityLabel = "\(warning), \(unencryptedWarning)"
-    public static let restoreInterruptedNote =
-        "Keep little-orbit open. If the restore is interrupted, your data stays exactly as it was before."
-
-    // MARK: Device-specific copy
-
-    public var emptyMessage: String {
-        if device == .mac {
-            // Frame 168:2267.
-            return "The first automatic backup is made after you change something. You can also back up now or "
-                + "restore from a backup file."
-        }
-        return "little-orbit makes a backup once a day after you change something. Backups stay on this "
-            + "\(deviceName)."
-    }
-
-    /// After "Last backup: …": when automatic backups run.
-    public var retentionNote: String {
-        "little-orbit backs up once a day after you change something."
-    }
-
-    /// The footer under Keep (L11), with the current N and M.
-    public var keepFooter: String {
-        let recent =
-            retention.recentAutomatic == 1
-            ? "your most recent automatic backup"
-            : "your \(retention.recentAutomatic) most recent automatic backups"
-        let monthly =
-            switch retention.monthlyMonths {
-            case 0: ""
-            case 1: " and the first automatic backup of this month"
-            default: " and the first automatic backup of each month for \(retention.monthlyMonths) months"
-            }
-        return "little-orbit keeps \(recent)\(monthly). Manual and Before restore backups are kept until you delete "
-            + "them."
-    }
-
-    /// The Monthly Backups stepper's value: "12 Months", "1 Month" or "Off" (L11).
-    public func monthlyValue(_ months: Int) -> String {
-        switch months {
-        case 0: Self.monthlyOff
-        case 1: "1 Month"
-        default: "\(months) Months"
-        }
-    }
-
-    /// 'Delete 4 Backups?' or 'Delete 1 Backup?' (L12, L14).
-    public func pruneTitle(_ count: Int) -> String {
-        "\(pruneConfirm(count))?"
-    }
-
-    /// The destructive button: 'Delete 4 Backups' or 'Delete 1 Backup' (L12, L14).
-    public func pruneConfirm(_ count: Int) -> String {
-        count == 1 ? "Delete 1 Backup" : "Delete \(count) Backups"
-    }
-
-    public func pruneMessage(_ count: Int) -> String {
-        let them = count == 1 ? "deletes 1 of them" : "deletes \(count) of them"
-        return "Keeping fewer automatic backups \(them) now. Manual and Before restore backups aren’t affected."
-    }
-
-    public var storageFooter: String {
-        if device == .mac {
-            return "Backups stay on this \(deviceName), inside little-orbit’s own container, and are never uploaded. "
-                + "Export one to keep a copy somewhere else."
-        }
-        return "Backups stay on this \(deviceName) and are never uploaded. Export one to keep a copy somewhere else."
-    }
-
-    public var notEnoughStorageMessage: String {
-        "Last backup failed: not enough storage. Free up space on this \(deviceName), then \(pressVerb) Back Up Now. "
-            + "No older backup was removed."
-    }
-
-    public var deleteMessage: String {
-        "It’s removed from this \(deviceName). This can’t be undone."
-    }
-
-    public var advancedFooter: String {
-        "Automatic daily backups, Back Up Now, export and restore. Backups stay on this \(deviceName)."
-    }
-
-    /// The Delete footnote on every backup's detail, naming the device's biometry, then the Keep footer (D116.1,
-    /// D196.1, L25): "Any backup can be deleted. Delete asks you to confirm, and asks for Face ID or the app
-    /// passcode first when App Lock is on. little-orbit keeps your 7 most recent automatic backups…"
-    public func deleteFootnote(_ method: AppUnlockMethod) -> String {
-        let unlock =
-            switch method {
-            case .faceID: "Face ID or the app passcode"
-            case .touchID: "Touch ID or the app passcode"
-            case .opticID: "Optic ID or the app passcode"
-            case .passcodeOnly: "the app passcode"
-            }
-        return "Any backup can be deleted. Delete asks you to confirm, and asks for \(unlock) first when App Lock is "
-            + "on. \(keepFooter)"
-    }
+    public static let unencryptedWarningAccessibilityLabel = FeatureText.format(
+        """
+        Warning, This file isn’t encrypted and contains all your financial data.
+        """
+    )
+    public static let restoreInterruptedNote = FeatureText.format(
+        """
+        Keep little-orbit open. If the restore is interrupted, your data stays exactly as it was before.
+        """
+    )
 
     /// The macOS tab's inline line after a restore (UI Designer, frame 169:5253). iOS shows `restoredToast`.
     public func restoredMessage(before: BackupRecord, now: Date) -> String {
-        "Backup restored. Your previous data is saved as a Before restore backup (\(date(before.createdAt, now: now)))."
+        FeatureText.format(
+            "Backup restored. Your previous data is saved as a Before restore backup (%@).",
+            date(before.createdAt, now: now),
+        )
     }
 
     /// The suggested export name, `little-orbit YYYY-MM-DD HHmm[ n].littleorbit-backup` (D116.4, D118.3): the
@@ -220,7 +143,7 @@ public struct BackupPresentation: Sendable {
     /// "Version 1" in the iOS backup detail; the list line keeps "Format 1" (frame 165:504). "Unknown" when the
     /// manifest was never read.
     public static func version(_ version: Int) -> String {
-        version > 0 ? "Version \(version)" : unknownKind
+        version > 0 ? FeatureText.format("Version %lld", version) : unknownKind
     }
 
     private static func pad(_ value: Int, _ width: Int) -> String {
@@ -231,19 +154,35 @@ public struct BackupPresentation: Sendable {
     public func restoreMessage(for manifest: BackupManifest, now: Date) -> String {
         let summary = [date(manifest.createdAt, now: now), counts(manifest.accountCount, manifest.transactionCount)]
             .joined(separator: " · ")
-        return "All data on this \(deviceName) will be replaced with this backup (\(summary)). Your current data is "
-            + "saved first as a Before restore backup, so you can go back. App Lock, Hide amounts, report "
-            + "exclusions and theme on this \(deviceName) don’t change."
+        return FeatureText.format(
+            """
+            All data on this %1$@ will be replaced with this backup (%2$@). Your current data is saved first \
+            as a Before restore backup, so you can go back. App Lock, Hide amounts, report exclusions and \
+            theme on this %1$@ don’t change.
+            """,
+            deviceName,
+            summary,
+        )
     }
 
     // MARK: Values
 
     public static func kind(_ kind: BackupKind?) -> String {
         switch kind {
-        case .automatic: "Automatic"
-        case .manual: "Manual"
-        case .beforeRestore: "Before restore"
+        case .automatic: FeatureText.format("Automatic")
+        case .manual: FeatureText.format("Manual")
+        case .beforeRestore: FeatureText.format("Before restore")
         case nil: unknownKind
+        }
+    }
+
+    /// "Automatic backup", as VoiceOver reads a row's kind.
+    static func kindBackup(_ kind: BackupKind?) -> String {
+        switch kind {
+        case .automatic: FeatureText.format("Automatic backup")
+        case .manual: FeatureText.format("Manual backup")
+        case .beforeRestore: FeatureText.format("Before restore backup")
+        case nil: FeatureText.format("Unknown backup")
         }
     }
 
@@ -256,17 +195,17 @@ public struct BackupPresentation: Sendable {
             Date.FormatStyle(locale: locale, calendar: calendar, timeZone: timeZone).hour().minute()
         )
         if calendar.isDate(date, inSameDayAs: now) {
-            return "Today, \(time)"
+            return FeatureText.format("Today, %@", time)
         }
         if let yesterday = calendar.date(byAdding: .day, value: -1, to: now),
             calendar.isDate(date, inSameDayAs: yesterday)
         {
-            return "Yesterday, \(time)"
+            return FeatureText.format("Yesterday, %@", time)
         }
         let day = date.formatted(
             Date.FormatStyle(locale: locale, calendar: calendar, timeZone: timeZone).day().month(.abbreviated).year()
         )
-        return "\(day), \(time)"
+        return FeatureText.format("%1$@, %2$@", day, time)
     }
 
     /// The stored file's size, attachments included (D116.5), formatted for the locale.
@@ -278,24 +217,27 @@ public struct BackupPresentation: Sendable {
     }
 
     public func counts(_ accounts: Int, _ transactions: Int) -> String {
-        "\(accounts) \(accounts == 1 ? "account" : "accounts") · "
-            + "\(transactions) \(transactions == 1 ? "transaction" : "transactions")"
+        FeatureText.format(
+            "%1$@ · %2$@",
+            FeatureText.plural("%lld accounts", one: "%lld account", accounts),
+            FeatureText.plural("%lld transactions", one: "%lld transaction", transactions),
+        )
     }
 
     public static func format(_ version: Int) -> String {
-        version > 0 ? "Format \(version)" : "Format \(unknownKind.lowercased())"
+        version > 0 ? FeatureText.format("Format %lld", version) : FeatureText.format("Format unknown")
     }
 
     /// The Export sheet's summary of the selected backup, on iOS and macOS (R1, S64, S76, D186).
     public func exportSummary(_ record: BackupRecord, now: Date) -> String {
         var parts = [
-            "Backup from \(date(record.createdAt, now: now))",
+            FeatureText.format("Backup from %@", date(record.createdAt, now: now)),
             Self.kind(record.kind),
-            "\(record.accountCount) \(record.accountCount == 1 ? "account" : "accounts")",
-            "\(record.transactionCount) \(record.transactionCount == 1 ? "transaction" : "transactions")",
+            FeatureText.plural("%lld accounts", one: "%lld account", record.accountCount),
+            FeatureText.plural("%lld transactions", one: "%lld transaction", record.transactionCount),
         ]
         if record.attachmentCount > 0 {
-            parts.append("\(record.attachmentCount) \(record.attachmentCount == 1 ? "attachment" : "attachments")")
+            parts.append(FeatureText.plural("%lld attachments", one: "%lld attachment", record.attachmentCount))
         }
         return parts.joined(separator: " · ")
     }
@@ -315,7 +257,7 @@ public struct BackupPresentation: Sendable {
             switch record.condition {
             case .restorable: nil
             case .damaged: Self.damagedExplanation
-            case .newerFormat: "\(Self.newerFormatNote) \(Self.newerFormatDetail)"
+            case .newerFormat: FeatureText.format("%1$@ %2$@", Self.newerFormatNote, Self.newerFormatDetail)
             }
         return BackupRowModel(
             id: record.id,
@@ -326,8 +268,13 @@ public struct BackupPresentation: Sendable {
             formatText: Self.format(record.formatVersion),
             countsText: countsText,
             detailLine: [kind, sizeText, Self.format(record.formatVersion)].joined(separator: " · "),
-            accessibilityLabel: ([title, "\(kind) backup"] + (status.map { [$0] } ?? []) + [
-                sizeText, countsText.replacingOccurrences(of: " · ", with: ", "),
+            accessibilityLabel: ([title, Self.kindBackup(record.kind)] + (status.map { [$0] } ?? []) + [
+                sizeText,
+                FeatureText.format(
+                    "%1$@, %2$@",
+                    FeatureText.plural("%lld accounts", one: "%lld account", record.accountCount),
+                    FeatureText.plural("%lld transactions", one: "%lld transaction", record.transactionCount),
+                ),
             ])
             .joined(separator: ", "),
             accountCount: record.accountCount,

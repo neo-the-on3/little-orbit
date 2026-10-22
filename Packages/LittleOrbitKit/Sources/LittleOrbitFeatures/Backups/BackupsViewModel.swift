@@ -187,7 +187,7 @@ public final class BackupsViewModel {
         rows = overview.backups.map { presentation.row($0, now: moment) }
         if let last = overview.lastBackup {
             lastBackupText =
-                "Last backup: \(presentation.date(last.createdAt, now: moment)). " + presentation.retentionNote
+                presentation.lastBackup(presentation.date(last.createdAt, now: moment))
         } else {
             lastBackupText = nil
         }
