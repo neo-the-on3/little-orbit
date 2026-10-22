@@ -173,8 +173,8 @@ struct FakeBackupArchiving: BackupArchiving {
         let data: Data =
             switch archive {
             case .data(let data): data
-            // A file that can't be read throws its own error, the way Apple Archive's reader does.
-            case .file(let url): try Data(contentsOf: url)
+            // A file that can't be read at all is `unreadableFile`, the way Apple Archive's reader does (D207.2).
+            case .file(let url): try Self.read(url)
             }
         guard let stored = try? JSONDecoder().decode([Stored].self, from: data) else {
             throw BackupError.damaged
@@ -202,6 +202,13 @@ struct FakeBackupArchiving: BackupArchiving {
             data.withUnsafeBytes { body($0) }
             return nil
         }
+    }
+
+    static func read(_ url: URL) throws -> Data {
+        guard let data = try? Data(contentsOf: url) else {
+            throw BackupError.unreadableFile
+        }
+        return data
     }
 
     static func crafted(_ entries: [BackupArchiveEntry]) throws -> Data {

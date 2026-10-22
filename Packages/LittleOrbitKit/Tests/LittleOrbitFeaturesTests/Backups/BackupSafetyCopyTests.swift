@@ -59,7 +59,7 @@ struct BackupSafetyCopyTests {
         #expect(window.alert?.title == "Couldn’t Restore")
         #expect(
             window.alert?.message
-                == "The backup of your current data didn’t pass its check, so nothing was replaced. Your data hasn’t changed."
+                == "little-orbit couldn’t make a safe copy of your current data first, so nothing was replaced. Your data hasn’t changed."
         )
         #expect(window.toast == nil)
         #expect(try fixture.source.base.ledgerSnapshot() == current)

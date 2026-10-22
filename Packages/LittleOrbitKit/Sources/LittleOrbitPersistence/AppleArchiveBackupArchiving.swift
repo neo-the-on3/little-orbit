@@ -150,20 +150,36 @@ import LittleOrbitDomain
                         url.stopAccessingSecurityScopedResource()
                     }
                 }
-                // A file that can't be opened at all, like one in iCloud Drive that isn't downloaded, throws its own
-                // read error, not `damaged` (N1).
-                try FileHandle(forReadingFrom: url).close()
-                guard
-                    let stream = ArchiveByteStream.fileStream(
-                        path: FilePath(url.path),
-                        mode: .readOnly,
-                        options: [],
-                        permissions: FilePermissions(rawValue: 0o644),
-                    )
-                else {
-                    throw CocoaError(.fileReadUnknown)
-                }
+                return try Self.entries(ofFileAt: url, reading: reading)
+            }
+        }
+
+        /// A picked file, read through `FileReadByteStream`. Any read or I/O error on the way, opening it or
+        /// partway through (like iCloud Drive evicting it mid-read), is `unreadableFile`, never `damaged`: only a
+        /// file that was read and fails a check is damaged (D207.2). `failingAfter` is for tests.
+        static func entries(
+            ofFileAt url: URL,
+            failingAfter limit: Int? = nil,
+            reading: (String) -> BackupArchiveRead,
+        ) throws -> [BackupArchiveEntry] {
+            let file: FileReadByteStream
+            do {
+                file = try FileReadByteStream(url, failingAfter: limit)
+            } catch {
+                throw BackupError.unreadableFile
+            }
+            guard let stream = ArchiveByteStream.customStream(instance: file) else {
+                try? file.close()
+                throw BackupError.unreadableFile
+            }
+            do {
                 return try Self.entries(of: stream, reading: reading)
+            } catch {
+                // The decoder reports a failed read as a bad archive, so the stream's own record decides.
+                if file.readFailed {
+                    throw BackupError.unreadableFile
+                }
+                throw error
             }
         }
 

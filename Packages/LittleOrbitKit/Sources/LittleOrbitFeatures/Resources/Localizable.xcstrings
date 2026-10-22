@@ -750,8 +750,20 @@
         }
       }
     },
+    "Couldn’t Open Backup": {
+      "comment": "Alert title when a picked backup file can’t be read at all: an I/O or permission error, or a file that isn’t downloaded (D207.2). The only button is OK.",
+      "extractionState": "manual",
+      "localizations": {
+        "en": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Couldn’t Open Backup"
+          }
+        }
+      }
+    },
     "Couldn’t Restore": {
-      "comment": "Alert title when a restore stopped before replacing anything, because the backup of the current data made first didn’t pass its check.",
+      "comment": "Alert title when a restore stopped before replacing anything, because the safe copy of the current data made first didn’t pass its check (D207.1). The only button is OK.",
       "extractionState": "manual",
       "localizations": {
         "en": {
@@ -1960,14 +1972,14 @@
         }
       }
     },
-    "The backup of your current data didn’t pass its check, so nothing was replaced. Your data hasn’t changed.": {
-      "comment": "Alert message under “Couldn’t Restore”.",
+    "The file couldn’t be read. Make sure it’s fully downloaded and try again. Your data hasn’t changed.": {
+      "comment": "Alert message under “Couldn’t Open Backup” (D207.2).",
       "extractionState": "manual",
       "localizations": {
         "en": {
           "stringUnit": {
             "state": "translated",
-            "value": "The backup of your current data didn’t pass its check, so nothing was replaced. Your data hasn’t changed."
+            "value": "The file couldn’t be read. Make sure it’s fully downloaded and try again. Your data hasn’t changed."
           }
         }
       }
@@ -2244,6 +2256,18 @@
           "stringUnit": {
             "state": "translated",
             "value": "little-orbit backs up once a day after you change something."
+          }
+        }
+      }
+    },
+    "little-orbit couldn’t make a safe copy of your current data first, so nothing was replaced. Your data hasn’t changed.": {
+      "comment": "Alert message under “Couldn’t Restore” (D207.1).",
+      "extractionState": "manual",
+      "localizations": {
+        "en": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "little-orbit couldn’t make a safe copy of your current data first, so nothing was replaced. Your data hasn’t changed."
           }
         }
       }

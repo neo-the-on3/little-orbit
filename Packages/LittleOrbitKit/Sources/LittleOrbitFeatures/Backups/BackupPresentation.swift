@@ -59,10 +59,16 @@ public struct BackupPresentation: Sendable {
     public static let damagedTitle = FeatureText.format("This Backup Is Damaged")
     public static let damagedMessage = FeatureText.format("It can’t be restored. Your data hasn’t changed.")
     public static let newerFormatTitle = FeatureText.format("Update little-orbit to Restore This Backup")
-    /// The restore stopped before replacing anything: its Before restore backup didn't pass its check (D63, B3).
+    /// The restore stopped before replacing anything: its Before restore backup didn't pass its check (D63, B3,
+    /// Product Manager D207.1).
     public static let beforeRestoreFailedTitle = FeatureText.format("Couldn’t Restore")
     public static let beforeRestoreFailedMessage = FeatureText.format(
-        "The backup of your current data didn’t pass its check, so nothing was replaced. Your data hasn’t changed."
+        "little-orbit couldn’t make a safe copy of your current data first, so nothing was replaced. Your data hasn’t changed."
+    )
+    /// A picked file couldn't be read at all, for example an iCloud Drive file that isn't downloaded (D207.2).
+    public static let unreadableFileTitle = FeatureText.format("Couldn’t Open Backup")
+    public static let unreadableFileMessage = FeatureText.format(
+        "The file couldn’t be read. Make sure it’s fully downloaded and try again. Your data hasn’t changed."
     )
     public static let newerFormatMessage = FeatureText.format(
         """

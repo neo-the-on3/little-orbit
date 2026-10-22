@@ -16,10 +16,15 @@ public struct BackupAlert: Identifiable, Equatable, Sendable {
         title: BackupPresentation.newerFormatTitle,
         message: BackupPresentation.newerFormatMessage,
     )
-    /// The Before restore backup didn't check out, so nothing was replaced (D63, B3).
+    /// The Before restore backup didn't check out, so nothing was replaced (D63, B3, D207.1).
     public static let beforeRestoreFailed = BackupAlert(
         title: BackupPresentation.beforeRestoreFailedTitle,
         message: BackupPresentation.beforeRestoreFailedMessage,
+    )
+    /// A picked file couldn't be read at all (D207.2). One that's read but fails a check is `damaged`.
+    public static let unreadableFile = BackupAlert(
+        title: BackupPresentation.unreadableFileTitle,
+        message: BackupPresentation.unreadableFileMessage,
     )
 }
 
@@ -217,6 +222,8 @@ public final class BackupsViewModel {
             .alert(.newerFormat)
         case .beforeRestoreFailed:
             .alert(.beforeRestoreFailed)
+        case .unreadableFile:
+            .alert(.unreadableFile)
         case .notEnoughStorage, .busy:
             .none
         default:
