@@ -2,6 +2,7 @@
     import Foundation
     import LittleOrbitDomain
     @testable import LittleOrbitPersistence
+    import SQLite3
     import SwiftData
     import XCTest
 
@@ -112,6 +113,53 @@
                 XCTAssertTrue(fresh.splits?.isEmpty ?? false)
                 XCTAssertTrue(fresh.attachments?.isEmpty ?? false)
             }
+        }
+
+        /// `payeeReferenceCount` filters transactions by payee. The payee is a to-one relationship, so its
+        /// column is a foreign key that the store indexes itself; no `#Index` (and no schema change) is needed
+        /// (D191.4).
+        func testThePayeeColumnIsIndexed() throws {
+            let directory = FileManager.default.temporaryDirectory
+                .appendingPathComponent("little-orbit-\(UUID().uuidString)", isDirectory: true)
+            try FileManager.default.createDirectory(at: directory, withIntermediateDirectories: true)
+            defer { try? FileManager.default.removeItem(at: directory) }
+            let url = directory.appendingPathComponent("ledger.store")
+            try onMain {
+                let repository = try LittleOrbitStore.makeRepository(configuration: StoreConfiguration(fileURL: url))
+                let account = try saveCash(in: repository, opening: "100")
+                let payee = Payee(name: "Trailhead Sports")
+                try repository.savePayee(payee)
+                try repository.saveTransaction(
+                    Transaction(type: .expense, amount: decimal("10"), accountID: account.id, payeeID: payee.id)
+                )
+                XCTAssertEqual(try repository.payeeReferenceCount(payee.id), 1)
+            }
+            let indexes = try indexDefinitions(in: url)
+            XCTAssertTrue(
+                indexes.contains { $0.contains("ZTRANSACTIONRECORD") && $0.contains("ZPAYEE") },
+                "\(indexes)",
+            )
+        }
+
+        private func indexDefinitions(in url: URL) throws -> [String] {
+            var database: OpaquePointer?
+            defer { sqlite3_close(database) }
+            guard sqlite3_open_v2(url.path, &database, SQLITE_OPEN_READONLY, nil) == SQLITE_OK else {
+                throw CocoaError(.fileReadUnknown)
+            }
+            var statement: OpaquePointer?
+            defer { sqlite3_finalize(statement) }
+            let query = "SELECT sql FROM sqlite_master WHERE type = 'index' AND sql IS NOT NULL"
+            guard sqlite3_prepare_v2(database, query, -1, &statement, nil) == SQLITE_OK else {
+                throw CocoaError(.fileReadUnknown)
+            }
+            var definitions: [String] = []
+            while sqlite3_step(statement) == SQLITE_ROW {
+                if let text = sqlite3_column_text(statement, 0) {
+                    definitions.append(String(cString: text))
+                }
+            }
+            return definitions
         }
 
         private func write(_ account: Account, configuration: StoreConfiguration) throws {

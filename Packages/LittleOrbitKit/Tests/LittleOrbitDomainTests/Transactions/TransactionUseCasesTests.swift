@@ -52,9 +52,11 @@ struct TransactionUseCasesTests {
         let save = TransactionUseCases(repository: repository).saveTransactions
         let when = F.date(2026, 10, 20)
         #expect(try save.resolvePayee(named: "   ", createdAt: when) == nil)
-        let corner = try #require(try save.resolvePayee(named: " Corner Shop ", createdAt: when))
-        #expect(corner.name == "Corner Shop")
-        #expect(try save.resolvePayee(named: "corner shop", createdAt: when)?.id == corner.id)
+        let created = try #require(try save.resolvePayee(named: " Corner Shop ", createdAt: when))
+        #expect(created.payee.name == "Corner Shop")
+        #expect(created.isNew)
+        let found = try #require(try save.resolvePayee(named: "corner shop", createdAt: when))
+        #expect(found == ResolvedPayee(payee: created.payee, isNew: false))
         #expect(try repository.payees().count == 1)
     }
 

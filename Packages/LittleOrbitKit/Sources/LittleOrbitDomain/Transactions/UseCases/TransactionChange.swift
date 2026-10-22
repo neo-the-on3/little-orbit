@@ -13,6 +13,17 @@ public struct RemovedTransaction: Equatable, Sendable {
     }
 }
 
+/// A payee found or saved for a typed name, and whether this call saved it (`SaveTransactionsUseCase`).
+public struct ResolvedPayee: Equatable, Sendable {
+    public var payee: Payee
+    public var isNew: Bool
+
+    public init(payee: Payee, isNew: Bool) {
+        self.payee = payee
+        self.isNew = isNew
+    }
+}
+
 /// An account removed by a delete, with every transaction that went with it (either side of a transfer),
 /// so Undo can restore it all (#93, D164.5).
 public struct RemovedAccount: Equatable, Sendable {
@@ -39,24 +50,75 @@ public enum TransactionChange: Equatable, Sendable {
     case removedAccount(RemovedAccount)
     /// Revert by deleting the account again, with its transactions.
     case addedAccount(UUID)
+    /// A save that also created these payees from typed text (D191.4). Revert reverts the save, then
+    /// removes each payee that nothing else uses and no one has changed since; any other stays, silently.
+    indirect case createdPayees([Payee], TransactionChange)
+    /// Revert by putting these payees back, with the same IDs, then reverting the change (Redo, D191.4a.3).
+    indirect case removedPayees([Payee], TransactionChange)
+
+    /// `change`, plus the payees its save created, if any.
+    public static func saved(_ change: TransactionChange, creating payees: [Payee]) -> TransactionChange {
+        payees.isEmpty ? change : .createdPayees(payees, change)
+    }
+
+    /// `change`, plus the payees Undo removed with it, if any, for Redo to put back.
+    static func saved(_ change: TransactionChange, removing payees: [Payee]) -> TransactionChange {
+        payees.isEmpty ? change : .removedPayees(payees, change)
+    }
+
+    /// This change with every use of one payee moved to another.
+    func replacingPayee(_ payeeID: UUID, with otherID: UUID) -> TransactionChange {
+        func moved(_ transaction: Transaction) -> Transaction {
+            var transaction = transaction
+            if transaction.payeeID == payeeID {
+                transaction.payeeID = otherID
+            }
+            return transaction
+        }
+        func moved(_ item: RemovedTransaction) -> RemovedTransaction {
+            var item = item
+            item.transaction = moved(item.transaction)
+            return item
+        }
+        switch self {
+        case .removed(let items): return .removed(items.map(moved))
+        case .replaced(let versions): return .replaced(versions.map(moved))
+        case .removedAccount(var removed):
+            removed.transactions = removed.transactions.map(moved)
+            return .removedAccount(removed)
+        case .createdPayees(let payees, let change):
+            return .createdPayees(payees, change.replacingPayee(payeeID, with: otherID))
+        case .removedPayees(let payees, let change):
+            return .removedPayees(payees, change.replacingPayee(payeeID, with: otherID))
+        case .added, .addedAccount: return self
+        }
+    }
+
+    /// The transaction or account change itself, without the payees that come and go with it.
+    public var core: TransactionChange {
+        switch self {
+        case .createdPayees(_, let change), .removedPayees(_, let change): change.core
+        case .removed, .added, .replaced, .removedAccount, .addedAccount: self
+        }
+    }
 
     /// The transactions the change touches.
     public var transactionIDs: [UUID] {
-        switch self {
+        switch core {
         case .removed(let items): items.map(\.transaction.id)
         case .added(let ids): ids
         case .replaced(let items): items.map(\.id)
         case .removedAccount(let removed): removed.transactions.map(\.transaction.id)
-        case .addedAccount: []
+        case .addedAccount, .createdPayees, .removedPayees: []
         }
     }
 
     /// The account a whole-account change is about; empty for transaction changes.
     public var accountIDs: [UUID] {
-        switch self {
+        switch core {
         case .removedAccount(let removed): [removed.account.id]
         case .addedAccount(let id): [id]
-        case .removed, .added, .replaced: []
+        case .removed, .added, .replaced, .createdPayees, .removedPayees: []
         }
     }
 }

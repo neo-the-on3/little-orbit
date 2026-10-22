@@ -18,7 +18,8 @@ public enum UndoActionTitle {
     /// Transactions". Bulk changes include the count, so the menus say exactly what will be undone (Kiran's
     /// Q1 on #87). Redo keeps the name of the user's change, not of its inverse (see `WindowUndoHistory`).
     public static func base(of change: TransactionChange) -> String {
-        switch change {
+        // A payee the save created doesn't change the name: "Undo New Transaction" (D191.4).
+        switch change.core {
         case .removed(let items):
             if items.count == 1 {
                 FeatureText.string("Delete Transaction", comment: "Undo name: one transaction deleted.")
@@ -53,7 +54,7 @@ public enum UndoActionTitle {
                 "Delete Account \(removed.account.name)",
                 comment: "Undo name: an account deleted, with its name.",
             )
-        case .addedAccount:
+        case .addedAccount, .createdPayees, .removedPayees:
             FeatureText.string("New Account", comment: "Undo name: an account added.")
         }
     }

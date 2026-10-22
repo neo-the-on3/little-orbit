@@ -465,9 +465,12 @@ public final class TransactionFormViewModel {
         }
         do {
             var draft = draft
-            draft.payeeID = type == .transfer ? nil : try resolvePayee()
+            let resolved = type == .transfer ? nil : try resolvePayee()
+            draft.payeeID = resolved?.payee.id
             let transaction = draft.transaction(accounts: accounts, now: now())
-            return try saveTransactions.save([transaction])
+            // A payee this save created goes with it on Undo, unless something else uses it by then (D191.4).
+            let created = resolved.flatMap { $0.isNew ? [$0.payee] : nil } ?? []
+            return try saveTransactions.save([transaction], creating: created)
         } catch {
             errorMessage = AccountHistoryViewModel.message(for: error)
             return nil
@@ -475,19 +478,20 @@ public final class TransactionFormViewModel {
     }
 
     /// The chosen payee, an existing one with the typed name, or a new one.
-    private func resolvePayee() throws -> UUID? {
+    private func resolvePayee() throws -> ResolvedPayee? {
         if let payeeID {
-            return payeeID
+            let chosen = payees.first { $0.id == payeeID } ?? Payee(id: payeeID)
+            return ResolvedPayee(payee: chosen, isNew: false)
         }
         guard let name = TransactionText.trimmed(payeeText) else {
             return nil
         }
-        guard let payee = try saveTransactions.resolvePayee(named: name, createdAt: now()) else {
+        guard let resolved = try saveTransactions.resolvePayee(named: name, createdAt: now()) else {
             return nil
         }
-        if !payees.contains(where: { $0.id == payee.id }) {
-            payees.append(payee)
+        if !payees.contains(where: { $0.id == resolved.payee.id }) {
+            payees.append(resolved.payee)
         }
-        return payee.id
+        return resolved
     }
 }

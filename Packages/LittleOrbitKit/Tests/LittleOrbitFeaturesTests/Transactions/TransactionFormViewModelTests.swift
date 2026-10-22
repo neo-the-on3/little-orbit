@@ -247,10 +247,16 @@ struct TransactionFormViewModelTests {
         let model = model(repository)
         type("90", into: model)
         model.payeeText = "Corner Bakery"
-        _ = model.save()
+        let change = model.save()
         let payee = try #require(try repository.payees().first)
         #expect(payee.name == "Corner Bakery")
         #expect(try repository.transactions().first?.payeeID == payee.id)
+        // The new payee comes with the change, so Undo can remove it again (D191.4).
+        guard case .createdPayees(let created, .added) = change else {
+            Issue.record("Expected an add that created the payee: \(String(describing: change))")
+            return
+        }
+        #expect(created.map(\.id) == [payee.id])
     }
 
     @Test("Description autocomplete offers earlier descriptions")

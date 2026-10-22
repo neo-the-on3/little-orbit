@@ -52,6 +52,7 @@ func assertLedgerAcceptance(make: MakeRepository) throws {
     try assertDeletedRecordsAreHiddenFromQueries(make: make)
     try assertSeedCategoriesAreIdempotent(make: make)
     try assertNamesAreTrimmedAndPayeesMerge(make: make)
+    try assertPayeeReferenceCount(make: make)
     try assertSplitsMustSumToTheTransaction(make: make)
     try assertAttachmentLimit(make: make)
     try assertYenRejectsAFractionalAmount(make: make)

@@ -9,7 +9,8 @@ struct ChangeChecker {
     func outcome(of change: TransactionChange) throws -> ChangeOutcome {
         let current = Dictionary(uniqueKeysWithValues: try repository.transactions().map { ($0.id, $0) })
         var outcome = ChangeOutcome()
-        switch change {
+        // The payees a save created have their own, silent rule (D191.4a); the check is on the change.
+        switch change.core {
         case .removed(let items):
             outcome.removedTransactionIDs = Set(items.map(\.transaction.id))
             outcome.accountIDs = Self.accounts(of: items.map(\.transaction))
@@ -30,6 +31,8 @@ struct ChangeChecker {
             outcome.removedTransactionIDs = Set(removed.transactions.map(\.transaction.id))
             outcome.accountIDs = Self.accounts(of: removed.transactions.map(\.transaction))
                 .subtracting([removed.account.id])
+        case .createdPayees, .removedPayees:
+            break
         case .addedAccount(let id):
             outcome.accountIDs = [id]
             let contents = current.values.filter { $0.accountID == id || $0.transferAccountID == id }

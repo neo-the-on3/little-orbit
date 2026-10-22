@@ -79,6 +79,18 @@
             try mutate { try LedgerBook.savingPayee(payee, in: $0, now: now()) }
         }
 
+        public func payeeReferenceCount(_ payeeID: UUID) throws -> Int {
+            // Inside `atomically` the writes so far are only in the batch's snapshot until its one save, so
+            // the count reads them there; otherwise it's one count query on the store.
+            if let batch {
+                return batch.payeeReferenceCount(payeeID)
+            }
+            let descriptor = FetchDescriptor<LittleOrbitSchemaV1.TransactionRecord>(
+                predicate: #Predicate { $0.payee?.id == payeeID && $0.deletedAt == nil }
+            )
+            return try context.fetchCount(descriptor)
+        }
+
         public func deletePayee(id: UUID) throws {
             try mutate { try LedgerBook.deletingPayee(id: id, in: $0, now: now()) }
         }

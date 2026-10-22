@@ -23,6 +23,10 @@ public protocol LedgerRepository: AnyObject {
     func savePayee(_ payee: Payee) throws
     func deletePayee(id: UUID) throws
     func mergePayees(_ sourceID: UUID, into survivingID: UUID) throws
+    /// How many live records use this payee, so Undo can tell whether a payee its save created may go
+    /// (D191.4). Today only transactions can: a scheduled occurrence is a transaction, and there is no
+    /// scheduled-transaction template, rule or split payee yet. A model that gets a payee must join the count.
+    func payeeReferenceCount(_ payeeID: UUID) throws -> Int
 
     func tags() throws -> [Tag]
     func saveTag(_ tag: Tag) throws

@@ -86,3 +86,33 @@ func assertBalanceCountsOnlyTransactionsDatedUpToToday(make: MakeRepository) thr
     let tomorrow = CalendarDay(year: 2026, month: 10, day: 21)
     XCTAssertEqual(try repository.balance(of: account.id, today: tomorrow), decimal("60"))
 }
+
+/// The live transactions that use a payee, Undo's test for removing a payee its save created (D191.4). Inside
+/// `atomically` the count sees the change's own writes.
+@MainActor
+func assertPayeeReferenceCount(make: MakeRepository) throws {
+    let repository = try make()
+    let account = try saveCash(in: repository, opening: "100")
+    let payee = Payee(name: "Trailhead Sports")
+    let other = Payee(name: "Corner Shop")
+    try repository.savePayee(payee)
+    try repository.savePayee(other)
+    let first = Transaction(type: .expense, amount: decimal("10"), accountID: account.id, payeeID: payee.id)
+    let second = Transaction(type: .expense, amount: decimal("20"), accountID: account.id, payeeID: payee.id)
+    try repository.saveTransaction(first)
+    try repository.saveTransaction(second)
+    XCTAssertEqual(try repository.payeeReferenceCount(payee.id), 2)
+    XCTAssertEqual(try repository.payeeReferenceCount(other.id), 0)
+
+    try repository.atomically {
+        try repository.deleteTransaction(id: first.id)
+        XCTAssertEqual(try repository.payeeReferenceCount(payee.id), 1, "the count sees the pending delete")
+        var moved = second
+        moved.payeeID = other.id
+        try repository.saveTransaction(moved)
+        XCTAssertEqual(try repository.payeeReferenceCount(payee.id), 0)
+        XCTAssertEqual(try repository.payeeReferenceCount(other.id), 1)
+    }
+    XCTAssertEqual(try repository.payeeReferenceCount(payee.id), 0, "deleted transactions don't count")
+    XCTAssertEqual(try repository.payeeReferenceCount(other.id), 1)
+}
