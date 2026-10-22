@@ -116,4 +116,18 @@ struct BackupReadFailureTests {
         #expect(!BackupReadFailure.isReadFailure(UnexpectedError()))
         #expect(!BackupReadFailure.isReadFailure(CocoaError(.fileWriteOutOfSpace)))
     }
+
+    @Test("A write or permission code counts only when the store raised it reading a stored backup's file")
+    func writeCodesOnlyFromStoredReads() {
+        for code in [CocoaError.Code.fileWriteNoPermission, .fileWriteVolumeReadOnly] {
+            #expect(!BackupReadFailure.isReadFailure(CocoaError(code)))
+            #expect(BackupReadFailure.isReadFailure(BackupFileReadError(CocoaError(code))))
+        }
+        let wrapped = NSError(
+            domain: NSCocoaErrorDomain,
+            code: CocoaError.Code.fileWriteNoPermission.rawValue,
+            userInfo: [NSUnderlyingErrorKey: NSError(domain: NSPOSIXErrorDomain, code: Int(EACCES))],
+        )
+        #expect(!BackupReadFailure.isReadFailure(wrapped))
+    }
 }

@@ -338,9 +338,12 @@ final class LockedFilesStorage: BackupStorage, @unchecked Sendable {
     private let lock = NSLock()
     private var readsFail = false
     private(set) var deletes = 0
+    /// What a read throws while the files are locked.
+    private let failure: any Error
 
-    init(folder: URL) throws {
+    init(folder: URL, failure: any Error = CocoaError(.fileReadNoPermission)) throws {
         base = try FileBackupStorage(folder: folder)
+        self.failure = failure
     }
 
     func lockFiles() {
@@ -353,14 +356,14 @@ final class LockedFilesStorage: BackupStorage, @unchecked Sendable {
 
     func listing(id: UUID) throws -> BackupFolderListing {
         if lock.withLock({ readsFail }) {
-            throw CocoaError(.fileReadNoPermission)
+            throw failure
         }
         return try base.listing(id: id)
     }
 
     func read(id: UUID) throws -> BackupSnapshotFiles {
         if lock.withLock({ readsFail }) {
-            throw CocoaError(.fileReadNoPermission)
+            throw failure
         }
         return try base.read(id: id)
     }
