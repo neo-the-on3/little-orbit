@@ -236,8 +236,10 @@ struct BackupsViewModelTests {
         let object = try #require(JSONSerialization.jsonObject(with: manifest) as? [String: Any])
         #expect(object["encryption"] == nil)
         #expect(object["formatVersion"] as? Int == 1)
-        // Saved or cancelled, the file and its folder go when the panel closes.
-        window.finishExport()
+        // Saved: SwiftUI sets isPresented to false, then calls onCompletion. The file and its folder go (B4).
+        #expect(window.isExportPresented)
+        window.isExportPresented = false
+        window.exportCompleted(.success(FileManager.default.temporaryDirectory.appendingPathComponent(file.fileName)))
         #expect(window.pendingExport == nil)
         #expect(!FileManager.default.fileExists(atPath: file.url.deletingLastPathComponent().path))
         #expect(((try? FileManager.default.contentsOfDirectory(atPath: staging)) ?? []).isEmpty)

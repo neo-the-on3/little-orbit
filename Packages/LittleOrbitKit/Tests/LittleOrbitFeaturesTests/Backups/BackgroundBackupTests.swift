@@ -110,6 +110,52 @@ struct BackgroundBackupTests {
         #expect(fixture.stagingIsEmpty)
     }
 
+    @Test("A launch backup still running when the app goes to the background gets the background time")
+    func launchBackupGetsTime() async throws {
+        let fixture = try StreamingFixture(size: Self.size)
+        let model = fixture.harness.viewModel()
+        let activity = FakeBackgroundActivity()
+        fixture.source.hooks.gate(3)
+        let launch = Task { await model.backUpAutomaticallyIfNeeded() }
+        try await wait { fixture.source.hooks.hasReachedGate }
+
+        let background = model.backUpInBackground(activity)
+        #expect(background != nil)
+        #expect(activity.begun == ["Automatic backup"])
+        fixture.source.hooks.release()
+        await background?.value
+        await launch.value
+
+        // The one launch backup, finished inside the assertion; the background trigger made no second one.
+        #expect(activity.ended == [BackgroundActivityID(rawValue: 1)])
+        #expect(try await fixture.harness.service.overview().backups.map(\.kind) == [.automatic])
+        #expect(!model.isBackingUp)
+    }
+
+    @Test("When the time runs out, a launch backup still running is cancelled cleanly too")
+    func launchBackupExpires() async throws {
+        let fixture = try StreamingFixture(size: Self.size)
+        let model = fixture.harness.viewModel()
+        let activity = FakeBackgroundActivity()
+        fixture.source.hooks.gate(3)
+        let launch = Task { await model.backUpAutomaticallyIfNeeded() }
+        try await wait { fixture.source.hooks.hasReachedGate }
+
+        let background = model.backUpInBackground(activity)
+        activity.expire()
+        fixture.source.hooks.release()
+        await background?.value
+        await launch.value
+
+        #expect(activity.ended == [BackgroundActivityID(rawValue: 1)])
+        #expect(fixture.folders.isEmpty)
+        #expect(fixture.stagingIsEmpty)
+        #expect(try await fixture.harness.service.overview().lastFailure == nil)
+        #expect(!model.isBackingUp)
+        await model.backUpInBackground(activity)?.value
+        #expect(try await fixture.harness.service.overview().backups.map(\.kind) == [.automatic])
+    }
+
     @Test("Without background time, on macOS, the backup still runs")
     func withoutActivity() async throws {
         let fixture = try StreamingFixture(size: 10)

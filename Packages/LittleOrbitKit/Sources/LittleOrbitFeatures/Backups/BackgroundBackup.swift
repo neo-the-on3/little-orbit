@@ -31,12 +31,20 @@ final class BackgroundBackupRun {
     private let activity: (any BackgroundActivity)?
     private var id: BackgroundActivityID?
     private(set) var task: Task<Void, Never>?
+    private var onExpiry: @MainActor () -> Void = {}
 
     init(activity: (any BackgroundActivity)?) {
         self.activity = activity
     }
 
-    func start(_ work: @escaping @MainActor () async -> Void, finished: @escaping @MainActor () -> Void) {
+    /// Runs `work` inside the assertion. If the time runs out, `expired` runs first, at once, then the task is
+    /// cancelled. That is how a run `work` only waits for, like a launch backup still going, is cancelled too.
+    func start(
+        _ work: @escaping @MainActor () async -> Void,
+        expired: @escaping @MainActor () -> Void = {},
+        finished: @escaping @MainActor () -> Void,
+    ) {
+        onExpiry = expired
         id = activity?
             .begin(Self.name) { [weak self] in
                 self?.expire()
@@ -49,6 +57,7 @@ final class BackgroundBackupRun {
     }
 
     private func expire() {
+        onExpiry()
         task?.cancel()
         end()
     }

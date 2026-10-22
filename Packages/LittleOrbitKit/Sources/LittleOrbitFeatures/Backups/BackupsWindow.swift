@@ -109,12 +109,34 @@ public final class BackupsWindow {
         exportPrompt = nil
     }
 
-    /// The share sheet or save panel closed, saved or cancelled: the export's file is removed (B2).
+    /// Removes the export's file, if there is one (B2). Safe to call more than once.
     public func finishExport() {
         if let pendingExport {
             model.discardExport(pendingExport)
         }
         pendingExport = nil
+    }
+
+    /// `fileExporter`'s `isPresented`. SwiftUI sets it to `false` when the save panel closes: before `onCompletion`
+    /// on a save, and with `onCancellation` on a cancel. The file has been copied by then, so that's when it's
+    /// removed (Tech Architect B4). iOS and macOS both export through `fileExporter`; there's no other share path.
+    public var isExportPresented: Bool {
+        get { pendingExport != nil }
+        set {
+            if !newValue {
+                finishExport()
+            }
+        }
+    }
+
+    /// `fileExporter`'s `onCompletion`, after `isExportPresented` was set to `false`. Saved or not, the file goes.
+    public func exportCompleted(_ result: Result<URL, any Error>) {
+        finishExport()
+    }
+
+    /// `fileExporter`'s `onCancellation`, after `isExportPresented` was set to `false`.
+    public func exportCancelled() {
+        finishExport()
     }
 
     // MARK: Restore

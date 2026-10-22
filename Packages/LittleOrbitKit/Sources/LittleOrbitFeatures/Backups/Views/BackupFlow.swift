@@ -58,6 +58,19 @@
             )
         }
 
+        /// The save panel's binding. Closing the panel sets it to `false`, which removes the export's file (B4).
+        /// Only the screen on top presents the panel, and only it passes the close on, as with the other bindings.
+        static func exportPresented(_ window: BackupsWindow, isActive: Bool = true) -> Binding<Bool> {
+            Binding(
+                get: { isActive && window.isExportPresented },
+                set: {
+                    if isActive {
+                        window.isExportPresented = $0
+                    }
+                },
+            )
+        }
+
         private func isPresented<Item>(_ keyPath: ReferenceWritableKeyPath<BackupsWindow, Item?>) -> Binding<Bool> {
             Binding(
                 get: { isActive && window[keyPath: keyPath] != nil },
@@ -76,15 +89,15 @@
                     Task { await window.restoreFromFile(.file(url)) }
                 }
                 .fileExporter(
-                    isPresented: isPresented(\.pendingExport),
+                    isPresented: Self.exportPresented(window, isActive: isActive),
                     document: window.pendingExport.map { BackupFileDocument(url: $0.url) },
-                    contentType: .littleOrbitBackup,
+                    contentTypes: [.littleOrbitBackup],
                     defaultFilename: window.pendingExport.map {
                         String($0.fileName.dropLast(BackupFormat.fileExtension.count + 1))
                     },
-                ) { _ in
-                    window.finishExport()
-                }
+                    onCompletion: { window.exportCompleted($0) },
+                    onCancellation: { window.exportCancelled() },
+                )
                 .sheet(item: presented(\.exportPrompt)) { prompt in
                     ExportBackupSheet(window: window, prompt: prompt)
                 }
