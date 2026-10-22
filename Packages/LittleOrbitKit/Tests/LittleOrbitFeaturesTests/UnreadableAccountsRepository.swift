@@ -34,6 +34,7 @@ final class UnreadableAccountsRepository: LedgerRepository {
 
     func saveTransaction(_ transaction: Transaction) throws { try base.saveTransaction(transaction) }
     func deleteTransaction(id: UUID) throws { try base.deleteTransaction(id: id) }
+    func payeeReferenceCount(_ payeeID: UUID) throws -> Int { try base.payeeReferenceCount(payeeID) }
     func recordScheduledOccurrence(_ transaction: Transaction) throws -> Transaction {
         try base.recordScheduledOccurrence(transaction)
     }

@@ -5,8 +5,9 @@ import LittleOrbitPersistence
 import Testing
 
 /// A transaction's category and payee are fields like any other in the stale check (D187.5): if window B
-/// changes one that window A's step changed, A's Undo is stale and writes nothing. Only the category and
-/// payee records themselves (their names, a merge) aren't checked, because no undo step writes them.
+/// changes one that window A's step changed, A's Undo is stale and writes nothing. The category and payee
+/// records themselves (their names, a merge) aren't checked: no undo step edits them, and a payee a step
+/// created goes on Undo only if nothing uses it and no one renamed it, silently otherwise (D191.4).
 @MainActor
 @Suite("Stale undo steps: a transaction's category and payee")
 struct WindowUndoCategoryPayeeTests {
@@ -50,6 +51,68 @@ struct WindowUndoCategoryPayeeTests {
         return setup
     }
 
+    /// Saves a new transaction with a typed payee name in `window`, as the form does.
+    private func add(_ transaction: Transaction, payee name: String, in window: TestWindow, _ setup: Setup) throws {
+        let resolved = try #require(
+            try setup.useCases.saveTransactions.resolvePayee(named: name, createdAt: F.date(2026, 10, 21))
+        )
+        var transaction = transaction
+        transaction.payeeID = resolved.payee.id
+        let created = resolved.isNew ? [resolved.payee] : []
+        window.history.record(try setup.useCases.saveTransactions.save([transaction], creating: created))
+    }
+
+    @Test("N3: A's Undo of a new transaction removes its new payee; Redo brings both back, same IDs")
+    func newPayeeUndoAndRedo() throws {
+        let setup = try setup([])
+        let spend = F.expense(2_500, on: F.date(2026, 10, 21))
+        try add(spend, payee: "Trailhead Sports", in: setup.first, setup)
+        let payee = try #require(try setup.repository.payees().first { $0.name == "Trailhead Sports" })
+        #expect(setup.first.history.undoTitle == "New Transaction in Everyday Savings")
+
+        setup.first.history.undo()
+        #expect(setup.first.history.alert == nil)
+        #expect(try setup.repository.transactions().isEmpty)
+        #expect(try !setup.repository.payees().contains { $0.id == payee.id })
+
+        setup.first.history.redo()
+        #expect(try setup.repository.payees().filter { $0.name == "Trailhead Sports" }.map(\.id) == [payee.id])
+        #expect(try setup.repository.transactions().map(\.payeeID) == [payee.id])
+    }
+
+    @Test("N3c: B renames A's new payee; A's Undo has no alert and keeps it, Redo links to the new name")
+    func newPayeeRenamedElsewhere() throws {
+        let setup = try setup([])
+        try add(F.expense(2_500, on: F.date(2026, 10, 21)), payee: "Trailhead Sports", in: setup.first, setup)
+        var payee = try #require(try setup.repository.payees().first { $0.name == "Trailhead Sports" })
+        payee.name = "Trailhead Outdoor"
+        try setup.repository.savePayee(payee)
+        let count = try setup.repository.payees().count
+
+        setup.first.history.undo()
+        #expect(setup.first.history.alert == nil)
+        #expect(try setup.repository.transactions().isEmpty)
+        #expect(try setup.repository.payees().first { $0.id == payee.id }?.name == "Trailhead Outdoor")
+
+        setup.first.history.redo()
+        #expect(setup.first.history.alert == nil)
+        #expect(try setup.repository.payees().count == count, "no second payee")
+        #expect(try setup.repository.transactions().map(\.payeeID) == [payee.id])
+    }
+
+    @Test("N3a: B uses A's new payee too; A's Undo keeps it")
+    func newPayeeUsedElsewhere() throws {
+        let setup = try setup([])
+        try add(F.expense(2_500, on: F.date(2026, 10, 21)), payee: "Trailhead Sports", in: setup.first, setup)
+        try add(F.expense(900, on: F.date(2026, 10, 21)), payee: "Trailhead Sports", in: setup.second, setup)
+        let payee = try #require(try setup.repository.payees().first { $0.name == "Trailhead Sports" })
+
+        setup.first.history.undo()
+        #expect(setup.first.history.alert == nil)
+        #expect(try setup.repository.transactions().map(\.payeeID) == [payee.id])
+        #expect(try setup.repository.payees().contains { $0.id == payee.id })
+    }
+
     private var three: [Transaction] {
         [
             F.expense(450, on: F.date(2026, 10, 18), details: "Corner Bakery"),
@@ -69,7 +132,7 @@ struct WindowUndoCategoryPayeeTests {
         let revision = setup.updates.revision
 
         setup.first.history.undo()
-        #expect(setup.first.history.alert?.title == "Can't Undo Edit 3 Transactions")
+        #expect(setup.first.history.alert?.title == "Can't Undo Edit 3 Transactions in Everyday Savings")
         #expect(
             setup.first.history.alert?.message == "Corner Bakery was changed in another window. Nothing was changed."
         )
@@ -91,7 +154,7 @@ struct WindowUndoCategoryPayeeTests {
         let before = try setup.repository.transactions()
 
         setup.first.history.undo()
-        #expect(setup.first.history.alert?.title == "Can't Undo Edit Transaction")
+        #expect(setup.first.history.alert?.title == "Can't Undo Edit Transaction in Everyday Savings")
         #expect(
             setup.first.history.alert?.message
                 == "Maple Noodle Bar was changed in another window. Nothing was changed."

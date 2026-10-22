@@ -55,8 +55,13 @@ public protocol SaveTransactionsUseCase {
     /// Saves new or edited transactions, all or none, and returns the revertible change: `.added` for new
     /// ones, `.replaced` with the stored versions for edits.
     func save(_ transactions: [Transaction]) throws -> TransactionChange
+    /// `save(_:)` for a save that used these payees `resolvePayee` just created. The change carries them as
+    /// stored after the save, which sets their default category, so Undo can tell later edits (D191.4a.1).
+    func save(_ transactions: [Transaction], creating payees: [Payee]) throws -> TransactionChange
     /// The payee with this name (case-insensitive), saving a new one if there is none. `nil` for a blank name.
-    func resolvePayee(named name: String, createdAt: Date) throws -> Payee?
+    /// A new one comes back with `isNew` set, so the caller can record it with its change
+    /// (`TransactionChange.saved(_:creating:)`) and Undo can remove it again (D191.4).
+    func resolvePayee(named name: String, createdAt: Date) throws -> ResolvedPayee?
 }
 
 @MainActor
@@ -164,6 +169,13 @@ public struct DefaultSaveTransactionsUseCase: SaveTransactionsUseCase {
         try repository.atomically { try saveAll(transactions) }
     }
 
+    public func save(_ transactions: [Transaction], creating payees: [Payee]) throws -> TransactionChange {
+        try repository.atomically {
+            let change = try saveAll(transactions)
+            return .saved(change, creating: try PayeeCleanup(repository: repository).stored(payees))
+        }
+    }
+
     private func saveAll(_ transactions: [Transaction]) throws -> TransactionChange {
         let stored = Dictionary(uniqueKeysWithValues: try repository.transactions().map { ($0.id, $0) })
         var previous: [Transaction] = []
@@ -176,21 +188,18 @@ public struct DefaultSaveTransactionsUseCase: SaveTransactionsUseCase {
         return previous.isEmpty ? .added(transactions.map(\.id)) : .replaced(previous)
     }
 
-    public func resolvePayee(named name: String, createdAt: Date) throws -> Payee? {
+    public func resolvePayee(named name: String, createdAt: Date) throws -> ResolvedPayee? {
         let trimmed = name.trimmingCharacters(in: .whitespacesAndNewlines)
         guard !trimmed.isEmpty else {
             return nil
         }
-        if let existing = try repository.payees()
-            .first(where: {
-                $0.deletedAt == nil && $0.name.compare(trimmed, options: [.caseInsensitive]) == .orderedSame
-            })
-        {
-            return existing
+        if let existing = try repository.payees().first(where: { $0.isLive(named: trimmed) }) {
+            return ResolvedPayee(payee: existing, isNew: false)
         }
         let payee = Payee(name: trimmed, createdAt: createdAt)
         try repository.savePayee(payee)
-        return payee
+        let stored = try repository.payees().first { $0.id == payee.id } ?? payee
+        return ResolvedPayee(payee: stored, isNew: true)
     }
 }
 
@@ -218,6 +227,7 @@ public struct DefaultTransactionChangesUseCase: TransactionChangesUseCase {
         try repository.atomically {
             let checker = ChangeChecker(repository: repository)
             if case .stale(let reason) = try checker.check(change, expecting: outcome) {
+                // Nothing is written, so a payee the step's save created stays too, which is harmless (D191.4a.2).
                 return .stale(reason)
             }
             let inverse = try revertAll(change, expecting: outcome)
@@ -229,13 +239,13 @@ public struct DefaultTransactionChangesUseCase: TransactionChangesUseCase {
         // Every version the change touches: before it and, for an edit or an add, after it (D166.3).
         let current = try repository.transactions()
         let versions: [Transaction] =
-            switch change {
+            switch change.core {
             case .removed(let items): items.map(\.transaction)
             case .replaced(let previous):
                 previous + current.filter { now in previous.contains { $0.id == now.id } }
             case .added(let ids): current.filter { ids.contains($0.id) }
             // Whole-account changes carry their account in the change itself.
-            case .removedAccount, .addedAccount: []
+            case .removedAccount, .addedAccount, .createdPayees, .removedPayees: []
             }
         let ids = Set(versions.flatMap { [$0.accountID, $0.transferAccountID].compactMap(\.self) })
         let transfers = versions.compactMap { version -> TransferImpact? in
@@ -276,6 +286,17 @@ public struct DefaultTransactionChangesUseCase: TransactionChangesUseCase {
 
     private func revertAll(_ change: TransactionChange, expecting outcome: ChangeOutcome) throws -> TransactionChange {
         switch change {
+        case .createdPayees(let payees, let change):
+            // Undo: the change first, so the count no longer sees it; then its unused payees (D191.4).
+            let inverse = try revertAll(change, expecting: outcome)
+            return .saved(inverse, removing: try PayeeCleanup(repository: repository).removeUnused(payees))
+        case .removedPayees(let payees, let change):
+            // Redo: the payees first, with their IDs, so the transactions can use them (D191.4a.3).
+            let cleanup = PayeeCleanup(repository: repository)
+            let (restored, change) = try cleanup.restore(payees, for: change)
+            let inverse = try revertAll(change, expecting: outcome)
+            // As stored now: reapplying the transactions sets their default category again.
+            return .saved(inverse, creating: try cleanup.stored(restored))
         case .removed(let items):
             try restore(items)
             return .added(items.map(\.transaction.id))
@@ -288,27 +309,31 @@ public struct DefaultTransactionChangesUseCase: TransactionChangesUseCase {
         case .added(let ids):
             return try removeAll(ids: ids)
         case .replaced(let previous):
-            let current = Dictionary(uniqueKeysWithValues: try repository.transactions().map { ($0.id, $0) })
-            var inverse: [Transaction] = []
-            for old in previous {
-                guard let now = current[old.id] else {
-                    continue
-                }
-                inverse.append(now)
-                guard now != outcome.transactions[old.id] else {
-                    // Nothing else changed it: the earlier version goes back as it was.
-                    try repository.saveTransaction(old)
-                    continue
-                }
-                // Another window changed fields this change didn't touch; those keep their new values.
-                var merged = now
-                for field in outcome.touchedFields[old.id] ?? Set(TransactionField.allCases) {
-                    field.copy(from: old, into: &merged)
-                }
-                try repository.saveTransaction(merged)
-            }
-            return .replaced(inverse)
+            return try revertEdits(previous, expecting: outcome)
         }
+    }
+
+    private func revertEdits(_ previous: [Transaction], expecting outcome: ChangeOutcome) throws -> TransactionChange {
+        let current = Dictionary(uniqueKeysWithValues: try repository.transactions().map { ($0.id, $0) })
+        var inverse: [Transaction] = []
+        for old in previous {
+            guard let now = current[old.id] else {
+                continue
+            }
+            inverse.append(now)
+            guard now != outcome.transactions[old.id] else {
+                // Nothing else changed it: the earlier version goes back as it was.
+                try repository.saveTransaction(old)
+                continue
+            }
+            // Another window changed fields this change didn't touch; those keep their new values.
+            var merged = now
+            for field in outcome.touchedFields[old.id] ?? Set(TransactionField.allCases) {
+                field.copy(from: old, into: &merged)
+            }
+            try repository.saveTransaction(merged)
+        }
+        return .replaced(inverse)
     }
 }
 

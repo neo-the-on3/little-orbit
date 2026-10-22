@@ -44,7 +44,7 @@ public final class WindowUndoHistory {
     /// A failed Undo or Redo and what queued behind it (`WindowUndoHistory+Failure.swift`).
     @ObservationIgnored var failure = UndoFailureBlock()
     @ObservationIgnored private let changes: any TransactionChangesUseCase
-    @ObservationIgnored private let loadLedger: any LoadTransactionLedgerUseCase
+    @ObservationIgnored let loadLedger: any LoadTransactionLedgerUseCase
     @ObservationIgnored private let updates: LedgerUpdates
     /// Runs work after the current Undo or Redo returns, when the `UndoManager` takes steps again.
     @ObservationIgnored let later: (@escaping @MainActor () -> Void) -> Void
@@ -71,7 +71,7 @@ public final class WindowUndoHistory {
             self.change = change
             self.outcome = outcome
             self.impact = impact
-            if case .removedAccount(let removed) = change {
+            if case .removedAccount(let removed) = change.core {
                 account = removed.account
             } else {
                 account = nil
@@ -349,7 +349,7 @@ public final class WindowUndoHistory {
             if screen == .account(account.id) {
                 return nil
             }
-            let restoring = if case .addedAccount = step.change { true } else { false }
+            let restoring = if case .addedAccount = step.change.core { true } else { false }
             return UndoNotice(
                 message: restoring ? UndoText.restoredAccount(account.name) : UndoText.deletedAccount(account.name),
                 accountID: restoring ? account.id : nil,
@@ -362,62 +362,14 @@ public final class WindowUndoHistory {
         let count = step.change.transactionIDs.count
         // `step.change` is the inverse now: an Undo of a delete leaves `.added`, and so on.
         let effect: UndoText.Effect =
-            switch step.change {
+            switch step.change.core {
             case .added: .restored
             case .removed: .deleted
-            case .replaced, .removedAccount, .addedAccount: .updated
+            case .replaced, .removedAccount, .addedAccount, .createdPayees, .removedPayees: .updated
             }
         return UndoNotice(
             message: UndoActionTitle.placed(UndoText.notice(effect, count: count), step.impact),
             accountID: accounts.first?.id,
         )
-    }
-
-    // MARK: Stale steps
-
-    /// "Corner Bakery was changed in another window. Nothing was changed." (D187.5, X1–X6).
-    private func staleMessage(_ reason: StaleReason, _ step: Step) -> String {
-        switch reason {
-        case .accountDeleted(let ids):
-            let name = (step.impact.accounts + [step.account].compactMap(\.self))
-                .first { ids.contains($0.id) }?
-                .name
-            return StaleText.deleted(name ?? StaleText.theAccount)
-        case .deleted(let ids):
-            return staleRecords(ids, step, deleted: true)
-        case .changed(let ids):
-            return staleRecords(ids, step, deleted: false)
-        case .changedAndDeleted(let changed, let deleted):
-            return StaleText.changedOrDeleted(changed.count + deleted.count)
-        }
-    }
-
-    private func staleRecords(_ ids: [UUID], _ step: Step, deleted: Bool) -> String {
-        // One stale record is named, even in a bulk step; more are counted (D189.2).
-        if ids.count > 1 {
-            return StaleText.changedOrDeleted(ids.count)
-        }
-        let name: String
-        if let id = ids.first, let transaction = version(of: id, in: step) {
-            name = StaleText.name(of: transaction, payees: (try? loadLedger.ledger().payees) ?? [])
-        } else if let account = step.account {
-            name = account.name
-        } else {
-            name = StaleText.theTransaction
-        }
-        return deleted ? StaleText.deleted(name) : StaleText.changed(name)
-    }
-
-    /// A version of the transaction the step knows, for its name.
-    private func version(of id: UUID, in step: Step) -> Transaction? {
-        if let left = step.outcome.transactions[id] {
-            return left
-        }
-        switch step.change {
-        case .removed(let items): return items.first { $0.transaction.id == id }?.transaction
-        case .replaced(let versions): return versions.first { $0.id == id }
-        case .removedAccount(let removed): return removed.transactions.first { $0.transaction.id == id }?.transaction
-        case .added, .addedAccount: return nil
-        }
     }
 }

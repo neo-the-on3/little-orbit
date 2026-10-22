@@ -22,7 +22,7 @@ extension UndoActionTitle {
         let action: Action
         let count: Int
         let isTransfer: Bool
-        switch change {
+        switch change.core {
         case .removed(let items):
             (action, count) = (.delete, items.count)
             isTransfer = items.count == 1 && items[0].transaction.type == .transfer
@@ -32,7 +32,7 @@ extension UndoActionTitle {
         case .replaced(let items):
             (action, count) = (.edit, items.count)
             isTransfer = items.count == 1 && items[0].type == .transfer
-        case .removedAccount, .addedAccount:
+        case .removedAccount, .addedAccount, .createdPayees, .removedPayees:
             return base(of: change)
         }
         if count != 1 {

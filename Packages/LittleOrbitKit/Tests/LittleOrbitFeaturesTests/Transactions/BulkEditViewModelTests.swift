@@ -77,10 +77,12 @@ struct BulkEditViewModelTests {
             saved.map(\.categoryID).sorted { "\(String(describing: $0))" < "\(String(describing: $1))" }
                 == rows.map(\.categoryID).sorted { "\(String(describing: $0))" < "\(String(describing: $1))" }
         )
-        if case .replaced(let previous) = change {
+        // The new payee comes with the change, so Undo can remove it again (D191.4, #93 N3b).
+        if case .createdPayees(let payees, .replaced(let previous)) = change {
+            #expect(payees.map(\.id) == [bakery.id])
             #expect(previous.count == 5)
         } else {
-            Issue.record("Expected a replaced change")
+            Issue.record("Expected a replaced change that created the payee")
         }
     }
 

@@ -201,8 +201,11 @@ public final class BulkEditViewModel {
         }
         do {
             var changes = changes
+            var created: [Payee] = []
             if editsPayee {
-                changes.payeeID = .some(try resolvePayee())
+                let resolved = try resolvePayee()
+                changes.payeeID = .some(resolved?.payee.id)
+                created = resolved.flatMap { $0.isNew ? [$0.payee] : nil } ?? []
             }
             let updated = BulkEditRules.apply(
                 changes,
@@ -214,23 +217,24 @@ public final class BulkEditViewModel {
             if changed.isEmpty {
                 return .replaced([])
             }
-            return try saveTransactions.save(changed)
+            // A payee this edit created goes with it on Undo, unless something else uses it by then (D191.4).
+            return try saveTransactions.save(changed, creating: created)
         } catch {
             errorMessage = AccountHistoryViewModel.message(for: error)
             return nil
         }
     }
 
-    private func resolvePayee() throws -> UUID? {
+    private func resolvePayee() throws -> ResolvedPayee? {
         guard let name = TransactionText.trimmed(payeeText) else {
             return nil
         }
-        guard let payee = try saveTransactions.resolvePayee(named: name, createdAt: now()) else {
+        guard let resolved = try saveTransactions.resolvePayee(named: name, createdAt: now()) else {
             return nil
         }
-        if !payees.contains(where: { $0.id == payee.id }) {
-            payees.append(payee)
+        if !payees.contains(where: { $0.id == resolved.payee.id }) {
+            payees.append(resolved.payee)
         }
-        return payee.id
+        return resolved
     }
 }

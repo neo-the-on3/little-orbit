@@ -59,6 +59,7 @@ final class FullDiskLedgerRepository: LedgerRepository {
         try write()
         try base.savePayee(payee)
     }
+    func payeeReferenceCount(_ payeeID: UUID) throws -> Int { try base.payeeReferenceCount(payeeID) }
     func deletePayee(id: UUID) throws {
         try write()
         try base.deletePayee(id: id)

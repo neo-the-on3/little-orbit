@@ -40,6 +40,11 @@ public struct LedgerSnapshot: Equatable, Sendable {
         categories.filter { $0.deletedAt == nil }
     }
 
+    /// The live transactions that use this payee (see `LedgerRepository.payeeReferenceCount`).
+    public func payeeReferenceCount(_ payeeID: UUID) -> Int {
+        transactions.filter { $0.payeeID == payeeID && $0.deletedAt == nil }.count
+    }
+
     public func payeesVisible() -> [Payee] {
         payees.filter { $0.deletedAt == nil }
     }
