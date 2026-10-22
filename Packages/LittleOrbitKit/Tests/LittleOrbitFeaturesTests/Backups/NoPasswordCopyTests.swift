@@ -2,7 +2,7 @@ import Foundation
 import Testing
 
 /// S82 (R7, D182.1): no password UI or copy is left in the app, its packages or its string catalogs.
-@Suite("No password copy")
+@Suite("No password copy", .timeLimit(.minutes(2)))
 struct NoPasswordCopyTests {
     /// The repository root, from this file's path: Packages/LittleOrbitKit/Tests/LittleOrbitFeaturesTests/Backups.
     private static let root = URL(fileURLWithPath: #filePath)

@@ -12,7 +12,7 @@
     /// that read it while drawing, and redrew on that notification, never stopped. The toolbar now reads
     /// state the history keeps, which only the `UndoManager`'s group, Undo and Redo notifications update.
     @MainActor
-    @Suite("B1: the toolbar's Undo and Redo don't feed back")
+    @Suite("B1: the toolbar's Undo and Redo don't feed back", .timeLimit(.minutes(2)))
     struct UndoToolbarFeedbackTests {
         typealias F = TransactionFeatureFixture  // swiftlint:disable:this type_name
 

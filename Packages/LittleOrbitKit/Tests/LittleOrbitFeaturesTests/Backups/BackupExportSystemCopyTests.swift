@@ -8,7 +8,7 @@ import Testing
 /// goes after `onCompletion` or `onCancellation` and at the next export, but never while another window's panel
 /// may still be reading its copy.
 @MainActor
-@Suite("Export: the save panel's copy in tmp is removed")
+@Suite("Export: the save panel's copy in tmp is removed", .timeLimit(.minutes(2)))
 struct BackupExportSystemCopyTests {
     private let manager = FileManager.default
 

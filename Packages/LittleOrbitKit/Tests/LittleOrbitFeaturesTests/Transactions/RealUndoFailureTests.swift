@@ -10,7 +10,7 @@
     /// drops the failed one (#93, D191.3, D193). Runs in the macOS CI job; `WindowUndoFailureTests` has the
     /// same cases on the stand-in.
     @MainActor
-    @Suite("A failed Undo or Redo on a real UndoManager", .serialized)
+    @Suite("A failed Undo or Redo on a real UndoManager", .serialized, .timeLimit(.minutes(2)))
     struct RealUndoFailureTests {
         typealias F = TransactionFeatureFixture  // swiftlint:disable:this type_name
 

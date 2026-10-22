@@ -69,7 +69,7 @@ final class SpyArchiving: BackupArchiving, @unchecked Sendable {
 
 /// D195a.2, D197.1 and D197a.1: an imported archive is checked manifest entry → version → unsafe entries →
 /// checksums, in memory, stopping at the first failure (L21, L22, L34, L37, L40–L42).
-@Suite("Backup archive import")
+@Suite("Backup archive import", .timeLimit(.minutes(2)))
 struct BackupArchiveImportTests {
     private let codec = BackupCodec(hashing: FakeBackupHashing())
     private let archiving = SpyArchiving()

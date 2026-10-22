@@ -8,7 +8,7 @@
     /// Each Undo and Redo moves exactly one step on a window's real `UndoManager`, which groups by event
     /// (Tester's #87 recheck, bug 1). Runs in the macOS CI job.
     @MainActor
-    @Suite("One step per Undo with grouping by event", .serialized)
+    @Suite("One step per Undo with grouping by event", .serialized, .timeLimit(.minutes(2)))
     struct TransactionUndoEventGroupingTests {
         typealias F = TransactionFeatureFixture  // swiftlint:disable:this type_name
 

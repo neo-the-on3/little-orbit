@@ -7,7 +7,7 @@ import Testing
 /// Tester finding 3 on 4c8b0b3: SwiftUI's `fileExporter` writes its own copy of the export to
 /// `tmp/<uuid>/<file name>` in the app's container and leaves it there. Only files named the way an export is named
 /// are removed, from `tmp` itself or a `<uuid>` folder in it; the folder goes too once it's empty.
-@Suite("File backup storage: the save panel's copies in tmp")
+@Suite("File backup storage: the save panel's copies in tmp", .timeLimit(.minutes(2)))
 struct FileBackupStorageSystemCopyTests {
     private let manager = FileManager.default
 

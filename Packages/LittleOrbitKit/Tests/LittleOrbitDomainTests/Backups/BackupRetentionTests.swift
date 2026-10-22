@@ -3,7 +3,7 @@ import LittleOrbitDomain
 import Testing
 
 /// D195.4 and L7–L10, L33: which automatic backups cleanup keeps, as a pure function with an injected clock.
-@Suite("Backup retention")
+@Suite("Backup retention", .timeLimit(.minutes(2)))
 struct BackupRetentionTests {
     private let zone = TimeZone(identifier: "Asia/Kolkata") ?? .gmt
 

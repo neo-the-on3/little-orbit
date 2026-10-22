@@ -6,7 +6,7 @@ import Testing
 
 /// #40 acceptance over the real service, an in-memory ledger and real files in a temporary folder.
 @MainActor
-@Suite("Backup service")
+@Suite("Backup service", .timeLimit(.minutes(2)))
 struct BackupServiceTests {
     @Test("Back Up Now stores a manual backup with the visible counts")
     func backUpNow() async throws {

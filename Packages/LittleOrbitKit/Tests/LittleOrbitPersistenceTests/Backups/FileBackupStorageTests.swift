@@ -5,7 +5,7 @@ import Testing
 @testable import LittleOrbitPersistence
 
 /// D62 and D195: one folder per backup, by ID, complete or not there at all.
-@Suite("File backup storage")
+@Suite("File backup storage", .timeLimit(.minutes(2)))
 struct FileBackupStorageTests {
     private func folder() -> URL {
         FileManager.default.temporaryDirectory.appendingPathComponent(

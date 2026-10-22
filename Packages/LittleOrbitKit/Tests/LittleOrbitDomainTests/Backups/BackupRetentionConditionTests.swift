@@ -3,7 +3,7 @@ import LittleOrbitDomain
 import Testing
 
 /// D196 and D197.2: a backup's recorded month, and damaged and newer-format backups in retention (L26–L33, L36).
-@Suite("Backup retention: months, damaged and newer-format backups")
+@Suite("Backup retention: months, damaged and newer-format backups", .timeLimit(.minutes(2)))
 struct BackupRetentionConditionTests {
     private let kolkata = TimeZone(identifier: "Asia/Kolkata") ?? .gmt
     private let losAngeles = TimeZone(identifier: "America/Los_Angeles") ?? .gmt

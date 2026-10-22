@@ -36,7 +36,7 @@ private struct UnexpectedError: Error {}
 
 /// D207.2: every read or I/O error while a picked file is checked or restored is `unreadableFile`; only a file that
 /// was read and fails the manifest, safety or checksum checks is `damaged`; anything else is passed on as it is.
-@Suite("Backup import read failures (D207.2)")
+@Suite("Backup import read failures (D207.2)", .timeLimit(.minutes(2)))
 struct BackupReadFailureTests {
     private let codec = BackupCodec(hashing: FakeBackupHashing())
 

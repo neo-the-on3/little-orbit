@@ -3,7 +3,7 @@ import LittleOrbitDomain
 import Testing
 
 /// D62, D96.3, D116.3, D118.1 and D118.2: when an automatic backup is made and which are kept.
-@Suite("Backup policy")
+@Suite("Backup policy", .timeLimit(.minutes(2)))
 struct BackupPolicyTests {
     private let zone = TimeZone(identifier: "Asia/Kolkata") ?? .gmt
     /// 2026-10-22 09:12:05 IST.

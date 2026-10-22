@@ -33,7 +33,7 @@ private final class ChunkedBytes: BackupAttachmentReading, @unchecked Sendable {
 
 /// Tech Architect B1: the folder store writes attachment files from their bytes in chunks, clones the unchanged
 /// ones, and reads them back in chunks; a picked file's attachments go to a scratch folder in the staging folder.
-@Suite("File backup storage streams attachments")
+@Suite("File backup storage streams attachments", .timeLimit(.minutes(2)))
 struct FileBackupStorageStreamingTests {
     private static let size = BackupChunk.size * 5 / 2
 

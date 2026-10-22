@@ -7,7 +7,7 @@ import Testing
 #if canImport(AppleArchive)
     /// The real exported file end to end: Apple Archive, SHA-256 and the folder store (L19, L20, L40).
     @MainActor
-    @Suite("Backup service with Apple Archive")
+    @Suite("Backup service with Apple Archive", .timeLimit(.minutes(2)))
     struct BackupAppleArchiveServiceTests {
         private func harness() throws -> BackupHarness {
             try BackupHarness(archiving: AppleArchiveBackupArchiving(), hashing: CryptoKitBackupHashing())

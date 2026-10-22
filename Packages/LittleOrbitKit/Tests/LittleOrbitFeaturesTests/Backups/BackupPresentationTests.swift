@@ -4,7 +4,7 @@ import LittleOrbitFeatures
 import Testing
 
 /// The Backups copy (D118.4, D173.10, UI Designer). Buttons and titles are title case; body text is sentence case.
-@Suite("Backup presentation")
+@Suite("Backup presentation", .timeLimit(.minutes(2)))
 struct BackupPresentationTests {
     private let zone = TimeZone(identifier: "Asia/Kolkata") ?? .gmt
     private var presentation: BackupPresentation {

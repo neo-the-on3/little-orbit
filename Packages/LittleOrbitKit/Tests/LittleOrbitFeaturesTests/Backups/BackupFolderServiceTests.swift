@@ -6,7 +6,7 @@ import Testing
 
 /// D195 over the real service: one folder per backup, exports in one file, and retention (L1–L18).
 @MainActor
-@Suite("Backup service: folders and retention")
+@Suite("Backup service: folders and retention", .timeLimit(.minutes(2)))
 struct BackupFolderServiceTests {
     /// Changes the data and makes the day's automatic backup, one day later.
     private func dailyBackups(_ harness: BackupHarness, count: Int) async throws -> [BackupRecord] {

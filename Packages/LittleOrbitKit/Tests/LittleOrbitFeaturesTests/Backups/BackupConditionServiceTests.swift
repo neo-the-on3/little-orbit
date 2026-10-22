@@ -7,7 +7,7 @@ import Testing
 /// L19–L43 through the real folder store: damaged and newer-format backups, the import order, the month and the
 /// settings that aren't in a backup.
 @MainActor
-@Suite("Backup service: damaged, newer-format and imported backups")
+@Suite("Backup service: damaged, newer-format and imported backups", .timeLimit(.minutes(2)))
 struct BackupConditionServiceTests {
     private func rewriteManifest(_ harness: BackupHarness, _ id: UUID, _ change: (inout [String: Any]) -> Void) throws {
         let url = harness.backupFolder(id).appendingPathComponent(BackupFormat.manifestPath)

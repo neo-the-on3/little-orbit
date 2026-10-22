@@ -3,7 +3,7 @@ import LittleOrbitDomain
 import Testing
 
 /// D196.2 and D197.1: the manifest's month, and its format version read before anything else (L26, L34–L38).
-@Suite("Backup manifest: month and version")
+@Suite("Backup manifest: month and version", .timeLimit(.minutes(2)))
 struct BackupManifestVersionTests {
     private let codec = BackupCodec(hashing: FakeBackupHashing())
 

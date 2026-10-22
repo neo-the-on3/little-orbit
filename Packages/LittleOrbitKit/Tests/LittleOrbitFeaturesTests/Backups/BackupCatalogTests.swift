@@ -3,7 +3,7 @@ import Testing
 
 /// Every sentence the Backups copy reads through `FeatureText` is a catalog entry whose English is the same text,
 /// so the catalog and the Linux English never drift apart.
-@Suite("Backups copy in the String Catalog")
+@Suite("Backups copy in the String Catalog", .timeLimit(.minutes(2)))
 struct BackupCatalogTests {
     /// Packages/LittleOrbitKit/Sources/LittleOrbitFeatures, from this file's path.
     private static let features = URL(fileURLWithPath: #filePath)

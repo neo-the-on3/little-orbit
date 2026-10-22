@@ -7,7 +7,7 @@
     /// D63: a restore replaces the whole SwiftData ledger. B1: backups read attachments one at a time, in chunks,
     /// and a restore takes each one from a file.
     @MainActor
-    @Suite("SwiftData backup source")
+    @Suite("SwiftData backup source", .timeLimit(.minutes(2)))
     struct SwiftDataBackupSourceTests {
         @Test("Replacing the ledger leaves exactly the backup's records and balances")
         func replace() throws {

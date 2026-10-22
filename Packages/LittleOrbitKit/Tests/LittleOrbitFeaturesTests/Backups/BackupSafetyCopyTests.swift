@@ -7,7 +7,7 @@ import Testing
 /// check after cloning is written again without clones, and the earlier backup is marked 'Damaged'. A restore never
 /// replaces data unless its Before restore backup checked out (D63).
 @MainActor
-@Suite("Backups never trust a bad copy")
+@Suite("Backups never trust a bad copy", .timeLimit(.minutes(2)))
 struct BackupSafetyCopyTests {
     private static let size = BackupChunk.size * 5 / 2
 
