@@ -1,11 +1,10 @@
 #include "Shared.xcconfig"
-#include "Signing.xcconfig"
 
-// iOS app. Deployment target 27.0. Bundle ID app.littleorbit.ios plus
-// the optional LITTLEORBIT_BUNDLE_ID_SUFFIX from Signing.xcconfig.
+// iOS app. Deployment target 27.0. Bundle ID app.littleorbit.ios by default:
+// LITTLEORBIT_BUNDLE_ID_BASE and LITTLEORBIT_BUNDLE_ID_SUFFIX from Shared.xcconfig or Config/Local.xcconfig.
 
 PRODUCT_NAME = LittleOrbit
-PRODUCT_BUNDLE_IDENTIFIER = app.littleorbit.ios$(LITTLEORBIT_BUNDLE_ID_SUFFIX)
+PRODUCT_BUNDLE_IDENTIFIER = $(LITTLEORBIT_BUNDLE_ID_BASE).ios$(LITTLEORBIT_BUNDLE_ID_SUFFIX)
 INFOPLIST_KEY_CFBundleDisplayName = Little Orbit
 // The exported .littleorbit-backup type (D195a.1, L19) and LittleOrbitAppGroupIdentifier, from
 // LITTLEORBIT_APP_GROUP_IDENTIFIER in Shared.xcconfig (#52). Generated keys are merged into it. No document types:
@@ -22,7 +21,9 @@ INFOPLIST_KEY_UISupportedInterfaceOrientations_iPhone = UIInterfaceOrientationPo
 INFOPLIST_KEY_UISupportedInterfaceOrientations_iPad = UIInterfaceOrientationPortrait UIInterfaceOrientationPortraitUpsideDown UIInterfaceOrientationLandscapeLeft UIInterfaceOrientationLandscapeRight
 LD_RUNPATH_SEARCH_PATHS = $(inherited) @executable_path/Frameworks
 
-// Draft for Kiran (#52): the App Group entitlement isn't enabled. Turning it on is this one line, together
-// with the simulator signing change and App Group registration that need Kiran. Until then the store uses
-// the Application Support fallback.
-// CODE_SIGN_ENTITLEMENTS = Config/LittleOrbit.entitlements
+// Draft for Kiran (#52): the App Group entitlement isn't enabled. LITTLEORBIT_ENTITLEMENTS (Shared.xcconfig) is
+// empty, so no entitlements are signed in and the store uses the Application Support fallback. Turning it on is
+// setting that variable, together with the simulator signing change and App Group registration that need
+// Kiran. A builder can turn it on or off for their own builds in Config/Local.xcconfig (see
+// Config/Local.xcconfig.example and the README).
+CODE_SIGN_ENTITLEMENTS = $(LITTLEORBIT_ENTITLEMENTS)

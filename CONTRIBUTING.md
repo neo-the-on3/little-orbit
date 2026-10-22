@@ -122,7 +122,7 @@ mise run test              # swift test for each package
 
 - **Package tests** run with `mise run test` on Linux and macOS. Put platform-independent logic in the packages so it is covered on Linux too.
 - **Simulators only.** Apple builds are verified on the iOS 27.2 and watchOS 27.2 simulators and on macOS, with Xcode 27.2. There are no device builds, and testing does not need an Apple ID, certificate, or provisioning profile. Choose simulators by UDID, not by name, because names can repeat.
-- **No signing for tests.** Simulator builds don't sign, and Mac builds are ad-hoc signed. CI builds with `CODE_SIGNING_ALLOWED=NO`. `Config/Signing.local.xcconfig` is optional and gitignored. Create it from `Config/Signing.local.xcconfig.example` only if you want a local device build, and never commit it or any team ID, certificate, or profile.
+- **No signing for tests.** Simulator builds don't sign, and Mac builds are ad-hoc signed. CI builds with `CODE_SIGNING_ALLOWED=NO`. `Config/Local.xcconfig` is optional and gitignored. Create it from `Config/Local.xcconfig.example` only if you want to sign with your own Apple account (README, "Building with your own Apple account"), and never commit it or any team ID, certificate, or profile.
 - **Tester verification.** Tester checks pull requests on the simulators and macOS against the acceptance criteria. If a feature can only be checked on a real device, say so in the pull request.
 
 ## Architecture: MVVM with Clean layering

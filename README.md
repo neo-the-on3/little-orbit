@@ -94,19 +94,23 @@ For the watch app, use `-scheme 'LittleOrbit watchOS'`, `platform=watchOS Simula
 
 Device builds are optional; project testing uses simulators and macOS only.
 
-Signing is automatic (`CODE_SIGN_STYLE = Automatic`). `Config/Signing.xcconfig` leaves `LITTLEORBIT_DEVELOPMENT_TEAM` empty and sets `DEVELOPMENT_TEAM` from that variable for the iOS, macOS, and watchOS targets. No Team ID, certificate, or profile is committed.
+Signing is automatic (`CODE_SIGN_STYLE = Automatic`). `Config/Shared.xcconfig` leaves `LITTLEORBIT_DEVELOPMENT_TEAM` empty, and `Config/Signing.xcconfig` sets `DEVELOPMENT_TEAM` from it for the iOS, macOS, and watchOS targets. No Team ID, certificate, or profile is committed. Simulator builds skip signing, and Mac builds are ad-hoc signed. A fresh clone builds as-is, with the default bundle IDs and App Group ID.
 
-Simulator builds skip signing. Mac builds stay ad-hoc if you copy the example as-is. After `LITTLEORBIT_DEVELOPMENT_TEAM` is a real team, uncomment `CODE_SIGN_IDENTITY[sdk=macosx*] = Apple Development` in the local file so the Mac build uses that team. A device build uses your own team. Xcode creates the development provisioning profile on your Mac.
+## Building with your own Apple account
 
-**Option A.** Open the target's Signing & Capabilities tab, set the team to your free personal team or the paid team, and do not commit the project or xcconfig change.
+The repo is public, so you can sign it with your own Apple account without editing tracked files. Every per-builder value lives in an optional, gitignored `Config/Local.xcconfig`, which `Config/Shared.xcconfig` includes last, so it overrides the committed defaults. Without that file nothing changes.
 
-**Option B.** Copy the example and edit the copy only:
+1. Copy the example. Every line in it is commented out, so the copy changes nothing until you edit it:
 
-```sh
-cp Config/Signing.local.xcconfig.example Config/Signing.local.xcconfig
-```
+   ```sh
+   cp Config/Local.xcconfig.example Config/Local.xcconfig
+   ```
 
-Set `LITTLEORBIT_DEVELOPMENT_TEAM` to your 10-character Team ID. The Apple Development line in the example is commented out, so a copy with an empty team still ad-hoc signs the Mac app. Uncomment that line only after the team is set. Then, from the repo root:
+2. Set your team: `LITTLEORBIT_DEVELOPMENT_TEAM = <your 10-character Team ID>` (Xcode > Settings > Accounts). A free personal team or a paid team both work.
+3. Set a bundle ID base you control: `LITTLEORBIT_BUNDLE_ID_BASE = com.example.yourname.littleorbit`. The apps become `<base>.ios`, `<base>.macos` and `<base>.watchos`, and the App Group becomes `group.<base>`. You can instead keep the default base and set `LITTLEORBIT_BUNDLE_ID_SUFFIX = .yourname`, which is appended to every bundle ID and to the group. Set `LITTLEORBIT_APP_GROUP_IDENTIFIER` yourself only if the group can't follow the base, for example the team-prefixed form on macOS.
+4. For a Mac build with your certificate, uncomment `CODE_SIGN_IDENTITY[sdk=macosx*] = Apple Development`. Leave it commented while the team is empty, or the macOS build fails with "requires a development team".
+
+Then, from the repo root:
 
 ```sh
 xcodebuild -scheme 'LittleOrbit iOS' -destination 'generic/platform=iOS' -allowProvisioningUpdates build
@@ -114,7 +118,9 @@ xcodebuild -scheme 'LittleOrbit watchOS' -destination 'generic/platform=watchOS'
 xcodebuild -scheme 'LittleOrbit macOS' -destination 'generic/platform=macOS' -allowProvisioningUpdates build
 ```
 
-`Config/Signing.local.xcconfig` is gitignored. If `app.littleorbit.*` is already registered, set `LITTLEORBIT_BUNDLE_ID_SUFFIX` to a unique suffix that includes the leading dot, such as `.yourname`. A free personal team's profiles expire after 7 days.
+Defaults are `app.littleorbit.ios`, `app.littleorbit.macos`, `app.littleorbit.watchos` and `group.app.littleorbit`. The app reads the App Group ID only from its Info.plist (`LittleOrbitAppGroupIdentifier`, written from `LITTLEORBIT_APP_GROUP_IDENTIFIER`), so an override needs no code change. A free personal team's profiles expire after 7 days. `Config/Signing.local.xcconfig` is no longer read. If you had one, move its settings into `Config/Local.xcconfig`.
+
+**App Group entitlement.** It stays off by default: the iOS and macOS targets set `CODE_SIGN_ENTITLEMENTS = $(LITTLEORBIT_ENTITLEMENTS)`, and `Config/Shared.xcconfig` leaves `LITTLEORBIT_ENTITLEMENTS` empty until the project owner enables it (#52), so the store uses `Application Support/<bundle id>`. Leave it empty if your team can't register the App Group, or if you build with no Apple account (D183). To try the shared store in your own builds, register the App Group for your team and uncomment `LITTLEORBIT_ENTITLEMENTS = Config/LittleOrbit.entitlements` in your `Config/Local.xcconfig`, plus the two iOS simulator signing lines if you run it in the simulator. The watch app never gets an entitlement. The Mac App Sandbox entitlement is future work (#84). Moving an existing Application Support store into the group isn't implemented yet (#102), so a build with the entitlement starts with an empty group store.
 
 ## Package on Linux
 

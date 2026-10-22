@@ -1,28 +1,18 @@
-// Automatic signing for Little Orbit.
+// Automatic signing for Little Orbit. Included by Shared.xcconfig, before Config/Local.xcconfig.
 //
-// This committed file keeps LITTLEORBIT_DEVELOPMENT_TEAM empty. Do not put a
-// Team ID, certificate, private key, or provisioning profile here.
+// The committed LITTLEORBIT_DEVELOPMENT_TEAM (Shared.xcconfig) is empty. Do not put a Team ID, certificate,
+// private key, or provisioning profile in a tracked file.
 //
-// Each developer sets their own team in Config/Signing.local.xcconfig
-// (gitignored). Copy Config/Signing.local.xcconfig.example. A free personal
-// team or the paid team both work. Xcode creates the development
-// provisioning profile locally when you build for a device.
-//
-// Defaults are above the optional include. The local file overrides them.
-// DEVELOPMENT_TEAM and CODE_SIGN_STYLE are assigned after the include, so
-// every app target takes the team from LITTLEORBIT_DEVELOPMENT_TEAM and
-// stays on automatic signing.
-
-LITTLEORBIT_DEVELOPMENT_TEAM =
-LITTLEORBIT_BUNDLE_ID_SUFFIX =
+// Each builder sets their own team in Config/Local.xcconfig (gitignored). Copy Config/Local.xcconfig.example.
+// A free personal team or the paid team both work. Xcode creates the development provisioning profile
+// locally when you build for a device. Every value here can be overridden there, because Shared.xcconfig
+// includes Local.xcconfig after this file.
 
 // Simulator builds do not need a team. Mac builds stay ad-hoc until the
-// local file uncomments CODE_SIGN_IDENTITY[sdk=macosx*] = Apple Development.
+// local file sets CODE_SIGN_IDENTITY[sdk=macosx*] = Apple Development.
 CODE_SIGNING_ALLOWED[sdk=iphonesimulator*] = NO
 CODE_SIGNING_ALLOWED[sdk=watchsimulator*] = NO
 CODE_SIGN_IDENTITY[sdk=macosx*] = -
-
-#include? "Signing.local.xcconfig"
 
 DEVELOPMENT_TEAM = $(LITTLEORBIT_DEVELOPMENT_TEAM)
 CODE_SIGN_STYLE = Automatic
