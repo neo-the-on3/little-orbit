@@ -117,6 +117,9 @@ public final class LedgerUpdates {
     public func ledgerReplaced() {
         for entry in histories {
             entry.history?.clear()
+            // A failed or stale Undo's alert is about a step that's gone now, so it doesn't outlive the old data
+            // (Tech Architect N6).
+            entry.history?.alert = nil
         }
         revision += 1
     }

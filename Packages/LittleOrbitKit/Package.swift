@@ -52,6 +52,7 @@ let package = Package(
         .testTarget(
             name: "LittleOrbitFeaturesTests",
             dependencies: ["LittleOrbitFeatures", "LittleOrbitPersistence"],
+            resources: [.copy("Fixtures")],
         ),
         .testTarget(
             name: "LittleOrbitThemeTests",
