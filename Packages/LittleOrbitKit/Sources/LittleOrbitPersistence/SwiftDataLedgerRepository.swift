@@ -335,4 +335,17 @@
             }
         }
     }
+
+    /// Backups (#40): the whole ledger out, and replaced in one save.
+    extension SwiftDataLedgerRepository: LedgerBackupSource {
+        public func ledgerSnapshot() throws -> LedgerSnapshot {
+            try load()
+        }
+
+        /// `persist` upserts and deletes every record, then saves once; a failed save rolls back, so the store
+        /// is either fully replaced or unchanged (D63).
+        public func replaceLedger(with snapshot: LedgerSnapshot) throws {
+            try persist(snapshot)
+        }
+    }
 #endif
