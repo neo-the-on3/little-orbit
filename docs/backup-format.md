@@ -115,7 +115,8 @@ backup: the check right after a backup is written, cleanup's full check, and the
 The warning keeps only the manifest. When Restore is tapped, the Before restore backup is written first and the
 current data released, and only then is the backup read in full, checked again as it's decoded, and the data
 replaced in one save. Only the files the manifest lists are read. If the Before restore backup doesn't pass its
-check, or can't be checked, nothing is replaced and 'Couldn’t Restore' is shown (D63).
+check, or can't be checked, nothing is replaced and 'Couldn’t Restore' is shown: "little-orbit couldn’t make a safe
+copy of your current data first, so nothing was replaced. Your data hasn’t changed.", with only OK (D63, D207.1).
 
 A file in the folder that the manifest doesn't list, such as `.DS_Store`, is ignored.
 
@@ -176,9 +177,13 @@ each attachment from its file there, one at a time. The scratch folder is remove
 left by an interrupted restore goes at the next launch. A restore from the list takes the attachments from the
 backup's own folder the same way.
 
-A picked file that can't be opened at all, such as one in iCloud Drive that isn't downloaded, isn't damaged: its
-read error is shown, in the generic error alert. A single-file JSON
-envelope from an earlier PR #99 build isn't an archive, so it's damaged.
+A picked file that can't be read (an I/O or permission error, or one in iCloud Drive that isn't downloaded)
+isn't damaged: it shows 'Couldn’t Open Backup', "The file couldn’t be read. Make sure it’s fully downloaded and try
+again. Your data hasn’t changed.", with only OK (D207.2). That covers any read or I/O error from opening the file to
+its last byte, such as iCloud Drive evicting it mid-read, in the check and in the restore's own pass. The reader
+records a failed read itself, since Apple Archive reports one the same way as a bad archive. A file that's read but
+fails the manifest, safety or checksum checks is damaged, and a newer format asks for an
+update, as above. A single-file JSON envelope from an earlier PR #99 build isn't an archive, so it's damaged.
 
 In #40, 'Restore from File…' (iOS) and File > Restore from Backup… (macOS) are the only ways to import a backup.
 The apps declare no document types, so opening a `.littleorbit-backup` from Files or Finder doesn't start a

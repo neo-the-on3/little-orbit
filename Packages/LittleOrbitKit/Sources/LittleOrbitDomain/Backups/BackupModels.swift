@@ -193,4 +193,8 @@ public enum BackupError: Error, Equatable, Sendable {
     /// The Before restore backup didn't check out as restorable, so the restore stopped with the data unchanged
     /// (D63, B3).
     case beforeRestoreFailed
+    /// A picked file couldn't be read at all: an I/O or permission error, or a file that isn't downloaded, like an
+    /// iCloud Drive placeholder. It's never called damaged: 'Couldn’t Open Backup' (D207.2). A file that's read but
+    /// fails a check is `damaged`, and a newer format is `newerFormat`.
+    case unreadableFile
 }

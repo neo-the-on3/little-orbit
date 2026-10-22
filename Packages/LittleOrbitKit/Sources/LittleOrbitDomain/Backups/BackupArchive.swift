@@ -54,7 +54,8 @@ public protocol BackupArchiving: Sendable {
     func archive(_ files: [BackupArchiveFile], from folder: any BackupFileReading, to url: URL) throws
     /// The entries of `archive`, in order, in one pass, extracting nothing. `reading` says, for each regular file
     /// by its stored path, whether to skip its bytes, keep them, or stream them. Throws `BackupError.damaged` for
-    /// anything that isn't an archive, and the underlying error when the file can't be read at all.
+    /// anything that isn't an archive, and `unreadableFile` or the underlying read error when the file can't be
+    /// read, at its start or partway through (D207.2).
     func entries(
         of archive: BackupArchiveSource,
         reading: (String) -> BackupArchiveRead,
@@ -105,7 +106,7 @@ public struct BackupArchiveImport: Sendable {
         onStep: (BackupImportStep) -> Void = { _ in },
     ) throws -> BackupFolderSummary {
         onStep(.manifestEntry)
-        let headers = try archiving.entries(of: archive) { path in
+        let headers = try readEntries(of: archive) { path in
             BackupArchiveSafety.normalized(path) == BackupFormat.manifestPath ? .data : .skip
         }
         let manifest = try BackupArchiveSafety.manifest(in: headers)
@@ -115,7 +116,7 @@ public struct BackupArchiveImport: Sendable {
         try BackupArchiveSafety.check(headers)
         onStep(.checksums)
         var digests: [String: BackupFileDigesting] = [:]
-        let streamed = try archiving.entries(of: archive) { path in
+        let streamed = try readEntries(of: archive) { path in
             let normalized = BackupArchiveSafety.normalized(path)
             guard normalized != BackupFormat.manifestPath else {
                 return .skip
@@ -138,7 +139,7 @@ public struct BackupArchiveImport: Sendable {
         onStep: (BackupImportStep) -> Void = { _ in },
     ) throws -> BackupContents {
         _ = try check(archive, onStep: onStep)
-        return try codec.decode(BackupArchiveSafety.files(from: archiving.entries(of: archive) { _ in .data }))
+        return try codec.decode(BackupArchiveSafety.files(from: readEntries(of: archive) { _ in .data }))
     }
 
     /// A picked file for a restore: `check`, then one more pass that reads the JSON files and unpacks each listed
@@ -152,7 +153,7 @@ public struct BackupArchiveImport: Sendable {
     ) throws -> BackupOpened {
         let listed = try check(archive, onStep: onStep).fileSizes
         var unpacked = BackupUnpacking(scratch: scratch, codec: codec)
-        let entries = try archiving.entries(of: archive) { path in
+        let entries = try readEntries(of: archive) { path in
             let normalized = BackupArchiveSafety.normalized(path)
             if normalized == BackupFormat.manifestPath {
                 return .data
@@ -181,6 +182,20 @@ public struct BackupArchiveImport: Sendable {
         }
         _ = try codec.verify(manifest: manifest, digests: digests)
         return BackupOpened(contents: try codec.decodeDetails(files), attachments: BackupFolderAttachments(scratch))
+    }
+
+    /// One pass over `archive`. A read or I/O error on the way, from opening the file to its last byte, is
+    /// `unreadableFile`: the file couldn't be read, so it isn't called damaged (D207.2). Only a file that was read
+    /// and fails the manifest, safety or checksum checks is `damaged`.
+    private func readEntries(
+        of archive: BackupArchiveSource,
+        reading: (String) -> BackupArchiveRead,
+    ) throws -> [BackupArchiveEntry] {
+        do {
+            return try archiving.entries(of: archive, reading: reading)
+        } catch let error where BackupReadFailure.isReadFailure(error) {
+            throw BackupError.unreadableFile
+        }
     }
 
     /// The checked contents of an archive in memory.
@@ -362,4 +377,21 @@ public enum BackupArchiveSafety {
         }
         return path
     }
+}
+
+/// Whether an error is a failure to read a file: the file system's or the OS's read errors, as the archive reader
+/// passes them on. Anything else, such as a full disk while unpacking, is not.
+enum BackupReadFailure {
+    static func isReadFailure(_ error: any Error) -> Bool {
+        if error is POSIXError || (error as NSError).domain == NSPOSIXErrorDomain {
+            return true
+        }
+        let nsError = error as NSError
+        return nsError.domain == NSCocoaErrorDomain && readCodes.contains(CocoaError.Code(rawValue: nsError.code))
+    }
+
+    private static let readCodes: Set<CocoaError.Code> = [
+        .fileNoSuchFile, .fileLocking, .fileReadUnknown, .fileReadNoPermission, .fileReadInvalidFileName,
+        .fileReadNoSuchFile, .fileReadTooLarge, .ubiquitousFileUnavailable,
+    ]
 }

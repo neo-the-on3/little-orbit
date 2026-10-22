@@ -82,17 +82,20 @@ struct BackupsWindowTests {
         #expect(second.exportPrompt == nil)
     }
 
-    @Test("A picked file that can't be read shows its read error, not 'Damaged' (Tech Architect N1)")
+    @Test("A picked file that can't be read shows Couldn’t Open Backup in that window only, not 'Damaged' (D207.2)")
     func unreadableFile() async throws {
         let harness = try BackupHarness()
         let window = harness.window()
+        let other = harness.window()
         let missing = FileManager.default.temporaryDirectory
             .appendingPathComponent("not-downloaded-\(UUID().uuidString).littleorbit-backup")
         await window.restoreFromFile(.file(missing))
-        #expect(window.alert == nil)
+        #expect(window.alert == .unreadableFile)
+        #expect(window.errorMessage == nil)
         #expect(window.restorePrompt == nil)
-        let message = try #require(window.errorMessage)
-        #expect(!message.isEmpty)
+        #expect(other.alert == nil)
+        window.dismissAlert()
+        #expect(window.alert == nil)
     }
 
     @Test("A picked file is restored from where it is, read again and checked again after the warning (B1.1)")

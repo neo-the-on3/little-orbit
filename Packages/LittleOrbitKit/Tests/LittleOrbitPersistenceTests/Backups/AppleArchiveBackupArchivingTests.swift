@@ -139,10 +139,74 @@ import Testing
             #expect(try BackupArchiveSafety.files(from: archiving.entries(of: .file(url)) { _ in .data }) == withLarge)
         }
 
-        @Test("A file that can't be opened throws its read error, not 'damaged' (N1)")
+        @Test("A file that can't be opened is unreadable, not 'damaged' (D207.2)")
         func unreadableFile() {
             let url = FileManager.default.temporaryDirectory.appendingPathComponent("missing-\(UUID().uuidString)")
-            #expect(throws: CocoaError.self) { try archiving.entries(of: .file(url)) { _ in .skip } }
+            #expect(throws: BackupError.unreadableFile) { try archiving.entries(of: .file(url)) { _ in .skip } }
+        }
+
+        @Test("A file without read permission, or a folder, is unreadable (D207.2)", .enabled(if: getuid() != 0))
+        func noPermission() throws {
+            let url = FileManager.default.temporaryDirectory.appendingPathComponent("locked-\(UUID().uuidString)")
+            try Data("anything".utf8).write(to: url)
+            try FileManager.default.setAttributes([.posixPermissions: 0o000], ofItemAtPath: url.path)
+            defer { try? FileManager.default.removeItem(at: url) }
+            #expect(throws: BackupError.unreadableFile) { try archiving.entries(of: .file(url)) { _ in .skip } }
+            let folder = FileManager.default.temporaryDirectory.appendingPathComponent("folder-\(UUID().uuidString)")
+            try FileManager.default.createDirectory(at: folder, withIntermediateDirectories: true)
+            defer { try? FileManager.default.removeItem(at: folder) }
+            #expect(throws: BackupError.unreadableFile) { try archiving.entries(of: .file(folder)) { _ in .skip } }
+        }
+
+        @Test("A read error partway through a picked file, like iCloud evicting it, is unreadable (D207.2)")
+        func readErrorMidStream() throws {
+            let url = FileManager.default.temporaryDirectory.appendingPathComponent("evicted-\(UUID().uuidString)")
+            try archiving.archive(files).write(to: url)
+            defer { try? FileManager.default.removeItem(at: url) }
+            let everything = try AppleArchiveBackupArchiving.entries(ofFileAt: url) { _ in .stream { _ in } }
+            let headers = try archiving.entries(of: .file(url)) { _ in .skip }
+            let size = try #require(try FileManager.default.attributesOfItem(atPath: url.path)[.size] as? Int)
+            #expect(everything.count == headers.count)
+            #expect(throws: BackupError.unreadableFile) {
+                try AppleArchiveBackupArchiving.entries(ofFileAt: url, failingAfter: size / 2) { _ in
+                    .stream { _ in }
+                }
+            }
+        }
+
+        @Test("A picked file that's read in full but fails its checksum is damaged, not unreadable")
+        func checksumMismatchFile() throws {
+            let codec = BackupCodec(hashing: CryptoKitBackupHashing())
+            let manifest = BackupManifest(
+                kind: .manual,
+                createdAt: Date(timeIntervalSince1970: 1_792_640_525),
+                nameIndex: 1,
+                schemaVersion: "1.0.0",
+                accountCount: 1,
+                transactionCount: 0,
+                attachmentCount: 0,
+                month: "2026-10",
+            )
+            let ledger = LedgerSnapshot(accounts: [
+                Account(name: "Savings", type: .savings, currencyCode: "EUR", openingBalance: 100, sortOrder: 1)
+            ])
+            var encoded = try codec.encode(BackupContents(manifest: manifest, ledger: ledger))
+            let url = FileManager.default.temporaryDirectory.appendingPathComponent("changed-\(UUID().uuidString)")
+            defer { try? FileManager.default.removeItem(at: url) }
+            let importer = BackupArchiveImport(archiving: archiving, codec: codec)
+            try archiving.archive(encoded).write(to: url, options: .atomic)
+            _ = try importer.check(.file(url))
+            encoded["shared.json"]?[0] ^= 1
+            try archiving.archive(encoded).write(to: url, options: .atomic)
+            #expect(throws: BackupError.damaged) { try importer.check(.file(url)) }
+        }
+
+        @Test("An empty file is read, so it's damaged, not unreadable")
+        func emptyFile() throws {
+            let url = FileManager.default.temporaryDirectory.appendingPathComponent("empty-\(UUID().uuidString)")
+            try Data().write(to: url)
+            defer { try? FileManager.default.removeItem(at: url) }
+            #expect(throws: BackupError.damaged) { try archiving.entries(of: .file(url)) { _ in .skip } }
         }
 
         @Test("A file that isn't an archive is damaged")

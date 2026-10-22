@@ -164,6 +164,24 @@ struct BackupPresentationTests {
         #expect(BackupPresentation.damagedMessage == "It can’t be restored. Your data hasn’t changed.")
     }
 
+    @Test("Couldn’t Restore and Couldn’t Open Backup are Product Manager's copy, with curly apostrophes (D207)")
+    func d207Strings() {
+        #expect(BackupAlert.beforeRestoreFailed.title == "Couldn’t Restore")
+        #expect(
+            BackupAlert.beforeRestoreFailed.message
+                == "little-orbit couldn’t make a safe copy of your current data first, so nothing was replaced. "
+                + "Your data hasn’t changed."
+        )
+        #expect(BackupAlert.unreadableFile.title == "Couldn’t Open Backup")
+        #expect(
+            BackupAlert.unreadableFile.message
+                == "The file couldn’t be read. Make sure it’s fully downloaded and try again. Your data hasn’t changed."
+        )
+        for alert in [BackupAlert.beforeRestoreFailed, .unreadableFile] {
+            #expect(!(alert.title + alert.message).contains("'"))
+        }
+    }
+
     @Test("macOS copy: click, the Mac empty state and the inline restore line (UI Designer)")
     func macCopy() {
         let mac = presentation(.mac)
