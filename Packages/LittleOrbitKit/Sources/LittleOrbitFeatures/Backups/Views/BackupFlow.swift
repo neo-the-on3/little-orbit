@@ -58,8 +58,9 @@
             )
         }
 
-        /// The save panel's binding. Closing the panel sets it to `false`, which removes the export's file (B4).
-        /// Only the screen on top presents the panel, and only it passes the close on, as with the other bindings.
+        /// The save panel's binding. Closing the panel sets it to `false`, which only ends the presentation; the
+        /// export's file goes in `onCompletion` or `onCancellation` (B4). Only the screen on top presents the panel,
+        /// and only it passes the close on, as with the other bindings.
         static func exportPresented(_ window: BackupsWindow, isActive: Bool = true) -> Binding<Bool> {
             Binding(
                 get: { isActive && window.isExportPresented },

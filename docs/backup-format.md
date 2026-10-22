@@ -149,10 +149,12 @@ isn't a package. It survives FAT, exFAT and email unchanged, since it's one plai
 Export writes the archive to `Backups.staging/<uuid>.export/<file name>`, one file at a time in 1 MB chunks, and
 checks each file's size and SHA-256 against the manifest as it goes; a mismatch stops the export as damaged (Tech
 Architect B2). Only the files the manifest lists are included. The save panel and share sheet are handed that
-file's URL, never its bytes. The file is removed as soon as the panel closes, saved, cancelled or failed: SwiftUI
-sets `isPresented` to `false` before `onCompletion` or `onCancellation` runs, and that's what removes it (Tech
-Architect B4). One left by an interrupted app goes at the next launch. While a backup is being written to its export
-file, Delete refuses it and cleanup keeps it until it runs again.
+file's URL, never its bytes. The file is removed when the panel is done, saved, cancelled or failed, in
+`onCompletion` or `onCancellation` (Tech Architect B4). SwiftUI's `isPresented` going `false` only closes the panel,
+since the panel's `FileWrapper` reads the file lazily. If neither callback runs, the next export, the window closing,
+or the next launch removes it. While a backup is being written to an export file, even by two windows at once, Delete
+refuses it and cleanup keeps it until it runs again. Each export counts, so the backup stays locked until the last
+export of it ends.
 
 `manifest.json` is the archive's first entry, so a reader reaches the format version before anything else. Apple
 Archive itself refuses to read past an entry with an absolute path or a `..` component. When that happens, the

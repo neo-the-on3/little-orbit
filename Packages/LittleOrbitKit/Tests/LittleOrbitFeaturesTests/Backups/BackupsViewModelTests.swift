@@ -239,6 +239,7 @@ struct BackupsViewModelTests {
         // Saved: SwiftUI sets isPresented to false, then calls onCompletion. The file and its folder go (B4).
         #expect(window.isExportPresented)
         window.isExportPresented = false
+        #expect(FileManager.default.fileExists(atPath: file.url.path))
         window.exportCompleted(.success(FileManager.default.temporaryDirectory.appendingPathComponent(file.fileName)))
         #expect(window.pendingExport == nil)
         #expect(!FileManager.default.fileExists(atPath: file.url.deletingLastPathComponent().path))
