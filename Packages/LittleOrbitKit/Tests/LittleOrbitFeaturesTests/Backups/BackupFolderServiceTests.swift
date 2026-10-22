@@ -125,6 +125,8 @@ struct BackupFolderServiceTests {
         #expect(backups.map(\.id) == [second.id, first.id])
         #expect(backups.allSatisfy { $0.condition == .damaged && $0.kind == .manual })
         #expect(backups.map(\.createdAt) == [second.createdAt, first.createdAt])
+        // Its size from the last good read, not 0 or the folder's remaining files (D202.1, L47).
+        #expect(backups.map(\.byteSize) == [second.byteSize, first.byteSize])
         await #expect(throws: BackupError.damaged) { try await harness.service.openBackup(.stored(first.id)) }
         await #expect(throws: BackupError.damaged) { try await harness.service.exportBackup(id: second.id) }
         // Delete still works.

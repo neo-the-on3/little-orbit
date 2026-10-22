@@ -14,7 +14,7 @@ struct BackupServiceTests {
         let record = try await harness.service.backUpNow()
         #expect(record.kind == .manual)
         #expect(record.accountCount == FeatureFixture.all().count)
-        #expect(record.byteSize > 0)
+        #expect((record.byteSize ?? 0) > 0)
         #expect(try harness.storedFiles().count == 1)
         #expect(try await harness.service.overview().backups == [record])
     }
