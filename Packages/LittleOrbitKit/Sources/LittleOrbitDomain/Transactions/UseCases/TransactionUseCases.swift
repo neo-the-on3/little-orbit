@@ -87,17 +87,20 @@ public struct TransactionUseCases {
     public var accountHistory: any AccountHistoryUseCase
     public var saveTransactions: any SaveTransactionsUseCase
     public var changes: any TransactionChangesUseCase
+    public var dates: any TransactionDateUseCase
 
     public init(
         loadLedger: any LoadTransactionLedgerUseCase,
         accountHistory: any AccountHistoryUseCase,
         saveTransactions: any SaveTransactionsUseCase,
         changes: any TransactionChangesUseCase,
+        dates: any TransactionDateUseCase = DefaultTransactionDateUseCase(),
     ) {
         self.loadLedger = loadLedger
         self.accountHistory = accountHistory
         self.saveTransactions = saveTransactions
         self.changes = changes
+        self.dates = dates
     }
 
     /// The default implementations over one repository.

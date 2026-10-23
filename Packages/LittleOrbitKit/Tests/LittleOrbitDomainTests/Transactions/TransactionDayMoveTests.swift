@@ -119,4 +119,24 @@ struct TransactionDayMoveTests {
             }
         }
     }
+
+    @Test("The use case forwards to the calendar")
+    @MainActor
+    func useCase() {
+        let dates = DefaultTransactionDateUseCase()
+        let refund = F.date(2026, 10, 10, 21, zone: Self.london)
+        #expect(dates.day(of: refund, timeZoneID: Self.london) == F.day(2026, 10, 10))
+        #expect(dates.day(of: refund, timeZoneID: Self.kolkata) == F.day(2026, 10, 11))
+        #expect(
+            dates.noon(on: F.day(2026, 10, 10), timeZoneID: Self.kolkata)
+                == F.date(2026, 10, 10, 12, zone: Self.kolkata)
+        )
+        #expect(
+            dates.noon(on: F.day(2026, 10, 10), timeZoneID: "Not/AZone") == F.date(2026, 10, 10, 12, zone: "UTC")
+        )
+        #expect(dates.storedTimeZone("") == TimeZone(identifier: "UTC"))
+        #expect(dates.day(of: refund, timeZoneID: "Not/AZone") == F.day(2026, 10, 10))
+        let moved = dates.date(refund, movedTo: F.day(2026, 10, 12), timeZoneID: Self.london)
+        #expect(moved == F.date(2026, 10, 12, 21, zone: Self.london))
+    }
 }
