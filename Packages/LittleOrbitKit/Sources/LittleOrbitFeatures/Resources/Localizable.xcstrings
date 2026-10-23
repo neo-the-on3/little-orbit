@@ -2340,6 +2340,42 @@
         }
       }
     },
+    "Refund": {
+      "comment": "Refund row title when the refund has no payee and no description (D233.1).",
+      "extractionState": "manual",
+      "localizations": {
+        "en": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Refund"
+          }
+        }
+      }
+    },
+    "Refund (original deleted)": {
+      "comment": "Title of a refund whose expense was deleted, with no payee and no description (D233.1).",
+      "extractionState": "manual",
+      "localizations": {
+        "en": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Refund (original deleted)"
+          }
+        }
+      }
+    },
+    "Refund (original deleted) · %@": {
+      "comment": "Title of a refund whose expense was deleted. %@ is the payee’s name, or the description if there’s no payee.",
+      "extractionState": "manual",
+      "localizations": {
+        "en": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Refund (original deleted) · %@"
+          }
+        }
+      }
+    },
     "Refund date can’t be before the original expense for %2$lld refunds (latest %1$@).": {
       "comment": "Bulk edit: Apply saved nothing because the new date puts selected refunds before their expense (D225.4, D225.5). %1$@ is the latest such expense’s date, such as 17 Oct 2026; %2$lld is how many selected refunds.",
       "extractionState": "manual",
@@ -2370,6 +2406,18 @@
                 }
               }
             }
+          }
+        }
+      }
+    },
+    "Refund · %@": {
+      "comment": "Refund row title. %@ is the payee’s name, or the description if there’s no payee.",
+      "extractionState": "manual",
+      "localizations": {
+        "en": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Refund · %@"
           }
         }
       }

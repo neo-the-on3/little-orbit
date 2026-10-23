@@ -5,7 +5,10 @@ import LittleOrbitDomain
 public struct TransactionRowModel: Identifiable, Equatable, Sendable {
     public var id: UUID
     public var type: TransactionType
-    /// Payee, else "To/From <account>" for transfers, else the description, category or type.
+    /// "To/From <account>" for a transfer. Otherwise the payee, then the trimmed description, then the type
+    /// ("Expense", "Income"). A refund reads "Refund · <payee or description>", "Refund (original deleted) · …",
+    /// or plain "Refund" or "Refund (original deleted)" (D233.1). The category is never the title: it's first in
+    /// the subtitle (D233.2).
     public var title: String
     /// "Food & Dining · Team lunch", "Utilities · 3 Nov" on Upcoming rows, or "Transfer · received $12.00".
     public var subtitle: String
@@ -78,6 +81,10 @@ struct TransactionRowContext {
         var detailUsedAsTitle = false
         if isTransfer {
             title = transferTitle(transaction)
+        } else if transaction.isRefund {
+            // Payee, then description, then the plain word; the description isn't repeated below (D233.1, D233.3).
+            title = RefundText.rowTitle(name: payee?.name ?? details, isLinked: transaction.refundOfID != nil)
+            detailUsedAsTitle = true
         } else if let payee {
             title = payee.name
         } else if let details {
