@@ -20,7 +20,7 @@ public final class InMemoryLedgerRepository: LedgerRepository {
     }
 
     public func deleteAccount(id: UUID) throws {
-        snapshot = try LedgerBook.deletingAccount(id: id, in: snapshot)
+        snapshot = try LedgerBook.deletingAccount(id: id, in: snapshot, now: now())
     }
 
     public func transactions() throws -> [Transaction] {
@@ -32,7 +32,7 @@ public final class InMemoryLedgerRepository: LedgerRepository {
     }
 
     public func deleteTransaction(id: UUID) throws {
-        snapshot = try LedgerBook.deletingTransaction(id: id, in: snapshot)
+        snapshot = try LedgerBook.deletingTransaction(id: id, in: snapshot, now: now())
     }
 
     public func recordScheduledOccurrence(_ transaction: Transaction) throws -> Transaction {

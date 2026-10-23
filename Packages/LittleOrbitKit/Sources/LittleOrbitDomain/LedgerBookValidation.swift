@@ -92,18 +92,24 @@ extension LedgerBook {
         }
         try MinorUnitDecimal.validate(transaction.amount, currencyCode: account.currencyCode)
         try validateTags(of: transaction, in: snapshot)
+        if transaction.refundOfID != nil && !transaction.isRefund {
+            // Before the category: a mismatched pair is its own error, never read as a plain income (D33.1).
+            throw LedgerValidationError.refundLinkWithoutRefundFlag
+        }
         switch transaction.type {
         case .expense, .income:
             try validateCategorised(transaction, in: snapshot)
         case .transfer:
             try validateTransfer(transaction, source: account, in: snapshot)
         }
+        try validateRefund(transaction, in: snapshot)
         let existingSplits = snapshot.splits.filter {
             $0.transactionID == transaction.id && $0.deletedAt == nil
         }
         if !existingSplits.isEmpty {
             try validate(existingSplits, for: transaction, in: snapshot)
         }
+        try validateOriginal(transaction, in: snapshot)
     }
 
     static func validateTags(of transaction: Transaction, in snapshot: LedgerSnapshot) throws {
@@ -136,11 +142,10 @@ extension LedgerBook {
         guard let category = activeCategory(categoryID, in: snapshot) else {
             throw LedgerValidationError.missingCategory
         }
-        let refundKeepsExpenseCategory =
-            transaction.type == .income
-            && transaction.refundOfID != nil
-            && category.kind == .expense
-        if !refundKeepsExpenseCategory && !category.kind.matches(transaction.type) {
+        // A refund keeps its expense's category: the one income that uses an expense category, and never an
+        // income one, linked or not (D19, D33.1, D35.5).
+        let fits = transaction.isRefund ? category.kind == .expense : category.kind.matches(transaction.type)
+        if !fits {
             throw LedgerValidationError.categoryKindMismatch
         }
     }

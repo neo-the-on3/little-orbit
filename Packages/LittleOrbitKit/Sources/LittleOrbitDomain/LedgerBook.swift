@@ -74,7 +74,9 @@ public enum LedgerBook {
         return snapshot
     }
 
-    public static func deletingAccount(id: UUID, in snapshot: LedgerSnapshot) throws -> LedgerSnapshot {
+    /// Deletes the account with every transaction in or out of it. Refunds elsewhere of an expense that goes
+    /// with it are unlinked and keep their category (D19).
+    public static func deletingAccount(id: UUID, in snapshot: LedgerSnapshot, now: Date) throws -> LedgerSnapshot {
         guard snapshot.accounts.contains(where: { $0.id == id }) else {
             throw LedgerValidationError.unknownAccount
         }
@@ -88,6 +90,7 @@ public enum LedgerBook {
             }
         )
         snapshot.transactions.removeAll { removed.contains($0.id) }
+        unlinkRefunds(of: removed, in: &snapshot, now: now)
         snapshot.splits.removeAll { split in
             guard let transactionID = split.transactionID else {
                 return false
@@ -124,15 +127,19 @@ public enum LedgerBook {
         try validate(transaction, in: snapshot)
         touchPayee(for: transaction, in: &snapshot, now: now)
         replaceOrAppend(&snapshot.transactions, with: transaction)
+        applyingOriginal(transaction, to: &snapshot, now: now)
         return snapshot
     }
 
-    public static func deletingTransaction(id: UUID, in snapshot: LedgerSnapshot) throws -> LedgerSnapshot {
+    /// Deletes the transaction with its splits and attachments. Its refunds stay, unlinked, with `isRefund`
+    /// and their category: 'Refund (original deleted)' (D19).
+    public static func deletingTransaction(id: UUID, in snapshot: LedgerSnapshot, now: Date) throws -> LedgerSnapshot {
         guard snapshot.transactions.contains(where: { $0.id == id }) else {
             throw LedgerValidationError.missingTransaction
         }
         var snapshot = snapshot
         snapshot.transactions.removeAll { $0.id == id }
+        unlinkRefunds(of: [id], in: &snapshot, now: now)
         snapshot.splits.removeAll { $0.transactionID == id }
         snapshot.attachments.removeAll { $0.transactionID == id }
         return snapshot

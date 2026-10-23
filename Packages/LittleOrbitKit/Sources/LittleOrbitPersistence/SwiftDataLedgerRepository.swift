@@ -33,7 +33,7 @@
         }
 
         public func deleteAccount(id: UUID) throws {
-            try mutate { try LedgerBook.deletingAccount(id: id, in: $0) }
+            try mutate { try LedgerBook.deletingAccount(id: id, in: $0, now: now()) }
         }
 
         public func transactions() throws -> [Transaction] {
@@ -45,7 +45,7 @@
         }
 
         public func deleteTransaction(id: UUID) throws {
-            try mutate { try LedgerBook.deletingTransaction(id: id, in: $0) }
+            try mutate { try LedgerBook.deletingTransaction(id: id, in: $0, now: now()) }
         }
 
         public func recordScheduledOccurrence(_ transaction: Transaction) throws -> Transaction {

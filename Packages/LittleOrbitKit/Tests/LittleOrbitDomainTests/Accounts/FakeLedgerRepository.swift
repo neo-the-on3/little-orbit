@@ -20,9 +20,12 @@ final class FakeLedgerRepository: LedgerRepository {
     private(set) var atomicChanges = 0
     private var tick = 0.0
 
-    init(accounts: [Account] = [], transactions: [Transaction] = []) throws {
+    init(accounts: [Account] = [], categories: [TransactionCategory] = [], transactions: [Transaction] = []) throws {
         for account in accounts {
             try saveAccount(account)
+        }
+        for category in categories {
+            snapshot = try LedgerBook.savingCategory(category, in: snapshot, now: now())
         }
         for transaction in transactions {
             snapshot = try LedgerBook.savingTransaction(transaction, in: snapshot, now: now())
@@ -66,7 +69,7 @@ final class FakeLedgerRepository: LedgerRepository {
     }
 
     func deleteAccount(id: UUID) throws {
-        snapshot = try LedgerBook.deletingAccount(id: id, in: snapshot)
+        snapshot = try LedgerBook.deletingAccount(id: id, in: snapshot, now: now())
     }
 
     func transactions() throws -> [Transaction] {
@@ -83,7 +86,7 @@ final class FakeLedgerRepository: LedgerRepository {
 
     func deleteTransaction(id: UUID) throws {
         try write()
-        snapshot = try LedgerBook.deletingTransaction(id: id, in: snapshot)
+        snapshot = try LedgerBook.deletingTransaction(id: id, in: snapshot, now: now())
     }
 
     func recordScheduledOccurrence(_ transaction: Transaction) throws -> Transaction { throw Unsupported() }
