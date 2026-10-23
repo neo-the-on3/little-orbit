@@ -2,8 +2,8 @@ import Foundation
 import LittleOrbitDomain
 import LittleOrbitPersistence
 
-/// A real folder store with switchable failures: a full disk on writes and export staging, read errors, and
-/// folders that can't be removed.
+/// A real folder store with switchable failures: a full disk on writes and export staging, read errors, folders
+/// that can't be removed, and a status that can't be read once a write has found the disk full.
 final class ScriptedStorage: BackupStorage, @unchecked Sendable {
     let base: FileBackupStorage
     private let lock = NSLock()
@@ -14,6 +14,9 @@ final class ScriptedStorage: BackupStorage, @unchecked Sendable {
         deleteError: (any Error)?.none,
         writeError: (any Error)?.none,
         listError: (any Error)?.none,
+        statusErrorAfterFullDisk: (any Error)?.none,
+        statusError: (any Error)?.none,
+        statusSaves: 0,
     )
 
     init(folder: URL) throws {
@@ -46,6 +49,18 @@ final class ScriptedStorage: BackupStorage, @unchecked Sendable {
         set { lock.withLock { state.listError = newValue } }
     }
 
+    /// Set as the status's read error when a write finds the disk full.
+    var statusErrorAfterFullDisk: (any Error)? {
+        get { lock.withLock { state.statusErrorAfterFullDisk } }
+        set { lock.withLock { state.statusErrorAfterFullDisk = newValue } }
+    }
+    var statusSaves: Int { lock.withLock { state.statusSaves } }
+
+    private func fullDisk() -> BackupError {
+        lock.withLock { state.statusError = state.statusErrorAfterFullDisk }
+        return .notEnoughStorage
+    }
+
     func storedIDs() throws -> [UUID] {
         if let listError { throw listError }
         return try base.storedIDs()
@@ -63,8 +78,14 @@ final class ScriptedStorage: BackupStorage, @unchecked Sendable {
         if let deleteError { throw deleteError }
         try base.delete(id: id)
     }
-    func loadStatus() throws -> BackupStatus { try base.loadStatus() }
-    func saveStatus(_ status: BackupStatus) throws { try base.saveStatus(status) }
+    func loadStatus() throws -> BackupStatus {
+        if let error = lock.withLock({ state.statusError }) { throw error }
+        return try base.loadStatus()
+    }
+    func saveStatus(_ status: BackupStatus) throws {
+        lock.withLock { state.statusSaves += 1 }
+        try base.saveStatus(status)
+    }
     func makeScratch() throws -> any BackupScratchFolder { try base.makeScratch() }
     func makeExportFolder() throws -> URL {
         if let exportFolderError { throw exportFolderError }
@@ -73,7 +94,7 @@ final class ScriptedStorage: BackupStorage, @unchecked Sendable {
     func removeExport(_ file: URL) { base.removeExport(file) }
 
     func write(_ files: BackupSnapshotFiles, id: UUID, cloningFrom earlier: UUID?) throws {
-        if diskFull { throw BackupError.notEnoughStorage }
+        if diskFull { throw fullDisk() }
         if let writeError { throw writeError }
         try base.write(files, id: id, cloningFrom: earlier)
     }
@@ -84,7 +105,7 @@ final class ScriptedStorage: BackupStorage, @unchecked Sendable {
         id: UUID,
         cloningFrom earlier: UUID?,
     ) throws {
-        if diskFull { throw BackupError.notEnoughStorage }
+        if diskFull { throw fullDisk() }
         if let writeError { throw writeError }
         try base.write(files, attachments: attachments, id: id, cloningFrom: earlier)
     }
