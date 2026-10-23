@@ -7,7 +7,8 @@
 PRODUCT_NAME = LittleOrbit
 PRODUCT_BUNDLE_IDENTIFIER = app.littleorbit.ios$(LITTLEORBIT_BUNDLE_ID_SUFFIX)
 INFOPLIST_KEY_CFBundleDisplayName = Little Orbit
-// The exported .littleorbit-backup type (D195a.1, L19). Generated keys are merged into it. No document types:
+// The exported .littleorbit-backup type (D195a.1, L19) and LittleOrbitAppGroupIdentifier, from
+// LITTLEORBIT_APP_GROUP_IDENTIFIER in Shared.xcconfig (#52). Generated keys are merged into it. No document types:
 // opening a backup from Files or Finder is the follow-up to #40 (D197.3, L39).
 INFOPLIST_FILE = Config/LittleOrbit-Info.plist
 SDKROOT = iphoneos
@@ -20,3 +21,8 @@ INFOPLIST_KEY_UILaunchScreen_Generation = YES
 INFOPLIST_KEY_UISupportedInterfaceOrientations_iPhone = UIInterfaceOrientationPortrait UIInterfaceOrientationLandscapeLeft UIInterfaceOrientationLandscapeRight
 INFOPLIST_KEY_UISupportedInterfaceOrientations_iPad = UIInterfaceOrientationPortrait UIInterfaceOrientationPortraitUpsideDown UIInterfaceOrientationLandscapeLeft UIInterfaceOrientationLandscapeRight
 LD_RUNPATH_SEARCH_PATHS = $(inherited) @executable_path/Frameworks
+
+// Draft for Kiran (#52): the App Group entitlement isn't enabled. Turning it on is this one line, together
+// with the simulator signing change and App Group registration that need Kiran. Until then the store uses
+// the Application Support fallback.
+// CODE_SIGN_ENTITLEMENTS = Config/LittleOrbit.entitlements

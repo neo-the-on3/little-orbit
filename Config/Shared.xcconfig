@@ -20,3 +20,12 @@ CURRENT_PROJECT_VERSION = 1
 GENERATE_INFOPLIST_FILE = YES
 ENABLE_PREVIEWS = YES
 SWIFT_EMIT_LOC_STRINGS = YES
+
+// App Group for the shared on-device store (#52, D34.1). The iOS and macOS apps write it into Info.plist
+// (Config/LittleOrbit-Info.plist) and, once enabled, into their entitlements (Config/LittleOrbit.entitlements).
+// This is the only place the ID is set. If team signing needs the team-prefixed form on macOS, override it
+// in macOS.xcconfig. The watchOS app keeps its own store (#48) and doesn't use it.
+//
+// The store uses the group container only when the app is signed with this entitlement. Until then it falls
+// back to Application Support/<bundle id> (StoreLocation in LittleOrbitPersistence).
+LITTLEORBIT_APP_GROUP_IDENTIFIER = group.app.littleorbit

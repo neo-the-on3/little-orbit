@@ -14,8 +14,8 @@ import SwiftUI
     enum AppComposition {
         static func make() -> Result<AppFeatures, any Error> {
             Result { () throws -> AppFeatures in
-                // Application Support/<bundle id>/LittleOrbit.store (or an App Group container when one is
-                // configured), never default.store.
+                // <App Group container>/LittleOrbit.store when the app is entitled to the group (#52),
+                // otherwise Application Support/<bundle id>/LittleOrbit.store. Never default.store.
                 let repository = try LittleOrbitStore.makeRepository(configuration: .appLocal())
                 return try AppFeatures(repository: repository, backupStorage: FileBackupStorage.appDefault())
             }
