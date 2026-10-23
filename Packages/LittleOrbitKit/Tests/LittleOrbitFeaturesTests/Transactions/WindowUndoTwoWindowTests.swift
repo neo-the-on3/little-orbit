@@ -244,6 +244,95 @@ struct WindowUndoTwoWindowTests {
         #expect(!setup.first.history.canRedo)
     }
 
+    @Test("D228.1: a change made on the store, with no window, makes A's Undo stale with the same message")
+    func changedOutsideAnyWindow() throws {
+        let corner = bakery
+        let setup = try setup([corner])
+        setup.first.history.setScreen(.account(F.cardID))
+        try setup.edit(corner.id, in: setup.first) { $0.amount = 500 }
+        var changed = try #require(try setup.stored(corner.id))
+        changed.amount = 650
+        try setup.repository.saveTransaction(changed)
+
+        setup.first.history.undo()
+        #expect(try setup.stored(corner.id)?.amount == 650, "Nothing was changed")
+        #expect(setup.first.history.alert?.title == "Can’t Undo Edit Transaction in Rewards Card")
+        let message = try #require(setup.first.history.alert?.message)
+        #expect(message == "Corner Bakery has changed since then. Nothing was changed.")
+        #expect(!message.contains("window"))
+        #expect(!setup.first.history.canUndo, "The step is removed")
+    }
+
+    @Test("X4a, D203: A deletes in Household Card, B renames it Home Card and deletes it; A's alert keeps the name")
+    func accountRenamedThenDeletedElsewhere() throws {
+        let bluebird = F.expense(1_200, on: F.date(2026, 10, 18), account: F.cardID, details: "Bluebird Hardware")
+        let setup = try setup([bluebird])
+        var card = try #require(try setup.repository.accounts().first { $0.id == F.cardID })
+        card.name = "Household Card"
+        try setup.repository.saveAccount(card)
+        setup.first.history.setScreen(.account(F.cardID))
+        _ = try setup.delete([bluebird.id], in: setup.first)
+        card.name = "Home Card"
+        try setup.repository.saveAccount(card)
+        setup.second.history.record(try WindowUndoHistoryTests.deleteAccount(setup.repository, F.cardID))
+
+        setup.first.history.undo()
+        #expect(try setup.repository.transactions().isEmpty, "Nothing is restored into a missing account")
+        #expect(setup.first.history.alert?.title == "Can’t Undo Delete Transaction in Household Card")
+        #expect(
+            setup.first.history.alert?.message == "Household Card has been deleted. Nothing was changed."
+        )
+        #expect(!setup.first.history.canUndo, "The step is removed")
+    }
+
+    @Test("D228.4: an unnamed transfer that changed since reads “The transfer has changed since then.”")
+    func unnamedTransferChanged() throws {
+        let transfer = F.transfer(2_000, on: F.date(2026, 10, 18))
+        let setup = try setup([transfer])
+        try setup.edit(transfer.id, in: setup.first) { $0.amount = 2_500 }
+        try setup.edit(transfer.id, in: setup.second) { $0.amount = 3_000 }
+
+        setup.first.history.undo()
+        #expect(try setup.stored(transfer.id)?.amount == 3_000)
+        #expect(setup.first.history.alert?.message == "The transfer has changed since then. Nothing was changed.")
+    }
+
+    @Test("D228.4: an unnamed transaction deleted since reads “The transaction has been deleted.”")
+    func unnamedTransactionDeleted() throws {
+        let unnamed = F.expense(300, on: F.date(2026, 10, 18))
+        let setup = try setup([unnamed])
+        try setup.edit(unnamed.id, in: setup.first) { $0.amount = 350 }
+        _ = try setup.delete([unnamed.id], in: setup.second)
+
+        setup.first.history.undo()
+        #expect(try setup.stored(unnamed.id) == nil)
+        #expect(
+            setup.first.history.alert?.message == "The transaction has been deleted. Nothing was changed."
+        )
+    }
+
+    @Test("D228.4: a deleted account the step couldn't name reads “The account has been deleted.”")
+    func unnamedAccountDeleted() throws {
+        let corner = bakery
+        let setup = try setup([corner])
+        // The step's accounts couldn't be read when it was recorded, so it has no account name to give.
+        let unreadable = TransactionUseCases(
+            loadLedger: setup.useCases.loadLedger,
+            accountHistory: setup.useCases.accountHistory,
+            saveTransactions: setup.useCases.saveTransactions,
+            changes: UnreadablePlaceChanges(base: setup.useCases.changes),
+        )
+        let window = TestWindow(unreadable, updates: setup.updates)
+        _ = try setup.delete([corner.id], in: window)
+        window.history.dismissAlert()
+        setup.second.history.record(try WindowUndoHistoryTests.deleteAccount(setup.repository, F.cardID))
+
+        window.history.undo()
+        #expect(try setup.repository.transactions().isEmpty)
+        #expect(window.history.alert?.message == "The account has been deleted. Nothing was changed.")
+        #expect(!window.history.canUndo)
+    }
+
     @Test("X7: B edits and undoes its edit; the values match what A left, so A's Undo works")
     func otherWindowUndidItsChange() throws {
         let corner = bakery
@@ -313,4 +402,26 @@ struct LedgerReplacedUndoTests {
         #expect(!second.history.canUndo && !second.history.canRedo)
         #expect(updates.revision == revision + 1)
     }
+}
+
+/// The real changes use case, except that the accounts a change touches can't be read when it's recorded.
+@MainActor
+private struct UnreadablePlaceChanges: TransactionChangesUseCase {
+    struct Failure: Error {}
+
+    let base: any TransactionChangesUseCase
+
+    func remove(ids: [UUID]) throws -> TransactionChange { try base.remove(ids: ids) }
+
+    func outcome(of change: TransactionChange) throws -> ChangeOutcome { try base.outcome(of: change) }
+
+    func check(_ change: TransactionChange, expecting outcome: ChangeOutcome) throws -> ChangeCheck {
+        try base.check(change, expecting: outcome)
+    }
+
+    func revert(_ change: TransactionChange, expecting outcome: ChangeOutcome) throws -> RevertResult {
+        try base.revert(change, expecting: outcome)
+    }
+
+    func impact(of _: TransactionChange) throws -> ChangeImpact { throw Failure() }
 }
