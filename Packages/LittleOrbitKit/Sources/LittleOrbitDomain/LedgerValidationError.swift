@@ -33,9 +33,8 @@ public enum LedgerValidationError: Error, Equatable, Sendable {
     case showAvailableCreditNotAllowed
     case transactionTypeChangeNotAllowed
     case invalidTimeZone
-    case splitsDoNotMatchAmount
-    case splitsRequireUncategorised
-    case splitsNotAllowedOnTransfer
+    /// A split broke this rule (D64, D97.3). Each rule is its own case so a caller can name it.
+    case splitRuleBroken(SplitRule)
     case attachmentTooLarge
     case invalidAttachment
     case missingScheduleKey
@@ -67,4 +66,28 @@ public enum LedgerValidationError: Error, Equatable, Sendable {
     /// The change would leave linked refunds pointing at something that isn't a plain expense: the expense
     /// becomes an income, or it's split while Schema V1 can't link a refund to a line.
     case originalHasRefunds
+}
+
+/// The rules a stored split must keep (D64, D97.3, D117.1). Facts only; how to word them is up to the caller.
+public enum SplitRule: CaseIterable, Equatable, Sendable {
+    /// A transfer can't be split (D64).
+    case notOnTransfer
+    /// A refund can't be split (D97.3).
+    case notOnRefund
+    /// A split transaction has no category of its own; each line has one.
+    case transactionHasCategory
+    /// A split has at least 2 lines; one line is a normal single-category transaction (D64).
+    case tooFewLines
+    /// A split has at most `SplitPlan.maximumLines` lines (D64).
+    case tooManyLines
+    /// Every line's amount is above 0 (D64).
+    case lineAmountNotPositive
+    /// Every line has a category (D64).
+    case lineMissingCategory
+    /// Every line's category is of the transaction's kind: no mixed expense and income lines (D64).
+    case lineCategoryKind
+    /// No category is on two lines (D117.1).
+    case categoryRepeated
+    /// The lines add up to the transaction's amount (D64).
+    case linesDoNotMatchTotal
 }
