@@ -32,6 +32,11 @@ public final class RefundFormViewModel {
     public var errorMessage: String?
     /// The refund against the ledger now; `nil` when Refund isn't offered or the expense is gone.
     public private(set) var check: RefundCheck?
+    /// The last check that found the expense. An open sheet keeps showing its expense, amounts, account and
+    /// currency from it after the expense is split or deleted elsewhere (D251), while Save stays unavailable.
+    @ObservationIgnored private var lastCheck: RefundCheck?
+    /// What the sheet shows: the check now, else the last one that found the expense.
+    private var shown: RefundCheck? { check ?? lastCheck }
 
     @ObservationIgnored private let refunds: any RefundTransactionUseCase
     @ObservationIgnored private let dates: any TransactionDateUseCase
@@ -85,34 +90,34 @@ public final class RefundFormViewModel {
 
     /// The expense's name: its payee, else its trimmed description, else "Expense", as its row reads.
     public var expenseName: String {
-        guard let expense = check?.expense else {
+        guard let expense = shown?.expense else {
             return ""
         }
-        if let payee = check?.payees.first(where: { $0.id == expense.payeeID }) {
+        if let payee = shown?.payees.first(where: { $0.id == expense.payeeID }) {
             return payee.name
         }
         return TransactionText.trimmed(expense.details) ?? TransactionFormViewModel.typeName(.expense)
     }
 
     private var expenseCurrency: String {
-        currency(of: check?.expense.accountID)
+        currency(of: shown?.expense.accountID)
     }
 
     private var expenseDay: CalendarDay? {
-        check.map { dates.day(of: $0.expense.date, timeZoneID: $0.expense.timeZoneID) }
+        shown.map { dates.day(of: $0.expense.date, timeZoneID: $0.expense.timeZoneID) }
     }
 
     private var today: CalendarDay { TransactionTiming.today(now(), timeZone: timeZone) }
 
     private var refundedText: String? {
-        guard let check, check.refunded > 0 else {
+        guard let check = shown, check.refunded > 0 else {
             return nil
         }
         return formatter.string(check.refunded, currencyCode: expenseCurrency)
     }
 
     private var refundableAmountText: String {
-        formatter.string(check?.refundable ?? 0, currencyCode: expenseCurrency)
+        formatter.string(shown?.refundable ?? 0, currencyCode: expenseCurrency)
     }
 
     /// iOS "Refund of": "Trailhead Sports · 17 Oct".
@@ -125,7 +130,7 @@ public final class RefundFormViewModel {
 
     /// iOS "Refundable": "₹700.00 of ₹1,000.00"; "₹0.00 of ₹1,000.00" when it's fully refunded.
     public var refundableText: String {
-        let total = formatter.string(check?.expense.amount ?? 0, currencyCode: expenseCurrency)
+        let total = formatter.string(shown?.expense.amount ?? 0, currencyCode: expenseCurrency)
         return RefundFormText.refundable(refundableAmountText, of: total)
     }
 
@@ -136,7 +141,7 @@ public final class RefundFormViewModel {
 
     /// macOS: "Refund of Trailhead Sports · 17 Oct 2026 · ₹1,000.00 · ₹300.00 already refunded".
     public var caption: String {
-        guard let check, let day = expenseDay else {
+        guard let check = shown, let day = expenseDay else {
             return ""
         }
         return RefundFormText.caption(
@@ -161,7 +166,7 @@ public final class RefundFormViewModel {
 
     /// The live accounts, not hidden ones, except the expense's own and the chosen one (S35), in sidebar order.
     public var accountOptions: [RefundAccountOption] {
-        guard let check else {
+        guard let check = shown else {
             return []
         }
         let kept = [check.expense.accountID, accountID].compactMap(\.self)
@@ -178,7 +183,7 @@ public final class RefundFormViewModel {
 
     /// The expense's category, which a refund keeps (D19, D33.4).
     public var categoryName: String {
-        check?.categories.first { $0.id == check?.expense.categoryID }?.name ?? TransactionText.uncategorised
+        shown?.categories.first { $0.id == shown?.expense.categoryID }?.name ?? TransactionText.uncategorised
     }
 
     /// macOS: "Shopping (from the expense)".
@@ -240,9 +245,22 @@ public final class RefundFormViewModel {
     /// the payee text included.
     public func reload() {
         refresh()
-        if base != nil, check == nil, errorMessage == nil {
-            errorMessage = "This transaction no longer exists."
+        if let base, check == nil, errorMessage == nil {
+            errorMessage = Self.unavailableMessage(of: base.refundOfID, refunds: refunds)
         }
+    }
+
+    /// Why an open sheet can't refund its expense any more: it was split in another window (D251.1), else it's
+    /// gone (D251.4). Nothing is written, and Save stays unavailable.
+    private static func unavailableMessage(of expenseID: UUID?, refunds: any RefundTransactionUseCase) -> String {
+        if let expenseID, (try? refunds.isSplit(expenseID)) == true {
+            return FeatureText.string(
+                "This expense is now split, so it can’t be refunded.",
+                comment:
+                    "Refund sheet alert when another window split the expense while the sheet was open (D251). Schema V1 can’t refund a split expense (D35.6, #126).",
+            )
+        }
+        return "This transaction no longer exists."
     }
 
     private func refresh() {
@@ -252,6 +270,9 @@ public final class RefundFormViewModel {
         }
         do {
             check = try refunds.check(draft)
+            if let check {
+                lastCheck = check
+            }
         } catch {
             errorMessage = AccountHistoryViewModel.message(for: error)
         }
@@ -287,7 +308,7 @@ public final class RefundFormViewModel {
     }
 
     private func currency(of accountID: UUID?) -> String {
-        Self.currency(of: accountID, in: check?.accounts ?? [])
+        Self.currency(of: accountID, in: shown?.accounts ?? [])
     }
 
     private static func currency(of accountID: UUID?, in accounts: [Account]) -> String {

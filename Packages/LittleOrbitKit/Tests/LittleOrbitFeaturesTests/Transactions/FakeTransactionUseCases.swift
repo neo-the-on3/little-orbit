@@ -110,6 +110,8 @@ struct NoRefunds: RefundTransactionUseCase {
 
     func check(_: Transaction) -> RefundCheck? { nil }
 
+    func isSplit(_: UUID) -> Bool { false }
+
     func save(_: Transaction, payeeName _: String) throws -> TransactionChange {
         throw LedgerValidationError.refundOriginalMissing
     }

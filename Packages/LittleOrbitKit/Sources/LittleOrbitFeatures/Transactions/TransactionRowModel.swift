@@ -66,6 +66,8 @@ struct TransactionRowContext {
     let text: TransactionText
     let today: CalendarDay
     var scope: TransactionListScope = .account
+    /// Live split lines per split transaction: its category reads 'Split (3)' (D64, S1, S45).
+    var splitLineCounts: [UUID: Int] = [:]
 
     func row(_ entry: HistoryEntry, isUpcoming: Bool) -> TransactionRowModel {
         let transaction = entry.transaction
@@ -76,7 +78,11 @@ struct TransactionRowContext {
         let details = TransactionText.trimmed(transaction.details)
         let isTransfer = transaction.type == .transfer
 
-        let categoryText = isTransfer ? TransactionText.transfer : category?.name ?? TransactionText.uncategorised
+        let lineCount = isTransfer ? nil : splitLineCounts[transaction.id]
+        let categoryText =
+            isTransfer
+            ? TransactionText.transfer
+            : lineCount.map(TransactionText.split) ?? category?.name ?? TransactionText.uncategorised
         let title: String
         var detailUsedAsTitle = false
         if isTransfer {
@@ -136,7 +142,7 @@ struct TransactionRowContext {
             balanceValueText: balance,
             isUpcoming: isUpcoming,
             symbolName: isTransfer ? "arrow.left.arrow.right" : category?.iconName ?? "questionmark",
-            isUncategorised: !isTransfer && category == nil,
+            isUncategorised: !isTransfer && lineCount == nil && category == nil,
             dateText: text.fullDate(day),
             categoryText: categoryText,
             accountText: account.name,

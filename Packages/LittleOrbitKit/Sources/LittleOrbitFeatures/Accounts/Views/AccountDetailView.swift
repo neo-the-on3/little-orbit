@@ -155,7 +155,12 @@
         }
 
         private func refund(_ id: UUID) {
-            refundSheet = RefundSheet(model: transactions.makeRefund(of: id))
+            let model = transactions.makeRefund(of: id)
+            // Nothing to refund (split, or changed since the menu was drawn): open no empty sheet (D224.3).
+            guard model.isAvailable else {
+                return
+            }
+            refundSheet = RefundSheet(model: model)
         }
 
         /// Copies one row as one Undo step (D65, D221, S29). Adds show no toast (D164.2).

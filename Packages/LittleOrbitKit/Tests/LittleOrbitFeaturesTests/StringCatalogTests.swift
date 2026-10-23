@@ -76,4 +76,9 @@ struct StringCatalogTests {
         #expect(entries["Refund"] == ["Refund"])
     }
 
+    @Test("D251.1: the refund sheet’s split message is its own whole-phrase entry")
+    func refundSplitMessage() throws {
+        let key = "This expense is now split, so it can’t be refunded."
+        #expect(try Self.entries()[key] == [key])
+    }
 }

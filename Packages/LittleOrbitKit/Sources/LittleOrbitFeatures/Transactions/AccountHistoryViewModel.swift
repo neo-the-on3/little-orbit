@@ -39,7 +39,8 @@ public final class AccountHistoryViewModel {
     public private(set) var sections: [TransactionDaySection] = []
     public private(set) var accountExists = true
     public var selection: Set<UUID> = []
-    /// The rows Refund is offered on: expenses that aren't refunds (D65, D117.2, D117.3).
+    /// The rows Refund is offered on: expenses that aren't refunds (D65, D117.2, D117.3) and aren't split, since
+    /// Schema V1 can't link a refund to a split expense (D35.6, D224.3; split-line refunds come with #126).
     public private(set) var refundableIDs: Set<UUID> = []
     /// The rows Duplicate is hidden on: refunds (D65, D117.3, D237.3).
     public private(set) var refundIDs: Set<UUID> = []
@@ -130,6 +131,7 @@ public final class AccountHistoryViewModel {
                 formatter: formatter,
                 text: text,
                 today: today,
+                splitLineCounts: page.splitLineCounts,
             )
             let currency = account.currencyCode
             balanceText = formatter.string(history.currentBalance, currencyCode: currency)
@@ -151,7 +153,11 @@ public final class AccountHistoryViewModel {
                 )
             }
             let shown = (history.upcoming + history.days.flatMap(\.entries)).map(\.transaction)
-            refundableIDs = Set(shown.filter { TransactionActions(for: $0).canRefund }.map(\.id))
+            // Read once per load, not per row.
+            let splitIDs = Set(page.splitLineCounts.keys)
+            refundableIDs = Set(
+                shown.filter { TransactionActions(for: $0).canRefund && !splitIDs.contains($0.id) }.map(\.id)
+            )
             refundIDs = Set(shown.filter { TransactionActions(for: $0).duplicate == .disabledForRefund }.map(\.id))
             let visible = Set(allRows.map(\.id))
             selection = selection.intersection(visible)

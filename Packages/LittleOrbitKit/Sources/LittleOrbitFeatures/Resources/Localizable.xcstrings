@@ -2761,6 +2761,19 @@
         }
       }
     },
+    "Split (%lld)": {
+      "comment": "Category of a split transaction in lists and the macOS table. %lld is its number of lines, 2 to 20 (D64).",
+      "extractionState": "manual",
+      "generatesSymbol": false,
+      "localizations": {
+        "en": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Split (%lld)"
+          }
+        }
+      }
+    },
     "Text shortened to fit %lld characters": {
       "comment": "Under the description field after a paste was cut to the character limit.",
       "extractionState": "manual",
@@ -3003,6 +3016,19 @@
           "stringUnit": {
             "state": "translated",
             "value": "This expense has refunds, so it can’t become income."
+          }
+        }
+      }
+    },
+    "This expense is now split, so it can’t be refunded.": {
+      "comment": "Refund sheet alert when another window split the expense while the sheet was open (D251). Schema V1 can’t refund a split expense (D35.6, #126).",
+      "extractionState": "manual",
+      "generatesSymbol": false,
+      "localizations": {
+        "en": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "This expense is now split, so it can’t be refunded."
           }
         }
       }

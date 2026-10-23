@@ -29,11 +29,20 @@ public struct AccountHistoryPage: Equatable, Sendable {
     public var history: AccountHistory
     /// The records a history entry refers to: the other account of a transfer, categories and payees.
     public var ledger: TransactionLedger
+    /// How many live split lines each split transaction has, for its 'Split (3)' category (D64, S1, S45).
+    /// Transactions with no split aren't listed.
+    public var splitLineCounts: [UUID: Int]
 
-    public init(account: Account, history: AccountHistory, ledger: TransactionLedger) {
+    public init(
+        account: Account,
+        history: AccountHistory,
+        ledger: TransactionLedger,
+        splitLineCounts: [UUID: Int] = [:],
+    ) {
         self.account = account
         self.history = history
         self.ledger = ledger
+        self.splitLineCounts = splitLineCounts
     }
 }
 
@@ -160,25 +169,6 @@ public struct DefaultLoadTransactionLedgerUseCase: LoadTransactionLedgerUseCase 
             try repository.seedDefaultCategories()
         }
         return try ledger()
-    }
-}
-
-@MainActor
-public struct DefaultAccountHistoryUseCase: AccountHistoryUseCase {
-    private let ledger: DefaultLoadTransactionLedgerUseCase
-    private let build = BuildAccountHistory()
-
-    public init(repository: any LedgerRepository) {
-        self.ledger = DefaultLoadTransactionLedgerUseCase(repository: repository)
-    }
-
-    public func history(of accountID: UUID, today: CalendarDay) throws -> AccountHistoryPage? {
-        let contents = try ledger.ledger()
-        guard let account = contents.accounts.first(where: { $0.id == accountID }) else {
-            return nil
-        }
-        let history = build(account: account, transactions: contents.transactions, today: today)
-        return AccountHistoryPage(account: account, history: history, ledger: contents)
     }
 }
 

@@ -53,6 +53,9 @@ public protocol RefundTransactionUseCase {
     /// `refund` against the ledger as it is now, so the sheet follows changes made in other windows. `nil` when
     /// its expense is gone or can no longer be refunded.
     func check(_ refund: Transaction) throws -> RefundCheck?
+    /// Whether the expense is still there and now split, which Schema V1 can't refund (D35.6, D251.1), so the
+    /// sheet can say why `check` found nothing.
+    func isSplit(_ expenseID: UUID) throws -> Bool
     /// Saves the refund with the payee as typed, all or nothing, and returns the change, so one Undo removes it.
     /// `payeeName` is an existing payee's name, a new name, which creates that payee with the refund (Undo
     /// removes it again, D191.4), or blank for none (D235). Throws `RefundBlocked` when `check` finds issues,
@@ -94,6 +97,12 @@ public struct DefaultRefundTransactionUseCase: RefundTransactionUseCase {
             categories: snapshot.categoriesVisible(),
             payees: snapshot.payeesVisible(),
         )
+    }
+
+    public func isSplit(_ expenseID: UUID) throws -> Bool {
+        let snapshot = try snapshot()
+        return snapshot.transactionsVisible().contains { $0.id == expenseID }
+            && !snapshot.splitsVisible(for: expenseID).isEmpty
     }
 
     public func save(_ refund: Transaction, payeeName: String) throws -> TransactionChange {
