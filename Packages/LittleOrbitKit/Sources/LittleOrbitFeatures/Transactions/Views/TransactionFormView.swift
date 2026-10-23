@@ -29,6 +29,10 @@
         /// The text field being edited. The amount uses the decimal pad with the operator row; description
         /// and notes use the normal keyboard (D163).
         @FocusState private var focus: FormField?
+        #if os(iOS)
+            /// The category list and split editor pushed from the Category row (#34).
+            @State private var path: [TransactionFormRoute] = []
+        #endif
 
         enum FormField: Hashable {
             case amount, received, payee, description, notes
@@ -40,7 +44,7 @@
         }
 
         var body: some View {
-            NavigationStack {
+            stack {
                 content
                     .navigationTitle(model.title)
                     // Refunds recorded or deleted in another window update the form live (D225.1).
@@ -81,6 +85,21 @@
             }
             #if os(macOS)
                 .frame(minWidth: 460, minHeight: 520)
+            #endif
+        }
+
+        /// The sheet's navigation stack; on iOS it can push the category list and the split editor.
+        @ViewBuilder
+        private func stack<Content: View>(@ViewBuilder _ content: () -> Content) -> some View {
+            #if os(iOS)
+                NavigationStack(path: $path) {
+                    content()
+                        .navigationDestination(for: TransactionFormRoute.self) { route in
+                            TransactionFormDestination(route: route, model: model, path: $path)
+                        }
+                }
+            #else
+                NavigationStack { content() }
             #endif
         }
 
@@ -144,25 +163,33 @@
                 stackedRow("Account", value: model.accountName) {
                     Picker("Account", selection: $model.accountID) { accountOptions }
                 }
-                stackedRow("Category", value: model.categoryName, spoken: model.categorySpokenValue) {
-                    // The menu's items are standard Labels, so each lines up with its icon, in a section per
-                    // parent (UI Designer). The chosen value shows as text only, and its accessibility label
-                    // carries the parent, so VoiceOver reads "Category" then "Groceries, under Food & Dining"
-                    // once each: the iOS picker folds this label into its own, and the macOS one uses it as
-                    // the value (Tester's #87 v11).
-                    Picker(selection: $model.categoryID) {
-                        Label("Uncategorised", systemImage: "questionmark").tag(UUID?.none)
-                        CategoryPickerSections(groups: model.categoryGroups)
-                    } label: {
-                        Text("Category")
-                    } currentValueLabel: {
-                        Text(model.categoryName)
-                            .accessibilityLabel(model.categorySpokenValue)
-                    }
+                if model.offersSplit {
+                    TransactionCategoryRow(model: model)
+                } else {
+                    categoryPicker
                 }
                 payeeField
             }
             dateRow
+        }
+
+        @ViewBuilder private var categoryPicker: some View {
+            stackedRow("Category", value: model.categoryName, spoken: model.categorySpokenValue) {
+                // The menu's items are standard Labels, so each lines up with its icon, in a section per
+                // parent (UI Designer). The chosen value shows as text only, and its accessibility label
+                // carries the parent, so VoiceOver reads "Category" then "Groceries, under Food & Dining"
+                // once each: the iOS picker folds this label into its own, and the macOS one uses it as
+                // the value (Tester's #87 v11).
+                Picker(selection: $model.categoryID) {
+                    Label("Uncategorised", systemImage: "questionmark").tag(UUID?.none)
+                    CategoryPickerSections(groups: model.categoryGroups)
+                } label: {
+                    Text("Category")
+                } currentValueLabel: {
+                    Text(model.categoryName)
+                        .accessibilityLabel(model.categorySpokenValue)
+                }
+            }
         }
 
         /// A picker row. At accessibility sizes the label goes above the value and the value wraps onto more
@@ -296,7 +323,7 @@
                 Button {
                     model.choosePayee(suggestion)
                 } label: {
-                    suggestionLabel(suggestion)
+                    SuggestionLabel(suggestion: suggestion)
                 }
                 .buttonStyle(.plain)
             }
@@ -321,7 +348,7 @@
                 Button {
                     model.chooseDescription(suggestion)
                 } label: {
-                    suggestionLabel(suggestion)
+                    SuggestionLabel(suggestion: suggestion)
                 }
                 .buttonStyle(.plain)
             }
@@ -334,23 +361,6 @@
                     .font(.theme(Self.footnoteStyle))
                     .foregroundStyle(Color(ThemeColor.labelSecondary))
             }
-        }
-
-        private func suggestionLabel(_ suggestion: TransactionSuggestion) -> some View {
-            HStack {
-                Image(systemName: "clock.arrow.circlepath")
-                    .foregroundStyle(Color(ThemeColor.labelSecondary))
-                    .accessibilityHidden(true)
-                Text(suggestion.text)
-                    .foregroundStyle(Color(ThemeColor.labelPrimary))
-                Spacer()
-                Text(TransactionFormViewModel.usageText(suggestion))
-                    .font(.theme(Self.footnoteStyle))
-                    .foregroundStyle(Color(ThemeColor.labelSecondary))
-            }
-            .contentShape(Rectangle())
-            .accessibilityElement(children: .combine)
-            .accessibilityHint("Uses this suggestion")
         }
 
         // MARK: - Platform layouts

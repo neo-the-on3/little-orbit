@@ -1447,7 +1447,7 @@
       }
     },
     "Delete Line": {
-      "comment": "macOS split line − button, for VoiceOver and its help tag (D64).",
+      "comment": "Deletes one split line: the macOS − button’s VoiceOver label and help tag, the iOS swipe action, and the confirmation’s button (D64, D242).",
       "extractionState": "manual",
       "generatesSymbol": false,
       "localizations": {
