@@ -134,6 +134,21 @@ struct WindowUndoStaleDetailTests {
         #expect(!setup.first.history.canUndo)
     }
 
+    @Test("X12, D189.2: Undo of a bulk edit after B deletes exactly one names it")
+    func bulkEditOneDeleted() throws {
+        let rows = three
+        let setup = try setup(rows)
+        try setup.bulkEdit()
+        setup.second.history.record(try setup.useCases.changes.remove(ids: [rows[1].id]))
+        let before = try setup.repository.transactions()
+
+        setup.first.history.undo()
+        #expect(try setup.repository.transactions() == before)
+        #expect(setup.first.history.alert?.title == "Can’t Undo Edit 3 Transactions in Rewards Card")
+        #expect(setup.first.history.alert?.message == "Fuel has been deleted. Nothing was changed.")
+        #expect(!setup.first.history.canUndo)
+    }
+
     @Test("D189.2: Redo of a bulk delete with one record already deleted elsewhere names it")
     func bulkDeleteOneStale() throws {
         let rows = three

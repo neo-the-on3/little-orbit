@@ -56,4 +56,16 @@ struct StringCatalogTests {
             #expect(entries[key] == [key], "\(key) is one entry with its English value")
         }
     }
+
+    @Test("D228: no stale-step message key or value names a window")
+    func staleMessagesNameNoCause() throws {
+        let entries = try Self.entries()
+        let stale = entries.filter { $0.key.hasSuffix("Nothing was changed.") }
+        #expect(stale.count >= 3)
+        for (key, values) in stale {
+            for text in [key] + values {
+                #expect(!text.lowercased().contains("window"), "\(text) names a cause")
+            }
+        }
+    }
 }
