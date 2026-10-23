@@ -73,4 +73,43 @@ struct TransactionFormRefundsTests {
         #expect(model.allowedTypes == [.income])
         #expect(!model.showsTypeSwitch)
     }
+
+    @Test("D225.1: refunds recorded or deleted in another window update an open Edit Expense, keeping the user’s edits")
+    func followsLiveRefunds() throws {
+        let fixture = try F()
+        let expense = try fixture.expense(1_000, on: F.date(2026, 10, 17, zone: F.kolkata))
+        let model = form(expense.id, in: fixture)
+        #expect(model.showsTypeSwitch)
+        model.expressionInput = "1200"
+        model.note = "Shoes and socks"
+        model.payeeText = "Trailhead Outlet"
+        let refund = try fixture.refund(300, of: expense, on: F.date(2026, 10, 18, zone: F.kolkata))
+        model.reload()
+        #expect(!model.showsTypeSwitch)
+        #expect(
+            model.refundsFootnote
+                == "Refunded ₹300.00 of ₹1,200.00. While these refunds exist, the amount can’t go below ₹300.00 and the expense can’t become income."
+        )
+        #expect(model.expressionInput == "1200")
+        #expect(model.note == "Shoes and socks")
+        #expect(model.payeeText == "Trailhead Outlet")
+        try fixture.repository.deleteTransaction(id: refund.id)
+        model.reload()
+        #expect(model.showsTypeSwitch)
+        #expect(model.refundsFootnote == nil)
+        #expect(model.expressionInput == "1200")
+        #expect(model.note == "Shoes and socks")
+    }
+
+    @Test("D225.1: an editor the user already switched to Income keeps the switch when a refund arrives")
+    func keepsIncome() throws {
+        let fixture = try F()
+        let expense = try fixture.expense(1_000, on: F.date(2026, 10, 17, zone: F.kolkata))
+        let model = form(expense.id, in: fixture)
+        model.type = .income
+        try fixture.refund(300, of: expense, on: F.date(2026, 10, 18, zone: F.kolkata))
+        model.reload()
+        #expect(model.type == .income)
+        #expect(model.showsTypeSwitch)
+    }
 }

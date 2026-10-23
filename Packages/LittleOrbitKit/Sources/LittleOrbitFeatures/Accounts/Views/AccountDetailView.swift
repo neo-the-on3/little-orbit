@@ -63,6 +63,7 @@
                 .sheet(item: $formSheet) { sheet in
                     TransactionFormView(
                         model: sheet.model,
+                        updates: transactions.updates,
                         onSaved: record,
                     )
                 }

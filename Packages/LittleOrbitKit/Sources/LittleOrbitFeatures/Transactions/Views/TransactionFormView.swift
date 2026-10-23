@@ -9,9 +9,15 @@
     /// Return saves and Esc cancels.
     struct TransactionFormView: View {
         @State private var model: TransactionFormViewModel
+        let updates: LedgerUpdates
         let onSaved: (TransactionChange) -> Void
 
-        init(model: TransactionFormViewModel, onSaved: @escaping (TransactionChange) -> Void) {
+        init(
+            model: TransactionFormViewModel,
+            updates: LedgerUpdates,
+            onSaved: @escaping (TransactionChange) -> Void,
+        ) {
+            self.updates = updates
             _model = State(initialValue: model)
             self.onSaved = onSaved
         }
@@ -37,6 +43,8 @@
             NavigationStack {
                 content
                     .navigationTitle(model.title)
+                    // Refunds recorded or deleted in another window update the form live (D225.1).
+                    .onChange(of: updates.revision) { model.reload() }
                     #if os(iOS)
                         .navigationBarTitleDisplayMode(.inline)
                     #endif
@@ -345,25 +353,6 @@
             .accessibilityHint("Uses this suggestion")
         }
 
-        @ViewBuilder private var messages: some View {
-            // On iOS the calculator error shows under the amount field instead (D163).
-            #if os(macOS)
-                if let error = model.amountError {
-                    Label(error, systemImage: "exclamationmark.circle")
-                        .foregroundStyle(Color(ThemeColor.statusOverspent))
-                }
-            #endif
-            if let refunds = model.refundsFootnote {
-                Text(refunds)
-                    .font(.theme(Self.footnoteStyle))
-                    .foregroundStyle(Color(ThemeColor.labelSecondary))
-            }
-            if let issue = model.issueMessage {
-                Label(issue, systemImage: "exclamationmark.triangle")
-                    .foregroundStyle(Color(ThemeColor.statusWarning))
-            }
-        }
-
         // MARK: - Platform layouts
 
         #if os(macOS)
@@ -467,6 +456,25 @@
     }
 
     extension TransactionFormView {
+        @ViewBuilder private var messages: some View {
+            // On iOS the calculator error shows under the amount field instead (D163).
+            #if os(macOS)
+                if let error = model.amountError {
+                    Label(error, systemImage: "exclamationmark.circle")
+                        .foregroundStyle(Color(ThemeColor.statusOverspent))
+                }
+            #endif
+            if let refunds = model.refundsFootnote {
+                Text(refunds)
+                    .font(.theme(Self.footnoteStyle))
+                    .foregroundStyle(Color(ThemeColor.labelSecondary))
+            }
+            if let issue = model.issueMessage {
+                Label(issue, systemImage: "exclamationmark.triangle")
+                    .foregroundStyle(Color(ThemeColor.statusWarning))
+            }
+        }
+
         /// Hidden while the expense has refunds (`showsTypeSwitch`, D222.2).
         private var typePicker: some View {
             Picker("Type", selection: $model.type) {

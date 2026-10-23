@@ -60,7 +60,8 @@ public final class TransactionFormViewModel {
     @ObservationIgnored private var accounts: [Account] = []
     @ObservationIgnored private var categories: [TransactionCategory] = []
     @ObservationIgnored private var payees: [Payee] = []
-    @ObservationIgnored private(set) var transactions: [Transaction] = []
+    /// Observed, so the refunds footnote and the Expense/Income switch follow a reload (D225.1).
+    private(set) var transactions: [Transaction] = []
     @ObservationIgnored private(set) var timeZoneID: String
 
     public init(
@@ -106,6 +107,19 @@ public final class TransactionFormViewModel {
     }
 
     // MARK: Loading
+
+    /// Rereads the ledger after a change in this window or another, the way the bulk sheet follows live data
+    /// (D225.1): refunds recorded or deleted elsewhere hide or show Expense/Income and the refunds footnote.
+    /// Only the ledger is reread; the user's own edits stay as they are.
+    public func reload() {
+        do {
+            let ledger = try loadLedger.ledgerForEntry()
+            accounts = ledger.accounts
+            transactions = ledger.transactions
+        } catch {
+            errorMessage = AccountHistoryViewModel.message(for: error)
+        }
+    }
 
     private func load() {
         do {
