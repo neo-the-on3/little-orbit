@@ -26,7 +26,13 @@ final class FakeTransactionUseCases {
             saveTransactions: self,
             changes: self,
             duplicate: self,
+            splits: self,
         )
+    }
+
+    func save(_ transaction: Transaction, lines: [TransactionSplit]) throws -> TransactionChange {
+        saved.append([transaction])
+        return .added([transaction.id])
     }
 
     func duplicate(id: UUID, now: Date) throws -> TransactionChange {
@@ -92,4 +98,4 @@ final class FakeTransactionUseCases {
 
 extension FakeTransactionUseCases: LoadTransactionLedgerUseCase, AccountHistoryUseCase {}
 extension FakeTransactionUseCases: SaveTransactionsUseCase, TransactionChangesUseCase {}
-extension FakeTransactionUseCases: DuplicateTransactionUseCase {}
+extension FakeTransactionUseCases: DuplicateTransactionUseCase, SplitTransactionUseCase {}

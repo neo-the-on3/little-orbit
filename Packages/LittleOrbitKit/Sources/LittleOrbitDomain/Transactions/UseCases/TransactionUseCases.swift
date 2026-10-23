@@ -96,6 +96,7 @@ public struct TransactionUseCases {
     public var saveTransactions: any SaveTransactionsUseCase
     public var changes: any TransactionChangesUseCase
     public var duplicate: any DuplicateTransactionUseCase
+    public var splits: any SplitTransactionUseCase
     public var dates: any TransactionDateUseCase
 
     public init(
@@ -104,6 +105,7 @@ public struct TransactionUseCases {
         saveTransactions: any SaveTransactionsUseCase,
         changes: any TransactionChangesUseCase,
         duplicate: any DuplicateTransactionUseCase,
+        splits: any SplitTransactionUseCase,
         dates: any TransactionDateUseCase = DefaultTransactionDateUseCase(),
     ) {
         self.loadLedger = loadLedger
@@ -111,6 +113,7 @@ public struct TransactionUseCases {
         self.saveTransactions = saveTransactions
         self.changes = changes
         self.duplicate = duplicate
+        self.splits = splits
         self.dates = dates
     }
 
@@ -122,6 +125,7 @@ public struct TransactionUseCases {
             saveTransactions: DefaultSaveTransactionsUseCase(repository: repository),
             changes: DefaultTransactionChangesUseCase(repository: repository),
             duplicate: DefaultDuplicateTransactionUseCase(repository: repository),
+            splits: DefaultSplitTransactionUseCase(repository: repository),
         )
     }
 }
