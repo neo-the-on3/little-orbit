@@ -29,6 +29,21 @@ struct SplitsRefundsFixture {
         )
     }
 
+    /// Adds a payee record as it is.
+    @discardableResult
+    mutating func addPayee(named name: String) -> Payee {
+        let payee = Payee(name: name, createdAt: now, updatedAt: now)
+        snapshot.payees.append(payee)
+        return payee
+    }
+
+    /// Marks a payee record deleted, the way a payee cleanup leaves it.
+    mutating func deletePayee(_ payee: Payee) {
+        if let index = snapshot.payees.firstIndex(where: { $0.id == payee.id }) {
+            snapshot.payees[index].deletedAt = now
+        }
+    }
+
     /// Adds categories as they are, for trees the default list doesn't have.
     mutating func addCategories(_ categories: [TransactionCategory]) {
         snapshot.categories += categories
@@ -47,6 +62,7 @@ struct SplitsRefundsFixture {
         in category: TransactionCategory? = nil,
         on date: Date,
         account: Account? = nil,
+        payee: Payee? = nil,
     ) throws -> Transaction {
         let transaction = Transaction(
             type: .expense,
@@ -55,6 +71,7 @@ struct SplitsRefundsFixture {
             timeZoneID: TransactionFixture.india,
             accountID: (account ?? savings).id,
             categoryID: category?.id,
+            payeeID: payee?.id,
         )
         snapshot = try LedgerBook.savingTransaction(transaction, in: snapshot, now: now)
         return transaction

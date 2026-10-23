@@ -33,8 +33,9 @@ public enum RefundPlan {
         max(0, expense.amount - refunded(of: expense.id, in: transactions, excluding: excluding))
     }
 
-    /// A new refund of `expense`: the remaining amount, dated `now`, in the expense's category and account
-    /// (D65, S14). `nil` when Refund isn't offered for it (`TransactionActions.canRefund`) or it's split.
+    /// A new refund of `expense`: the remaining amount, dated `now`, in the expense's category, account and payee
+    /// (D65, S14, D234.4). The payee is set only when its record still exists, and the description is left
+    /// empty. `nil` when Refund isn't offered for it (`TransactionActions.canRefund`) or it's split.
     public static func newRefund(
         of expense: Transaction,
         in snapshot: LedgerSnapshot,
@@ -44,6 +45,7 @@ public enum RefundPlan {
         guard TransactionActions(for: expense).canRefund, snapshot.splitsVisible(for: expense.id).isEmpty else {
             return nil
         }
+        let payeeID = expense.payeeID.flatMap { id in snapshot.payeesVisible().contains { $0.id == id } ? id : nil }
         return Transaction(
             type: .income,
             amount: refundable(for: expense, in: snapshot.transactions),
@@ -51,6 +53,7 @@ public enum RefundPlan {
             timeZoneID: timeZoneID,
             accountID: expense.accountID,
             categoryID: expense.categoryID,
+            payeeID: payeeID,
             status: TransactionStatus.newTransactionDefault,
             refundOfID: expense.id,
             isRefund: true,

@@ -86,6 +86,35 @@ struct RefundPlanTests {
         #expect(RefundPlan.newRefund(of: refund, in: withRefund.snapshot, now: now) == nil)
     }
 
+    @Test("D234.4: the refund takes the expense's payee and no description")
+    func prefillWithPayee() throws {
+        var fixture = try SplitsRefundsFixture()
+        let trailhead = fixture.addPayee(named: "Trailhead Sports")
+        let expense = try fixture.expense(1_000, in: fixture.shopping, on: F.date(10, 17), payee: trailhead)
+        let refund = try #require(RefundPlan.newRefund(of: expense, in: fixture.snapshot, now: now))
+        #expect(refund.payeeID == trailhead.id)
+        #expect(refund.details == nil)
+    }
+
+    @Test("D234.4: an expense with no payee gives a refund with none")
+    func prefillWithoutPayee() throws {
+        let (fixture, expense) = try shoppingWithRefund()
+        let refund = try #require(RefundPlan.newRefund(of: expense, in: fixture.snapshot, now: now))
+        #expect(refund.payeeID == nil)
+        #expect(refund.details == nil)
+    }
+
+    @Test("D234.4: a payee whose record is gone isn't copied")
+    func prefillWithDeletedPayee() throws {
+        var fixture = try SplitsRefundsFixture()
+        let trailhead = fixture.addPayee(named: "Trailhead Sports")
+        let expense = try fixture.expense(1_000, in: fixture.shopping, on: F.date(10, 17), payee: trailhead)
+        fixture.deletePayee(trailhead)
+        let refund = try #require(RefundPlan.newRefund(of: expense, in: fixture.snapshot, now: now))
+        #expect(refund.payeeID == nil)
+        #expect(refund.details == nil)
+    }
+
     private struct Pair {
         let fixture: SplitsRefundsFixture
         let expense: Transaction
