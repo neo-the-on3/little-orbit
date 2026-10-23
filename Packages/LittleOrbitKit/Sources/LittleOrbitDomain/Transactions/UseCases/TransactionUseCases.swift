@@ -80,6 +80,14 @@ public protocol TransactionChangesUseCase {
     func impact(of change: TransactionChange) throws -> ChangeImpact
 }
 
+@MainActor
+public protocol DuplicateTransactionUseCase {
+    /// Saves a copy of the transaction, dated `now`, by the D65 copy rules (`TransactionDuplicate`), and returns
+    /// the change: `.added` with the copy, so Undo deletes the copy and leaves the original unchanged (S29).
+    /// Throws `missingTransaction` when it's gone and `refundCannotBeDuplicated` for a refund.
+    func duplicate(id: UUID, now: Date) throws -> TransactionChange
+}
+
 /// The transaction use cases as one value, for the composition root.
 @MainActor
 public struct TransactionUseCases {
@@ -87,6 +95,7 @@ public struct TransactionUseCases {
     public var accountHistory: any AccountHistoryUseCase
     public var saveTransactions: any SaveTransactionsUseCase
     public var changes: any TransactionChangesUseCase
+    public var duplicate: any DuplicateTransactionUseCase
     public var dates: any TransactionDateUseCase
 
     public init(
@@ -94,12 +103,14 @@ public struct TransactionUseCases {
         accountHistory: any AccountHistoryUseCase,
         saveTransactions: any SaveTransactionsUseCase,
         changes: any TransactionChangesUseCase,
+        duplicate: any DuplicateTransactionUseCase,
         dates: any TransactionDateUseCase = DefaultTransactionDateUseCase(),
     ) {
         self.loadLedger = loadLedger
         self.accountHistory = accountHistory
         self.saveTransactions = saveTransactions
         self.changes = changes
+        self.duplicate = duplicate
         self.dates = dates
     }
 
@@ -110,6 +121,7 @@ public struct TransactionUseCases {
             accountHistory: DefaultAccountHistoryUseCase(repository: repository),
             saveTransactions: DefaultSaveTransactionsUseCase(repository: repository),
             changes: DefaultTransactionChangesUseCase(repository: repository),
+            duplicate: DefaultDuplicateTransactionUseCase(repository: repository),
         )
     }
 }

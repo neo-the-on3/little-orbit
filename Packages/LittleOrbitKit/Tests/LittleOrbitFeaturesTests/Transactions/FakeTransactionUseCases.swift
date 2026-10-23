@@ -17,9 +17,21 @@ final class FakeTransactionUseCases {
     private(set) var saved: [[Transaction]] = []
     private(set) var removed: [[UUID]] = []
     private(set) var reverted: [TransactionChange] = []
+    private(set) var duplicated: [UUID] = []
 
     var useCases: TransactionUseCases {
-        TransactionUseCases(loadLedger: self, accountHistory: self, saveTransactions: self, changes: self)
+        TransactionUseCases(
+            loadLedger: self,
+            accountHistory: self,
+            saveTransactions: self,
+            changes: self,
+            duplicate: self,
+        )
+    }
+
+    func duplicate(id: UUID, now: Date) throws -> TransactionChange {
+        duplicated.append(id)
+        return .added([UUID()])
     }
 
     func ledger() throws -> TransactionLedger { contents }
@@ -80,3 +92,4 @@ final class FakeTransactionUseCases {
 
 extension FakeTransactionUseCases: LoadTransactionLedgerUseCase, AccountHistoryUseCase {}
 extension FakeTransactionUseCases: SaveTransactionsUseCase, TransactionChangesUseCase {}
+extension FakeTransactionUseCases: DuplicateTransactionUseCase {}

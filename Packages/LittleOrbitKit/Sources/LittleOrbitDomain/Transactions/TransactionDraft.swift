@@ -46,7 +46,7 @@ public struct TransactionDraft: Equatable, Sendable {
         createdAt = date
         isRefund = false
         tagIDs = []
-        status = .cleared
+        status = TransactionStatus.newTransactionDefault
     }
 
     public init(editing transaction: Transaction) {

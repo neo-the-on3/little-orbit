@@ -321,6 +321,7 @@ struct WindowUndoTwoWindowTests {
             accountHistory: setup.useCases.accountHistory,
             saveTransactions: setup.useCases.saveTransactions,
             changes: UnreadablePlaceChanges(base: setup.useCases.changes),
+            duplicate: setup.useCases.duplicate,
         )
         let window = TestWindow(unreadable, updates: setup.updates)
         _ = try setup.delete([corner.id], in: window)

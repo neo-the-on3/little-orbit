@@ -33,6 +33,7 @@ public enum LedgerValidationError: Error, Equatable, Sendable {
     case showAvailableCreditNotAllowed
     case transactionTypeChangeNotAllowed
     case invalidTimeZone
+    case refundCannotBeDuplicated
     /// A split broke this rule (D64, D97.3). Each rule is its own case so a caller can name it.
     case splitRuleBroken(SplitRule)
     case attachmentTooLarge
