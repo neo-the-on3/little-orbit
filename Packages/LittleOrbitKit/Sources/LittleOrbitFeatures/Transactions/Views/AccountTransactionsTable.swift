@@ -35,15 +35,21 @@
                         )
                 }
                 .width(min: 90, ideal: 100)
-                TableColumn("Payee") { row in
-                    Text(row.title)
-                }
+                TransactionTitleColumn.column()
+                // Narrower than the title, so the title fits at the default window size (D234.1, D235.2).
                 TableColumn("Category") { row in
                     Text(row.categoryText)
+                        .lineLimit(1)
+                        .truncationMode(.tail)
+                        .help(row.categoryText)
                 }
+                .width(min: 100, ideal: 140)
                 TableColumn("Account") { row in
                     Text(row.accountText)
+                        .lineLimit(1)
+                        .truncationMode(.tail)
                 }
+                .width(min: 100, ideal: 140)
                 TableColumn("Amount") { row in
                     Text(row.amountText)
                         .font(.theme(Typography.Amount.macOSBody))

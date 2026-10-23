@@ -17,6 +17,8 @@ struct LittleOrbitMacApp: App {
         WindowGroup {
             RootView(features: features)
         }
+        // A defined first size, so the history table's Payee column fits a refund title (D235.1).
+        .defaultSize(width: 1200, height: 760)
         .commands {
             RestoreFromBackupCommand(isPickingFile: $isPickingBackupFile)
         }
