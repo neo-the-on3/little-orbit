@@ -72,6 +72,40 @@
         }
       }
     },
+    "%1$@ is already the To account of %2$lld selected transfers. Pick a different account to save.": {
+      "comment": "Bulk edit: Apply saved nothing because the chosen account is the To account of selected transfers (D223.3). %1$@ is the chosen account; %2$lld is how many selected transfers go to it.",
+      "extractionState": "manual",
+      "localizations": {
+        "en": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "%1$@ is already the To account of %#@transfers@. Pick a different account to save."
+          },
+          "substitutions": {
+            "transfers": {
+              "argNum": 2,
+              "formatSpecifier": "lld",
+              "variations": {
+                "plural": {
+                  "one": {
+                    "stringUnit": {
+                      "state": "translated",
+                      "value": "a selected transfer"
+                    }
+                  },
+                  "other": {
+                    "stringUnit": {
+                      "state": "translated",
+                      "value": "%arg selected transfers"
+                    }
+                  }
+                }
+              }
+            }
+          }
+        }
+      }
+    },
     "%1$@ · %2$@": {
       "comment": "A backup's account count (%1$@) and transaction count (%2$@).",
       "extractionState": "manual",
@@ -105,6 +139,114 @@
           "stringUnit": {
             "state": "translated",
             "value": "%1$@, under %2$@"
+          }
+        }
+      }
+    },
+    "%3$lld selected transactions are in %1$@, so they can’t move to %2$@. Pick an account in %1$@ to save.": {
+      "comment": "Bulk edit: Apply saved nothing because the chosen account is in another currency (D226.4). %1$@ is the selected rows’ currency code, such as INR; %2$@ is the chosen account; %3$lld is how many selected rows are in that currency.",
+      "extractionState": "manual",
+      "localizations": {
+        "en": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "%#@subject@ in %1$@, so %#@pronoun@ can’t move to %2$@. Pick an account in %1$@ to save."
+          },
+          "substitutions": {
+            "subject": {
+              "argNum": 3,
+              "formatSpecifier": "lld",
+              "variations": {
+                "plural": {
+                  "one": {
+                    "stringUnit": {
+                      "state": "translated",
+                      "value": "A selected transaction is"
+                    }
+                  },
+                  "other": {
+                    "stringUnit": {
+                      "state": "translated",
+                      "value": "%arg selected transactions are"
+                    }
+                  }
+                }
+              }
+            },
+            "pronoun": {
+              "argNum": 3,
+              "formatSpecifier": "lld",
+              "variations": {
+                "plural": {
+                  "one": {
+                    "stringUnit": {
+                      "state": "translated",
+                      "value": "it"
+                    }
+                  },
+                  "other": {
+                    "stringUnit": {
+                      "state": "translated",
+                      "value": "they"
+                    }
+                  }
+                }
+              }
+            }
+          }
+        }
+      }
+    },
+    "%3$lld selected transactions aren’t in %1$@, so they can’t move to %2$@. Select transactions in one currency to change Account.": {
+      "comment": "Bulk edit: Apply saved nothing because the selection mixes currencies and some rows aren’t in the chosen account’s currency (D227.2). %1$@ is the chosen account’s currency code, such as INR; %2$@ is the chosen account; %3$lld is how many selected rows aren’t in that currency.",
+      "extractionState": "manual",
+      "localizations": {
+        "en": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "%#@subject@ in %1$@, so %#@pronoun@ can’t move to %2$@. Select transactions in one currency to change Account."
+          },
+          "substitutions": {
+            "subject": {
+              "argNum": 3,
+              "formatSpecifier": "lld",
+              "variations": {
+                "plural": {
+                  "one": {
+                    "stringUnit": {
+                      "state": "translated",
+                      "value": "A selected transaction isn’t"
+                    }
+                  },
+                  "other": {
+                    "stringUnit": {
+                      "state": "translated",
+                      "value": "%arg selected transactions aren’t"
+                    }
+                  }
+                }
+              }
+            },
+            "pronoun": {
+              "argNum": 3,
+              "formatSpecifier": "lld",
+              "variations": {
+                "plural": {
+                  "one": {
+                    "stringUnit": {
+                      "state": "translated",
+                      "value": "it"
+                    }
+                  },
+                  "other": {
+                    "stringUnit": {
+                      "state": "translated",
+                      "value": "they"
+                    }
+                  }
+                }
+              }
+            }
           }
         }
       }

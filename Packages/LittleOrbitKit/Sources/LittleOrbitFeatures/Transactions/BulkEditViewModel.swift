@@ -208,7 +208,7 @@ public final class BulkEditViewModel {
                 changes.payeeID = .some(resolved?.payee.id)
                 created = resolved.flatMap { $0.isNew ? [$0.payee] : nil } ?? []
             }
-            let updated = BulkEditRules.apply(
+            let updated = try BulkEditRules.apply(
                 changes,
                 to: selection,
                 accounts: accounts,
@@ -220,6 +220,10 @@ public final class BulkEditViewModel {
             }
             // A payee this edit created goes with it on Undo, unless something else uses it by then (D191.4).
             return try saveTransactions.save(changed, creating: created)
+        } catch let rejection as BulkEditRejection {
+            // Nothing is saved and the sheet stays open with one message (D223.3, D226.4).
+            errorMessage = BulkEditText.message(for: rejection, accounts: accounts)
+            return nil
         } catch {
             errorMessage = AccountHistoryViewModel.message(for: error)
             return nil
