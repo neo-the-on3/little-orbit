@@ -1243,6 +1243,66 @@
         }
       }
     },
+    "Duplicate Transaction": {
+      "comment": "Undo name: one transaction duplicated, when its account couldn’t be read as the step was recorded (D221.3).",
+      "extractionState": "manual",
+      "localizations": {
+        "en": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Duplicate Transaction"
+          }
+        }
+      }
+    },
+    "Duplicate Transaction in %@": {
+      "comment": "Undo name: one expense or income duplicated, in its account (D221). Refunds can’t be duplicated. %@ is the account name.",
+      "extractionState": "manual",
+      "localizations": {
+        "en": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Duplicate Transaction in %@"
+          }
+        }
+      }
+    },
+    "Duplicate Transfer": {
+      "comment": "Undo name: one transfer duplicated, when its accounts couldn’t be read as the step was recorded (D221.3).",
+      "extractionState": "manual",
+      "localizations": {
+        "en": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Duplicate Transfer"
+          }
+        }
+      }
+    },
+    "Duplicate Transfer from %1$@ to %2$@": {
+      "comment": "Undo name: one transfer duplicated, with its two accounts (D221). %1$@ is the source account, %2$@ the destination.",
+      "extractionState": "manual",
+      "localizations": {
+        "en": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Duplicate Transfer from %1$@ to %2$@"
+          }
+        }
+      }
+    },
+    "Duplicate Transfer in %@": {
+      "comment": "Undo name: one transfer duplicated when only one of its accounts could be read (D221). %@ is the account name.",
+      "extractionState": "manual",
+      "localizations": {
+        "en": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Duplicate Transfer in %@"
+          }
+        }
+      }
+    },
     "Edit %1$lld Transactions in %2$@": {
       "comment": "Undo name: several transactions edited at once in one account (D198). %1$lld is the number of transactions; %2$@ is the account name.",
       "extractionState": "manual",

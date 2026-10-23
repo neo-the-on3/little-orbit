@@ -137,8 +137,8 @@ struct DuplicateUseCaseTests {
         let repository = try FakeLedgerRepository(accounts: F.accounts, transactions: [original])
         let useCases = TransactionUseCases(repository: repository)
         let change = try useCases.duplicate.duplicate(id: original.id, now: today)
-        guard case .added(let ids) = change, let copyID = ids.first else {
-            Issue.record("Expected .added, got \(change)")
+        guard case .duplicated(_, .added(let ids)) = change, let copyID = ids.first else {
+            Issue.record("Expected a duplicated .added, got \(change)")
             return
         }
         let copy = try #require(try repository.transactions().first { $0.id == copyID })
@@ -146,6 +146,35 @@ struct DuplicateUseCaseTests {
         #expect(copy.amount == 500)
         _ = try useCases.changes.revertNow(change)
         #expect(try repository.transactions().map(\.id) == [original.id])
+    }
+
+    @Test("D221: the change is marked with the copy's type for its name; Undo and Redo are an add's (S29, P4)")
+    func markedAsDuplicate() throws {
+        let expense = F.expense(500, on: F.date(2026, 10, 19))
+        let income = F.income(900, on: F.date(2026, 10, 19))
+        let transfer = F.transfer(200, on: F.date(2026, 10, 19))
+        let repository = try FakeLedgerRepository(accounts: F.accounts, transactions: [expense, income, transfer])
+        let useCases = TransactionUseCases(repository: repository)
+        let originals = try repository.transactions()
+        for (original, type) in [(expense, TransactionType.expense), (income, .income), (transfer, .transfer)] {
+            let change = try useCases.duplicate.duplicate(id: original.id, now: today)
+            #expect(change.duplicatedType == type)
+            let copyID = try #require(change.transactionIDs.first)
+            #expect(change.core == .added([copyID]))
+            let undo = try useCases.changes.revertNow(change)
+            #expect(try repository.transactions() == originals, "Undo removes only the copy")
+            _ = try useCases.changes.revertNow(undo)
+            #expect(try repository.transactions().contains { $0.id == copyID }, "Redo brings it back, same id")
+            _ = try useCases.changes.revertNow(.added([copyID]))
+        }
+        #expect(TransactionChange.added([expense.id]).duplicatedType == nil)
+        #expect(
+            TransactionChange.saved(
+                .duplicated(.income, .added([income.id])),
+                creating: [Payee(name: "Corner Bakery")],
+            )
+            .duplicatedType == .income
+        )
     }
 
     @Test("Duplicating a split copies its lines, and Undo removes them with the copy")
@@ -163,8 +192,8 @@ struct DuplicateUseCaseTests {
         )
         let useCases = TransactionUseCases(repository: repository)
         let change = try useCases.duplicate.duplicate(id: original.id, now: today)
-        guard case .added(let ids) = change, let copyID = ids.first else {
-            Issue.record("Expected .added, got \(change)")
+        guard case .duplicated(_, .added(let ids)) = change, let copyID = ids.first else {
+            Issue.record("Expected a duplicated .added, got \(change)")
             return
         }
         let lines = try repository.splits(for: copyID)
@@ -184,8 +213,8 @@ struct DuplicateUseCaseTests {
         let duplicate = DefaultDuplicateTransactionUseCase(repository: repository, timeZoneID: { F.india })
         let now = F.date(2026, 10, 21, 15, 40)
         let change = try duplicate.duplicate(id: original.id, now: now)
-        guard case .added(let ids) = change, let copyID = ids.first else {
-            Issue.record("Expected .added, got \(change)")
+        guard case .duplicated(_, .added(let ids)) = change, let copyID = ids.first else {
+            Issue.record("Expected a duplicated .added, got \(change)")
             return
         }
         let copy = try #require(try repository.transactions().first { $0.id == copyID })

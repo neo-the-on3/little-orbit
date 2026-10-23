@@ -19,7 +19,10 @@ public enum UndoActionTitle {
     /// Q1 on #87). Redo keeps the name of the user's change, not of its inverse (see `WindowUndoHistory`).
     public static func base(of change: TransactionChange) -> String {
         // A payee the save created doesn't change the name: "Undo New Transaction" (D191.4).
-        switch change.core {
+        if let type = change.duplicatedType {
+            return duplicate(type)
+        }
+        return switch change.core {
         case .removed(let items):
             if items.count == 1 {
                 FeatureText.string("Delete Transaction", comment: "Undo name: one transaction deleted.")
@@ -54,9 +57,18 @@ public enum UndoActionTitle {
                 "Delete Account \(removed.account.name)",
                 comment: "Undo name: an account deleted, with its name.",
             )
-        case .addedAccount, .createdPayees, .removedPayees, .restoringLines:
-            FeatureText.string("New Account", comment: "Undo name: an account added.")
+        case .addedAccount, .createdPayees, .removedPayees, .restoringLines, .duplicated:
+            accountAdded(change.core)
         }
+    }
+
+    /// "New Account", for `.addedAccount` only. `core` unwraps the other cases to the change they carry, so
+    /// they never get here, and never read "New Account".
+    private static func accountAdded(_ core: TransactionChange) -> String {
+        guard case .addedAccount = core else {
+            preconditionFailure("TransactionChange.core never returns a wrapping case")
+        }
+        return FeatureText.string("New Account", comment: "Undo name: an account added.")
     }
 
     /// `base` ("5 transactions deleted") as the toast shows it on `screen`; Undo and Redo names use `stepName`

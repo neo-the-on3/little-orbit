@@ -28,7 +28,7 @@ public struct DefaultDuplicateTransactionUseCase: DuplicateTransactionUseCase {
             if !copy.splits.isEmpty {
                 try repository.replaceSplits(copy.splits, for: copy.transaction.id)
             }
-            return .added([copy.transaction.id])
+            return .duplicated(copy.transaction.type, .added([copy.transaction.id]))
         }
     }
 }

@@ -67,6 +67,9 @@ public enum TransactionChange: Equatable, Sendable {
     /// the change, IDs included, and to none when it had no split. Revert reverts the change and puts exactly
     /// these lines back, so Undo of a split edit, of making a split or of removing one restores the lines too.
     indirect case restoringLines([UUID: [TransactionSplit]], TransactionChange)
+    /// A copy that Duplicate made, of this type. Only its name differs (D221): it reverts, checks and touches
+    /// exactly what the change does, so Undo removes only the copy (S29).
+    indirect case duplicated(TransactionType, TransactionChange)
 
     /// `change`, plus the payees its save created, if any.
     public static func saved(_ change: TransactionChange, creating payees: [Payee]) -> TransactionChange {
@@ -104,6 +107,8 @@ public enum TransactionChange: Equatable, Sendable {
             return .removedPayees(payees, change.replacingPayee(payeeID, with: otherID))
         case .restoringLines(let lines, let change):
             return .restoringLines(lines, change.replacingPayee(payeeID, with: otherID))
+        case .duplicated(let type, let change):
+            return .duplicated(type, change.replacingPayee(payeeID, with: otherID))
         case .added, .addedAccount: return self
         }
     }
@@ -111,7 +116,9 @@ public enum TransactionChange: Equatable, Sendable {
     /// The transaction or account change itself, without the payees that come and go with it.
     public var core: TransactionChange {
         switch self {
-        case .createdPayees(_, let change), .removedPayees(_, let change), .restoringLines(_, let change): change.core
+        case .createdPayees(_, let change), .removedPayees(_, let change), .restoringLines(_, let change),
+            .duplicated(_, let change):
+            change.core
         case .removed, .added, .replaced, .removedAccount, .addedAccount: self
         }
     }
@@ -123,7 +130,17 @@ public enum TransactionChange: Equatable, Sendable {
         case .added(let ids): ids
         case .replaced(let items): items.map(\.id)
         case .removedAccount(let removed): removed.transactions.map(\.transaction.id)
-        case .addedAccount, .createdPayees, .removedPayees, .restoringLines: []
+        case .addedAccount, .createdPayees, .removedPayees, .restoringLines, .duplicated: []
+        }
+    }
+
+    /// The type of the copy, when Duplicate made this change; `nil` for any other change. For its name only.
+    public var duplicatedType: TransactionType? {
+        switch self {
+        case .duplicated(let type, _): type
+        case .createdPayees(_, let change), .removedPayees(_, let change), .restoringLines(_, let change):
+            change.duplicatedType
+        case .removed, .added, .replaced, .removedAccount, .addedAccount: nil
         }
     }
 
@@ -131,7 +148,8 @@ public enum TransactionChange: Equatable, Sendable {
     public var replacedLines: [UUID: [TransactionSplit]] {
         switch self {
         case .restoringLines(let lines, let change): change.replacedLines.merging(lines) { inner, _ in inner }
-        case .createdPayees(_, let change), .removedPayees(_, let change): change.replacedLines
+        case .createdPayees(_, let change), .removedPayees(_, let change), .duplicated(_, let change):
+            change.replacedLines
         case .removed, .added, .replaced, .removedAccount, .addedAccount: [:]
         }
     }
@@ -141,7 +159,7 @@ public enum TransactionChange: Equatable, Sendable {
         switch core {
         case .removedAccount(let removed): [removed.account.id]
         case .addedAccount(let id): [id]
-        case .removed, .added, .replaced, .createdPayees, .removedPayees, .restoringLines: []
+        case .removed, .added, .replaced, .createdPayees, .removedPayees, .restoringLines, .duplicated: []
         }
     }
 }

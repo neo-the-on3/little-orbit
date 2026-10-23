@@ -11,6 +11,8 @@ final class FakeTransactionUseCases {
     var historyError: (any Error)?
     var revertError: (any Error)?
     var impactError: (any Error)?
+    /// What `impact(of:)` returns when it doesn't throw.
+    var impactResult = ChangeImpact()
     var outcomeError: (any Error)?
     /// When set, every step is stale for this reason.
     var staleReason: StaleReason?
@@ -92,7 +94,7 @@ final class FakeTransactionUseCases {
         if let impactError {
             throw impactError
         }
-        return ChangeImpact()
+        return impactResult
     }
 }
 

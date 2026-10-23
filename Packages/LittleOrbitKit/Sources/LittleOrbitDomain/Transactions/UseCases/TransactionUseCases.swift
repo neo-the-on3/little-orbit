@@ -83,7 +83,8 @@ public protocol TransactionChangesUseCase {
 @MainActor
 public protocol DuplicateTransactionUseCase {
     /// Saves a copy of the transaction, dated `now`, by the D65 copy rules (`TransactionDuplicate`), and returns
-    /// the change: `.added` with the copy, so Undo deletes the copy and leaves the original unchanged (S29).
+    /// the change: `.added` with the copy, marked `.duplicated` for its Undo name (D221), so Undo deletes the
+    /// copy and leaves the original unchanged (S29).
     /// Throws `missingTransaction` when it's gone and `refundCannotBeDuplicated` for a refund.
     func duplicate(id: UUID, now: Date) throws -> TransactionChange
 }
@@ -277,7 +278,7 @@ public struct DefaultTransactionChangesUseCase: TransactionChangesUseCase {
                 previous + current.filter { now in previous.contains { $0.id == now.id } }
             case .added(let ids): current.filter { ids.contains($0.id) }
             // Whole-account changes carry their account in the change itself.
-            case .removedAccount, .addedAccount, .createdPayees, .removedPayees, .restoringLines: []
+            case .removedAccount, .addedAccount, .createdPayees, .removedPayees, .restoringLines, .duplicated: []
             }
         let ids = Set(versions.flatMap { [$0.accountID, $0.transferAccountID].compactMap(\.self) })
         let transfers = versions.compactMap { version -> TransferImpact? in
@@ -367,6 +368,9 @@ public struct DefaultTransactionChangesUseCase: TransactionChangesUseCase {
             return .saved(inverse, creating: try cleanup.stored(restored))
         case .restoringLines(let lines, let change):
             return try revertLines(lines, around: change, expecting: outcome)
+        case .duplicated(_, let change):
+            // Undo removes the copy; Redo keeps the name the step was recorded with (D221.5).
+            return try revertAll(change, expecting: outcome)
         case .removed(let items):
             try restore(items)
             return .added(items.map(\.transaction.id))
