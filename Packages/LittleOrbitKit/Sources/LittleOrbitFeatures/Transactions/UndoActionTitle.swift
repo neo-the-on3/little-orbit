@@ -54,7 +54,7 @@ public enum UndoActionTitle {
                 "Delete Account \(removed.account.name)",
                 comment: "Undo name: an account deleted, with its name.",
             )
-        case .addedAccount, .createdPayees, .removedPayees:
+        case .addedAccount, .createdPayees, .removedPayees, .restoringLines:
             FeatureText.string("New Account", comment: "Undo name: an account added.")
         }
     }

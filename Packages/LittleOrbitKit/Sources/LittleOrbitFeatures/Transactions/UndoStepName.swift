@@ -32,7 +32,7 @@ extension UndoActionTitle {
         case .replaced(let items):
             (action, count) = (.edit, items.count)
             isTransfer = items.count == 1 && items[0].type == .transfer
-        case .removedAccount, .addedAccount, .createdPayees, .removedPayees:
+        case .removedAccount, .addedAccount, .createdPayees, .removedPayees, .restoringLines:
             return base(of: change)
         }
         if count != 1 {

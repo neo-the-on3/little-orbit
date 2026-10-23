@@ -16,9 +16,7 @@ struct ChangeChecker {
             outcome.accountIDs = Self.accounts(of: items.map(\.transaction))
             outcome.keepUnlinkedRefunds(of: items, from: current)
         case .added(let ids):
-            for id in ids {
-                outcome.keep(current[id], touching: Set(TransactionField.allCases))
-            }
+            try keepAdded(ids, current: current, in: &outcome)
         case .replaced(let previous):
             for old in previous {
                 outcome.keep(
@@ -33,7 +31,7 @@ struct ChangeChecker {
             outcome.accountIDs = Self.accounts(of: removed.transactions.map(\.transaction))
                 .subtracting([removed.account.id])
             outcome.keepUnlinkedRefunds(of: removed.transactions, from: current)
-        case .createdPayees, .removedPayees:
+        case .createdPayees, .removedPayees, .restoringLines:
             break
         case .addedAccount(let id):
             outcome.accountIDs = [id]
@@ -43,7 +41,40 @@ struct ChangeChecker {
                 outcome.keep(transaction, touching: Set(TransactionField.allCases))
             }
         }
+        if !change.replacedLines.isEmpty {
+            let lines = try linesByTransaction()
+            for id in change.replacedLines.keys {
+                outcome.splitLines[id] = lines[id] ?? []
+            }
+        }
         return outcome
+    }
+
+    /// New transactions leave every field, and a new split, or a Duplicate of one, its lines too, so Undo is
+    /// stale if either changed since.
+    private func keepAdded(_ ids: [UUID], current: [UUID: Transaction], in outcome: inout ChangeOutcome) throws {
+        guard !ids.isEmpty else {
+            return
+        }
+        let lines = try linesByTransaction()
+        for id in ids {
+            outcome.keep(current[id], touching: Set(TransactionField.allCases))
+            if let kept = lines[id], !kept.isEmpty {
+                outcome.splitLines[id] = kept
+            }
+        }
+    }
+
+    /// Every transaction's live lines from one read, so a step over many transactions loads the ledger once,
+    /// not once for each of them.
+    private func linesByTransaction() throws -> [UUID: [SplitLineValue]] {
+        var grouped: [UUID: [TransactionSplit]] = [:]
+        for split in try repository.splits(for: nil) {
+            if let id = split.transactionID {
+                grouped[id, default: []].append(split)
+            }
+        }
+        return grouped.mapValues(SplitLineValue.of)
     }
 
     func check(_ change: TransactionChange, expecting outcome: ChangeOutcome) throws -> ChangeCheck {
@@ -71,13 +102,20 @@ struct ChangeChecker {
             }
             return !(outcome.touchedFields[id] ?? []).allSatisfy { $0.matches(left, now) }
         }
+        let lines = outcome.splitLines.isEmpty ? [:] : try linesByTransaction()
+        let relined = order.filter { id in
+            guard let left = outcome.splitLines[id], current[id] != nil, !changed.contains(id) else {
+                return false
+            }
+            return (lines[id] ?? []) != left
+        }
         let added = outcome.accountContents.flatMap { accountID, ids in
             current.values
                 .filter { ($0.accountID == accountID || $0.transferAccountID == accountID) && !ids.contains($0.id) }
                 .map(\.id)
                 .sorted { $0.uuidString < $1.uuidString }
         }
-        let altered = changed + added
+        let altered = changed + relined + added
         if !missing.isEmpty {
             // A bulk step can have both; the caller counts them together (D189.2).
             return .stale(altered.isEmpty ? .deleted(missing) : .changedAndDeleted(changed: altered, deleted: missing))
@@ -104,7 +142,7 @@ struct ChangeChecker {
                 restoring: [removed.account],
                 current: current,
             )
-        case .added, .replaced, .addedAccount, .createdPayees, .removedPayees:
+        case .added, .replaced, .addedAccount, .createdPayees, .removedPayees, .restoringLines:
             return []
         }
     }
@@ -112,7 +150,9 @@ struct ChangeChecker {
     /// Every transaction the check looks at, in the change's own order first.
     private static func order(_ change: TransactionChange, _ outcome: ChangeOutcome) -> [UUID] {
         var ids = change.transactionIDs
-        let rest = Set(outcome.transactions.keys).union(outcome.removedTransactionIDs).subtracting(ids)
+        let rest = Set(outcome.transactions.keys).union(outcome.removedTransactionIDs)
+            .union(outcome.splitLines.keys)
+            .subtracting(ids)
         ids += rest.sorted { $0.uuidString < $1.uuidString }
         return ids
     }

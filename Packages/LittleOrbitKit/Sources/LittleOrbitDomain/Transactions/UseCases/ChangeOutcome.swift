@@ -72,6 +72,9 @@ public struct ChangeOutcome: Equatable, Sendable {
     /// For an account the change restored, every transaction in or out of it, so reverting never deletes a
     /// transaction another window added to it since.
     public var accountContents: [UUID: Set<UUID>]
+    /// For each transaction whose split lines the change replaced, the lines it left. They must still be
+    /// there, unchanged in ID, category, amount, note and order (`SplitLineValue`).
+    public var splitLines: [UUID: [SplitLineValue]]
 
     public init(
         transactions: [UUID: Transaction] = [:],
@@ -80,6 +83,7 @@ public struct ChangeOutcome: Equatable, Sendable {
         accountIDs: Set<UUID> = [],
         removedAccountIDs: Set<UUID> = [],
         accountContents: [UUID: Set<UUID>] = [:],
+        splitLines: [UUID: [SplitLineValue]] = [:],
     ) {
         self.transactions = transactions
         self.touchedFields = touchedFields
@@ -87,6 +91,31 @@ public struct ChangeOutcome: Equatable, Sendable {
         self.accountIDs = accountIDs
         self.removedAccountIDs = removedAccountIDs
         self.accountContents = accountContents
+        self.splitLines = splitLines
+    }
+}
+
+/// A split line as the stale check compares it: what a user can change, not the bookkeeping dates.
+public struct SplitLineValue: Equatable, Sendable {
+    public var id: UUID
+    public var categoryID: UUID?
+    public var amount: Decimal
+    public var note: String?
+    public var sortOrder: Double
+
+    public init(_ split: TransactionSplit) {
+        id = split.id
+        categoryID = split.categoryID
+        amount = split.amount
+        note = split.note
+        sortOrder = split.sortOrder
+    }
+
+    /// The live lines of a transaction, in their order.
+    public static func of(_ splits: [TransactionSplit]) -> [SplitLineValue] {
+        splits.filter { $0.deletedAt == nil }
+            .sorted { ($0.sortOrder, $0.id.uuidString) < ($1.sortOrder, $1.id.uuidString) }
+            .map(SplitLineValue.init)
     }
 }
 

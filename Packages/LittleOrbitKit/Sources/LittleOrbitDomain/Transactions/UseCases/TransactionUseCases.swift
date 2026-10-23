@@ -273,7 +273,7 @@ public struct DefaultTransactionChangesUseCase: TransactionChangesUseCase {
                 previous + current.filter { now in previous.contains { $0.id == now.id } }
             case .added(let ids): current.filter { ids.contains($0.id) }
             // Whole-account changes carry their account in the change itself.
-            case .removedAccount, .addedAccount, .createdPayees, .removedPayees: []
+            case .removedAccount, .addedAccount, .createdPayees, .removedPayees, .restoringLines: []
             }
         let ids = Set(versions.flatMap { [$0.accountID, $0.transferAccountID].compactMap(\.self) })
         let transfers = versions.compactMap { version -> TransferImpact? in
@@ -361,6 +361,8 @@ public struct DefaultTransactionChangesUseCase: TransactionChangesUseCase {
             let inverse = try revertAll(change, expecting: outcome)
             // As stored now: reapplying the transactions sets their default category again.
             return .saved(inverse, creating: try cleanup.stored(restored))
+        case .restoringLines(let lines, let change):
+            return try revertLines(lines, around: change, expecting: outcome)
         case .removed(let items):
             try restore(items)
             return .added(items.map(\.transaction.id))
@@ -375,6 +377,28 @@ public struct DefaultTransactionChangesUseCase: TransactionChangesUseCase {
         case .replaced(let previous):
             return try revertEdits(previous, expecting: outcome)
         }
+    }
+
+    /// Takes the current lines off first, so a transaction can get its category back; reverts the change; then
+    /// puts the earlier lines back with their IDs. The inverse holds the lines this took off.
+    private func revertLines(
+        _ lines: [UUID: [TransactionSplit]],
+        around change: TransactionChange,
+        expecting outcome: ChangeOutcome,
+    ) throws -> TransactionChange {
+        let ids = lines.keys.sorted { $0.uuidString < $1.uuidString }
+        var current: [UUID: [TransactionSplit]] = [:]
+        for id in ids {
+            current[id] = try repository.splits(for: id)
+            try repository.replaceSplits([], for: id)
+        }
+        let inverse = try revertAll(change, expecting: outcome)
+        for id in ids {
+            if let earlier = lines[id], !earlier.isEmpty {
+                try repository.replaceSplits(earlier, for: id)
+            }
+        }
+        return .restoringLines(current, inverse)
     }
 
     private func revertEdits(_ previous: [Transaction], expecting outcome: ChangeOutcome) throws -> TransactionChange {
