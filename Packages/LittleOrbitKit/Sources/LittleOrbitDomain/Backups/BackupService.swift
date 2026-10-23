@@ -10,6 +10,8 @@ public final class BackupService: AllBackupUseCases {
     private let exports = BackupExportCounts()
     /// Each export handed out and not yet discarded, with its backup's ID.
     private var openExports: [URL: UUID] = [:]
+    /// The backups whose folders were read for the list since this service was made (D208.2, D214).
+    let listedThisSession = BackupListedThisSession()
 
     private let source: any LedgerBackupSource
     let storage: any BackupStorage
@@ -129,9 +131,12 @@ public final class BackupService: AllBackupUseCases {
             guard let record = catalog.records.first(where: { $0.id == id }) else {
                 throw BackupError.notFound
             }
-            // Export… is unavailable for a damaged or newer-format backup (D196.3, D197.2).
-            guard record.isRestorable else {
-                throw record.condition == .newerFormat ? BackupError.newerFormat : BackupError.damaged
+            // Export… is unavailable for a damaged, newer-format or unreadable backup (D196.3, D197.2, D214).
+            switch record.condition {
+            case .restorable: break
+            case .damaged: throw BackupError.damaged
+            case .newerFormat: throw BackupError.newerFormat
+            case .unreadable: throw BackupError.unreadableBackup
             }
             let storage = self.storage
             let codec = self.codec
@@ -193,8 +198,8 @@ public final class BackupService: AllBackupUseCases {
         exports.count(of: id)
     }
 
-    /// `work`, with a backup that can't be read reported as `cleanupBlocked` (R3, D208.3) and any other failure as
-    /// `cleanupFailed` (D211.6). Either way nothing is deleted and N and M aren't saved, as both come after it.
+    /// `work`, with a backup that can't be read reported as `cleanupBlocked` (R3, D208.3) and any other failure,
+    /// the list itself not reading included (`BackupListUnreadable`, D214.5), as `cleanupFailed` (D211.6). Either way nothing is deleted and N and M aren't saved, as both come after it.
     /// Cancelling passes through.
     private static func blockingCleanup<Value>(_ work: () async throws -> Value) async throws -> Value {
         do {
@@ -349,9 +354,10 @@ public final class BackupService: AllBackupUseCases {
     func loadCatalog() async throws -> BackupCatalog {
         let storage = self.storage
         let codec = self.codec
+        let listed = listedThisSession
         return
             try await Task.detached(executorPreference: BackupWorkExecutor.shared, priority: .userInitiated) {
-                try Self.catalog(storage: storage, codec: codec)
+                try Self.catalog(storage: storage, codec: codec, listed: listed)
             }
             .value
     }
@@ -360,6 +366,10 @@ public final class BackupService: AllBackupUseCases {
     /// first, so a damaged one is never counted, never a keeper and never pruned, and only undamaged ones count as
     /// restorable (D196.3, L30–L33). If a folder can't be read at all, this throws and nothing is pruned (R3).
     func toPrune(_ records: [BackupRecord], _ retention: BackupRetention) async throws -> [BackupRecord] {
+        // A folder that couldn't be read at all stops cleanup, as one that fails its read below does (D208.3, D214).
+        if records.contains(where: { $0.condition == .unreadable }) {
+            throw BackupFileReadError(BackupError.unreadableBackup)
+        }
         let storage = self.storage
         let codec = self.codec
         let moment = now()
@@ -386,96 +396,5 @@ public final class BackupService: AllBackupUseCases {
         isBusy = true
         defer { isBusy = false }
         return try await body()
-    }
-}
-
-extension BackupService {
-    /// The list, built from the folders (D195.3). Each folder named by a backup ID is listed:
-    /// - with a supported manifest whose files are all there at their listed sizes, and no failed check since:
-    ///   restorable
-    /// - with a newer format's manifest: `newerFormat`, never checksum-checked (D197.2)
-    /// - with no manifest, an unreadable one, a missing file or one of the wrong size, or a failed check: damaged,
-    ///   with the kind and date last known for it (D196.3, L29, L37)
-    ///
-    /// The cache in the status is rebuilt from the result. If a folder can't be read at all (the device is locked,
-    /// an I/O error), that error is thrown, so a partial list is never shown (R3). A folder deleted meanwhile just
-    /// drops out.
-    nonisolated static func catalog(storage: any BackupStorage, codec: BackupCodec) throws -> BackupCatalog {
-        var status = try storage.loadStatus()
-        var records: [BackupRecord] = []
-        for id in try storage.storedIDs() {
-            let listing: BackupFolderListing
-            do {
-                listing = try storage.listing(id: id)
-            } catch BackupError.notFound {
-                continue
-            }
-            records.append(record(id, listing: listing, known: status.known[id], codec: codec))
-        }
-        let known = Dictionary(records.map { ($0.id, $0) }, uniquingKeysWith: { first, _ in first })
-        if known != status.known {
-            status.known = known
-            try? storage.saveStatus(status)
-        }
-        return BackupCatalog(records: records, status: status)
-    }
-
-    nonisolated static func record(
-        _ id: UUID,
-        listing: BackupFolderListing,
-        known: BackupRecord?,
-        codec: BackupCodec,
-    ) -> BackupRecord {
-        guard let data = listing.manifest, let reading = try? codec.reading(manifest: data) else {
-            var record =
-                known
-                ?? BackupRecord(
-                    id: id,
-                    kind: nil,
-                    createdAt: listing.createdAt ?? BackupRecord.unknownDate,
-                    formatVersion: 0,
-                    byteSize: listing.totalSize,
-                    accountCount: nil,
-                    transactionCount: nil,
-                    attachmentCount: nil,
-                )
-            record.condition = .damaged
-            return record
-        }
-        switch reading {
-        case .newer(let hints):
-            return BackupRecord(
-                id: id,
-                kind: hints.kind ?? known?.kind,
-                createdAt: hints.createdAt ?? known?.createdAt ?? listing.createdAt ?? BackupRecord.unknownDate,
-                nameIndex: hints.nameIndex ?? known?.nameIndex ?? 1,
-                formatVersion: hints.formatVersion,
-                byteSize: listing.totalSize,
-                // A newer format's counts aren't read, so none are shown, not even an earlier read's.
-                accountCount: nil,
-                transactionCount: nil,
-                attachmentCount: nil,
-                month: hints.month,
-                condition: .newerFormat,
-            )
-        case .supported(let summary):
-            let manifest = summary.manifest
-            let filesThere = summary.fileSizes.allSatisfy { path, size in listing.fileSizes[path] == size }
-            let failedCheck = known?.condition == .damaged && known?.fingerprint == summary.fingerprint
-            return BackupRecord(
-                id: id,
-                kind: manifest.kind,
-                createdAt: manifest.createdAt,
-                nameIndex: manifest.nameIndex,
-                formatVersion: manifest.formatVersion,
-                byteSize: summary.byteSize,
-                accountCount: manifest.accountCount,
-                transactionCount: manifest.transactionCount,
-                attachmentCount: manifest.attachmentCount,
-                fingerprint: summary.fingerprint,
-                month: manifest.month,
-                condition: filesThere && !failedCheck ? .restorable : .damaged,
-            )
-        }
     }
 }

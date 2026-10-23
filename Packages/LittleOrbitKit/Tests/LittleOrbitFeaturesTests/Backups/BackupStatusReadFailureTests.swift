@@ -5,7 +5,8 @@ import Testing
 
 /// Tech Architect on 8a43e74: a `status.json` that can't be read was read as an empty status, and the list then
 /// saved that over it, losing the N4 line, the skip-after-restore marker and what was known about damaged folders.
-/// Now the read failure is thrown, nothing is saved over the file, and it reaches D211's existing copy.
+/// Now the read failure is thrown, nothing is saved over the file, and it reaches D211's existing copy: lowering
+/// Keep shows D211.6's general message, not D208.3's, which is for a backup that can't be read (D214.5).
 @MainActor
 @Suite("A status.json that can't be read is never saved over (R3, D211.5)", .serialized, .timeLimit(.minutes(2)))
 struct BackupStatusReadFailureTests {
@@ -45,8 +46,14 @@ struct BackupStatusReadFailureTests {
         await window.backUpNow()
         #expect(window.alert == .backUpFailed)
         window.alert = nil
+        // D214.5: the list couldn't be read, not a backup, so D211.6's general message, not D208.3's.
         await window.proposeRetention(BackupRetention(recentAutomatic: 1, monthlyMonths: 0))
-        #expect(window.alert == .cleanupBlocked)
+        #expect(window.alert == .cleanupFailed)
+        #expect(window.alert?.title == "Couldn’t Delete Old Backups")
+        #expect(
+            window.alert?.message
+                == "little-orbit couldn’t delete your older backups. Try again later. Your setting hasn’t changed."
+        )
         #expect(window.errorMessage == nil)
 
         allowReading(url)
@@ -72,6 +79,9 @@ struct BackupStatusReadFailureTests {
         #expect(window.errorMessage == nil)
         await window.backUpNow()
         #expect(window.alert == .backUpFailed)
+        window.alert = nil
+        await window.proposeRetention(BackupRetention(recentAutomatic: 1, monthlyMonths: 0))
+        #expect(window.alert == .cleanupFailed)
         #expect(try harness.storedFiles().filter { $0 != "status.json" }.count == 1)
     }
 

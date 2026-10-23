@@ -137,4 +137,69 @@ struct FileBackupStorageReadFailureTests {
         #expect(listing.manifest == Data("{}".utf8))
         #expect(listing.sizesKnown)
     }
+
+    @Test("Reading a backup whose folder can't be listed throws a read failure, so it's never called damaged (D208.2)")
+    func filesDenied() throws {
+        let folder = folder()
+        defer { remove(folder) }
+        let storage = try FileBackupStorage(folder: folder)
+        let id = UUID()
+        try storage.write(
+            BackupSnapshotFiles(["manifest.json": Data("{}".utf8), "accounts/A/2026.json": Data("year".utf8)]),
+            id: id,
+            cloningFrom: nil,
+        )
+        let accounts = storage.folderURL(id).appendingPathComponent("accounts", isDirectory: true)
+        guard try deny(accounts) else {
+            return
+        }
+        defer { try? FileManager.default.setAttributes([.posixPermissions: 0o755], ofItemAtPath: accounts.path) }
+
+        #expect(throws: BackupFileReadError.self) { try storage.files(id: id) }
+    }
+
+    @Test("Delete removes a backup folder that can't be read, inner folders included (D214)")
+    func deleteDenied() throws {
+        let folder = folder()
+        defer { remove(folder) }
+        let storage = try FileBackupStorage(folder: folder)
+        let id = UUID()
+        try storage.write(
+            BackupSnapshotFiles(["manifest.json": Data("{}".utf8), "accounts/A/2026.json": Data("year".utf8)]),
+            id: id,
+            cloningFrom: nil,
+        )
+        let url = storage.folderURL(id)
+        let accounts = url.appendingPathComponent("accounts", isDirectory: true)
+        try FileManager.default.setAttributes([.posixPermissions: 0], ofItemAtPath: accounts.path)
+        try FileManager.default.setAttributes([.posixPermissions: 0], ofItemAtPath: url.path)
+        defer {
+            try? FileManager.default.setAttributes([.posixPermissions: 0o755], ofItemAtPath: url.path)
+            try? FileManager.default.setAttributes([.posixPermissions: 0o755], ofItemAtPath: accounts.path)
+        }
+
+        try storage.delete(id: id)
+
+        #expect(!FileManager.default.fileExists(atPath: url.path))
+        #expect(try storage.storedIDs().isEmpty)
+        let staging = URL(fileURLWithPath: folder.path + ".staging")
+        #expect((try? FileManager.default.contentsOfDirectory(atPath: staging.path)) ?? [] == [])
+    }
+
+    @Test("A folder's creation date is read without reading the folder, where the platform reports one (D214.3)")
+    func creationDate() throws {
+        let folder = folder()
+        defer { remove(folder) }
+        let storage = try FileBackupStorage(folder: folder)
+        let id = UUID()
+        try storage.write(BackupSnapshotFiles(["manifest.json": Data("{}".utf8)]), id: id, cloningFrom: nil)
+        let url = storage.folderURL(id)
+        try FileManager.default.setAttributes([.posixPermissions: 0], ofItemAtPath: url.path)
+        defer { try? FileManager.default.setAttributes([.posixPermissions: 0o755], ofItemAtPath: url.path) }
+        // Read after the chmod: on Linux, creationDate follows ctime, which the chmod changes.
+        let expected = try FileManager.default.attributesOfItem(atPath: url.path)[.creationDate] as? Date
+
+        #expect(storage.folderCreationDate(id: id) == expected)
+        #expect(storage.folderCreationDate(id: UUID()) == nil)
+    }
 }

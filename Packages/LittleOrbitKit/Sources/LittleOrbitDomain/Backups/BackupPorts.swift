@@ -70,9 +70,12 @@ public protocol BackupStorage: Sendable {
     /// never listed (D195.6).
     func storedIDs() throws -> [UUID]
     /// A folder's manifest and file sizes, for the list. Throws `BackupError.notFound` when the folder is gone, and
-    /// the underlying error for a failed read (R3). A file whose size can't be read is left out and marked by
+    /// a read failure when the folder, or a folder inside it, can't be listed (R3, D214). A file whose size can't be read is left out and marked by
     /// `sizesKnown`, so one unreadable size never hides the whole list (D202.1).
     func listing(id: UUID) throws -> BackupFolderListing
+    /// When the folder was made, read without reading the folder itself, for one whose contents can't be read
+    /// (D214.3). `nil` when that can't be read either, or the platform doesn't report it.
+    func folderCreationDate(id: UUID) -> Date?
     /// Every file in a backup folder, by relative path, all in memory. Only export uses it; checks and restores
     /// read through `files(id:)`.
     func read(id: UUID) throws -> BackupSnapshotFiles
@@ -111,6 +114,11 @@ public protocol BackupStorage: Sendable {
 extension BackupStorage {
     /// Stores with no save-panel copies to clean up.
     public func removeSystemExportCopies() {}
+
+    /// Stores that don't know when a folder was made.
+    public func folderCreationDate(id: UUID) -> Date? {
+        nil
+    }
 
     /// The whole folder in memory, for stores that have nothing better.
     public func files(id: UUID) throws -> any BackupFileReading {
