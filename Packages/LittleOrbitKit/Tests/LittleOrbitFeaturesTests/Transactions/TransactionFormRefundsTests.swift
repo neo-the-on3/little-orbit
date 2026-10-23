@@ -112,4 +112,39 @@ struct TransactionFormRefundsTests {
         #expect(model.type == .income)
         #expect(model.showsTypeSwitch)
     }
+
+    @Test("D117.5, S61: Edit Expense lists its refunds, oldest first, with day, signed amount and account")
+    func refundRows() throws {
+        let fixture = try F()
+        let expense = try fixture.expense(1_000, on: F.date(2026, 10, 17, zone: F.kolkata))
+        let later = try fixture.refund(200, of: expense, on: F.date(2026, 10, 21, zone: F.kolkata))
+        let first = try fixture.refund(300, of: expense, on: F.date(2026, 10, 20, zone: F.kolkata))
+        let model = form(expense.id, in: fixture)
+        let account = fixture.savings.name
+        #expect(
+            model.refundRows == [
+                ExpenseRefundRow(id: first.id, date: "20 Oct", amount: "+₹300.00", account: account),
+                ExpenseRefundRow(id: later.id, date: "21 Oct", amount: "+₹200.00", account: account),
+            ]
+        )
+        #expect(form(first.id, in: fixture).refundRows.isEmpty)
+    }
+
+    @Test(
+        "B3: a refund with an unknown or empty stored zone reads its day in UTC, not the device zone",
+        arguments: ["Mars/Olympus", ""],
+    )
+    func refundRowUnknownZone(_ zone: String) throws {
+        let fixture = try F()
+        let expense = try fixture.expense(1_000, on: F.date(2026, 10, 17, zone: F.kolkata))
+        // 20 Oct 20:00 UTC is already 21 Oct in Kolkata, the device zone here.
+        let refund = try fixture.refund(300, of: expense, on: F.date(2026, 10, 20, 20, 0, zone: "UTC"), zone: "UTC")
+        var snapshot = try fixture.repository.ledgerSnapshot()
+        let index = try #require(snapshot.transactions.firstIndex { $0.id == refund.id })
+        // Written straight into the store, the way a backup from another device could hold it.
+        snapshot.transactions[index].timeZoneID = zone
+        try fixture.repository.replaceLedger(with: snapshot)
+        let model = form(expense.id, in: fixture)
+        #expect(model.refundRows.map(\.date) == ["20 Oct"])
+    }
 }

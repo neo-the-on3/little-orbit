@@ -371,6 +371,7 @@
                     messages
                     accountRows
                     detailsFields
+                    ExpenseRefundsSection(rows: model.refundRows, footnote: model.refundsFootnote)
                 }
                 .formStyle(.grouped)
             }
@@ -399,6 +400,7 @@
                                     Text("Description, notes")
                                 }
                             }
+                            ExpenseRefundsSection(rows: model.refundRows, footnote: model.refundsFootnote)
                         }
                         .scrollDismissesKeyboard(.interactively)
                         // Keep the description and its suggestions above the keyboard (UI Designer, #87 U1).
@@ -464,11 +466,6 @@
                         .foregroundStyle(Color(ThemeColor.statusOverspent))
                 }
             #endif
-            if let refunds = model.refundsFootnote {
-                Text(refunds)
-                    .font(.theme(Self.footnoteStyle))
-                    .foregroundStyle(Color(ThemeColor.labelSecondary))
-            }
             if let issue = model.issueMessage {
                 Label(issue, systemImage: "exclamationmark.triangle")
                     .foregroundStyle(Color(ThemeColor.statusWarning))

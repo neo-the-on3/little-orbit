@@ -57,7 +57,7 @@ public final class TransactionFormViewModel {
     @ObservationIgnored let now: () -> Date
     @ObservationIgnored private(set) var original: Transaction?
     @ObservationIgnored private var originalPayeeName = ""
-    @ObservationIgnored private var accounts: [Account] = []
+    @ObservationIgnored private(set) var accounts: [Account] = []
     @ObservationIgnored private var categories: [TransactionCategory] = []
     @ObservationIgnored private var payees: [Payee] = []
     /// Observed, so the refunds footnote and the Expense/Income switch follow a reload (D225.1).

@@ -2438,7 +2438,7 @@
       }
     },
     "Refund": {
-      "comment": "Refund row title when the refund has no payee and no description (D233.1).",
+      "comment": "Refund row title when the refund has no payee and no description (D233.1); also the refund sheet’s title and the title of each row in Edit Expense’s Refunds section (#34).",
       "extractionState": "manual",
       "localizations": {
         "en": {
@@ -2575,6 +2575,18 @@
           "stringUnit": {
             "state": "translated",
             "value": "Refunded %1$@ of %2$@. While these refunds exist, the amount can’t go below %1$@ and the expense can’t become income."
+          }
+        }
+      }
+    },
+    "Refunds": {
+      "comment": "Header of the section listing an expense’s refunds in Edit Expense (D117.5).",
+      "extractionState": "manual",
+      "localizations": {
+        "en": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Refunds"
           }
         }
       }

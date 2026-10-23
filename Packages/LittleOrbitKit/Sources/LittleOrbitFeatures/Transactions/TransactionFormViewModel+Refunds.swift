@@ -14,6 +14,35 @@ extension TransactionFormViewModel {
         return refunds.isEmpty ? nil : refunds.reduce(Decimal(0)) { $0 + $1.amount }
     }
 
+    /// The expense's Refunds section, oldest first (D117.5, S61): each refund's date, "+₹300.00" and the
+    /// account it went to. Each row reads plain "Refund", since a refund can't belong to a split line yet (#126).
+    public var refundRows: [ExpenseRefundRow] {
+        guard let original, original.type == .expense, !original.isRefund else {
+            return []
+        }
+        return
+            transactions
+            .filter { $0.refundOfID == original.id && $0.isRefund && $0.deletedAt == nil }
+            .sorted { ($0.date, $0.id.uuidString) < ($1.date, $1.id.uuidString) }
+            .map { refund in
+                // The one stored-zone fallback: an unknown or empty zone reads as UTC, as in the list (D229.1).
+                let zone = dates.storedTimeZone(refund.timeZoneID)
+                let account = accounts.first { $0.id == refund.accountID }
+                return ExpenseRefundRow(
+                    id: refund.id,
+                    date: refund.date.formatted(
+                        Date.FormatStyle(locale: locale, timeZone: zone).day().month(.abbreviated)
+                    ),
+                    amount: formatter.string(
+                        refund.amount,
+                        currencyCode: account?.currencyCode ?? currencyCode,
+                        showsPlus: true,
+                    ),
+                    account: account?.name ?? "",
+                )
+            }
+    }
+
     /// The Expense/Income switch is hidden while the expense has refunds. One already switched to Income keeps
     /// it, so the user can go back (D225.1).
     public var showsTypeSwitch: Bool {
@@ -45,5 +74,20 @@ extension TransactionFormViewModel {
             )
         }
         return AccountHistoryViewModel.message(for: error)
+    }
+}
+
+/// One refund in an expense's Refunds section: titled "Refund", with its day, signed amount and account.
+public struct ExpenseRefundRow: Identifiable, Equatable, Sendable {
+    public let id: UUID
+    public let date: String
+    public let amount: String
+    public let account: String
+
+    public init(id: UUID, date: String, amount: String, account: String) {
+        self.id = id
+        self.date = date
+        self.amount = amount
+        self.account = account
     }
 }
