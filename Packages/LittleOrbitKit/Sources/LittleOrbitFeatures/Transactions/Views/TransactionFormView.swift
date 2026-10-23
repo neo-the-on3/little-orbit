@@ -215,7 +215,11 @@
         /// under it; the compact picker read "Date, Date" with a second picker button inside (Tester's #87
         /// recheck).
         @ViewBuilder private var dateRow: some View {
-            let picker = DatePicker("Date", selection: $model.date, displayedComponents: .date)
+            // `pickerDate` does the zone work (D229.4, D230.1). This only pins the picker to the zone that value is
+            // built in. In the app that's the environment's default anyway; it keeps the two in step if the
+            // system zone changes while the sheet is open, or when a preview or test injects another zone.
+            let picker = DatePicker("Date", selection: $model.pickerDate, displayedComponents: .date)
+                .environment(\.timeZone, model.pickerTimeZone)
             if dynamicTypeSize.isAccessibilitySize {
                 Button {
                     withAnimation { showsCalendar.toggle() }

@@ -350,7 +350,7 @@ struct TransactionFormViewModelTests {
     func dateAccessibilityValue() throws {
         let model = model(try F.repository())
         #expect(model.dateSpokenText == "20 October 2026")
-        model.date = F.date(2026, 10, 21, 23)
+        model.pickerDate = F.date(2026, 10, 21, 23)
         #expect(model.dateSpokenText == "21 October 2026")
     }
 
@@ -382,9 +382,9 @@ struct TransactionFormViewModelTests {
     func dateRow() throws {
         let model = model(try F.repository())
         #expect(model.dateText == "Today")
-        model.date = F.date(2026, 10, 19)
+        model.pickerDate = F.date(2026, 10, 19)
         #expect(model.dateText == "Yesterday")
-        model.date = F.date(2026, 11, 3)
+        model.pickerDate = F.date(2026, 11, 3)
         #expect(model.dateText == "3 Nov 2026")
     }
 

@@ -38,7 +38,8 @@ public final class TransactionFormViewModel {
         }
     }
     public private(set) var payeeID: UUID?
-    public var date: Date
+    /// The stored moment. The picker edits it through `pickerDate`, which changes only its day (D230.1).
+    public internal(set) var date: Date
     public private(set) var details = ""
     public private(set) var detailsWasShortened = false
     public var note = ""
@@ -48,22 +49,24 @@ public final class TransactionFormViewModel {
 
     @ObservationIgnored private let loadLedger: any LoadTransactionLedgerUseCase
     @ObservationIgnored private let saveTransactions: any SaveTransactionsUseCase
-    @ObservationIgnored private let locale: Locale
+    @ObservationIgnored let dates: any TransactionDateUseCase
+    @ObservationIgnored let locale: Locale
     @ObservationIgnored private let formatter: MoneyFormatter
-    @ObservationIgnored private let text: TransactionText
-    @ObservationIgnored private let timeZone: TimeZone
-    @ObservationIgnored private let now: () -> Date
+    @ObservationIgnored let text: TransactionText
+    @ObservationIgnored let timeZone: TimeZone
+    @ObservationIgnored let now: () -> Date
     @ObservationIgnored private(set) var original: Transaction?
     @ObservationIgnored private var originalPayeeName = ""
     @ObservationIgnored private var accounts: [Account] = []
     @ObservationIgnored private var categories: [TransactionCategory] = []
     @ObservationIgnored private var payees: [Payee] = []
     @ObservationIgnored private var transactions: [Transaction] = []
-    @ObservationIgnored private var timeZoneID: String
+    @ObservationIgnored private(set) var timeZoneID: String
 
     public init(
         loadLedger: any LoadTransactionLedgerUseCase,
         saveTransactions: any SaveTransactionsUseCase,
+        dates: any TransactionDateUseCase = DefaultTransactionDateUseCase(),
         mode: TransactionFormMode,
         locale: Locale = .current,
         timeZone: TimeZone = .current,
@@ -71,6 +74,7 @@ public final class TransactionFormViewModel {
     ) {
         self.loadLedger = loadLedger
         self.saveTransactions = saveTransactions
+        self.dates = dates
         self.mode = mode
         self.locale = locale
         self.formatter = MoneyFormatter(locale: locale)
@@ -93,6 +97,7 @@ public final class TransactionFormViewModel {
         self.init(
             loadLedger: useCases.loadLedger,
             saveTransactions: useCases.saveTransactions,
+            dates: useCases.dates,
             mode: mode,
             locale: locale,
             timeZone: timeZone,
@@ -365,22 +370,6 @@ public final class TransactionFormViewModel {
         {
             categoryID = suggested
         }
-    }
-
-    // MARK: Date
-
-    /// "21 October 2026": the date in full, in the entry's time zone, for VoiceOver (UI Designer, #87 UI3).
-    public var dateSpokenText: String {
-        var style = Date.FormatStyle(date: .long, time: .omitted, locale: locale)
-        style.timeZone = TimeZone(identifier: timeZoneID) ?? timeZone
-        return date.formatted(style)
-    }
-
-    public var dateText: String {
-        let day =
-            TransactionCalendar.calendarDay(of: date, timeZoneID: timeZoneID)
-            ?? TransactionTiming.today(date, timeZone: timeZone)
-        return text.relativeDate(day, today: TransactionTiming.today(now(), timeZone: timeZone))
     }
 
     // MARK: Description and notes
