@@ -198,8 +198,8 @@ public final class BackupService: AllBackupUseCases {
             .value
     }
 
-    /// The Before restore backup first, and only if it's restorable is `source` checked again, file by file, and
-    /// the data replaced; otherwise this throws `beforeRestoreFailed` with the data unchanged (D63, B3).
+    /// The Before restore backup first, and only if it's made and restorable is `source` checked again, file by
+    /// file, and the data replaced; otherwise this throws `beforeRestoreFailed` with the data unchanged (D63, B3).
     /// Attachments go from file to store one at a time and are never all in memory: a stored backup's from its
     /// folder, a picked file's from a scratch folder they're unpacked into after every check passes (B1).
     public func restore(
@@ -208,13 +208,7 @@ public final class BackupService: AllBackupUseCases {
     ) async throws -> BackupRecord {
         try await exclusively {
             progress(.savingCurrentData)
-            // D63: the data is only replaced once its Before restore backup checked out as restorable (B3).
-            let before = try await makeBackup(
-                .beforeRestore,
-                of: self.source.backupSnapshot(),
-                bytes: self.source.attachmentBytes(),
-                requiringCheck: true,
-            )
+            let before = try await makeBeforeRestoreBackup()
             progress(.replacingData)
             let (opened, scratch) = try await openForRestore(source)
             defer { scratch?.remove() }
@@ -224,6 +218,27 @@ public final class BackupService: AllBackupUseCases {
             try? await markRestored()
             progress(.finished)
             return before
+        }
+    }
+
+    /// The Before restore backup of the current data. D63: the data is only replaced once it checked out as
+    /// restorable (B3). Any failure to make it, a write, a move, a staging folder or its check, is
+    /// `beforeRestoreFailed`, so nothing of the store's own files or folders reaches the user (Tester F3, D207.1).
+    /// Cancelling and a full disk pass through: a full disk is the list's failure line (N4).
+    private func makeBeforeRestoreBackup() async throws -> BackupRecord {
+        do {
+            return try await makeBackup(
+                .beforeRestore,
+                of: source.backupSnapshot(),
+                bytes: source.attachmentBytes(),
+                requiringCheck: true,
+            )
+        } catch let error as CancellationError {
+            throw error
+        } catch BackupError.notEnoughStorage {
+            throw BackupError.notEnoughStorage
+        } catch {
+            throw BackupError.beforeRestoreFailed
         }
     }
 
