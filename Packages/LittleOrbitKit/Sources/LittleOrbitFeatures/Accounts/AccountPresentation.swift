@@ -211,15 +211,39 @@ public struct AccountDeletePrompt: Identifiable, Equatable, Sendable {
     init(account: Account, impact: AccountDeletionImpact) {
         accountID = account.id
         title = "Delete “\(account.name)”?"
-        let count = impact.transactionCount
-        var first = "This deletes \(count) \(count == 1 ? "transaction" : "transactions")"
-        if impact.transferCount > 0 {
-            let transfers = impact.transferCount
-            first +=
-                ", including \(transfers) \(transfers == 1 ? "transfer" : "transfers") to or from other accounts whose balances will change"
+        message = Self.message(transactions: impact.transactionCount, transfers: impact.transferCount)
+    }
+
+    /// One whole catalog message for each case (D236.2, D236.3); nothing is joined here. A count of 0 never
+    /// reaches a counted entry, so the message can't say "0 transactions".
+    static func message(transactions count: Int, transfers: Int) -> String {
+        if count <= 0 {
+            return FeatureText.string(
+                "This account has no transactions. You can undo this. Hide it instead to keep it; hidden accounts still count toward net wealth.",
+                comment: "Account delete confirmation message: the account has no transactions.",
+            )
         }
-        message =
-            first
-            + ". Attachments are deleted too. You can undo this. Hide it instead to keep everything; hidden accounts still count toward net wealth."
+        if transfers <= 0 {
+            return FeatureText.plural(
+                "This deletes %lld transactions. Attachments are deleted too. You can undo this. Hide it instead to keep everything; hidden accounts still count toward net wealth.",
+                one:
+                    "This deletes %lld transaction. Attachments are deleted too. You can undo this. Hide it instead to keep everything; hidden accounts still count toward net wealth.",
+                count,
+            )
+        }
+        if count == 1 {
+            return FeatureText.string(
+                "This deletes 1 transaction, a transfer to or from another account whose balance will change. Attachments are deleted too. You can undo this. Hide it instead to keep everything; hidden accounts still count toward net wealth.",
+                comment: "Account delete confirmation message: the account's only transaction is a transfer.",
+            )
+        }
+        return FeatureText.pluralFormat(
+            "This deletes %1$lld transactions, including %2$lld transfers to or from other accounts whose balances will change. Attachments are deleted too. You can undo this. Hide it instead to keep everything; hidden accounts still count toward net wealth.",
+            one:
+                "This deletes %1$lld transactions, including %2$lld transfer to or from another account whose balance will change. Attachments are deleted too. You can undo this. Hide it instead to keep everything; hidden accounts still count toward net wealth.",
+            count: transfers,
+            count,
+            transfers,
+        )
     }
 }
