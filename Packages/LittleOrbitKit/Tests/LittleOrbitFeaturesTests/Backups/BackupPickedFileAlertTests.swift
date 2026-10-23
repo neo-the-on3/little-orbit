@@ -184,12 +184,12 @@ struct BackupPickedFileAlertTests {
         }
     }
 
-    @Test("A truly unexpected error keeps Something Went Wrong")
+    @Test("A truly unexpected error keeps Something Went Wrong, with the catalog text, not its own (D211.9)")
     func unexpectedError() async throws {
         defer { try? FileManager.default.removeItem(at: folder) }
         let window = try await restoring(failingPass: 2, error: UnexpectedReaderError())
         #expect(window.alert == nil)
-        #expect(window.errorMessage == "Unexpected")
+        #expect(window.errorMessage == BackupPresentation.somethingWentWrongMessage)
     }
 
     @Test("Each case maps to its own alert, and only a picked file's read failure is Couldn’t Open Backup")

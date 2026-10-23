@@ -39,4 +39,34 @@ public struct BackupAlert: Identifiable, Equatable, Sendable {
         title: BackupPresentation.deleteWhileExportingTitle,
         message: BackupPresentation.deleteWhileExportingMessage,
     )
+    /// A full disk while the Before restore backup was made: nothing was replaced (D211.8).
+    public static let notEnoughStorageToRestore = BackupAlert(
+        title: BackupPresentation.notEnoughStorageToRestoreTitle,
+        message: BackupPresentation.notEnoughStorageToRestoreMessage,
+    )
+    /// The export file couldn't be created or written, a full disk included (D211.4).
+    public static let exportFailed = BackupAlert(
+        title: BackupPresentation.exportFailedTitle,
+        message: BackupPresentation.exportFailedMessage,
+    )
+    /// After the Before restore backup was made, the restore couldn't finish: nothing was replaced (D211.1).
+    public static let restoreFailed = BackupAlert(
+        title: BackupPresentation.beforeRestoreFailedTitle,
+        message: BackupPresentation.restoreFailedMessage,
+    )
+    /// Back Up Now failed other than with a full disk, which is the list's line (D211.2).
+    public static let backUpFailed = BackupAlert(
+        title: BackupPresentation.backUpFailedTitle,
+        message: BackupPresentation.backUpFailedMessage,
+    )
+    /// The backup's folder couldn't be removed (D211.3). An export in progress is `deleteWhileExporting`.
+    public static let deleteFailed = BackupAlert(
+        title: BackupPresentation.deleteFailedTitle,
+        message: BackupPresentation.deleteFailedMessage,
+    )
+    /// Lowering N or M failed before anything was saved or deleted (D211.6).
+    public static let cleanupFailed = BackupAlert(
+        title: BackupPresentation.cleanupBlockedTitle,
+        message: BackupPresentation.cleanupFailedMessage,
+    )
 }

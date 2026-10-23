@@ -225,7 +225,7 @@ struct BackupFolderServiceTests {
         #expect(try await harness.service.overview().backups.count == 7)
     }
 
-    @Test("If a manifest can't be read, the list fails and nothing is pruned or listed partly (R3)")
+    @Test("If a manifest can't be read, the list fails and nothing is pruned or listed partly (R3, D211.2, D211.5)")
     func lockedFiles() async throws {
         let folder = FileManager.default.temporaryDirectory
             .appendingPathComponent("backup-tests-\(UUID().uuidString)", isDirectory: true)
@@ -235,10 +235,11 @@ struct BackupFolderServiceTests {
         _ = try await harness.service.backUpNow()
         storage.lockFiles()
 
-        await #expect(throws: CocoaError.self) { try await harness.service.overview() }
+        // The list's "Couldn’t Load Backups" and Back Up Now's "Couldn’t Back Up", never the system's text (D211).
+        await #expect(throws: BackupError.loadFailed) { try await harness.service.overview() }
         harness.advance(86_400)
         await #expect(throws: CocoaError.self) { try await harness.service.backUpAutomaticallyIfNeeded() }
-        await #expect(throws: CocoaError.self) { try await harness.service.backUpNow() }
+        await #expect(throws: BackupError.backUpFailed) { try await harness.service.backUpNow() }
         #expect(storage.deletes == 0)
         #expect(try storage.base.storedIDs().count == 1)
     }

@@ -116,6 +116,10 @@ public final class BackupsViewModel {
         self.announce = announce
     }
 
+    /// The Backups folder couldn't be read: the list shows "Couldn’t Load Backups" with Try Again instead of its
+    /// rows, never an alert (D211.5).
+    public private(set) var isLoadFailed = false
+
     public var isEmpty: Bool {
         rows.isEmpty
     }
@@ -170,9 +174,17 @@ public final class BackupsViewModel {
         rows.first { $0.id == id }
     }
 
-    /// Reads the list again. It throws if the list can't be read (R3), for the window that asked to say so.
+    /// Reads the list again. A Backups folder that can't be read doesn't throw: it's the list's "Couldn’t Load
+    /// Backups" state, and the next load that works clears it (R3, D211.5). It throws only when cancelled.
     public func load() async throws {
-        let overview = try await useCases.list.overview()
+        let overview: BackupOverview
+        do {
+            overview = try await useCases.list.overview()
+        } catch BackupError.loadFailed {
+            isLoadFailed = true
+            return
+        }
+        isLoadFailed = false
         let moment = now()
         presentation.retention = overview.retention
         records = overview.backups
@@ -185,31 +197,6 @@ public final class BackupsViewModel {
         }
         failureMessage = overview.lastFailure == .notEnoughStorage ? presentation.notEnoughStorageMessage : nil
         isBackingUp = useCases.make.isBusy && restoreStep == nil
-    }
-
-    /// How a window shows `error`. Not enough storage is the failure line, read with the list; another backup
-    /// running needs nothing (D118.5).
-    public static func feedback(for error: any Error) -> BackupFeedback {
-        switch error as? BackupError {
-        case .damaged, .notFound:
-            .alert(.damaged)
-        case .newerFormat:
-            .alert(.newerFormat)
-        case .beforeRestoreFailed:
-            .alert(.beforeRestoreFailed)
-        case .unreadableFile:
-            .alert(.unreadableFile)
-        case .unreadableBackup:
-            .alert(.unreadableBackup)
-        case .cleanupBlocked:
-            .alert(.cleanupBlocked)
-        case .exporting:
-            .alert(.deleteWhileExporting)
-        case .notEnoughStorage, .busy:
-            .none
-        default:
-            .error(error.localizedDescription)
-        }
     }
 
     /// Runs `work`, then reads the list again whether it worked or not, and rethrows its error.

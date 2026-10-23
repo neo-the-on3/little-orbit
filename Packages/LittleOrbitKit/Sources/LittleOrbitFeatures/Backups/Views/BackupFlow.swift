@@ -73,6 +73,16 @@
         }
 
         private func isPresented<Item>(_ keyPath: ReferenceWritableKeyPath<BackupsWindow, Item?>) -> Binding<Bool> {
+            Self.presented(window, keyPath, isActive: isActive)
+        }
+
+        /// An alert's `isPresented` on one screen of `window`: on only while that screen is on top, and only it
+        /// clears the alert. The alert is the window's, so after a pop the screen now on top presents it (D211.8).
+        static func presented<Item>(
+            _ window: BackupsWindow,
+            _ keyPath: ReferenceWritableKeyPath<BackupsWindow, Item?>,
+            isActive: Bool,
+        ) -> Binding<Bool> {
             Binding(
                 get: { isActive && window[keyPath: keyPath] != nil },
                 set: { if !$0 && isActive { window[keyPath: keyPath] = nil } },
@@ -141,7 +151,7 @@
                     Text(alert.message)
                 }
                 .alert(
-                    "Something Went Wrong",
+                    BackupPresentation.somethingWentWrongTitle,
                     isPresented: isPresented(\.errorMessage),
                 ) {
                     Button("OK") { window.dismissError() }
@@ -401,6 +411,28 @@
                 } message: { presented in
                     Text(presented.message)
                 }
+        }
+    }
+
+    /// The Backups list's state when its folder couldn't be read: "Couldn’t Load Backups", with Try Again to read it
+    /// again, in place of the rows. Never an alert (D211.5). SwiftUI's own `ContentUnavailableView` on iOS and macOS.
+    struct BackupLoadFailedView: View {
+        let window: BackupsWindow
+
+        var body: some View {
+            ContentUnavailableView(
+                label: {
+                    Label(BackupPresentation.loadFailedTitle, systemImage: "exclamationmark.triangle")
+                },
+                description: {
+                    Text(BackupPresentation.loadFailedMessage)
+                },
+                actions: {
+                    Button(BackupPresentation.tryAgain) {
+                        Task { await window.load() }
+                    }
+                },
+            )
         }
     }
 #endif

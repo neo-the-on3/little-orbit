@@ -182,7 +182,7 @@ extension BackupRecord {
 }
 
 /// Errors a backup, export or restore can end with. Each leaves the current data unchanged.
-public enum BackupError: Error, Equatable, Sendable {
+public enum BackupError: Error, Equatable, Sendable, CaseIterable {
     /// Not a backup, truncated, or its checksum fails: 'This Backup Is Damaged' (D63).
     case damaged
     /// Made by a newer version of the app: 'Update little-orbit to Restore This Backup' (D63).
@@ -210,4 +210,23 @@ public enum BackupError: Error, Equatable, Sendable {
     /// The backup is being written to an export file, so it can't be deleted now. Nothing is deleted or queued:
     /// 'Can’t Delete This Backup' (D208.1).
     case exporting
+    /// The disk was full while the Before restore backup was made, so the restore stopped with the data unchanged.
+    /// Restore only: Back Up Now's full disk stays `notEnoughStorage`, the list's line (D62, D211.8).
+    case notEnoughStorageToRestore
+    /// An export's file couldn't be created or written before the save panel, a full disk included. The backup is
+    /// unchanged (D211.4). A stored backup that can't be read stays `unreadableBackup`.
+    case exportFailed
+    /// Lowering N or M failed before anything was saved or deleted, other than a backup that couldn't be read
+    /// (`cleanupBlocked`) (D211.6).
+    case cleanupFailed
+    /// After the Before restore backup was made, the backup couldn't be unpacked or the data couldn't be replaced:
+    /// nothing was replaced, and the Before restore backup is kept (D211.1). Read errors stay `unreadableBackup`
+    /// or `unreadableFile`.
+    case restoreFailed
+    /// Back Up Now failed other than with a full disk, which stays `notEnoughStorage` (D211.2).
+    case backUpFailed
+    /// A backup's folder couldn't be removed (D211.3).
+    case deleteFailed
+    /// The Backups folder couldn't be listed or its status read, so there's no list (D211.5).
+    case loadFailed
 }

@@ -107,7 +107,13 @@
                         .accessibilityElement(children: .combine)
                     }
                 }
-                if model.isEmpty {
+                if model.isLoadFailed {
+                    BackupLoadFailedView(window: window)
+                        // In a List row a default-style Button makes the whole row its tap target. Borderless keeps
+                        // Try Again's look and makes it the only thing in the row that responds (Tester F1).
+                        .buttonStyle(.borderless)
+                        .listRowBackground(Color.clear)
+                } else if model.isEmpty {
                     ContentUnavailableView(
                         BackupPresentation.emptyTitle,
                         systemImage: "clock.arrow.circlepath",

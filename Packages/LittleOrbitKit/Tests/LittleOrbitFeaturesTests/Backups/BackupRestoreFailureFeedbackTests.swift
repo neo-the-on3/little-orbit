@@ -138,7 +138,7 @@ struct BackupRestoreFailureFeedbackTests {
         return FailingWindow(window: window, failing: failing, id: backup.id)
     }
 
-    @Test("Restore from File: a write error while unpacking shows Something Went Wrong after the progress closes")
+    @Test("Restore from File: a write error while unpacking shows Couldn’t Restore (D211.1) after the progress closes")
     func unpackWriteError() async throws {
         defer { try? FileManager.default.removeItem(at: folder) }
         let url = try await pickedFile()
@@ -151,9 +151,10 @@ struct BackupRestoreFailureFeedbackTests {
 
         await confirm(window, prompt)
         expectHeldThroughLateSheet(window)
-        #expect(window.errorMessage == denied.localizedDescription)
+        #expect(window.alert == .restoreFailed)
+        #expect(window.errorMessage == nil)
         // A write error isn't a read failure: not Couldn’t Open Backup.
-        #expect(window.alert == nil)
+        #expect(window.alert != .unreadableFile)
         #expect(try harness.repository.ledgerSnapshot() == ledger)
     }
 

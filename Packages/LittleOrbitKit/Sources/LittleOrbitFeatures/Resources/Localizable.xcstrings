@@ -714,6 +714,18 @@
         }
       }
     },
+    "Couldn’t Back Up": {
+      "comment": "Alert title when Back Up Now failed other than with a full disk, which shows the list's line instead (D211.2). The only button is OK.",
+      "extractionState": "manual",
+      "localizations": {
+        "en": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Couldn’t Back Up"
+          }
+        }
+      }
+    },
     "Couldn’t Delete Old Backups": {
       "comment": "Alert title after lowering Recent Automatic Backups or Monthly Backups while one backup can’t be read, so nothing was deleted (D208.3). The only button is OK.",
       "extractionState": "manual",
@@ -722,6 +734,42 @@
           "stringUnit": {
             "state": "translated",
             "value": "Couldn’t Delete Old Backups"
+          }
+        }
+      }
+    },
+    "Couldn’t Delete This Backup": {
+      "comment": "Alert title when a backup's folder couldn't be removed (D211.3). “Can’t Delete This Backup” is only for a backup being exported. The only button is OK.",
+      "extractionState": "manual",
+      "localizations": {
+        "en": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Couldn’t Delete This Backup"
+          }
+        }
+      }
+    },
+    "Couldn’t Export Backup": {
+      "comment": "Alert title when the export file couldn't be created or written before the save panel opens, a full disk included (D211.4). The only button is OK.",
+      "extractionState": "manual",
+      "localizations": {
+        "en": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Couldn’t Export Backup"
+          }
+        }
+      }
+    },
+    "Couldn’t Load Backups": {
+      "comment": "Heading shown in place of the Backups list when the backups folder couldn't be read (D211.5). Not an alert.",
+      "extractionState": "manual",
+      "localizations": {
+        "en": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Couldn’t Load Backups"
           }
         }
       }
@@ -1604,6 +1652,66 @@
         }
       }
     },
+    "little-orbit couldn’t create the export file. Make sure there’s enough storage on this device and try again. Your backup hasn’t changed.": {
+      "comment": "Message of the “Couldn’t Export Backup” alert (D211.4).",
+      "extractionState": "manual",
+      "localizations": {
+        "en": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "little-orbit couldn’t create the export file. Make sure there’s enough storage on this device and try again. Your backup hasn’t changed."
+          }
+        }
+      }
+    },
+    "little-orbit couldn’t delete your older backups. Try again later. Your setting hasn’t changed.": {
+      "comment": "Message of the “Couldn’t Delete Old Backups” alert when lowering the Keep values failed before anything was saved or deleted, other than a backup that couldn't be read (D211.6).",
+      "extractionState": "manual",
+      "localizations": {
+        "en": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "little-orbit couldn’t delete your older backups. Try again later. Your setting hasn’t changed."
+          }
+        }
+      }
+    },
+    "little-orbit couldn’t finish restoring this backup, so nothing was replaced. Your data hasn’t changed, and the Before restore backup made just now is in your list.": {
+      "comment": "Message of the “Couldn’t Restore” alert when the backup couldn't be unpacked or the data couldn't be replaced after the Before restore backup was made (D211.1). Not D207.1's message.",
+      "extractionState": "manual",
+      "localizations": {
+        "en": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "little-orbit couldn’t finish restoring this backup, so nothing was replaced. Your data hasn’t changed, and the Before restore backup made just now is in your list."
+          }
+        }
+      }
+    },
+    "little-orbit couldn’t finish this. Try again later.": {
+      "comment": "Message of the “Something Went Wrong” alert in Backups when no other case applies. It never shows the error's own text (D211.9).",
+      "extractionState": "manual",
+      "localizations": {
+        "en": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "little-orbit couldn’t finish this. Try again later."
+          }
+        }
+      }
+    },
+    "little-orbit couldn’t make a backup right now. Your data hasn’t changed. Try again later.": {
+      "comment": "Message of the “Couldn’t Back Up” alert (D211.2).",
+      "extractionState": "manual",
+      "localizations": {
+        "en": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "little-orbit couldn’t make a backup right now. Your data hasn’t changed. Try again later."
+          }
+        }
+      }
+    },
     "little-orbit couldn’t read one of your backups, so none were deleted. Try again later. Your setting hasn’t changed.": {
       "comment": "Alert message under “Couldn’t Delete Old Backups” (D208.3). “Your setting” is the Keep value the user lowered; it goes back to the saved value.",
       "extractionState": "manual",
@@ -1624,6 +1732,42 @@
           "stringUnit": {
             "state": "translated",
             "value": "little-orbit couldn’t read this backup. Try again later. Your data hasn’t changed."
+          }
+        }
+      }
+    },
+    "little-orbit couldn’t read your backups folder. Your backups and data haven’t changed. Try again later.": {
+      "comment": "Description under “Couldn’t Load Backups” in the Backups list (D211.5).",
+      "extractionState": "manual",
+      "localizations": {
+        "en": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "little-orbit couldn’t read your backups folder. Your backups and data haven’t changed. Try again later."
+          }
+        }
+      }
+    },
+    "little-orbit couldn’t remove this backup. Try again later.": {
+      "comment": "Message of the “Couldn’t Delete This Backup” alert (D211.3).",
+      "extractionState": "manual",
+      "localizations": {
+        "en": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "little-orbit couldn’t remove this backup. Try again later."
+          }
+        }
+      }
+    },
+    "little-orbit needs space to save a copy of your current data before restoring, so nothing was replaced. Free up some storage and try again. Your data hasn’t changed.": {
+      "comment": "Message of the “Not Enough Storage to Restore” alert (D211.8).",
+      "extractionState": "manual",
+      "localizations": {
+        "en": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "little-orbit needs space to save a copy of your current data before restoring, so nothing was replaced. Free up some storage and try again. Your data hasn’t changed."
           }
         }
       }
@@ -1828,6 +1972,18 @@
         }
       }
     },
+    "Not Enough Storage to Restore": {
+      "comment": "Alert title when a restore stopped because the disk was full while the safe copy of the current data was being made (D211.8). Restore only; Back Up Now shows the list's line instead. The only button is OK.",
+      "extractionState": "manual",
+      "localizations": {
+        "en": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Not Enough Storage to Restore"
+          }
+        }
+      }
+    },
     "Off": {
       "comment": "Monthly Backups stepper value at 0.",
       "extractionState": "manual",
@@ -1980,6 +2136,18 @@
           "stringUnit": {
             "state": "translated",
             "value": "Restoring Backup"
+          }
+        }
+      }
+    },
+    "Something Went Wrong": {
+      "comment": "Alert title in Backups when no other case applies (D211.9). Its message is the catalog's own, never the error's text. The only button is OK.",
+      "extractionState": "manual",
+      "localizations": {
+        "en": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Something Went Wrong"
           }
         }
       }
@@ -2160,6 +2328,18 @@
           "stringUnit": {
             "state": "translated",
             "value": "Transfers don’t have a category"
+          }
+        }
+      }
+    },
+    "Try Again": {
+      "comment": "Button under “Couldn’t Load Backups” in the Backups list. Reads the list again (D211.5).",
+      "extractionState": "manual",
+      "localizations": {
+        "en": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Try Again"
           }
         }
       }
