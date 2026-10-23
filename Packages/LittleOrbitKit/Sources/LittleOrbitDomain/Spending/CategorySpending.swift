@@ -69,7 +69,8 @@ public enum CategorySpending {
         return totals
     }
 
-    /// The net spending of these categories together, in `currencyCode`.
+    /// What a budget over `categories` has spent in `currencyCode`: the sum of their net spending. Matches IDs
+    /// exactly; expand a parent with `budgetCategories(selecting:in:)` first (D217).
     public static func spent(
         on categories: Set<UUID>,
         currencyCode: String,
@@ -83,6 +84,31 @@ public enum CategorySpending {
             }
             .values
             .reduce(Decimal(0), +)
+    }
+
+    /// The categories a budget that selects `selection` counts, as one set to pass to `spent(on:)`: each
+    /// selected category and, for a parent, every one of its subcategories, archived ones included (D217.1,
+    /// D217.7). It uses the category tree as it is now, for every period, so a subcategory moved under another
+    /// parent counts there in past periods too (D217.6). Deleted categories are left out. Being one set, it
+    /// counts a transaction or split line at most once, even when a parent and its subcategory are both
+    /// selected (D217.3).
+    public static func budgetCategories(
+        selecting selection: Set<UUID>,
+        in categories: [TransactionCategory],
+    ) -> Set<UUID> {
+        let live = categories.filter { $0.deletedAt == nil }
+        var included = selection.intersection(live.map(\.id))
+        var grew = true
+        while grew {
+            grew = false
+            for category in live where !included.contains(category.id) {
+                if let parentID = category.parentID, included.contains(parentID) {
+                    included.insert(category.id)
+                    grew = true
+                }
+            }
+        }
+        return included
     }
 
     /// The live transactions dated in the range, with their account's currency.
