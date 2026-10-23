@@ -55,6 +55,7 @@ struct BackupSafetyCopyTests {
         fixture.source.hooks.flip(fixture.source.hooks.calls + 1)
 
         await window.confirmRestore(prompt)
+        window.showAndCloseRestoreProgress()
 
         #expect(window.alert?.title == "Couldn’t Restore")
         #expect(
