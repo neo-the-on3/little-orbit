@@ -959,7 +959,7 @@
       }
     },
     "Delete %lld Backups": {
-      "comment": "Destructive button when lowering Keep deletes automatic backups. %lld is how many.",
+      "comment": "Destructive button when lowering Keep deletes automatic backups. %lld is how many. Singular for one (D212).",
       "extractionState": "manual",
       "generatesSymbol": false,
       "localizations": {
@@ -984,7 +984,7 @@
       }
     },
     "Delete %lld Backups?": {
-      "comment": "Title of the confirmation when lowering Keep deletes automatic backups. %lld is how many.",
+      "comment": "Title of the confirmation when lowering Keep deletes automatic backups. %lld is how many. Singular for one (D212).",
       "extractionState": "manual",
       "localizations": {
         "en": {
@@ -1593,7 +1593,7 @@
       }
     },
     "Keeping fewer automatic backups deletes %lld of them now. Manual and Before restore backups aren’t affected.": {
-      "comment": "Message of the confirmation when lowering Keep deletes automatic backups. %lld is how many.",
+      "comment": "Message of the confirmation when lowering Keep deletes automatic backups. %lld is how many. The one variant says \"1 backup\" (D212).",
       "extractionState": "manual",
       "localizations": {
         "en": {
@@ -1602,7 +1602,7 @@
               "one": {
                 "stringUnit": {
                   "state": "translated",
-                  "value": "Keeping fewer automatic backups deletes %lld of them now. Manual and Before restore backups aren’t affected."
+                  "value": "Keeping fewer automatic backups deletes %lld backup now. Manual and Before restore backups aren’t affected."
                 }
               },
               "other": {

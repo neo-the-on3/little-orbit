@@ -283,17 +283,23 @@ struct BackupPresentationTests {
         #expect(presentation.monthlyValue(12) == "12 Months")
     }
 
-    @Test("The lowering alert has the exact count, singular for one (L12, L14)")
+    @Test("The lowering alert has the exact count, singular for one (L12, L14, D212, L74)")
     func pruneAlert() {
-        #expect(presentation.pruneTitle(4) == "Delete 4 Backups?")
-        #expect(presentation.pruneConfirm(4) == "Delete 4 Backups")
-        #expect(
-            presentation.pruneMessage(4)
-                == "Keeping fewer automatic backups deletes 4 of them now. Manual and Before restore backups "
-                + "aren’t affected."
-        )
+        for count in [2, 4] {
+            #expect(presentation.pruneTitle(count) == "Delete \(count) Backups?")
+            #expect(presentation.pruneConfirm(count) == "Delete \(count) Backups")
+            #expect(
+                presentation.pruneMessage(count)
+                    == "Keeping fewer automatic backups deletes \(count) of them now. Manual and Before restore "
+                    + "backups aren’t affected."
+            )
+        }
         #expect(presentation.pruneTitle(1) == "Delete 1 Backup?")
         #expect(presentation.pruneConfirm(1) == "Delete 1 Backup")
-        #expect(presentation.pruneMessage(1).hasPrefix("Keeping fewer automatic backups deletes 1 of them now."))
+        #expect(
+            presentation.pruneMessage(1)
+                == "Keeping fewer automatic backups deletes 1 backup now. Manual and Before restore backups aren’t "
+                + "affected."
+        )
     }
 }
