@@ -80,23 +80,52 @@ public struct AppGroupEntitlementCheck: Sendable {
     public static let denied = AppGroupEntitlementCheck { _ in false }
 }
 
-/// Why the store is in Application Support instead of the App Group container. Both reasons are properties of
-/// the build, so a build that falls back always falls back.
+/// Why the store is in Application Support instead of the App Group container.
 public enum StoreFallbackReason: String, Sendable, Equatable {
-    /// Info.plist names no App Group.
+    /// Info.plist names no App Group. A property of the build.
     case noAppGroupConfigured
-    /// The app isn't signed with the App Group entitlement, as in simulator builds with signing off.
+    /// The app isn't signed with the App Group entitlement, as in simulator builds with signing off. A property of
+    /// the build.
     case notEntitled
+    /// The app is entitled, but the group container is missing or can't be written, and no group store has been
+    /// recorded, so there is nothing in the group to leave behind (Kiran's ask on #98).
+    case containerUnavailable
+    /// The app is entitled and the container is fine, but the store is already in the app folder (its marker says
+    /// so, or it holds data and no group store was recorded). It stays there until #102 moves it.
+    case awaitingMigration
 }
 
-/// Why a build that is entitled to its App Group can't use the group container. These are runtime failures,
-/// so the store throws `StoreError.appGroupContainerUnavailable` instead of opening a second, empty store in
-/// Application Support that the next good launch would leave behind.
+/// Why a build that is entitled to its App Group can't use the group container.
 public enum AppGroupContainerFailure: String, Sendable, Equatable {
     /// The system returned no container for the group.
     case noContainer
     /// The group container's folder couldn't be created.
     case containerNotWritable
+}
+
+/// Why a build can't open a store that its marker says is in an App Group (`StoreError.storeIsInAppGroup`).
+public enum StoreHomeConflict: String, Sendable, Equatable {
+    /// This build names no App Group.
+    case noAppGroupConfigured
+    /// This build isn't entitled to the group.
+    case notEntitled
+    /// This build names a different group, for example after a builder override.
+    case groupIdentifierChanged
+}
+
+/// Why a launch rewrites the store-home marker from what's on disk instead of following it. Each is logged with the
+/// chosen location (`marker repaired: <reason>`), so it can be told apart from a normal launch.
+public enum StoreHomeRepair: String, Sendable, Equatable {
+    /// The marker said `appFolder`, but the app-folder store is empty and the group store holds data, so the group
+    /// store is used and the marker becomes `group`.
+    case appFolderEmptyGroupHasData
+    /// No marker, and the group store holds data: the group store, and marker=`group` is written.
+    case noMarkerGroupHasData
+    /// No marker, and the app-folder store holds data: the app folder, and marker=`appFolder` is written.
+    case noMarkerAppFolderHasData
+    /// The marker couldn't be read. The location was decided by disk (or by the build when it isn't entitled) and
+    /// the marker is rewritten.
+    case unreadableMarker
 }
 
 /// Which of the two store locations was chosen.
@@ -111,26 +140,42 @@ public enum StoreLocationKind: Sendable, Equatable {
 public struct ResolvedStoreLocation: Sendable, Equatable {
     public var url: URL
     public var kind: StoreLocationKind
+    /// What to record once the store has opened (`StoreHomeRecorder`).
+    public var homeRecord: StoreHomeRecord?
+    /// Why the marker is being rewritten from what's on disk, when it is. Logged with the location.
+    public var repair: StoreHomeRepair?
 
-    public init(url: URL, kind: StoreLocationKind) {
+    public init(
+        url: URL,
+        kind: StoreLocationKind,
+        homeRecord: StoreHomeRecord? = nil,
+        repair: StoreHomeRepair? = nil,
+    ) {
         self.url = url
         self.kind = kind
+        self.homeRecord = homeRecord
+        self.repair = repair
     }
 }
 
 /// Where the on-device store lives. This is the one place that decides it.
 ///
-/// 1. If Info.plist names an App Group (`LittleOrbitAppGroupIdentifier`, set from the
-///    `LITTLEORBIT_APP_GROUP_IDENTIFIER` build setting), the app is entitled to it and its container folder can
-///    be created, the store is `<group container>/LittleOrbit.store`, shared with the app's extensions.
-/// 2. If no App Group is configured or the app isn't entitled to it, it is
-///    `Application Support/<bundle id>/LittleOrbit.store`.
-/// 3. If the app is entitled but the container is missing or its folder can't be created, opening the store
-///    throws `StoreError.appGroupContainerUnavailable`. It never falls back then.
+/// The store is either `<group container>/LittleOrbit.store`, shared with the app's extensions, or
+/// `Application Support/<bundle id>/LittleOrbit.store`. The group is the one Info.plist names
+/// (`LittleOrbitAppGroupIdentifier`, from the `LITTLEORBIT_APP_GROUP_IDENTIFIER` build setting).
 ///
-/// The choice depends only on the build and its signature, so a build never alternates between the two and
-/// starts empty on a later launch. Nothing is copied between them: per D34.2 a dev store from PR #51 is left
-/// where it is and never merged.
+/// After each successful open the app records where its store is, in a store-home marker
+/// (`Application Support/<bundle id>/StoreHome.json`, see `StoreHomeRecorder`). The choice follows that marker and
+/// what is on disk, so a store only moves through #102's one-time migration, never because of one bad launch:
+/// 1. Entitled and the container is usable: the group store, unless the store is already in the app folder (the
+///    marker says so, or the app-folder store holds data and no group store was recorded). Then it stays in the app
+///    folder (`awaitingMigration`) until #102 moves it. Both holding data is `StoreError.storesInBothLocations`,
+///    never a merge.
+/// 2. Entitled but the container is missing or can't be written: the app folder (`containerUnavailable`) when no
+///    group store was recorded. When one was, it throws `StoreError.appGroupContainerUnavailable` and opens no
+///    empty store.
+/// 3. No group configured or not entitled: the app folder, as before. When the marker says the store is in a
+///    group, or in a different group than the configured one, it throws `StoreError.storeIsInAppGroup` instead.
 ///
 /// SwiftData's default URL is `Application Support/default.store`, which an unsandboxed Mac app shares
 /// with every other unsandboxed SwiftData app. Both locations avoid that, on iOS and macOS alike.
@@ -168,29 +213,19 @@ public enum StoreLocation {
         return container.appendingPathComponent(fileName, isDirectory: false)
     }
 
-    /// Chooses the store location and creates its folder if missing. Throws
-    /// `StoreError.appGroupContainerUnavailable` when the app is entitled to its group but can't use the
-    /// container.
+    /// Chooses the store location and creates its folder if missing. `marker` defaults to the app's
+    /// `StoreHome.json`. Throws `StoreError.appGroupContainerUnavailable`, `.storeIsInAppGroup` or
+    /// `.storesInBothLocations` when no location can be chosen without hiding or splitting data.
     public static func resolve(
         applicationSupport: URL? = nil,
         bundleIdentifier: String? = Bundle.main.bundleIdentifier,
         appGroupIdentifier: String? = StoreLocation.bundleAppGroupIdentifier,
         groupContainer: AppGroupContainerLookup = .system,
         entitlement: AppGroupEntitlementCheck = .system,
+        marker: (any StoreHomeMarkerStore)? = nil,
+        contents: StoreContentsCheck = .system,
         fileManager: FileManager = .default,
     ) throws -> ResolvedStoreLocation {
-        let reason: StoreFallbackReason
-        switch try appGroup(
-            identifier: appGroupIdentifier,
-            groupContainer: groupContainer,
-            entitlement: entitlement,
-            fileManager: fileManager,
-        ) {
-        case .available(let resolved):
-            return resolved
-        case .fallback(let fallback):
-            reason = fallback
-        }
         let base =
             try applicationSupport
             ?? fileManager.url(
@@ -199,32 +234,77 @@ public enum StoreLocation {
                 appropriateFor: nil,
                 create: true,
             )
-        let url = storeURL(applicationSupport: base, bundleIdentifier: bundleIdentifier)
-        try fileManager.createDirectory(at: url.deletingLastPathComponent(), withIntermediateDirectories: true)
-        return ResolvedStoreLocation(url: url, kind: .applicationSupport(reason))
+        let appFolderURL = storeURL(applicationSupport: base, bundleIdentifier: bundleIdentifier)
+        let markerFile = FileStoreHomeMarkerStore.appFolder(
+            applicationSupport: base,
+            bundleIdentifier: bundleIdentifier,
+        )
+        let decision = try decide(
+            group: nonBlank(appGroupIdentifier),
+            marker: (marker ?? markerFile).read(),
+            appFolderURL: appFolderURL,
+            groupContainer: groupContainer,
+            entitlement: entitlement,
+            contents: contents,
+            fileManager: fileManager,
+        )
+        switch decision {
+        case .group(let identifier, let url, let repair):
+            let record = StoreHomeRecord(
+                home: .group(identifier),
+                markerURL: markerFile.url,
+                groupCopyURL: url.deletingLastPathComponent().appendingPathComponent(FileStoreHomeMarkerStore.fileName),
+            )
+            return ResolvedStoreLocation(
+                url: url,
+                kind: .appGroup(identifier: identifier),
+                homeRecord: record,
+                repair: repair,
+            )
+        case .appFolder(let reason, let groupContainerURL, let repair):
+            try fileManager.createDirectory(
+                at: appFolderURL.deletingLastPathComponent(),
+                withIntermediateDirectories: true,
+            )
+            let record = StoreHomeRecord(
+                home: .appFolder(),
+                markerURL: markerFile.url,
+                groupCopyURL: groupContainerURL?.appendingPathComponent(FileStoreHomeMarkerStore.fileName),
+            )
+            return ResolvedStoreLocation(
+                url: appFolderURL,
+                kind: .applicationSupport(reason),
+                homeRecord: record,
+                repair: repair,
+            )
+        }
     }
 
-    /// The store in the App Group container only, for an extension that reads the app's store. An extension has
-    /// no use for its own Application Support folder, so there is no fallback: it throws
-    /// `StoreError.sharedStoreUnavailable` without the group and `StoreError.appGroupContainerUnavailable` when
-    /// the container can't be used.
+    /// The store in the App Group container only, for an extension that reads the app's store. It follows the same
+    /// rule read-only and never creates a file or folder. An extension has no use for its own Application Support
+    /// folder, so there is no fallback: it throws `StoreError.sharedStoreUnavailable` without the group,
+    /// `StoreError.appGroupContainerUnavailable` without the container, and `StoreError.sharedStoreNotInGroup`
+    /// when the app's store-home copy in the group is missing or doesn't name this group's store.
     public static func sharedStoreURL(
         appGroupIdentifier: String? = StoreLocation.bundleAppGroupIdentifier,
         groupContainer: AppGroupContainerLookup = .system,
         entitlement: AppGroupEntitlementCheck = .system,
-        fileManager: FileManager = .default,
+        groupCopy: (any StoreHomeMarkerStore)? = nil,
     ) throws -> URL {
-        switch try appGroup(
-            identifier: appGroupIdentifier,
-            groupContainer: groupContainer,
-            entitlement: entitlement,
-            fileManager: fileManager,
-        ) {
-        case .available(let resolved):
-            return resolved.url
-        case .fallback(let reason):
-            throw StoreError.sharedStoreUnavailable(reason)
+        guard let identifier = nonBlank(appGroupIdentifier) else {
+            throw StoreError.sharedStoreUnavailable(.noAppGroupConfigured)
         }
+        guard entitlement.isEntitled(identifier) else {
+            throw StoreError.sharedStoreUnavailable(.notEntitled)
+        }
+        guard let container = groupContainer.containerURL(identifier) else {
+            throw StoreError.appGroupContainerUnavailable(.noContainer)
+        }
+        let copy = groupCopy ?? FileStoreHomeMarkerStore.groupCopy(container: container)
+        guard case .recorded(let home) = copy.read(), home.isSameLocation(as: .group(identifier)) else {
+            throw StoreError.sharedStoreNotInGroup
+        }
+        return container.appendingPathComponent(fileName, isDirectory: false)
     }
 
     /// The store URL with its folder created if missing, and the chosen location logged.
@@ -234,18 +314,46 @@ public enum StoreLocation {
         appGroupIdentifier: String? = StoreLocation.bundleAppGroupIdentifier,
         groupContainer: AppGroupContainerLookup = .system,
         entitlement: AppGroupEntitlementCheck = .system,
+        marker: (any StoreHomeMarkerStore)? = nil,
+        contents: StoreContentsCheck = .system,
         fileManager: FileManager = .default,
     ) throws -> URL {
+        try prepare(
+            applicationSupport: applicationSupport,
+            bundleIdentifier: bundleIdentifier,
+            appGroupIdentifier: appGroupIdentifier,
+            groupContainer: groupContainer,
+            entitlement: entitlement,
+            marker: marker,
+            contents: contents,
+            fileManager: fileManager,
+        )
+        .url
+    }
+
+    /// `resolve`, with the chosen location logged.
+    static func prepare(
+        applicationSupport: URL?,
+        bundleIdentifier: String?,
+        appGroupIdentifier: String?,
+        groupContainer: AppGroupContainerLookup,
+        entitlement: AppGroupEntitlementCheck,
+        marker: (any StoreHomeMarkerStore)?,
+        contents: StoreContentsCheck,
+        fileManager: FileManager,
+    ) throws -> ResolvedStoreLocation {
         let resolved = try resolve(
             applicationSupport: applicationSupport,
             bundleIdentifier: bundleIdentifier,
             appGroupIdentifier: appGroupIdentifier,
             groupContainer: groupContainer,
             entitlement: entitlement,
+            marker: marker,
+            contents: contents,
             fileManager: fileManager,
         )
-        log(resolved)
-        return resolved.url
+        log(summary(of: resolved))
+        return resolved
     }
 
     /// A one-line description of the chosen location, without the path. This is what the app logs.
@@ -258,87 +366,69 @@ public enum StoreLocation {
         }
     }
 
-    private enum AppGroupOutcome {
-        case available(ResolvedStoreLocation)
-        case fallback(StoreFallbackReason)
+    /// The launch log line: the location, plus the marker repair when there is one, so a repaired marker can be
+    /// told apart from a normal launch. Reasons only, no path.
+    public static func summary(of resolved: ResolvedStoreLocation) -> String {
+        guard let repair = resolved.repair else {
+            return summary(of: resolved.kind)
+        }
+        return summary(of: resolved.kind) + " (marker repaired: \(repair.rawValue))"
     }
 
-    /// The group store, or the build-dependent reason not to use it. Throws once the app is entitled to the
-    /// group, because falling back then would split the data between two stores.
-    private static func appGroup(
-        identifier: String?,
-        groupContainer: AppGroupContainerLookup,
-        entitlement: AppGroupEntitlementCheck,
-        fileManager: FileManager,
-    ) throws -> AppGroupOutcome {
-        guard let identifier = nonBlank(identifier) else {
-            return .fallback(.noAppGroupConfigured)
-        }
-        guard entitlement.isEntitled(identifier) else {
-            return .fallback(.notEntitled)
-        }
-        guard let url = groupStoreURL(appGroupIdentifier: identifier, lookup: groupContainer) else {
-            throw StoreError.appGroupContainerUnavailable(.noContainer)
-        }
-        do {
-            try fileManager.createDirectory(at: url.deletingLastPathComponent(), withIntermediateDirectories: true)
-        } catch {
-            throw StoreError.appGroupContainerUnavailable(.containerNotWritable)
-        }
-        return .available(ResolvedStoreLocation(url: url, kind: .appGroup(identifier: identifier)))
-    }
-
-    private static func log(_ resolved: ResolvedStoreLocation) {
+    /// Logs `line`, which carries reasons only, never a path or user data.
+    static func log(_ line: String) {
         #if canImport(os)
             let logger = Logger(subsystem: Bundle.main.bundleIdentifier ?? fallbackFolderName, category: "Store")
-            logger.notice("\(summary(of: resolved.kind), privacy: .public) at \(resolved.url.path, privacy: .private)")
+            logger.notice("\(line, privacy: .public)")
         #endif
     }
 
-    private static func nonBlank(_ text: String?) -> String? {
+    static func nonBlank(_ text: String?) -> String? {
         let trimmed = text?.trimmingCharacters(in: .whitespacesAndNewlines) ?? ""
         return trimmed.isEmpty ? nil : trimmed
     }
 }
 
 extension StoreConfiguration {
-    /// The app's local store, with sync off: in the App Group container when one is configured and the app is
-    /// entitled to it, otherwise in the app's own Application Support folder. Throws
-    /// `StoreError.appGroupContainerUnavailable` when the app is entitled but can't use the container.
+    /// The app's local store, with sync off, where `StoreLocation.resolve` puts it. Its store-home record is
+    /// written by `LittleOrbitStore.makeContainer` once the store opens. Throws what `resolve` throws.
     public static func appLocal(
         applicationSupport: URL? = nil,
         bundleIdentifier: String? = Bundle.main.bundleIdentifier,
         appGroupIdentifier: String? = StoreLocation.bundleAppGroupIdentifier,
         groupContainer: AppGroupContainerLookup = .system,
         entitlement: AppGroupEntitlementCheck = .system,
+        marker: (any StoreHomeMarkerStore)? = nil,
+        contents: StoreContentsCheck = .system,
         fileManager: FileManager = .default,
     ) throws -> StoreConfiguration {
-        let url = try StoreLocation.prepareStoreURL(
+        let resolved = try StoreLocation.prepare(
             applicationSupport: applicationSupport,
             bundleIdentifier: bundleIdentifier,
             appGroupIdentifier: appGroupIdentifier,
             groupContainer: groupContainer,
             entitlement: entitlement,
+            marker: marker,
+            contents: contents,
             fileManager: fileManager,
         )
-        return StoreConfiguration(fileURL: url)
+        return StoreConfiguration(fileURL: resolved.url, homeRecord: resolved.homeRecord)
     }
 
-    /// The app's store in the App Group container, opened read-only, for an extension such as a widget.
-    /// Throws `StoreError.sharedStoreUnavailable` without the group and `StoreError.appGroupContainerUnavailable`
-    /// when the container can't be used. Opening it before the app has created the store throws
-    /// `StoreError.readOnlyStoreMissing` and creates no file.
+    /// The app's store in the App Group container, opened read-only, for an extension such as a widget. Throws
+    /// what `StoreLocation.sharedStoreURL` throws; a missing or stale store-home copy means no data. Opening it
+    /// before the app has created the store throws `StoreError.readOnlyStoreMissing` and creates no file.
     public static func sharedReadOnly(
         appGroupIdentifier: String? = StoreLocation.bundleAppGroupIdentifier,
         groupContainer: AppGroupContainerLookup = .system,
         entitlement: AppGroupEntitlementCheck = .system,
-        fileManager: FileManager = .default,
+        groupCopy: (any StoreHomeMarkerStore)? = nil,
     ) throws -> StoreConfiguration {
         let url = try StoreLocation.sharedStoreURL(
             appGroupIdentifier: appGroupIdentifier,
             groupContainer: groupContainer,
             entitlement: entitlement,
-            fileManager: fileManager,
+            groupCopy: groupCopy,
         )
         return StoreConfiguration(fileURL: url, readOnly: true)
     }

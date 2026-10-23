@@ -30,7 +30,14 @@ struct StoreLocationResolutionTests {
             appGroupIdentifier: group,
             groupContainer: lookup ?? self.lookup(container),
             entitlement: entitlement,
+            contents: .fileHasBytes,
         )
+    }
+
+    /// Records that the store is in the group, as a launch that opened the group store does.
+    private func recordGroupHome() throws {
+        try FileStoreHomeMarkerStore.appFolder(applicationSupport: support, bundleIdentifier: Self.bundle)
+            .write(.group(Self.group))
     }
 
     private var fallbackURL: URL {
@@ -87,38 +94,57 @@ struct StoreLocationResolutionTests {
         #expect(!FileManager.default.fileExists(atPath: container.path), "The group container is never touched")
     }
 
-    @Test("Entitled but no container from the system: it throws and opens no second store")
-    func noContainer() {
+    @Test("Entitled but no container from the system: it falls back when no group store is recorded")
+    func noContainer() throws {
         defer { cleanUp() }
+        let resolved = try resolve(lookup: .unavailable)
+        #expect(resolved.kind == .applicationSupport(.containerUnavailable))
+        #expect(resolved.url.standardizedFileURL == fallbackURL)
+    }
+
+    @Test("Entitled but no container from the system: it throws and opens no second store when marker=group")
+    func noContainerWithGroupMarker() throws {
+        defer { cleanUp() }
+        try recordGroupHome()
         #expect(throws: StoreError.appGroupContainerUnavailable(.noContainer)) {
             try resolve(lookup: .unavailable)
         }
-        #expect(!FileManager.default.fileExists(atPath: support.path), "No empty Application Support store")
+        #expect(!FileManager.default.fileExists(atPath: fallbackURL.path), "No empty Application Support store")
     }
 
-    @Test("Entitled but the group container can't be created: it throws and opens no second store")
+    @Test("Entitled but the group container can't be created: falls back with no group marker, throws with one")
     func containerNotWritable() throws {
         defer { cleanUp() }
         try FileManager.default.createDirectory(at: root, withIntermediateDirectories: true)
         let blocker = root.appendingPathComponent("not-a-folder")
         try Data("x".utf8).write(to: blocker)
+        let broken = lookup(blocker.appendingPathComponent("group", isDirectory: true))
+        #expect(try resolve(lookup: broken).kind == .applicationSupport(.containerUnavailable))
+        try recordGroupHome()
         #expect(throws: StoreError.appGroupContainerUnavailable(.containerNotWritable)) {
-            try resolve(lookup: lookup(blocker.appendingPathComponent("group", isDirectory: true)))
+            try resolve(lookup: broken)
         }
-        #expect(!FileManager.default.fileExists(atPath: support.path), "No empty Application Support store")
     }
 
-    @Test("The app's store throws, instead of falling back, when the entitled container is unavailable")
-    func appLocalThrowsWhenEntitledContainerIsUnavailable() {
+    @Test("The app's store falls back when no group marker, and throws when marker=group, if the container is gone")
+    func appLocalFallsBackOrThrowsWhenEntitledContainerIsUnavailable() throws {
         defer { cleanUp() }
-        #expect(throws: StoreError.appGroupContainerUnavailable(.noContainer)) {
+        let appLocal = {
             try StoreConfiguration.appLocal(
                 applicationSupport: support,
                 bundleIdentifier: Self.bundle,
                 appGroupIdentifier: Self.group,
                 groupContainer: .unavailable,
                 entitlement: .granted,
+                contents: .fileHasBytes,
             )
+        }
+        let configuration = try appLocal()
+        #expect(configuration.fileURL?.standardizedFileURL == fallbackURL)
+        #expect(configuration.homeRecord?.home == .appFolder())
+        try recordGroupHome()
+        #expect(throws: StoreError.appGroupContainerUnavailable(.noContainer)) {
+            try appLocal()
         }
     }
 
@@ -139,13 +165,18 @@ struct StoreLocationResolutionTests {
         #expect(resolved.kind == .appGroup(identifier: Self.group))
     }
 
-    @Test("iOS, signed but the container can't be created: it throws")
+    @Test("iOS, signed but the container can't be created: falls back with no group marker, throws with one")
     func iOSSignedContainerNotWritable() throws {
         defer { cleanUp() }
         try FileManager.default.createDirectory(at: root, withIntermediateDirectories: true)
         let blocker = root.appendingPathComponent("not-a-folder")
         try Data("x".utf8).write(to: blocker)
         let broken = lookup(blocker.appendingPathComponent("group", isDirectory: true))
+        #expect(
+            try resolve(lookup: broken, entitlement: .containerPresence(broken)).kind
+                == .applicationSupport(.containerUnavailable)
+        )
+        try recordGroupHome()
         #expect(throws: StoreError.appGroupContainerUnavailable(.containerNotWritable)) {
             try resolve(lookup: broken, entitlement: .containerPresence(broken))
         }
@@ -186,6 +217,7 @@ struct StoreLocationResolutionTests {
     @Test("Extension: the shared store is the app's group store, opened read-only")
     func sharedReadOnly() throws {
         defer { cleanUp() }
+        try FileStoreHomeMarkerStore.groupCopy(container: container).write(.group(Self.group))
         let configuration = try StoreConfiguration.sharedReadOnly(
             appGroupIdentifier: Self.group,
             groupContainer: lookup(container),

@@ -90,8 +90,30 @@ final class StoreLocationTests: XCTestCase {
         XCTAssertTrue(FileManager.default.fileExists(atPath: container.path))
     }
 
-    func testAnEntitledBuildWithoutItsGroupContainerThrowsInsteadOfFallingBack() {
+    func testAnEntitledBuildWithoutItsGroupContainerFallsBackWhenNoGroupStoreIsRecorded() throws {
         let support = root.appendingPathComponent("support", isDirectory: true)
+        let url = try StoreLocation.prepareStoreURL(
+            applicationSupport: support,
+            bundleIdentifier: "com.example.littleorbit",
+            appGroupIdentifier: "group.com.example.littleorbit",
+            groupContainer: .unavailable,
+            entitlement: .granted,
+            contents: .fileHasBytes,
+        )
+        XCTAssertEqual(
+            url.standardizedFileURL,
+            StoreLocation.storeURL(applicationSupport: support, bundleIdentifier: "com.example.littleorbit")
+                .standardizedFileURL,
+        )
+    }
+
+    func testAnEntitledBuildWithoutItsGroupContainerThrowsWhenTheStoreIsRecordedInTheGroup() throws {
+        let support = root.appendingPathComponent("support", isDirectory: true)
+        let marker = FileStoreHomeMarkerStore.appFolder(
+            applicationSupport: support,
+            bundleIdentifier: "com.example.littleorbit",
+        )
+        try marker.write(.group("group.com.example.littleorbit"))
         XCTAssertThrowsError(
             try StoreLocation.prepareStoreURL(
                 applicationSupport: support,
@@ -99,11 +121,18 @@ final class StoreLocationTests: XCTestCase {
                 appGroupIdentifier: "group.com.example.littleorbit",
                 groupContainer: .unavailable,
                 entitlement: .granted,
+                contents: .fileHasBytes,
             )
         ) { error in
             XCTAssertEqual(error as? StoreError, .appGroupContainerUnavailable(.noContainer))
         }
-        XCTAssertFalse(FileManager.default.fileExists(atPath: support.path))
+        XCTAssertFalse(
+            FileManager.default.fileExists(
+                atPath:
+                    StoreLocation.storeURL(applicationSupport: support, bundleIdentifier: "com.example.littleorbit")
+                    .path
+            )
+        )
     }
 
     func testNoOrBlankGroupIDNeverAsksForAContainer() {
