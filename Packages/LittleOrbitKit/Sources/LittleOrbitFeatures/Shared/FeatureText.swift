@@ -28,6 +28,18 @@ enum FeatureText {
         static func plural(_ key: StaticString, one _: StaticString, _ count: Int) -> String {
             format(key, count)
         }
+
+        /// The catalog entry `key`, filled with `arguments`, whose plural variants are chosen by `count`, one of
+        /// the arguments. `one` is the English singular, for Linux.
+        static func pluralFormat(
+            _ key: StaticString,
+            one _: StaticString,
+            count _: Int,
+            _ arguments: any CVarArg...,
+        ) -> String {
+            let format = Bundle.module.localizedString(forKey: "\(key)", value: nil, table: nil)
+            return String(format: format, locale: .current, arguments: arguments)
+        }
     #else
         /// The English text, built from the same interpolated literal as on Apple platforms.
         struct Value: ExpressibleByStringInterpolation {
@@ -52,6 +64,15 @@ enum FeatureText {
 
         static func plural(_ key: StaticString, one: StaticString, _ count: Int) -> String {
             String(format: count == 1 ? "\(one)" : "\(key)", locale: .current, count)
+        }
+
+        static func pluralFormat(
+            _ key: StaticString,
+            one: StaticString,
+            count: Int,
+            _ arguments: any CVarArg...,
+        ) -> String {
+            String(format: count == 1 ? "\(one)" : "\(key)", locale: .current, arguments: arguments)
         }
     #endif
 }
