@@ -11,10 +11,9 @@ public enum TransactionTiming {
             ?? TransactionCalendar.calendarDay(of: now, timeZoneID: "UTC")!
     }
 
-    /// The transaction's own day, falling back to UTC for an unknown time zone.
+    /// The transaction's own day, falling back to UTC for an unknown time zone (`TransactionCalendar.storedTimeZone`).
     public static func day(of transaction: Transaction) -> CalendarDay {
-        TransactionCalendar.calendarDay(of: transaction)
-            ?? TransactionCalendar.calendarDay(of: transaction.date, timeZoneID: "UTC")!
+        TransactionCalendar.ownDay(of: transaction.date, timeZoneID: transaction.timeZoneID)
     }
 
     public static func isUpcoming(_ transaction: Transaction, today: CalendarDay) -> Bool {

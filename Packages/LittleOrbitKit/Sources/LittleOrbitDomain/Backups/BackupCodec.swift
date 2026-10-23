@@ -449,7 +449,7 @@ public struct BackupCodec: Sendable {
         /// `nil` for a transaction with no account.
         static func path(of transaction: Transaction) -> String? {
             var calendar = Calendar(identifier: .gregorian)
-            calendar.timeZone = TimeZone(identifier: transaction.timeZoneID) ?? .gmt
+            calendar.timeZone = TransactionCalendar.storedTimeZone(transaction.timeZoneID)
             let year = calendar.component(.year, from: transaction.date)
             if transaction.type == .transfer || transaction.transferAccountID != nil {
                 return "\(BackupFormat.transfersFolder)/\(year).json"

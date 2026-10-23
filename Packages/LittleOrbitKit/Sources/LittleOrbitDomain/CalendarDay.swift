@@ -35,6 +35,23 @@ public struct TransactionDayGroup: Equatable, Sendable {
 }
 
 public enum TransactionCalendar {
+    /// The zone a record's own day is read and set in: its stored zone, or UTC when `timeZoneID` isn't a zone
+    /// Foundation recognises (an empty or unknown ID). Lists, the editor, refund dating and day changes all use
+    /// this one fallback, so a record shows, sorts and is checked on the same day everywhere.
+    public static func storedTimeZone(_ timeZoneID: String) -> TimeZone {
+        TimeZone(identifier: timeZoneID) ?? utc
+    }
+
+    /// The record's own day: `date`'s calendar day in `storedTimeZone(timeZoneID)`.
+    public static func ownDay(of date: Date, timeZoneID: String) -> CalendarDay {
+        var calendar = Calendar(identifier: .gregorian)
+        calendar.timeZone = storedTimeZone(timeZoneID)
+        let parts = calendar.dateComponents([.year, .month, .day], from: date)
+        return CalendarDay(year: parts.year ?? 1970, month: parts.month ?? 1, day: parts.day ?? 1)
+    }
+
+    private static let utc = TimeZone(identifier: "UTC") ?? TimeZone(secondsFromGMT: 0)!
+
     public static func calendarDay(of date: Date, timeZoneID: String) -> CalendarDay? {
         guard let timeZone = TimeZone(identifier: timeZoneID) else {
             return nil
@@ -72,14 +89,11 @@ public enum TransactionCalendar {
         )
     }
 
-    /// Groups by each transaction's own time zone. Days are newest first. Device time zone is ignored.
+    /// Groups by each transaction's own time zone (UTC for one that isn't recognised, `storedTimeZone`). Days are newest first. Device time zone is ignored.
     public static func groups(_ transactions: [Transaction]) -> [TransactionDayGroup] {
         var buckets: [CalendarDay: [Transaction]] = [:]
         for transaction in transactions where transaction.deletedAt == nil {
-            guard let day = calendarDay(of: transaction) else {
-                continue
-            }
-            buckets[day, default: []].append(transaction)
+            buckets[ownDay(of: transaction.date, timeZoneID: transaction.timeZoneID), default: []].append(transaction)
         }
         return buckets.keys.sorted(by: >)
             .map { day in
