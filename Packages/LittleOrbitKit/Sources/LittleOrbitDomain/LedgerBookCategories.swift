@@ -194,6 +194,10 @@ extension LedgerBook {
             snapshot.splits.removeAll { $0.transactionID == transactionID }
             return snapshot
         }
+        if !linkedRefunds(of: transactionID, in: snapshot).isEmpty {
+            // Schema V1 can't link a refund to one line (D35.6), so an expense with refunds stays unsplit.
+            throw LedgerValidationError.originalHasRefunds
+        }
         try validate(active, for: transaction, in: snapshot)
         for index in splits.indices {
             if let existing = snapshot.splits.first(where: { $0.id == splits[index].id }) {
