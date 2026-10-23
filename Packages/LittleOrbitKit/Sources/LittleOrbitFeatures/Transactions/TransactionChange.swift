@@ -49,6 +49,7 @@ public struct UndoAlert: Equatable, Sendable, Identifiable {
     /// "Can’t Undo Edit Transaction" for a stale step, "Couldn’t Undo Edit Transaction" for a failure, or
     /// "Couldn’t Make the Change" after a change.
     public var title: String
-    /// "Corner Bakery was changed in another window. Nothing was changed."
+    /// "Corner Bakery has changed since then. Nothing was changed." for a stale step, which names no cause
+    /// (D228).
     public var message: String
 }
