@@ -131,7 +131,7 @@ public final class AccountHistoryViewModel {
                 formatter: formatter,
                 text: text,
                 today: today,
-                splitLineCounts: page.splitLineCounts,
+                splitLines: page.splitLines,
             )
             let currency = account.currencyCode
             balanceText = formatter.string(history.currentBalance, currencyCode: currency)

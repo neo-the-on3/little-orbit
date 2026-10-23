@@ -12,10 +12,25 @@
         @MainActor
         static func column() -> some TableColumnContent<TransactionRowModel, Never> {
             TableColumn("Payee") { (row: TransactionRowModel) in
-                Text(row.title)
+                if row.isSplitLine {
+                    // A split's line under its row: the line's category, then its note (S45). Each is cut off at
+                    // the end with its full text on hover, as the title is (D234.2, D240.3).
+                    HStack {
+                        Text(row.title)
+                            .help(row.title)
+                        Text(row.subtitle)
+                            .foregroundStyle(.secondary)
+                            .help(row.subtitle)
+                    }
                     .lineLimit(1)
                     .truncationMode(.tail)
-                    .help(row.title)
+                    .accessibilityElement(children: .combine)
+                } else {
+                    Text(row.title)
+                        .lineLimit(1)
+                        .truncationMode(.tail)
+                        .help(row.title)
+                }
             }
             .width(min: minWidth, ideal: idealWidth)
         }

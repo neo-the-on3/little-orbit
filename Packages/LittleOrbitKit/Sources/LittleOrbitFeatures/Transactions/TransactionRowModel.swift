@@ -30,6 +30,11 @@ public struct TransactionRowModel: Identifiable, Equatable, Sendable {
     public var categoryText: String
     public var accountText: String
     public var accessibilityLabel: String
+    /// A split's lines, which the macOS table shows under its row (S45): each with the line's category as
+    /// its title, its note as the subtitle, and its share of the amount.
+    public var splitLines: [TransactionRowModel] = []
+    /// This row is one line of a split, shown under it.
+    public var isSplitLine = false
 }
 
 /// Which list a row is in, which decides how a transfer's amount reads (UI Designer, #87 U5).
@@ -66,8 +71,9 @@ struct TransactionRowContext {
     let text: TransactionText
     let today: CalendarDay
     var scope: TransactionListScope = .account
-    /// Live split lines per split transaction: its category reads 'Split (3)' (D64, S1, S45).
-    var splitLineCounts: [UUID: Int] = [:]
+    /// Live split lines per split transaction: its category reads 'Split (3)' and the macOS table lists
+    /// them under its row (D64, S1, S45).
+    var splitLines: [UUID: [TransactionSplit]] = [:]
 
     func row(_ entry: HistoryEntry, isUpcoming: Bool) -> TransactionRowModel {
         let transaction = entry.transaction
@@ -78,7 +84,8 @@ struct TransactionRowContext {
         let details = TransactionText.trimmed(transaction.details)
         let isTransfer = transaction.type == .transfer
 
-        let lineCount = isTransfer ? nil : splitLineCounts[transaction.id]
+        let lines = isTransfer ? [] : splitLines[transaction.id] ?? []
+        let lineCount = lines.isEmpty ? nil : lines.count
         let categoryText =
             isTransfer
             ? TransactionText.transfer
@@ -147,6 +154,35 @@ struct TransactionRowContext {
             categoryText: categoryText,
             accountText: account.name,
             accessibilityLabel: spoken.joined(separator: ", "),
+            splitLines: lines.map { lineRow($0, of: entry, isUpcoming: isUpcoming) },
+        )
+    }
+
+    /// One line under a split's row: "Household", "paper towels", "−₹240.00", signed like the split.
+    private func lineRow(_ line: TransactionSplit, of entry: HistoryEntry, isUpcoming: Bool) -> TransactionRowModel {
+        let category = categories.first { $0.id == line.categoryID }
+        let name = category?.name ?? TransactionText.uncategorised
+        let effect = entry.effect < 0 ? -line.amount : line.amount
+        let amount = formatter.string(effect, currencyCode: account.currencyCode, showsPlus: true)
+        let note = TransactionText.trimmed(line.note) ?? ""
+        return TransactionRowModel(
+            id: line.id,
+            type: entry.transaction.type,
+            title: name,
+            subtitle: note,
+            amountText: amount,
+            compactAmountText: amount,
+            amountTone: effect < 0 ? .negative : .positive,
+            balanceText: "",
+            balanceValueText: "",
+            isUpcoming: isUpcoming,
+            symbolName: category?.iconName ?? "questionmark",
+            isUncategorised: category == nil,
+            dateText: "",
+            categoryText: "",
+            accountText: "",
+            accessibilityLabel: [name, note, amount].filter { !$0.isEmpty }.joined(separator: ", "),
+            isSplitLine: true,
         )
     }
 

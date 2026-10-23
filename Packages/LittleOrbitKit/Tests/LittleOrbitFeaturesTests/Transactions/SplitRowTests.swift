@@ -10,7 +10,7 @@ import Testing
 struct SplitRowTests {
     typealias F = RefundsFeatureFixture  // swiftlint:disable:this type_name
 
-    @Test("S1, S45: a 3-line split reads 'Split (3)'; after its split is removed it reads its category again")
+    @Test("S1, S45: a 3-line split reads 'Split (3)' and lists its lines; once removed it reads its category again")
     func splitRow() throws {
         let fixture = try F()
         let groceries = TransactionCategory(name: "Groceries", kind: .expense)
@@ -44,9 +44,15 @@ struct SplitRowTests {
         #expect(row.categoryText == "Split (3)")
         #expect(row.subtitle == "Split (3)")
         #expect(!row.isUncategorised)
+        // S45: the macOS table lists the lines under the row, each signed like the split.
+        #expect(row.splitLines.map(\.title) == ["Groceries", "Household", "Shopping"])
+        #expect(row.splitLines.map(\.amountText) == ["−₹40.00", "−₹25.00", "−₹25.00"])
+        #expect(row.splitLines.allSatisfy { $0.isSplitLine })
+        #expect(history.owningIDs([lines[1].id]) == [basket.id])
         split.categoryID = groceries.id
         _ = try fixture.useCases.splits.save(split, lines: [])
         history.load()
         #expect(history.allRows.first { $0.id == basket.id }?.categoryText == "Groceries")
+        #expect(history.allRows.first { $0.id == basket.id }?.splitLines.isEmpty == true)
     }
 }

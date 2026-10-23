@@ -3,7 +3,8 @@
     import SwiftUI
 
     /// The macOS history table (Figma 28:1343): Upcoming first, then history newest first. Multi-select,
-    /// double-click to edit, Delete key to delete (#23 platforms, AC 9).
+    /// double-click to edit, Delete key to delete (#23 platforms, AC 9). A split's row expands to its lines
+    /// (Figma 177:3867, S45); selecting a line selects its split.
     struct AccountTransactionsTable: View {
         @Bindable var history: AccountHistoryViewModel
         let onEdit: (Set<UUID>) -> Void
@@ -29,7 +30,7 @@
         }
 
         var body: some View {
-            Table(of: TransactionRowModel.self, selection: $history.selection) {
+            Table(of: TransactionRowModel.self, selection: selection) {
                 TableColumn("Date") { row in
                     Text(row.dateText)
                         .foregroundStyle(
@@ -70,12 +71,21 @@
                 ForEach(tableSections) { section in
                     Section(section.id) {
                         ForEach(section.rows) { row in
-                            TableRow(row)
+                            if row.splitLines.isEmpty {
+                                TableRow(row)
+                            } else {
+                                DisclosureTableRow(row) {
+                                    ForEach(row.splitLines) { line in
+                                        TableRow(line)
+                                    }
+                                }
+                            }
                         }
                     }
                 }
             }
-            .contextMenu(forSelectionType: UUID.self) { ids in
+            .contextMenu(forSelectionType: UUID.self) { clicked in
+                let ids = history.owningIDs(clicked)
                 if !ids.isEmpty {
                     Button(ids.count == 1 ? "Edit Transaction…" : "Edit \(ids.count) Transactions…") { onEdit(ids) }
                     // One row offers Duplicate, a refund leaves it out, and several rows show it disabled (#31,
@@ -105,11 +115,18 @@
                     }
                 }
             } primaryAction: { ids in
-                onEdit(ids)
+                onEdit(history.owningIDs(ids))
             }
             .onDeleteCommand {
                 onDelete(history.selection)
             }
+        }
+
+        private var selection: Binding<Set<UUID>> {
+            Binding(
+                get: { history.selection },
+                set: { history.selection = history.owningIDs($0) },
+            )
         }
     }
 #endif

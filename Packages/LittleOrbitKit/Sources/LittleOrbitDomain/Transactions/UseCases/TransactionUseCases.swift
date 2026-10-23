@@ -29,20 +29,23 @@ public struct AccountHistoryPage: Equatable, Sendable {
     public var history: AccountHistory
     /// The records a history entry refers to: the other account of a transfer, categories and payees.
     public var ledger: TransactionLedger
-    /// How many live split lines each split transaction has, for its 'Split (3)' category (D64, S1, S45).
-    /// Transactions with no split aren't listed.
-    public var splitLineCounts: [UUID: Int]
+    /// Each split transaction's live lines in order, for its 'Split (3)' category and the macOS table's
+    /// expanded row (D64, S1, S45). Transactions with no split aren't listed.
+    public var splitLines: [UUID: [TransactionSplit]]
+
+    /// How many live lines each split transaction has.
+    public var splitLineCounts: [UUID: Int] { splitLines.mapValues(\.count) }
 
     public init(
         account: Account,
         history: AccountHistory,
         ledger: TransactionLedger,
-        splitLineCounts: [UUID: Int] = [:],
+        splitLines: [UUID: [TransactionSplit]] = [:],
     ) {
         self.account = account
         self.history = history
         self.ledger = ledger
-        self.splitLineCounts = splitLineCounts
+        self.splitLines = splitLines
     }
 }
 
