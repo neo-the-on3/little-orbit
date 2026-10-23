@@ -82,6 +82,54 @@ struct BackupNeverReadTests {
         #expect(backups[1].byteSize == 0)
         #expect(emptyRow.sizeText == presentation.size(0))
     }
+
+    @Test("After a relaunch, a folder that lost its manifest follows the never-seen rule (D202, D210)")
+    func manifestLostAcrossRelaunch() async throws {
+        let first = try BackupHarness()
+        let backup = try await first.service.backUpNow()
+        _ = try await first.service.overview()
+        let url = first.backupFolder(backup.id)
+        try FileManager.default.removeItem(at: url.appendingPathComponent(BackupFormat.manifestPath))
+        let remaining = try FileManager.default.subpathsOfDirectory(atPath: url.path)
+            .reduce(Int64(0)) { total, path in
+                let attributes = try FileManager.default.attributesOfItem(atPath: url.appendingPathComponent(path).path)
+                guard attributes[.type] as? FileAttributeType == .typeRegular else {
+                    return total
+                }
+                return total + ((attributes[.size] as? NSNumber)?.int64Value ?? 0)
+            }
+        let folderCreated = try FileManager.default.attributesOfItem(atPath: url.path)[.creationDate] as? Date
+
+        // A relaunch: a new store over the same folders, with only what's on disk to go on.
+        let relaunched = try BackupHarness(storage: FileBackupStorage(folder: first.folder))
+        let backups = try await relaunched.service.overview().backups
+        let record = try #require(backups.first)
+        #expect(backups.count == 1)
+        #expect(record.condition == .damaged)
+        #expect(!record.isRestorable)
+        #expect(record.byteSize == remaining)
+        #expect(record.byteSize != 0)
+        let row = presentation.row(record, now: relaunched.now)
+        #expect(row.kindText == "Unknown")
+        #expect(row.statusText == "Damaged")
+        #expect(row.sizeText == presentation.size(remaining))
+        if let folderCreated {
+            #expect(record.createdAt == folderCreated)
+            #expect(row.title == presentation.date(folderCreated, now: relaunched.now))
+        } else {
+            // A platform that doesn't report a folder's creation date: "Unknown", never a made-up date (L49).
+            #expect(row.title == "Unknown")
+        }
+        #expect(row.detailAccountsText == "Unknown")
+        #expect(row.detailTransactionsText == "Unknown")
+        #expect(!row.canRestore)
+        // Export… stays unavailable (D196.3); Delete still works.
+        await #expect(throws: BackupError.damaged) {
+            try await relaunched.service.exportBackup(id: record.id, named: "a.littleorbit-backup")
+        }
+        try await relaunched.service.deleteBackup(id: record.id)
+        #expect(try await relaunched.service.overview().backups.isEmpty)
+    }
 }
 
 /// The real folder store, with a folder's creation date set by the test (an unset date where `nil`) and its file
