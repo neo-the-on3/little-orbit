@@ -149,11 +149,25 @@
                     Text(window.errorMessage ?? "")
                 }
                 // Only the window that started the restore shows its progress; the others have their actions off.
+                // An error from the restore is presented only after this sheet's `onDismiss`: an alert set from the
+                // sheet's request on would be refused, as it's already presenting (Tester F1). If the binding clears
+                // before the sheet appears, the window stops waiting for it.
                 .sheet(
-                    isPresented: Binding(get: { isActive && window.isShowingRestoreProgress }, set: { _ in })
-                ) {
-                    RestoringBackupView(window: window)
-                        .interactiveDismissDisabled()
+                    isPresented: Binding(
+                        get: { isActive && window.isShowingRestoreProgress },
+                        set: { if !$0 { window.restoreProgressBindingCleared() } },
+                    ),
+                    onDismiss: { window.restoreProgressDismissed() },
+                    content: {
+                        RestoringBackupView(window: window)
+                            .interactiveDismissDisabled()
+                            .onAppear { window.restoreProgressAppeared() }
+                    },
+                )
+                .onChange(of: isActive && window.isShowingRestoreProgress) { _, isShown in
+                    if !isShown {
+                        window.restoreProgressBindingCleared()
+                    }
                 }
                 #if os(iOS)
                     // The iOS toast; macOS shows `restoredMessage` inline in the tab (frame 169:5253).

@@ -421,3 +421,12 @@ func oldEncryptedSample() throws -> Data {
     )
     return try Data(contentsOf: url)
 }
+
+extension BackupsWindow {
+    /// What SwiftUI does with the restore progress sheet the window asked for: its content appears, then it closes
+    /// and `onDismiss` runs. A restore's error is presented only after that (Tester F1).
+    func showAndCloseRestoreProgress() {
+        restoreProgressAppeared()
+        restoreProgressDismissed()
+    }
+}

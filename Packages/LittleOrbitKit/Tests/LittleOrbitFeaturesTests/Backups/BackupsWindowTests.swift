@@ -116,6 +116,7 @@ struct BackupsWindowTests {
         let ledger = try harness.repository.ledgerSnapshot()
         try Data("changed".utf8).write(to: url)
         await window.confirmRestore(prompt)
+        window.showAndCloseRestoreProgress()
         #expect(window.alert == .damaged)
         #expect(window.toast == nil)
         #expect(try harness.repository.ledgerSnapshot() == ledger)

@@ -17,7 +17,14 @@ import Observation
 public final class BackupsWindow {
     public var alert: BackupAlert?
     public var errorMessage: String?
-    public var restorePrompt: BackupRestorePrompt?
+    /// "Restore This Backup?". An error that arrives while it's up waits until its binding clears (Tester F1).
+    public var restorePrompt: BackupRestorePrompt? {
+        didSet {
+            if restorePrompt == nil {
+                showHeldFeedback()
+            }
+        }
+    }
     public var deletePrompt: BackupRowModel?
     public var exportPrompt: BackupExportPrompt?
     /// The file to hand to the save panel. It stays until the panel's `onCompletion` or `onCancellation` has run.
@@ -34,23 +41,38 @@ public final class BackupsWindow {
     /// the progress screen; the others just have their actions off.
     public private(set) var restoringSummary: String?
 
+    /// Where this window's restore progress sheet is, from the restore asking for it until its `onDismiss`.
+    private var progress = RestoreProgress.none
+    /// An alert or error that came while this window was presenting something else: its restore confirmation or its
+    /// progress sheet. iOS refuses to present an alert on a view that's already presenting, and SwiftUI doesn't try
+    /// again, so the error would never show (Tester F1). It's set as the window's alert or error once those have
+    /// closed: the confirmation's binding cleared, the progress sheet's `onDismiss` run.
+    @ObservationIgnored private var heldFeedback: BackupFeedback?
+
     @ObservationIgnored public let model: BackupsViewModel
 
     public init(model: BackupsViewModel) {
         self.model = model
     }
 
-    /// The window closed: an export file neither callback removed goes with it (B4). The launch sweep covers an app
-    /// that's killed.
+    /// The window closed: an export file neither callback removed goes with it (B4), and so does an error still held
+    /// for a progress sheet that never appeared. The launch sweep covers an app that's killed.
     isolated deinit {
         if let pendingExport {
             model.discardExport(pendingExport)
         }
     }
 
-    /// Whether this window shows the restore progress screen.
+    /// Whether this window shows the restore progress screen: the sheet's `isPresented`. It stays on after a restore
+    /// that ended before the sheet appeared, so the sheet appears and then closes, and an error waits for its
+    /// `onDismiss`.
     public var isShowingRestoreProgress: Bool {
-        restoringSummary != nil && model.restoreStep != nil
+        switch progress {
+        case .requested, .shown:
+            true
+        case .none, .closing:
+            false
+        }
     }
 
     /// The N and M this window's steppers show: the proposed ones while its 'Delete N Backups?' waits, otherwise
@@ -178,13 +200,63 @@ public final class BackupsWindow {
         }
         restoredMessage = nil
         restoringSummary = model.restoringSummary(for: prompt)
-        defer { restoringSummary = nil }
+        progress = .requested(finished: false, unbound: false)
         await run {
             if let outcome = try await model.restore(prompt) {
                 toast = outcome.toast
                 restoredMessage = outcome.restoredMessage
             }
         }
+        // An error from the restore was held. It shows after the sheet's `onDismiss`, even when the sheet appears
+        // only now. If the sheet can't appear any more, it shows at once.
+        switch progress {
+        case .shown:
+            progress = .closing
+        case .requested(_, let unbound):
+            if unbound || Task.isCancelled {
+                endProgress()
+            } else {
+                progress = .requested(finished: true, unbound: false)
+            }
+        case .none, .closing:
+            endProgress()
+        }
+    }
+
+    /// The restore progress sheet's content appeared. A restore that already ended closes it again at once.
+    public func restoreProgressAppeared() {
+        if case .requested(let finished, _) = progress {
+            progress = finished ? .closing : .shown
+        }
+    }
+
+    /// The progress sheet's `isPresented` went false. Before the sheet appeared, it may never appear now: a held
+    /// error shows at once if the restore has ended, or when it ends. Once the sheet is up, `onDismiss` follows.
+    public func restoreProgressBindingCleared() {
+        if case .requested(let finished, _) = progress {
+            if finished {
+                endProgress()
+            } else {
+                progress = .requested(finished: false, unbound: true)
+            }
+        }
+    }
+
+    /// The restore progress sheet's `onDismiss`: it has fully closed, so a held error can be presented.
+    public func restoreProgressDismissed() {
+        switch progress {
+        case .shown, .closing:
+            endProgress()
+        case .none, .requested:
+            break
+        }
+    }
+
+    /// Nothing of the restore is presented any more: a held error shows now.
+    private func endProgress() {
+        progress = .none
+        restoringSummary = nil
+        showHeldFeedback()
     }
 
     // MARK: Feedback
@@ -205,14 +277,49 @@ public final class BackupsWindow {
         do {
             try await work()
         } catch {
-            switch BackupsViewModel.feedback(for: error) {
-            case .alert(let shown):
-                alert = shown
-            case .error(let message):
-                errorMessage = message
-            case .none:
-                break
-            }
+            show(BackupsViewModel.feedback(for: error))
         }
     }
+
+    /// Whether this window is presenting its restore confirmation or progress, so an alert can't go up yet.
+    private var isPresentingRestore: Bool {
+        restorePrompt != nil || progress != .none
+    }
+
+    /// `feedback` as this window's alert or error, or held until its restore confirmation and progress have closed.
+    private func show(_ feedback: BackupFeedback) {
+        guard !isPresentingRestore else {
+            heldFeedback = feedback
+            return
+        }
+        switch feedback {
+        case .alert(let shown):
+            alert = shown
+        case .error(let message):
+            errorMessage = message
+        case .none:
+            break
+        }
+    }
+
+    private func showHeldFeedback() {
+        guard let held = heldFeedback, !isPresentingRestore else {
+            return
+        }
+        heldFeedback = nil
+        show(held)
+    }
+}
+
+/// The restore progress sheet, from the restore asking for it until its `onDismiss` (Tester F1, Tech Architect). From
+/// the request until the sheet's `onAppear` it counts as presenting, as an alert set then would be refused too.
+private enum RestoreProgress: Equatable {
+    case none
+    /// The restore asked for the sheet and it hasn't appeared yet. `finished`: the restore has ended, so the sheet
+    /// closes as soon as it appears. `unbound`: the sheet's binding cleared, so it may never appear.
+    case requested(finished: Bool, unbound: Bool)
+    /// The sheet is up and the restore runs.
+    case shown
+    /// The restore has ended and the sheet is closing; its `onDismiss` hasn't run yet.
+    case closing
 }
