@@ -27,8 +27,10 @@ struct AccountDeleteUndoTests {
         let confirmation = AccountDeleteConfirmation(model: model)
         confirmation.request(accountID: F.cardID)
         let prompt = try #require(confirmation.prompt)
-        #expect(prompt.message.hasPrefix("This deletes 12 transactions."))
-        #expect(prompt.message.contains("You can undo this."))
+        #expect(
+            prompt.message
+                == "This deletes 12 transactions. Attachments are deleted too. You can undo this. Hide it instead to keep everything; hidden accounts still count toward net wealth."
+        )
         let change = try #require(confirmation.confirm())
         #expect(model.row(id: F.cardID) == nil)
 

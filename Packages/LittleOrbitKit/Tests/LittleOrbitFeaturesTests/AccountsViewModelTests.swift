@@ -361,8 +361,8 @@ struct AccountsViewModelTests {
         #expect(model.assets.first?.balanceText == "₹24,000.00")
         confirmation.request(accountID: holiday.id)
         #expect(
-            confirmation.prompt?.message.hasPrefix("This deletes 1 transaction, including 1 transfer to or from")
-                == true
+            confirmation.prompt?.message
+                == "This deletes 1 transaction, a transfer to or from another account whose balance will change. Attachments are deleted too. You can undo this. Hide it instead to keep everything; hidden accounts still count toward net wealth."
         )
         confirmation.confirm()
         #expect(!model.assets.contains { $0.id == holiday.id })
@@ -370,13 +370,16 @@ struct AccountsViewModelTests {
         #expect(try repository.transactions().isEmpty)
     }
 
-    @Test("An account with no transactions says 0 and still offers Hide (S16)")
+    @Test("An account with no transactions gives no count and still offers Hide (S16, D236)")
     func zeroTransactions() throws {
         let model = model(try FeatureFixture.repository())
         let confirmation = AccountDeleteConfirmation(model: model)
         let id = try #require(model.assets.first?.id)
         confirmation.request(accountID: id)
-        #expect(confirmation.prompt?.message.hasPrefix("This deletes 0 transactions. Attachments") == true)
+        #expect(
+            confirmation.prompt?.message
+                == "This account has no transactions. You can undo this. Hide it instead to keep it; hidden accounts still count toward net wealth."
+        )
         #expect(confirmation.prompt?.hideTitle == "Hide Account")
     }
 
