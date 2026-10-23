@@ -10,17 +10,23 @@
     struct TransactionFormView: View {
         @State private var model: TransactionFormViewModel
         let updates: LedgerUpdates
+        /// Edit Expense's Refund…, Duplicate and Delete; `nil` for a new transaction.
+        let actions: TransactionFormActions?
         let onSaved: (TransactionChange) -> Void
 
         init(
             model: TransactionFormViewModel,
             updates: LedgerUpdates,
+            actions: TransactionFormActions? = nil,
             onSaved: @escaping (TransactionChange) -> Void,
         ) {
             self.updates = updates
             _model = State(initialValue: model)
+            self.actions = actions
             self.onSaved = onSaved
         }
+        /// A button's action, run once the sheet has gone (`onDisappear`).
+        @State private var afterClose: (() -> Void)?
         @Environment(\.dismiss) private var dismiss
         @Environment(\.dynamicTypeSize) private var dynamicTypeSize
         @State private var confirmingDiscard = false
@@ -86,6 +92,25 @@
             #if os(macOS)
                 .frame(minWidth: 460, minHeight: 520)
             #endif
+            .onDisappear { afterClose?() }
+        }
+
+        /// A Refund…, Duplicate or Delete button, once any discard is confirmed: closes the sheet, then acts.
+        private func close(then action: @escaping () -> Void) {
+            afterClose = action
+            dismiss()
+        }
+
+        @ViewBuilder private var actionSections: some View {
+            if let actions {
+                TransactionFormActionSections(
+                    actions: actions,
+                    deleteTitle: model.deleteTitle,
+                    deleteFootnote: model.deleteFootnote,
+                    hasUnsavedInput: model.hasUnsavedInput,
+                    close: { close(then: $0) },
+                )
+            }
         }
 
         /// The sheet's navigation stack; on iOS it can push the category list and the split editor.
@@ -127,10 +152,10 @@
 
         @ViewBuilder private var accountRows: some View {
             if model.type == .transfer {
-                stackedRow("From", value: model.accountLabel(model.accountID)) {
+                StackedPickerRow("From", value: model.accountLabel(model.accountID)) {
                     Picker("From", selection: $model.accountID) { accountOptions }
                 }
-                stackedRow("To", value: model.accountLabel(model.transferAccountID)) {
+                StackedPickerRow("To", value: model.accountLabel(model.transferAccountID)) {
                     Picker("To", selection: $model.transferAccountID) {
                         Text("Choose").tag(UUID?.none)
                         accountOptions
@@ -160,7 +185,7 @@
                     }
                 }
             } else {
-                stackedRow("Account", value: model.accountName) {
+                StackedPickerRow("Account", value: model.accountName) {
                     Picker("Account", selection: $model.accountID) { accountOptions }
                 }
                 if model.offersSplit {
@@ -174,7 +199,7 @@
         }
 
         @ViewBuilder private var categoryPicker: some View {
-            stackedRow("Category", value: model.categoryName, spoken: model.categorySpokenValue) {
+            StackedPickerRow("Category", value: model.categoryName, spoken: model.categorySpokenValue) {
                 // The menu's items are standard Labels, so each lines up with its icon, in a section per
                 // parent (UI Designer). The chosen value shows as text only, and its accessibility label
                 // carries the parent, so VoiceOver reads "Category" then "Groceries, under Food & Dining"
@@ -190,48 +215,6 @@
                         .accessibilityLabel(model.categorySpokenValue)
                 }
             }
-        }
-
-        /// A picker row. At accessibility sizes the label goes above the value and the value wraps onto more
-        /// lines, never truncated in the middle; the row opens the same choices as a menu. VoiceOver reads the
-        /// label once with the choice as the value, "Account, Everyday Savings" (Tester's #87 B2, B3). At other
-        /// sizes the standard picker reads that way itself. `spoken`, when set, is what VoiceOver reads instead
-        /// of `value`, such as "Groceries, under Food".
-        @ViewBuilder
-        private func stackedRow<Content: View>(
-            _ title: String,
-            value: String,
-            spoken: String? = nil,
-            @ViewBuilder control: () -> Content,
-        ) -> some View {
-            #if os(iOS)
-                if dynamicTypeSize.isAccessibilitySize {
-                    Menu {
-                        control()
-                            .pickerStyle(.inline)
-                            .labelsHidden()
-                    } label: {
-                        VStack(alignment: .leading, spacing: Spacing.spaceHalf) {
-                            Text(title)
-                                .foregroundStyle(Color(ThemeColor.labelPrimary))
-                            Text(value)
-                                .foregroundStyle(Color(ThemeColor.labelSecondary))
-                                .multilineTextAlignment(.leading)
-                                .fixedSize(horizontal: false, vertical: true)
-                        }
-                        .frame(maxWidth: .infinity, alignment: .leading)
-                        .contentShape(Rectangle())
-                    }
-                    .accessibilityElement(children: .ignore)
-                    .accessibilityLabel(title)
-                    .accessibilityValue(spoken ?? value)
-                    .accessibilityAddTraits(.isButton)
-                } else {
-                    control()
-                }
-            #else
-                control()
-            #endif
         }
 
         /// VoiceOver reads "Date, 21 October 2026" (UI Designer, #87 UI3). At accessibility sizes the label
@@ -382,6 +365,7 @@
                     accountRows
                     detailsFields
                     ExpenseRefundsSection(rows: model.refundRows, footnote: model.refundsFootnote)
+                    actionSections
                 }
                 .formStyle(.grouped)
             }
@@ -411,6 +395,7 @@
                                 }
                             }
                             ExpenseRefundsSection(rows: model.refundRows, footnote: model.refundsFootnote)
+                            actionSections
                         }
                         .scrollDismissesKeyboard(.interactively)
                         // Keep the description and its suggestions above the keyboard (UI Designer, #87 U1).

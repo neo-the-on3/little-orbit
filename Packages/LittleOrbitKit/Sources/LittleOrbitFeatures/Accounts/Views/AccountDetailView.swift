@@ -3,24 +3,6 @@
     import LittleOrbitTheme
     import SwiftUI
 
-    /// The state for the transaction entry sheet. Its view model is made once, when the sheet is requested.
-    struct TransactionFormSheet: Identifiable {
-        let id = UUID()
-        let model: TransactionFormViewModel
-    }
-
-    /// The refund sheet for one expense, iOS and macOS ⌘R (D65), with its view model made when it's requested.
-    struct RefundSheet: Identifiable {
-        let id = UUID()
-        let model: RefundFormViewModel
-    }
-
-    /// The macOS bulk edit sheet, with its view model made when the sheet is requested.
-    struct BulkEditSheet: Identifiable {
-        let id = UUID()
-        let model: BulkEditViewModel
-    }
-
     /// One account: the header, then its history (#23). iOS shows a grouped list (Figma 25:501) and macOS a
     /// table with multi-select (Figma 28:1343). Changes go into this window's undo history (#93, D187.2).
     struct AccountDetailView: View {
@@ -64,6 +46,7 @@
                     TransactionFormView(
                         model: sheet.model,
                         updates: transactions.updates,
+                        actions: formActions(sheet.model),
                         onSaved: record,
                     )
                 }
@@ -178,11 +161,6 @@
             }
             let selection = history.selection
             return selection.count == 1 && history.refundIDs.isSuperset(of: selection) ? .hidden : nil
-        }
-
-        /// Refund for the selection, or `nil` when it isn't exactly one expense, which disables ⌘R.
-        private var refundSelectionAction: SelectionAction? {
-            history.refundTarget(history.selection).map { id in SelectionAction { refund(id) } }
         }
 
         // MARK: - Content
@@ -492,5 +470,26 @@
             private static let headerAlignment = HorizontalAlignment.center
             private static let headerFrameAlignment = Alignment.center
         #endif
+    }
+
+    // MARK: - Edit commands
+
+    extension AccountDetailView {
+        /// Edit Expense's Refund…, Duplicate and Delete for the record being edited (Figma 175:1994).
+        private func formActions(_ model: TransactionFormViewModel) -> TransactionFormActions? {
+            guard case .edit(let id) = model.mode else {
+                return nil
+            }
+            return TransactionFormActions(
+                refund: history.refundTarget([id]).map { id in { refund(id) } },
+                duplicate: history.duplicateTarget([id]).map { id in { duplicate(id) } },
+                delete: { delete([id]) },
+            )
+        }
+
+        /// Refund for the selection, or `nil` when it isn't exactly one expense, which disables ⌘R.
+        private var refundSelectionAction: SelectionAction? {
+            history.refundTarget(history.selection).map { id in SelectionAction { refund(id) } }
+        }
     }
 #endif
