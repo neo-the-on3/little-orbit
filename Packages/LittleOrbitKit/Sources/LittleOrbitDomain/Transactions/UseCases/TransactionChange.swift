@@ -5,11 +5,19 @@ public struct RemovedTransaction: Equatable, Sendable {
     public var transaction: Transaction
     public var attachments: [Attachment]
     public var splits: [TransactionSplit]
+    /// The refunds the delete unlinked from this expense, so Undo links exactly these again (D19, #55).
+    public var unlinkedRefundIDs: [UUID]
 
-    public init(transaction: Transaction, attachments: [Attachment] = [], splits: [TransactionSplit] = []) {
+    public init(
+        transaction: Transaction,
+        attachments: [Attachment] = [],
+        splits: [TransactionSplit] = [],
+        unlinkedRefundIDs: [UUID] = [],
+    ) {
         self.transaction = transaction
         self.attachments = attachments
         self.splits = splits
+        self.unlinkedRefundIDs = unlinkedRefundIDs
     }
 }
 
