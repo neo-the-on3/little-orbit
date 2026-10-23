@@ -134,7 +134,7 @@ struct WindowUndoCategoryPayeeTests {
         setup.first.history.undo()
         #expect(setup.first.history.alert?.title == "Can’t Undo Edit 3 Transactions in Everyday Savings")
         #expect(
-            setup.first.history.alert?.message == "Corner Bakery was changed in another window. Nothing was changed."
+            setup.first.history.alert?.message == "Corner Bakery has changed since then. Nothing was changed."
         )
         #expect(try setup.repository.transactions() == before, "Nothing written")
         #expect(setup.updates.revision == revision)
@@ -157,7 +157,7 @@ struct WindowUndoCategoryPayeeTests {
         #expect(setup.first.history.alert?.title == "Can’t Undo Edit Transaction in Everyday Savings")
         #expect(
             setup.first.history.alert?.message
-                == "Maple Noodle Bar was changed in another window. Nothing was changed."
+                == "Maple Noodle Bar has changed since then. Nothing was changed."
         )
         #expect(try setup.repository.transactions() == before)
         #expect(try setup.repository.transactions().first { $0.id == rows[1].id }?.payeeID == pebble.id)

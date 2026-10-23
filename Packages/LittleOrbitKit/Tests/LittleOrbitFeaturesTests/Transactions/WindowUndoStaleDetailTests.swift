@@ -111,7 +111,7 @@ struct WindowUndoStaleDetailTests {
         #expect(try setup.repository.transactions() == before)
         #expect(setup.first.history.alert?.title == "Can’t Undo Edit 3 Transactions in Rewards Card")
         #expect(
-            setup.first.history.alert?.message == "Corner Bakery was changed in another window. Nothing was changed."
+            setup.first.history.alert?.message == "Corner Bakery has changed since then. Nothing was changed."
         )
     }
 
@@ -129,7 +129,7 @@ struct WindowUndoStaleDetailTests {
         #expect(setup.first.history.alert?.title == "Can’t Undo Edit 3 Transactions in Rewards Card")
         #expect(
             setup.first.history.alert?.message
-                == "2 of these transactions were changed or deleted in another window. Nothing was changed."
+                == "2 of these transactions have changed or been deleted since then. Nothing was changed."
         )
         #expect(!setup.first.history.canUndo)
     }
@@ -145,7 +145,7 @@ struct WindowUndoStaleDetailTests {
 
         setup.first.history.redo()
         #expect(setup.first.history.alert?.title == "Can’t Redo Delete 3 Transactions in Rewards Card")
-        #expect(setup.first.history.alert?.message == "Fuel was deleted in another window. Nothing was changed.")
+        #expect(setup.first.history.alert?.message == "Fuel has been deleted. Nothing was changed.")
         #expect(try setup.repository.transactions().count == 2)
     }
 }
