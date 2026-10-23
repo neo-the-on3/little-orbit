@@ -25,8 +25,14 @@ format bump (#100).
   they're known (D196.3, L29, L37). One whose manifest declares a newer format is listed as "Made by a newer
   version of little-orbit." and never as damaged (D197.2, L35). Neither can be restored or exported, and both can
   be deleted with the normal confirmation and App Lock.
-- If a folder can't be read at all (an I/O error, or a protected file), the error is reported and nothing is
-  listed or pruned, so the list is never a partial one (R3).
+- If the Backups folder or `status.json` can't be read (an I/O or permission error, a Backups folder that can be
+  listed but not searched included), the list shows Couldn’t Load Backups and nothing is pruned (R3, D214.1). One
+  backup folder that can't be read gets its own row: as last read if it was listed earlier in the session
+  (D208.2), otherwise "Couldn’t be read", never 'Damaged'. While such a row is there, nothing is pruned (D214).
+- Only real folders are backups. A symlink in the Backups folder, to a folder or anything else, is never one of
+  ours: it isn't listed, read or deleted (B1). Nothing in a backup folder is ever followed through a symlink, at
+  any depth. Listing, checking and reading skip links, and Delete and cleanup remove a link as a link, never
+  changing the permissions of, writing to or walking into anything it points at.
 - On iOS and iPadOS every file and folder, the temporary ones included, uses the default Data Protection class,
   `completeUntilFirstUserAuthentication`. It's protected until the first unlock after a restart, so automatic
   backups still work while the device is locked (D180, D182.3, R6). macOS has no per-file data protection and no

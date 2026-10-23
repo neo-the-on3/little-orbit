@@ -79,7 +79,9 @@ final class BackupFolderNames: @unchecked Sendable {
 
     /// The manifest's `backup.id`, or `nil` when there's no readable manifest or no ID in it.
     static func manifestID(in folder: URL) -> UUID? {
-        guard let data = try? Data(contentsOf: folder.appendingPathComponent(BackupFormat.manifestPath)) else {
+        let url = folder.appendingPathComponent(BackupFormat.manifestPath)
+        // A manifest that's a symlink is never read through (B1).
+        guard (try? FileBackupStorage.entryType(at: url)) == .typeRegular, let data = try? Data(contentsOf: url) else {
             return nil
         }
         return (try? decoder.decode(ManifestHead.self, from: data))?.backup.id

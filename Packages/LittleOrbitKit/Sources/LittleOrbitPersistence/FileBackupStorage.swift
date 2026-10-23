@@ -89,14 +89,18 @@ public final class FileBackupStorage: BackupStorage, @unchecked Sendable {
     /// Every folder in the Backups folder, whatever it's called, with the ID it's known by: the manifest's `id`,
     /// else the name of a folder named by an ID (earlier builds), else one made from the name, so a folder with no
     /// readable manifest is still listed, as damaged (D196.3, D209). No date is ever read from a name.
+    /// Only real folders count, never followed through a link: a backup is always a real folder, so a symlink, to a
+    /// folder or anything else, is never one of ours and is skipped (B1). A Backups folder that can't be listed, or
+    /// can be listed but not searched, throws a read failure, so it's Couldn’t Load Backups, never an empty list
+    /// (D214.1).
     private func scan() throws -> [UUID] {
         var found: [UUID: String] = [:]
         var order: [UUID] = []
         let known = names.byName()
-        for name in try fileManager.contentsOfDirectory(atPath: folder.path).sorted() where !name.hasPrefix(".") {
+        let entries = try reading { try fileManager.contentsOfDirectory(atPath: folder.path) }
+        for name in entries.sorted() where !name.hasPrefix(".") {
             let url = folder.appendingPathComponent(name, isDirectory: true)
-            var isDirectory: ObjCBool = false
-            guard fileManager.fileExists(atPath: url.path, isDirectory: &isDirectory), isDirectory.boolValue else {
+            guard try reading({ try Self.entryType(at: url) }) == .typeDirectory else {
                 continue
             }
             // A folder already known keeps its ID, so one whose manifest goes is still the same backup, now damaged.
@@ -127,8 +131,7 @@ public final class FileBackupStorage: BackupStorage, @unchecked Sendable {
 
     public func listing(id: UUID) throws -> BackupFolderListing {
         let url = folderURL(id)
-        var isDirectory: ObjCBool = false
-        guard fileManager.fileExists(atPath: url.path, isDirectory: &isDirectory), isDirectory.boolValue else {
+        guard Self.isRealFolder(url) else {
             throw BackupError.notFound
         }
         let base = url.standardizedFileURL.resolvingSymlinksInPath().path
@@ -143,8 +146,7 @@ public final class FileBackupStorage: BackupStorage, @unchecked Sendable {
     /// Throws `notFound` when there's no such folder, and the underlying error for any other failed read.
     public func read(id: UUID) throws -> BackupSnapshotFiles {
         let url = folderURL(id)
-        var isDirectory: ObjCBool = false
-        guard fileManager.fileExists(atPath: url.path, isDirectory: &isDirectory), isDirectory.boolValue else {
+        guard Self.isRealFolder(url) else {
             throw BackupError.notFound
         }
         return try Self.readFolder(url)
@@ -154,8 +156,7 @@ public final class FileBackupStorage: BackupStorage, @unchecked Sendable {
     /// backup can't be read rather than finding its files missing and calling it damaged (D208.2, D214).
     public func files(id: UUID) throws -> any BackupFileReading {
         let url = folderURL(id)
-        var isDirectory: ObjCBool = false
-        guard fileManager.fileExists(atPath: url.path, isDirectory: &isDirectory), isDirectory.boolValue else {
+        guard Self.isRealFolder(url) else {
             throw BackupError.notFound
         }
         _ = try Self.fileSizes(in: url.standardizedFileURL.resolvingSymlinksInPath().path)
@@ -196,14 +197,17 @@ public final class FileBackupStorage: BackupStorage, @unchecked Sendable {
     public func delete(id: UUID) throws {
         try locked {
             let url = folderURL(id)
-            guard fileManager.fileExists(atPath: url.path) else {
+            // Only a real folder, never a symlink: nothing a link points at is ever moved, written to or given new
+            // permissions (B1).
+            guard try Self.entryType(at: url) == .typeDirectory else {
                 return
             }
             // Renamed first, in one step, so a cleanup killed midway leaves no part of a listed folder (L17).
             try prepare(staging)
             let deleting = staging.appendingPathComponent("\(id.uuidString).deleting", isDirectory: true)
             // A folder that can't be read is ours to delete all the same (D214). Moving a folder to another
-            // parent needs write access to it, so a folder without it is given that first.
+            // parent needs write access to it, so a folder without it is given that first. If the move then fails,
+            // it keeps that access, and so lists again as a backup that can be read.
             if !fileManager.isWritableFile(atPath: url.path) {
                 try? fileManager.setAttributes([.posixPermissions: 0o700], ofItemAtPath: url.path)
             }
