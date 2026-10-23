@@ -375,6 +375,42 @@ struct WindowUndoTwoWindowTests {
         #expect(try setup.repository.transactions().isEmpty)
         #expect(setup.first.announcements.isEmpty)
     }
+
+    // MARK: - D228.4: the account or the transaction
+
+    @Test("D228.4: B adds a transaction to an account A's Redo would delete again; the message names the account")
+    func redoAccountDeleteNamesAccount() throws {
+        let setup = try setup([bakery])
+        setup.first.history.record(
+            .removedAccount(try AccountUseCases(repository: setup.repository).deleteAccount.delete(F.cardID))
+        )
+        setup.first.history.undo()
+        let added = F.expense(120, on: F.date(2026, 10, 19), account: F.cardID, details: "Pebble Market")
+        setup.second.history.record(try setup.useCases.saveTransactions.save([added]))
+        let before = try setup.repository.transactions()
+
+        setup.first.history.redo()
+        #expect(setup.first.history.alert?.title == "Can’t Redo Delete Account Rewards Card")
+        #expect(setup.first.history.alert?.message == "Rewards Card has changed since then. Nothing was changed.")
+        #expect(try setup.repository.transactions() == before)
+        #expect(!setup.first.history.canRedo)
+    }
+
+    @Test("D228.4: B changes a transaction A's account-delete Redo holds; the message names the transaction")
+    func redoAccountDeleteNamesChangedTransaction() throws {
+        let corner = bakery
+        let setup = try setup([corner])
+        setup.first.history.record(
+            .removedAccount(try AccountUseCases(repository: setup.repository).deleteAccount.delete(F.cardID))
+        )
+        setup.first.history.undo()
+        try setup.edit(corner.id, in: setup.second) { $0.amount = 500 }
+
+        setup.first.history.redo()
+        #expect(setup.first.history.alert?.title == "Can’t Redo Delete Account Rewards Card")
+        #expect(setup.first.history.alert?.message == "Corner Bakery has changed since then. Nothing was changed.")
+        #expect(!setup.first.history.canRedo)
+    }
 }
 
 /// After a backup restore replaces the ledger (#40, #99), no window can undo a step made against the old data.
