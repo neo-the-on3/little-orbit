@@ -23,6 +23,8 @@ public final class TransactionFormViewModel {
                 payeeText = ""
                 payeeID = nil
             }
+            // A split's lines are all expense or all income, so they go with the type they were made for (D64).
+            split = nil
         }
     }
     private var keypad = AmountKeypad()
@@ -46,9 +48,14 @@ public final class TransactionFormViewModel {
     public var showsMoreOptions = false
     public var errorMessage: String?
     public private(set) var accountOptions: [TransactionAccountOption] = []
+    /// The split lines, when the expense is split across categories; `nil` for one category (#34, D64).
+    public internal(set) var split: SplitEditorViewModel?
 
     @ObservationIgnored private let loadLedger: any LoadTransactionLedgerUseCase
     @ObservationIgnored private let saveTransactions: any SaveTransactionsUseCase
+    @ObservationIgnored let splits: (any SplitTransactionUseCase)?
+    /// The stored lines of the split being edited; none for a transaction that wasn't split.
+    @ObservationIgnored var originalLines: [SplitLineDraft] = []
     @ObservationIgnored let dates: any TransactionDateUseCase
     @ObservationIgnored let locale: Locale
     @ObservationIgnored let formatter: MoneyFormatter
@@ -58,7 +65,7 @@ public final class TransactionFormViewModel {
     @ObservationIgnored private(set) var original: Transaction?
     @ObservationIgnored private var originalPayeeName = ""
     @ObservationIgnored private(set) var accounts: [Account] = []
-    @ObservationIgnored private var categories: [TransactionCategory] = []
+    @ObservationIgnored var categories: [TransactionCategory] = []
     @ObservationIgnored private var payees: [Payee] = []
     /// Observed, so the refunds footnote and the Expense/Income switch follow a reload (D225.1).
     private(set) var transactions: [Transaction] = []
@@ -68,6 +75,7 @@ public final class TransactionFormViewModel {
         loadLedger: any LoadTransactionLedgerUseCase,
         saveTransactions: any SaveTransactionsUseCase,
         dates: any TransactionDateUseCase = DefaultTransactionDateUseCase(),
+        splits: (any SplitTransactionUseCase)? = nil,
         mode: TransactionFormMode,
         locale: Locale = .current,
         timeZone: TimeZone = .current,
@@ -76,6 +84,7 @@ public final class TransactionFormViewModel {
         self.loadLedger = loadLedger
         self.saveTransactions = saveTransactions
         self.dates = dates
+        self.splits = splits
         self.mode = mode
         self.locale = locale
         self.formatter = MoneyFormatter(locale: locale)
@@ -99,6 +108,7 @@ public final class TransactionFormViewModel {
             loadLedger: useCases.loadLedger,
             saveTransactions: useCases.saveTransactions,
             dates: useCases.dates,
+            splits: useCases.splits,
             mode: mode,
             locale: locale,
             timeZone: timeZone,
@@ -156,6 +166,7 @@ public final class TransactionFormViewModel {
             timeZoneID = transaction.timeZoneID
             details = transaction.details ?? ""
             note = transaction.note ?? ""
+            loadSplit(of: transaction.id)
         }
         let visible = accounts.filter { !$0.isHidden || $0.id == accountID || $0.id == transferAccountID }
         accountOptions = visible.sorted { $0.sortOrder < $1.sortOrder }
@@ -401,7 +412,7 @@ public final class TransactionFormViewModel {
             return false
         }
         return draft.issues(accounts: accounts).isEmpty && !isDetailsOverLimit
-            && note.count <= NoteLimit.limit
+            && note.count <= NoteLimit.limit && splitAllowsSave
     }
 
     /// Whether closing the sheet would lose anything, for the discard warning (Figma 26:1276).
@@ -409,12 +420,12 @@ public final class TransactionFormViewModel {
         guard let original else {
             return !keypad.expression.isEmpty || TransactionText.trimmed(payeeText) != nil
                 || TransactionText.trimmed(details) != nil || TransactionText.trimmed(note) != nil
-                || categoryID != nil
+                || categoryID != nil || split != nil
         }
         var saved = TransactionDraft(editing: original)
         saved.details = TransactionText.trimmed(saved.details)
         saved.note = TransactionText.trimmed(saved.note)
-        return draft != saved || payeeText != originalPayeeName
+        return draft != saved || payeeText != originalPayeeName || (split?.lines ?? []) != originalLines
     }
 
     /// Saves and returns the change to register for Undo; `nil` when nothing changed (`isUnchanged`).
@@ -427,6 +438,7 @@ public final class TransactionFormViewModel {
             keypad.reportError(currencyCode: currencyCode, locale: locale)
             return nil
         }
+        var splitting = false
         do {
             var draft = draft
             let resolved = type == .transfer ? nil : try resolvePayee()
@@ -434,9 +446,19 @@ public final class TransactionFormViewModel {
             let transaction = draft.transaction(accounts: accounts, now: now())
             // A payee this save created goes with it on Undo, unless something else uses it by then (D191.4).
             let created = resolved.flatMap { $0.isNew ? [$0.payee] : nil } ?? []
+            if let lines = linesToSave(for: transaction.id), let splits {
+                splitting = !lines.isEmpty
+                return try splits.save(transaction, lines: lines, creating: created)
+            }
             return try saveTransactions.save([transaction], creating: created)
         } catch {
-            errorMessage = Self.saveMessage(for: error)
+            var splitRefunds: Int?
+            if splitting, case LedgerValidationError.originalHasRefunds = error {
+                // Refunds were recorded while the split was open: reread them, for the count and the footnote.
+                reload()
+                splitRefunds = linkedRefundCount
+            }
+            errorMessage = Self.saveMessage(for: error, splitRefunds: splitRefunds)
             return nil
         }
     }

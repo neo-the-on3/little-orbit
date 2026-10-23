@@ -324,6 +324,32 @@
         }
       }
     },
+    "%@ left": {
+      "comment": "Split editor status figure when the lines add up to the total, such as “₹0.00 left” (D64). %@ is the amount.",
+      "extractionState": "manual",
+      "generatesSymbol": false,
+      "localizations": {
+        "en": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "%@ left"
+          }
+        }
+      }
+    },
+    "%@ left to assign": {
+      "comment": "Split editor status when some of the total is on no line, such as “₹30.00 left to assign” (D243). %@ is the amount.",
+      "extractionState": "manual",
+      "generatesSymbol": false,
+      "localizations": {
+        "en": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "%@ left to assign"
+          }
+        }
+      }
+    },
     "%lld Months": {
       "comment": "Monthly Backups stepper value. %lld is the number of months (1–24).",
       "extractionState": "manual",
@@ -568,6 +594,19 @@
         }
       }
     },
+    "Add Line": {
+      "comment": "Split editor button that adds a blank split line (D64).",
+      "extractionState": "manual",
+      "generatesSymbol": false,
+      "localizations": {
+        "en": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Add Line"
+          }
+        }
+      }
+    },
     "All data on this %1$@ will be replaced with this backup (%2$@). Your current data is saved first as a Before restore backup, so you can go back. App Lock, Hide amounts, report exclusions and theme on this %1$@ don’t change.": {
       "comment": "Warning before a restore. %1$@ is the device; %2$@ is the backup's summary, such as “Today, 9:12 AM · 3 accounts · 120 transactions”.",
       "extractionState": "manual",
@@ -576,6 +615,19 @@
           "stringUnit": {
             "state": "translated",
             "value": "All data on this %1$@ will be replaced with this backup (%2$@). Your current data is saved first as a Before restore backup, so you can go back. App Lock, Hide amounts, report exclusions and theme on this %1$@ don’t change."
+          }
+        }
+      }
+    },
+    "Already used on another line": {
+      "comment": "Split line category picker: a category another line of this split already uses, shown disabled (D117.1).",
+      "extractionState": "manual",
+      "generatesSymbol": false,
+      "localizations": {
+        "en": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Already used on another line"
           }
         }
       }
@@ -624,6 +676,19 @@
           "stringUnit": {
             "state": "translated",
             "value": "Any backup can be deleted. Delete asks you to confirm, and asks for the app passcode first when App Lock is on."
+          }
+        }
+      }
+    },
+    "auto": {
+      "comment": "macOS split line tag for a line with no amount typed, which shares what’s left of the total (D64).",
+      "extractionState": "manual",
+      "generatesSymbol": false,
+      "localizations": {
+        "en": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "auto"
           }
         }
       }
@@ -821,6 +886,19 @@
         }
       }
     },
+    "Blank amounts share what’s left. 2–20 lines.": {
+      "comment": "macOS split lines hint next to Add Line (D64).",
+      "extractionState": "manual",
+      "generatesSymbol": false,
+      "localizations": {
+        "en": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Blank amounts share what’s left. 2–20 lines."
+          }
+        }
+      }
+    },
     "Can’t Delete This Backup": {
       "comment": "Alert title when Delete is confirmed while the backup is being exported, in this or another window (D208.1). Nothing is deleted. The only button is OK.",
       "extractionState": "manual",
@@ -925,6 +1003,45 @@
           "stringUnit": {
             "state": "translated",
             "value": "Change Payee"
+          }
+        }
+      }
+    },
+    "Choose a category for every split line": {
+      "comment": "Split line error when the line has no category (D64).",
+      "extractionState": "manual",
+      "generatesSymbol": false,
+      "localizations": {
+        "en": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Choose a category for every split line"
+          }
+        }
+      }
+    },
+    "Choose Category": {
+      "comment": "iOS split editor line with no category yet (D64).",
+      "extractionState": "manual",
+      "generatesSymbol": false,
+      "localizations": {
+        "en": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Choose Category"
+          }
+        }
+      }
+    },
+    "Choose…": {
+      "comment": "macOS split line category popup with no category yet (D64).",
+      "extractionState": "manual",
+      "generatesSymbol": false,
+      "localizations": {
+        "en": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Choose…"
           }
         }
       }
@@ -1316,6 +1433,45 @@
         }
       }
     },
+    "Delete Expense": {
+      "comment": "Edit Expense button that deletes the expense (Figma 175:1994).",
+      "extractionState": "manual",
+      "generatesSymbol": false,
+      "localizations": {
+        "en": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Delete Expense"
+          }
+        }
+      }
+    },
+    "Delete Line": {
+      "comment": "macOS split line − button, for VoiceOver and its help tag (D64).",
+      "extractionState": "manual",
+      "generatesSymbol": false,
+      "localizations": {
+        "en": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Delete Line"
+          }
+        }
+      }
+    },
+    "Delete the %@ Line?": {
+      "comment": "Title of the confirmation for deleting a split line that holds refunds (D112, D219.2). %@ is the line’s category.",
+      "extractionState": "manual",
+      "generatesSymbol": false,
+      "localizations": {
+        "en": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Delete the %@ Line?"
+          }
+        }
+      }
+    },
     "Delete This Backup?": {
       "comment": "Title of the confirmation before deleting one backup.",
       "extractionState": "manual",
@@ -1488,6 +1644,45 @@
           "stringUnit": {
             "state": "translated",
             "value": "Delete…"
+          }
+        }
+      }
+    },
+    "Deleting the expense keeps its refunds in %@, labelled “Refund (original deleted)”. Undo links them again.": {
+      "comment": "Footnote under Delete Expense while the expense has refunds (D97.2, D112). %@ is the expense’s category.",
+      "extractionState": "manual",
+      "generatesSymbol": false,
+      "localizations": {
+        "en": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Deleting the expense keeps its refunds in %@, labelled “Refund (original deleted)”. Undo links them again."
+          }
+        }
+      }
+    },
+    "Discard Changes": {
+      "comment": "Confirms closing the edit sheet without its unsaved changes.",
+      "extractionState": "manual",
+      "generatesSymbol": false,
+      "localizations": {
+        "en": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Discard Changes"
+          }
+        }
+      }
+    },
+    "Discard this transaction?": {
+      "comment": "Title of the confirmation for closing the edit sheet with unsaved changes.",
+      "extractionState": "manual",
+      "generatesSymbol": false,
+      "localizations": {
+        "en": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Discard this transaction?"
           }
         }
       }
@@ -1817,6 +2012,32 @@
         }
       }
     },
+    "Every line must be more than %@": {
+      "comment": "Split line error when the line’s amount is 0 or less (D64, S3). %@ is zero in the transaction’s currency, such as “₹0.00”.",
+      "extractionState": "manual",
+      "generatesSymbol": false,
+      "localizations": {
+        "en": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Every line must be more than %@"
+          }
+        }
+      }
+    },
+    "Expense Categories": {
+      "comment": "Header of the iOS category list and a split line’s category list for an expense.",
+      "extractionState": "manual",
+      "generatesSymbol": false,
+      "localizations": {
+        "en": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Expense Categories"
+          }
+        }
+      }
+    },
     "Export": {
       "comment": "The iOS Export sheet’s confirm button; the share sheet follows directly, so no ellipsis.",
       "extractionState": "manual",
@@ -1890,6 +2111,19 @@
         }
       }
     },
+    "Income Categories": {
+      "comment": "Header of the iOS category list and a split line’s category list for an income.",
+      "extractionState": "manual",
+      "generatesSymbol": false,
+      "localizations": {
+        "en": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Income Categories"
+          }
+        }
+      }
+    },
     "It can’t be restored. Your data hasn’t changed.": {
       "comment": "Alert message under “This Backup Is Damaged”.",
       "extractionState": "manual",
@@ -1898,6 +2132,150 @@
           "stringUnit": {
             "state": "translated",
             "value": "It can’t be restored. Your data hasn’t changed."
+          }
+        }
+      }
+    },
+    "Its %1$@ refund moves to %2$@, the first remaining line. %3$@ is then left to assign.": {
+      "comment": "Split line delete confirmation when every remaining line is 0, one refund (D220.2). %1$@ is the refund, %2$@ the first line’s category, %3$@ what’s left.",
+      "extractionState": "manual",
+      "generatesSymbol": false,
+      "localizations": {
+        "en": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Its %1$@ refund moves to %2$@, the first remaining line. %3$@ is then left to assign."
+          }
+        }
+      }
+    },
+    "Its %1$@ refund moves to %2$@, the largest remaining line.": {
+      "comment": "Split line delete confirmation, one refund, nothing left to assign (D219.2). %1$@ is the refund, %2$@ the receiving line’s category.",
+      "extractionState": "manual",
+      "generatesSymbol": false,
+      "localizations": {
+        "en": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Its %1$@ refund moves to %2$@, the largest remaining line."
+          }
+        }
+      }
+    },
+    "Its %1$@ refund moves to %2$@, the largest remaining line. %3$@ is then left to assign.": {
+      "comment": "Split line delete confirmation, one refund, with an amount then left to assign (D112, D219.2). %1$@ is the refund, %2$@ the receiving line’s category, %3$@ what’s left.",
+      "extractionState": "manual",
+      "generatesSymbol": false,
+      "localizations": {
+        "en": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Its %1$@ refund moves to %2$@, the largest remaining line. %3$@ is then left to assign."
+          }
+        }
+      }
+    },
+    "Its %1$lld refunds (%2$@) move to %3$@, the first remaining line. %4$@ is then left to assign.": {
+      "comment": "Split line delete confirmation when every remaining line is 0, two or more refunds (D220.2). %1$lld is how many, %2$@ their total, %3$@ the first line’s category, %4$@ what’s left. The refund count has plural variants for translators; English uses this entry for 2 or more. The verb is in the plural variants, so it agrees with the count.",
+      "extractionState": "manual",
+      "generatesSymbol": false,
+      "localizations": {
+        "en": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Its %#@refunds@ to %3$@, the first remaining line. %4$@ is then left to assign."
+          },
+          "substitutions": {
+            "refunds": {
+              "argNum": 1,
+              "formatSpecifier": "lld",
+              "variations": {
+                "plural": {
+                  "one": {
+                    "stringUnit": {
+                      "state": "translated",
+                      "value": "%arg refund (%2$@) moves"
+                    }
+                  },
+                  "other": {
+                    "stringUnit": {
+                      "state": "translated",
+                      "value": "%arg refunds (%2$@) move"
+                    }
+                  }
+                }
+              }
+            }
+          }
+        }
+      }
+    },
+    "Its %1$lld refunds (%2$@) move to %3$@, the largest remaining line.": {
+      "comment": "Split line delete confirmation, two or more refunds, nothing left to assign (D219.2). %1$lld is how many, %2$@ their total, %3$@ the receiving line’s category. The refund count has plural variants for translators; English uses this entry for 2 or more. The verb is in the plural variants, so it agrees with the count.",
+      "extractionState": "manual",
+      "generatesSymbol": false,
+      "localizations": {
+        "en": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Its %#@refunds@ to %3$@, the largest remaining line."
+          },
+          "substitutions": {
+            "refunds": {
+              "argNum": 1,
+              "formatSpecifier": "lld",
+              "variations": {
+                "plural": {
+                  "one": {
+                    "stringUnit": {
+                      "state": "translated",
+                      "value": "%arg refund (%2$@) moves"
+                    }
+                  },
+                  "other": {
+                    "stringUnit": {
+                      "state": "translated",
+                      "value": "%arg refunds (%2$@) move"
+                    }
+                  }
+                }
+              }
+            }
+          }
+        }
+      }
+    },
+    "Its %1$lld refunds (%2$@) move to %3$@, the largest remaining line. %4$@ is then left to assign.": {
+      "comment": "Split line delete confirmation, two or more refunds, with an amount then left to assign (D219.2). %1$lld is how many, %2$@ their total, %3$@ the receiving line’s category, %4$@ what’s left. The refund count has plural variants for translators; English uses this entry for 2 or more. The verb is in the plural variants, so it agrees with the count.",
+      "extractionState": "manual",
+      "generatesSymbol": false,
+      "localizations": {
+        "en": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Its %#@refunds@ to %3$@, the largest remaining line. %4$@ is then left to assign."
+          },
+          "substitutions": {
+            "refunds": {
+              "argNum": 1,
+              "formatSpecifier": "lld",
+              "variations": {
+                "plural": {
+                  "one": {
+                    "stringUnit": {
+                      "state": "translated",
+                      "value": "%arg refund (%2$@) moves"
+                    }
+                  },
+                  "other": {
+                    "stringUnit": {
+                      "state": "translated",
+                      "value": "%arg refunds (%2$@) move"
+                    }
+                  }
+                }
+              }
+            }
           }
         }
       }
@@ -1934,6 +2312,19 @@
           "stringUnit": {
             "state": "translated",
             "value": "Keep"
+          }
+        }
+      }
+    },
+    "Keep Editing": {
+      "comment": "Cancels closing the edit sheet, keeping its unsaved changes.",
+      "extractionState": "manual",
+      "generatesSymbol": false,
+      "localizations": {
+        "en": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Keep Editing"
           }
         }
       }
@@ -2006,6 +2397,45 @@
           "stringUnit": {
             "state": "translated",
             "value": "Last backup: %@. little-orbit backs up once a day after you change something."
+          }
+        }
+      }
+    },
+    "Leave an amount blank to share what’s left equally. The last blank line gets any amount left over from rounding. Each line has a category, an amount above 0 and an optional note.": {
+      "comment": "iOS split editor footnote under Add Line, for every currency (D64, D242.3).",
+      "extractionState": "manual",
+      "generatesSymbol": false,
+      "localizations": {
+        "en": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Leave an amount blank to share what’s left equally. The last blank line gets any amount left over from rounding. Each line has a category, an amount above 0 and an optional note."
+          }
+        }
+      }
+    },
+    "Lines (%1$lld of %2$lld)": {
+      "comment": "iOS split editor section header, such as “Lines (3 of 20)”. %1$lld is the number of lines, %2$lld the most a split can have (D64).",
+      "extractionState": "manual",
+      "generatesSymbol": false,
+      "localizations": {
+        "en": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Lines (%1$lld of %2$lld)"
+          }
+        }
+      }
+    },
+    "Lines add up to the total": {
+      "comment": "Split editor status when the lines match the total (D64).",
+      "extractionState": "manual",
+      "generatesSymbol": false,
+      "localizations": {
+        "en": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Lines add up to the total"
           }
         }
       }
@@ -2592,14 +3022,14 @@
         }
       }
     },
-    "Refunded %1$@ of %2$@. While these refunds exist, the amount can’t go below %1$@ and the expense can’t become income.": {
-      "comment": "Edit sheet footnote for an expense with refunds (D222.2). %1$@ is what its refunds add up to, such as ₹300.00; %2$@ is the expense’s amount, such as ₹1,000.00.",
+    "Refunded %1$@ of %2$@. While these refunds exist, the amount can’t go below %1$@ and the expense can’t become income or be split.": {
+      "comment": "Edit sheet footnote for an expense with refunds (D222.2, D248.2: it can’t be split either). %1$@ is what its refunds add up to, such as ₹300.00; %2$@ is the expense’s amount, such as ₹1,000.00.",
       "extractionState": "manual",
       "localizations": {
         "en": {
           "stringUnit": {
             "state": "translated",
-            "value": "Refunded %1$@ of %2$@. While these refunds exist, the amount can’t go below %1$@ and the expense can’t become income."
+            "value": "Refunded %1$@ of %2$@. While these refunds exist, the amount can’t go below %1$@ and the expense can’t become income or be split."
           }
         }
       }
@@ -2625,6 +3055,32 @@
           "stringUnit": {
             "state": "translated",
             "value": "Refund…"
+          }
+        }
+      }
+    },
+    "Remove Split": {
+      "comment": "iOS split editor button that makes the expense a single-category one again, keeping the largest line’s category (D97).",
+      "extractionState": "manual",
+      "generatesSymbol": false,
+      "localizations": {
+        "en": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Remove Split"
+          }
+        }
+      }
+    },
+    "Remove Split?": {
+      "comment": "Title of the Remove Split confirmation on iOS and macOS (D219.3).",
+      "extractionState": "manual",
+      "generatesSymbol": false,
+      "localizations": {
+        "en": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Remove Split?"
           }
         }
       }
@@ -2737,6 +3193,19 @@
         }
       }
     },
+    "Save stays unavailable until the lines add up to the total and every line has a category and an amount above 0. A category can be used on one line only.": {
+      "comment": "macOS split lines footnote while Save is unavailable (D64, D117.1).",
+      "extractionState": "manual",
+      "generatesSymbol": false,
+      "localizations": {
+        "en": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Save stays unavailable until the lines add up to the total and every line has a category and an amount above 0. A category can be used on one line only."
+          }
+        }
+      }
+    },
     "Something Went Wrong": {
       "comment": "Alert title in Backups when no other case applies (D211.9). Its message is the catalog's own, never the error's text. The only button is OK.",
       "extractionState": "manual",
@@ -2774,6 +3243,58 @@
         }
       }
     },
+    "Split Across Categories…": {
+      "comment": "Row in the iOS category list, and the macOS + next to Category, that starts splitting the expense (D64).",
+      "extractionState": "manual",
+      "generatesSymbol": false,
+      "localizations": {
+        "en": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Split Across Categories…"
+          }
+        }
+      }
+    },
+    "Split lines are %@ more than the total": {
+      "comment": "Split editor status when the lines are over the total (D64, S6). %@ is how much over.",
+      "extractionState": "manual",
+      "generatesSymbol": false,
+      "localizations": {
+        "en": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Split lines are %@ more than the total"
+          }
+        }
+      }
+    },
+    "Split this %@ expense across 2 to 20 expense categories. Transfers and refunds can’t be split, so they don’t show this row.": {
+      "comment": "Footnote under “Split Across Categories…” in the iOS category list (D64, D97). %@ is the expense’s amount.",
+      "extractionState": "manual",
+      "generatesSymbol": false,
+      "localizations": {
+        "en": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Split this %@ expense across 2 to 20 expense categories. Transfers and refunds can’t be split, so they don’t show this row."
+          }
+        }
+      }
+    },
+    "Split this %@ income across 2 to 20 income categories. Transfers and refunds can’t be split, so they don’t show this row.": {
+      "comment": "Footnote under “Split Across Categories…” in the iOS category list for an income (D242.1). %@ is the income’s amount.",
+      "extractionState": "manual",
+      "generatesSymbol": false,
+      "localizations": {
+        "en": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Split this %@ income across 2 to 20 income categories. Transfers and refunds can’t be split, so they don’t show this row."
+          }
+        }
+      }
+    },
     "Text shortened to fit %lld characters": {
       "comment": "Under the description field after a paste was cut to the character limit.",
       "extractionState": "manual",
@@ -2806,6 +3327,19 @@
           "stringUnit": {
             "state": "translated",
             "value": "The account"
+          }
+        }
+      }
+    },
+    "The amount and details you entered will be lost.": {
+      "comment": "Message of the confirmation for closing the edit sheet with unsaved changes.",
+      "extractionState": "manual",
+      "generatesSymbol": false,
+      "localizations": {
+        "en": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "The amount and details you entered will be lost."
           }
         }
       }
@@ -2902,6 +3436,140 @@
           "stringUnit": {
             "state": "translated",
             "value": "This backup was made with a newer version of little-orbit. Your data hasn’t changed."
+          }
+        }
+      }
+    },
+    "This becomes %1$@ of %2$@ income, the largest line.": {
+      "comment": "Message of the Remove Split confirmation for an income split (D245). %1$@ is the largest line’s amount and %2$@ its category, which the income keeps. An income has no refunds, so there’s no refund sentence.",
+      "extractionState": "manual",
+      "localizations": {
+        "en": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "This becomes %1$@ of %2$@ income, the largest line."
+          }
+        }
+      }
+    },
+    "This becomes a %1$@ %2$@ expense, the largest line.": {
+      "comment": "Remove Split confirmation with no refunds (D97, D219.3). %1$@ is the total, %2$@ the kept category.",
+      "extractionState": "manual",
+      "generatesSymbol": false,
+      "localizations": {
+        "en": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "This becomes a %1$@ %2$@ expense, the largest line."
+          }
+        }
+      }
+    },
+    "This becomes a %1$@ %2$@ expense, the largest line. All %3$lld refunds stay linked and move to %2$@.": {
+      "comment": "Remove Split confirmation with three or more refunds (D219.3). %1$@ is the total, %2$@ the kept category, %3$lld the number of refunds. The refund count has plural variants for translators; English uses this entry for 3 or more. The verb is in the plural variants, so it agrees with the count.",
+      "extractionState": "manual",
+      "generatesSymbol": false,
+      "localizations": {
+        "en": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "This becomes a %1$@ %2$@ expense, the largest line. All %#@refunds@ to %2$@."
+          },
+          "substitutions": {
+            "refunds": {
+              "argNum": 3,
+              "formatSpecifier": "lld",
+              "variations": {
+                "plural": {
+                  "one": {
+                    "stringUnit": {
+                      "state": "translated",
+                      "value": "%arg refund stays linked and moves"
+                    }
+                  },
+                  "other": {
+                    "stringUnit": {
+                      "state": "translated",
+                      "value": "%arg refunds stay linked and move"
+                    }
+                  }
+                }
+              }
+            }
+          }
+        }
+      }
+    },
+    "This becomes a %1$@ %2$@ expense, the largest line. Both refunds stay linked and move to %2$@.": {
+      "comment": "Remove Split confirmation with two refunds (D219.3). %1$@ is the total, %2$@ the kept category.",
+      "extractionState": "manual",
+      "generatesSymbol": false,
+      "localizations": {
+        "en": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "This becomes a %1$@ %2$@ expense, the largest line. Both refunds stay linked and move to %2$@."
+          }
+        }
+      }
+    },
+    "This becomes a %1$@ %2$@ expense, the largest line. Its refund stays linked and moves to %2$@.": {
+      "comment": "Remove Split confirmation with one refund (D219.3). %1$@ is the total, %2$@ the kept category.",
+      "extractionState": "manual",
+      "generatesSymbol": false,
+      "localizations": {
+        "en": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "This becomes a %1$@ %2$@ expense, the largest line. Its refund stays linked and moves to %2$@."
+          }
+        }
+      }
+    },
+    "This becomes a %1$@ %2$@ expense. Its %3$@ refund stays linked and moves to %2$@.": {
+      "comment": "Deleting a line of a two-line split that holds one refund (D219.1, D220.1). %1$@ is the total, %2$@ the remaining category, %3$@ the refund.",
+      "extractionState": "manual",
+      "generatesSymbol": false,
+      "localizations": {
+        "en": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "This becomes a %1$@ %2$@ expense. Its %3$@ refund stays linked and moves to %2$@."
+          }
+        }
+      }
+    },
+    "This becomes a %1$@ %2$@ expense. Its %3$lld refunds (%4$@) stay linked and move to %2$@.": {
+      "comment": "Deleting a line of a two-line split that holds two or more refunds (D220.1). %1$@ is the total, %2$@ the remaining category, %3$lld how many, %4$@ their total. The refund count has plural variants for translators; English uses this entry for 2 or more. The verb is in the plural variants, so it agrees with the count.",
+      "extractionState": "manual",
+      "generatesSymbol": false,
+      "localizations": {
+        "en": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "This becomes a %1$@ %2$@ expense. Its %#@refunds@ to %2$@."
+          },
+          "substitutions": {
+            "refunds": {
+              "argNum": 3,
+              "formatSpecifier": "lld",
+              "variations": {
+                "plural": {
+                  "one": {
+                    "stringUnit": {
+                      "state": "translated",
+                      "value": "%arg refund (%4$@) stays linked and moves"
+                    }
+                  },
+                  "other": {
+                    "stringUnit": {
+                      "state": "translated",
+                      "value": "%arg refunds (%4$@) stay linked and move"
+                    }
+                  }
+                }
+              }
+            }
           }
         }
       }
@@ -3004,6 +3672,30 @@
           "stringUnit": {
             "state": "translated",
             "value": "This deletes 1 transaction, a transfer to or from another account whose balance will change. Attachments are deleted too. You can undo this. Hide it instead to keep everything; hidden accounts still count toward net wealth."
+          }
+        }
+      }
+    },
+    "This expense has %lld refunds, so it can’t be split. Remove the split to save your other changes.": {
+      "comment": "Edit sheet save alert when refunds were linked to the expense while a split was open (D248.3). Schema V1 can’t link a refund to a split line (D35.6, #126). %lld is how many refunds are linked; the one variant names a single refund.",
+      "extractionState": "manual",
+      "localizations": {
+        "en": {
+          "variations": {
+            "plural": {
+              "one": {
+                "stringUnit": {
+                  "state": "translated",
+                  "value": "This expense has a refund, so it can’t be split. Remove the split to save your other changes."
+                }
+              },
+              "other": {
+                "stringUnit": {
+                  "state": "translated",
+                  "value": "This expense has %lld refunds, so it can’t be split. Remove the split to save your other changes."
+                }
+              }
+            }
           }
         }
       }

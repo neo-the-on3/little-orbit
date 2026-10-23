@@ -76,6 +76,45 @@ struct StringCatalogTests {
         #expect(entries["Refund"] == ["Refund"])
     }
 
+    @Test("The split confirmations count refunds with plural variants, verb included (UI Designer, 23 Oct, item 4)")
+    func refundCountPlurals() throws {
+        let entries = try Self.entries()
+        let counted = entries.filter {
+            $0.key.contains("lld refunds") && ($0.key.hasPrefix("Its ") || $0.key.hasPrefix("This becomes"))
+        }
+        #expect(counted.count == 5)
+        for (key, values) in counted {
+            #expect(values.contains { $0.contains("%#@refunds@") }, "\(key) substitutes the count")
+            #expect(
+                values.contains { $0.hasPrefix("%arg refund ") && $0.hasSuffix("moves") },
+                "\(key) has a one variant",
+            )
+            #expect(
+                values.contains { $0.hasPrefix("%arg refunds ") && $0.hasSuffix(" move") },
+                "\(key) has an other variant",
+            )
+        }
+    }
+
+    @Test("D248.3: the split save refusal counts refunds with a plural variant")
+    func splitRefusalPlural() throws {
+        let values = try #require(
+            try Self.entries()[
+                "This expense has %lld refunds, so it can’t be split. Remove the split to save your other changes."
+            ]
+        )
+        #expect(
+            values.contains(
+                "This expense has a refund, so it can’t be split. Remove the split to save your other changes."
+            )
+        )
+        #expect(
+            values.contains(
+                "This expense has %lld refunds, so it can’t be split. Remove the split to save your other changes."
+            )
+        )
+    }
+
     @Test("D251.1: the refund sheet’s split message is its own whole-phrase entry")
     func refundSplitMessage() throws {
         let key = "This expense is now split, so it can’t be refunded."

@@ -29,7 +29,7 @@ struct TransactionFormRefundsTests {
         #expect(!model.showsTypeSwitch)
         #expect(
             model.refundsFootnote
-                == "Refunded ₹300.00 of ₹1,000.00. While these refunds exist, the amount can’t go below ₹300.00 and the expense can’t become income."
+                == "Refunded ₹300.00 of ₹1,000.00. While these refunds exist, the amount can’t go below ₹300.00 and the expense can’t become income or be split."
         )
         try fixture.repository.deleteTransaction(id: refund.id)
         let after = form(expense.id, in: fixture)
@@ -88,7 +88,7 @@ struct TransactionFormRefundsTests {
         #expect(!model.showsTypeSwitch)
         #expect(
             model.refundsFootnote
-                == "Refunded ₹300.00 of ₹1,200.00. While these refunds exist, the amount can’t go below ₹300.00 and the expense can’t become income."
+                == "Refunded ₹300.00 of ₹1,200.00. While these refunds exist, the amount can’t go below ₹300.00 and the expense can’t become income or be split."
         )
         #expect(model.expressionInput == "1200")
         #expect(model.note == "Shoes and socks")

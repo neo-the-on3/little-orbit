@@ -50,7 +50,7 @@ extension TransactionFormViewModel {
     }
 
     /// "Refunded ₹300.00 of ₹1,000.00. While these refunds exist, the amount can’t go below ₹300.00 and the
-    /// expense can’t become income." (D222.2)
+    /// expense can’t become income or be split." (D222.2, D248.2: it also explains the missing Split)
     public var refundsFootnote: String? {
         guard let refunded = refundedAmount, let original else {
             return nil
@@ -58,14 +58,32 @@ extension TransactionFormViewModel {
         let refundedText = formatter.string(refunded, currencyCode: currencyCode)
         let totalText = formatter.string(amount ?? original.amount, currencyCode: currencyCode)
         return FeatureText.format(
-            "Refunded %1$@ of %2$@. While these refunds exist, the amount can’t go below %1$@ and the expense can’t become income.",
+            "Refunded %1$@ of %2$@. While these refunds exist, the amount can’t go below %1$@ and the expense can’t become income or be split.",
             refundedText,
             totalText,
         )
     }
 
-    /// The save alert's message: the D222.3 fallback when the expense has refunds, else the general one.
-    static func saveMessage(for error: any Error) -> String {
+    /// How many live refunds are linked to the expense being edited.
+    var linkedRefundCount: Int {
+        guard let original, original.type == .expense, !original.isRefund else {
+            return 0
+        }
+        return transactions.filter { $0.refundOfID == original.id && $0.isRefund && $0.deletedAt == nil }.count
+    }
+
+    /// The save alert's message: the D222.3 fallback when the expense has refunds, else the general one. The
+    /// same ledger refusal guards a split, since Schema V1 keeps an expense with refunds unsplit (D35.6, #126),
+    /// so a save that carried lines says that instead, with how many refunds are linked (`splitRefunds`), for
+    /// refunds recorded while the split was open (D248.3).
+    static func saveMessage(for error: any Error, splitRefunds: Int? = nil) -> String {
+        if case LedgerValidationError.originalHasRefunds = error, let count = splitRefunds {
+            return FeatureText.plural(
+                "This expense has %lld refunds, so it can’t be split. Remove the split to save your other changes.",
+                one: "This expense has a refund, so it can’t be split. Remove the split to save your other changes.",
+                max(count, 1),
+            )
+        }
         if case LedgerValidationError.originalHasRefunds = error {
             return FeatureText.string(
                 "This expense has refunds, so it can’t become income.",
