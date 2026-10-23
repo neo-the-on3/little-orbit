@@ -36,22 +36,46 @@ extension FileBackupStorage {
     /// The folder's creation date from its own attributes, which can be read when its contents can't (D214.3).
     public func folderCreationDate(id: UUID) -> Date? {
         let url = folderURL(id)
+        guard Self.isRealFolder(url) else {
+            return nil
+        }
         return (try? fileManager.attributesOfItem(atPath: url.path))?[.creationDate] as? Date
     }
 
     /// Gives the owner access to `url` and every folder inside it, so a folder that couldn't be read can be removed.
-    /// Only for a folder already moved out of the Backups folder to be deleted (L17, D214).
+    /// Only for a folder already moved out of the Backups folder to be deleted (L17, D214). Only real folders are
+    /// changed or walked, `url` included: a symlink, at any depth, is never followed, so nothing it points at is
+    /// changed, and `removeItem` then removes it as a link (B1).
     static func makeRemovable(_ url: URL) {
         let fileManager = FileManager.default
+        guard isRealFolder(url) else {
+            return
+        }
         var pending = [url.path]
         while let path = pending.popLast() {
             try? fileManager.setAttributes([.posixPermissions: 0o700], ofItemAtPath: path)
             for name in (try? fileManager.contentsOfDirectory(atPath: path)) ?? [] {
                 let child = path + "/" + name
-                if (try? fileManager.attributesOfItem(atPath: child))?[.type] as? FileAttributeType == .typeDirectory {
+                if isRealFolder(URL(fileURLWithPath: child)) {
                     pending.append(child)
                 }
             }
         }
+    }
+
+    /// The type of the entry at `url` itself, never followed through a symlink (`lstat`): `.typeSymbolicLink` for a
+    /// link. `nil` when there's nothing there; any other failure, such as a folder above it that can't be searched,
+    /// throws.
+    static func entryType(at url: URL) throws -> FileAttributeType? {
+        do {
+            return try FileManager.default.attributesOfItem(atPath: url.path)[.type] as? FileAttributeType
+        } catch let error as CocoaError where error.code == .fileReadNoSuchFile || error.code == .fileNoSuchFile {
+            return nil
+        }
+    }
+
+    /// Whether `url` is a real folder: not a symlink to one, and not missing or unreadable.
+    static func isRealFolder(_ url: URL) -> Bool {
+        (try? entryType(at: url)) == .typeDirectory
     }
 }
