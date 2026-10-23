@@ -114,7 +114,14 @@ public enum LedgerBook {
     ) throws -> LedgerSnapshot {
         var snapshot = snapshot
         var transaction = normalize(transaction)
+        var keptZoneID: String?
         if let existing = snapshot.transactions.first(where: { $0.id == transaction.id }) {
+            // An edit keeps the stored zone ID as it is, even one this device doesn't recognise, such as one a
+            // backup restored; its day reads as UTC (`TransactionCalendar.storedTimeZone`, D230).
+            if transaction.timeZoneID == LedgerText.trimmed(existing.timeZoneID) {
+                transaction.timeZoneID = existing.timeZoneID
+                keptZoneID = existing.timeZoneID
+            }
             // Validation only. The schema stores `type` as a plain string and does not
             // constrain it. #37 will allow converting a transaction to a transfer.
             let crossesTransfer = (existing.type == .transfer) != (transaction.type == .transfer)
@@ -124,7 +131,7 @@ public enum LedgerBook {
             transaction.createdAt = existing.createdAt
             transaction.updatedAt = now
         }
-        try validate(transaction, in: snapshot)
+        try validate(transaction, in: snapshot, keepingZoneID: keptZoneID)
         touchPayee(for: transaction, in: &snapshot, now: now)
         replaceOrAppend(&snapshot.transactions, with: transaction)
         applyingOriginal(transaction, to: &snapshot, now: now)
