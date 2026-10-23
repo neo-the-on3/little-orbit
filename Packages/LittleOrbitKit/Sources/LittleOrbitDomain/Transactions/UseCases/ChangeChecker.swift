@@ -14,6 +14,7 @@ struct ChangeChecker {
         case .removed(let items):
             outcome.removedTransactionIDs = Set(items.map(\.transaction.id))
             outcome.accountIDs = Self.accounts(of: items.map(\.transaction))
+            outcome.keepUnlinkedRefunds(of: items, from: current)
         case .added(let ids):
             for id in ids {
                 outcome.keep(current[id], touching: Set(TransactionField.allCases))
@@ -31,6 +32,7 @@ struct ChangeChecker {
             outcome.removedTransactionIDs = Set(removed.transactions.map(\.transaction.id))
             outcome.accountIDs = Self.accounts(of: removed.transactions.map(\.transaction))
                 .subtracting([removed.account.id])
+            outcome.keepUnlinkedRefunds(of: removed.transactions, from: current)
         case .createdPayees, .removedPayees:
             break
         case .addedAccount(let id):
@@ -83,7 +85,28 @@ struct ChangeChecker {
         if !altered.isEmpty || !outcome.removedAccountIDs.isDisjoint(with: live) {
             return .stale(.changed(altered))
         }
+        let blocking = try refundOriginalsBlocking(change, current: current)
+        if !blocking.isEmpty {
+            return .stale(.changed(blocking))
+        }
         return .current
+    }
+
+    /// Expenses that can no longer take back a refund this change would restore linked (`RefundRestoreCheck`).
+    private func refundOriginalsBlocking(_ change: TransactionChange, current: [UUID: Transaction]) throws -> [UUID] {
+        let check = RefundRestoreCheck(repository: repository)
+        switch change.core {
+        case .removed(let items):
+            return try check.blockingOriginals(of: items, current: current)
+        case .removedAccount(let removed):
+            return try check.blockingOriginals(
+                of: removed.transactions,
+                restoring: [removed.account],
+                current: current,
+            )
+        case .added, .replaced, .addedAccount, .createdPayees, .removedPayees:
+            return []
+        }
     }
 
     /// Every transaction the check looks at, in the change's own order first.
@@ -100,6 +123,18 @@ struct ChangeChecker {
 }
 
 extension ChangeOutcome {
+    /// The fields Undo needs unchanged to link a refund to its expense again: still unlinked, still a refund,
+    /// and still fitting its expense's category, currency and cap (D19, D33).
+    static let relinkFields: Set<TransactionField> = [.type, .amount, .account, .category, .refundOf, .isRefund]
+
+    /// The refunds a delete unlinked and left in place, as the delete left them. Undo links them again only
+    /// if they still are as it left them; one the same delete removed is checked as removed instead.
+    fileprivate mutating func keepUnlinkedRefunds(of items: [RemovedTransaction], from current: [UUID: Transaction]) {
+        for refundID in items.flatMap(\.unlinkedRefundIDs) where !removedTransactionIDs.contains(refundID) {
+            keep(current[refundID], touching: Self.relinkFields)
+        }
+    }
+
     fileprivate mutating func keep(_ transaction: Transaction?, touching fields: Set<TransactionField>?) {
         guard let transaction else {
             return

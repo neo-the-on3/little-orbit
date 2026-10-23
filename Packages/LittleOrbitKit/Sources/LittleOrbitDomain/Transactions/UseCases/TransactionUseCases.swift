@@ -177,13 +177,26 @@ public struct DefaultSaveTransactionsUseCase: SaveTransactionsUseCase {
     }
 
     private func saveAll(_ transactions: [Transaction]) throws -> TransactionChange {
-        let stored = Dictionary(uniqueKeysWithValues: try repository.transactions().map { ($0.id, $0) })
+        let all = try repository.transactions()
+        let stored = Dictionary(uniqueKeysWithValues: all.map { ($0.id, $0) })
         var previous: [Transaction] = []
         for transaction in transactions {
             if let old = stored[transaction.id] {
                 previous.append(old)
+            } else if transaction.isRefund && transaction.refundOfID == nil {
+                // A refund always starts from an expense; only import and sync bring in unlinked ones (D35.2).
+                throw LedgerValidationError.refundNeedsOriginal
             }
             try repository.saveTransaction(transaction)
+        }
+        // Records the save changed as well, such as refunds following their expense's category (D33.4), go
+        // into the same change, so one Undo reverts them all.
+        let saved = Set(transactions.map(\.id))
+        let current = Dictionary(uniqueKeysWithValues: try repository.transactions().map { ($0.id, $0) })
+        for old in all where !saved.contains(old.id) {
+            if let now = current[old.id], !TransactionField.changed(from: old, to: now).isEmpty {
+                previous.append(old)
+            }
         }
         return previous.isEmpty ? .added(transactions.map(\.id)) : .replaced(previous)
     }
@@ -273,13 +286,49 @@ public struct DefaultTransactionChangesUseCase: TransactionChangesUseCase {
     }
 
     private func restore(_ items: [RemovedTransaction]) throws {
+        // Every transaction first, with any refund link left off, so a refund never waits for its expense.
         for item in items {
-            try repository.saveTransaction(item.transaction)
+            var transaction = item.transaction
+            transaction.refundOfID = nil
+            try repository.saveTransaction(transaction)
             for attachment in item.attachments {
                 try repository.saveAttachment(attachment)
             }
             if !item.splits.isEmpty {
                 try repository.replaceSplits(item.splits, for: item.transaction.id)
+            }
+        }
+        // Then the links. A refund that was linked when it went links to its expense again if that's still
+        // there, in the expense's current category (D33.4); the stale check has made sure it fits
+        // (`RefundRestoreCheck`). If the expense is gone, the refund stays unlinked and is saved once more,
+        // as the delete's unlink would have left it: same fields, a new `updatedAt` (D224.1).
+        let current = Dictionary(uniqueKeysWithValues: try repository.transactions().map { ($0.id, $0) })
+        for item in items {
+            guard let originalID = item.transaction.refundOfID, var refund = current[item.transaction.id] else {
+                continue
+            }
+            if let original = current[originalID] {
+                refund.refundOfID = originalID
+                refund.categoryID = original.categoryID
+            }
+            try repository.saveTransaction(refund)
+        }
+        // Last, the refunds each expense's delete unlinked, and only those (D19). The stale check has made
+        // sure each is still unlinked.
+        let unlinked = Set(items.flatMap(\.unlinkedRefundIDs))
+        guard !unlinked.isEmpty else {
+            return
+        }
+        let relinking = Dictionary(
+            uniqueKeysWithValues: try repository.transactions().filter { unlinked.contains($0.id) }.map { ($0.id, $0) }
+        )
+        for item in items {
+            for refundID in item.unlinkedRefundIDs {
+                guard var refund = relinking[refundID], refund.refundOfID == nil else {
+                    continue
+                }
+                refund.refundOfID = item.transaction.id
+                try repository.saveTransaction(refund)
             }
         }
     }
@@ -347,22 +396,37 @@ public struct DefaultTransactionChangesUseCase: TransactionChangesUseCase {
 struct LedgerRemoval {
     let repository: any LedgerRepository
 
-    /// Deletes these transactions with their attachments and splits. Ids that are gone are skipped.
+    /// Deletes these transactions with their attachments and splits. Ids that are gone are skipped. Each
+    /// deleted expense's refunds are unlinked (D19); the result records which, for Undo.
     func transactions(ids: [UUID]) throws -> [RemovedTransaction] {
         let all = try repository.transactions()
+        var live = Dictionary(uniqueKeysWithValues: all.map { ($0.id, $0) })
+        // Indexed once, so a bulk delete doesn't scan the ledger for each expense's refunds.
+        var refundsByOriginal: [UUID: [UUID]] = [:]
+        for transaction in all {
+            if let originalID = transaction.refundOfID {
+                refundsByOriginal[originalID, default: []].append(transaction.id)
+            }
+        }
         var removed: [RemovedTransaction] = []
         for id in ids {
-            guard let transaction = all.first(where: { $0.id == id }) else {
+            guard let transaction = live.removeValue(forKey: id) else {
                 continue
             }
+            let refundIDs = (refundsByOriginal.removeValue(forKey: id) ?? []).filter { live[$0] != nil }
             removed.append(
                 RemovedTransaction(
                     transaction: transaction,
                     attachments: try repository.attachments(for: id),
                     splits: try repository.splits(for: id),
+                    unlinkedRefundIDs: refundIDs,
                 )
             )
             try repository.deleteTransaction(id: id)
+            // As the delete left them, for a refund this same change deletes next.
+            for refundID in refundIDs {
+                live[refundID]?.refundOfID = nil
+            }
         }
         return removed
     }
