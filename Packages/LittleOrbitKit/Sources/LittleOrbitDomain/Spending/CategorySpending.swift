@@ -98,7 +98,7 @@ public enum CategorySpending {
         return snapshot.transactions.compactMap { transaction in
             guard transaction.deletedAt == nil,
                 let currency = transaction.accountID.flatMap({ currencies[$0] }),
-                let day = TransactionCalendar.calendarDay(of: transaction),
+                case let day = TransactionCalendar.ownDay(of: transaction.date, timeZoneID: transaction.timeZoneID),
                 start <= day, day <= end
             else {
                 return nil
