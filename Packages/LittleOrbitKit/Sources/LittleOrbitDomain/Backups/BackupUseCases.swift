@@ -174,8 +174,8 @@ public protocol RestoreBackupUseCase {
     /// file hashed in chunks (B1). Returns what the Restore warning names. Throws `damaged` or `newerFormat`.
     func checkBackup(_ source: BackupSource) async throws -> BackupManifest
     /// Makes a Before restore backup of the current data, then reads `source` again, checks it and replaces all
-    /// data with it in one save. If any step fails, the data is unchanged; if the Before restore backup isn't
-    /// restorable, it throws `beforeRestoreFailed` before reading `source` (D63, B3). Returns the Before restore
+    /// data with it in one save. If any step fails, the data is unchanged; if the Before restore backup can't be
+    /// made or isn't restorable, it throws `beforeRestoreFailed` before reading `source` (D63, B3, Tester F3). Returns the Before restore
     /// backup.
     func restore(
         _ source: BackupSource,
