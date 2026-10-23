@@ -78,13 +78,18 @@ extension LedgerBook {
         }
     }
 
-    static func validate(_ transaction: Transaction, in snapshot: LedgerSnapshot) throws {
+    /// `keepingZoneID` is the stored zone ID an edit keeps unchanged; it passes even when it isn't recognised.
+    static func validate(
+        _ transaction: Transaction,
+        in snapshot: LedgerSnapshot,
+        keepingZoneID keptZoneID: String? = nil,
+    ) throws {
         if transaction.amount <= 0 {
             throw LedgerValidationError.invalidAmount
         }
         try LedgerText.validateNote(transaction.note)
         try LedgerText.validateDetails(transaction.details)
-        guard TimeZone(identifier: transaction.timeZoneID) != nil else {
+        guard TimeZone(identifier: transaction.timeZoneID) != nil || transaction.timeZoneID == keptZoneID else {
             throw LedgerValidationError.invalidTimeZone
         }
         guard let account = transaction.accountID.flatMap({ activeAccount($0, in: snapshot) }) else {
