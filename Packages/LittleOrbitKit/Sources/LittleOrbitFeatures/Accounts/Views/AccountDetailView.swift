@@ -63,6 +63,7 @@
                     .sheet(item: $bulkEditSheet) { sheet in
                         BulkEditView(
                             model: sheet.model,
+                            updates: transactions.updates,
                             onApplied: record,
                         )
                     }

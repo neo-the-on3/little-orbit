@@ -53,7 +53,7 @@ struct BulkEditRefundsAccountsTests {
         var changes = BulkEditChanges()
         changes.accountID = account.id
         do {
-            _ = try BulkEditRules.apply(changes, to: rows, accounts: accounts, timeZoneID: Self.india)
+            _ = try BulkEditRules.apply(changes, to: rows, accounts: accounts, ledger: [])
             return nil
         } catch {
             return error
@@ -84,7 +84,7 @@ struct BulkEditRefundsAccountsTests {
         var changes = BulkEditChanges()
         changes.categoryID = .some(UUID())
         changes.payeeID = .some(bakery)
-        let result = try BulkEditRules.apply(changes, to: selection, accounts: accounts, timeZoneID: Self.india)
+        let result = try BulkEditRules.apply(changes, to: selection, accounts: accounts, ledger: [])
         #expect(zip(result, selection).allSatisfy { $0.categoryID == $1.categoryID })
         #expect(result.allSatisfy { $0.payeeID == bakery })
     }
@@ -111,7 +111,7 @@ struct BulkEditRefundsAccountsTests {
         let rows = plain + [transfer(100, to: holidayFund)]
         var changes = BulkEditChanges()
         changes.accountID = groceryCash.id
-        let result = try BulkEditRules.apply(changes, to: rows, accounts: accounts, timeZoneID: Self.india)
+        let result = try BulkEditRules.apply(changes, to: rows, accounts: accounts, ledger: [])
         #expect(result.allSatisfy { $0.accountID == groceryCash.id })
         #expect(zip(result, rows).allSatisfy { $0.amount == $1.amount && $0.type == $1.type })
         #expect(result.last?.transferAccountID == holidayFund.id)
@@ -187,7 +187,7 @@ struct BulkEditRefundsAccountsTests {
                 changes,
                 to: [expense, usdTransfer],
                 accounts: accounts,
-                timeZoneID: Self.india,
+                ledger: [],
             )
         }
     }

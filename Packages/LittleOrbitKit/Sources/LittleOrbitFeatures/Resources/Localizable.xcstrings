@@ -796,6 +796,18 @@
         }
       }
     },
+    "Category is unavailable because the selection includes a refund. A refund keeps its expense’s category.": {
+      "comment": "Bulk edit: footnote when the selection includes a refund, so Category is unavailable (D222.4).",
+      "extractionState": "manual",
+      "localizations": {
+        "en": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Category is unavailable because the selection includes a refund. A refund keeps its expense’s category."
+          }
+        }
+      }
+    },
     "Change Account": {
       "comment": "Bulk edit: VoiceOver name of the toggle that turns on Account, so it reads apart from the Account field next to it.",
       "extractionState": "manual",
@@ -1020,6 +1032,40 @@
           "stringUnit": {
             "state": "translated",
             "value": "Damaged"
+          }
+        }
+      }
+    },
+    "Date can’t be after the refunds of %2$lld transactions (earliest %1$@).": {
+      "comment": "Bulk edit: Apply saved nothing because the new date puts selected expenses after their refunds (D222.5, D225.5). %1$@ is the earliest such refund’s date, such as 20 Oct 2026; %2$lld is how many selected expenses.",
+      "extractionState": "manual",
+      "localizations": {
+        "en": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "%#@message@"
+          },
+          "substitutions": {
+            "message": {
+              "argNum": 2,
+              "formatSpecifier": "lld",
+              "variations": {
+                "plural": {
+                  "one": {
+                    "stringUnit": {
+                      "state": "translated",
+                      "value": "Date can’t be after its refunds (%1$@)."
+                    }
+                  },
+                  "other": {
+                    "stringUnit": {
+                      "state": "translated",
+                      "value": "Date can’t be after the refunds of %arg transactions (earliest %1$@)."
+                    }
+                  }
+                }
+              }
+            }
           }
         }
       }
@@ -1746,6 +1792,18 @@
         }
       }
     },
+    "Includes refunds": {
+      "comment": "Bulk edit: the Category popup, unavailable because the selection includes a refund.",
+      "extractionState": "manual",
+      "localizations": {
+        "en": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Includes refunds"
+          }
+        }
+      }
+    },
     "It can’t be restored. Your data hasn’t changed.": {
       "comment": "Alert message under “This Backup Is Damaged”.",
       "extractionState": "manual",
@@ -2034,6 +2092,18 @@
         }
       }
     },
+    "Mixed currencies": {
+      "comment": "Bulk edit: the Account popup, unavailable because the selected rows are in different currencies.",
+      "extractionState": "manual",
+      "localizations": {
+        "en": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Mixed currencies"
+          }
+        }
+      }
+    },
     "Mixed types": {
       "comment": "Bulk edit: Category is off because the rows mix kinds.",
       "extractionState": "manual",
@@ -2210,6 +2280,18 @@
         }
       }
     },
+    "Not in %@": {
+      "comment": "Bulk edit: subtitle of a disabled account in the Account popup. %@ is the selected rows’ currency code, such as INR (D226.3).",
+      "extractionState": "manual",
+      "localizations": {
+        "en": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Not in %@"
+          }
+        }
+      }
+    },
     "Off": {
       "comment": "Monthly Backups stepper value at 0.",
       "extractionState": "manual",
@@ -2254,6 +2336,40 @@
           "stringUnit": {
             "state": "translated",
             "value": "Redid %@"
+          }
+        }
+      }
+    },
+    "Refund date can’t be before the original expense for %2$lld refunds (latest %1$@).": {
+      "comment": "Bulk edit: Apply saved nothing because the new date puts selected refunds before their expense (D225.4, D225.5). %1$@ is the latest such expense’s date, such as 17 Oct 2026; %2$lld is how many selected refunds.",
+      "extractionState": "manual",
+      "localizations": {
+        "en": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "%#@message@"
+          },
+          "substitutions": {
+            "message": {
+              "argNum": 2,
+              "formatSpecifier": "lld",
+              "variations": {
+                "plural": {
+                  "one": {
+                    "stringUnit": {
+                      "state": "translated",
+                      "value": "Refund date can’t be before the original expense (%1$@)."
+                    }
+                  },
+                  "other": {
+                    "stringUnit": {
+                      "state": "translated",
+                      "value": "Refund date can’t be before the original expense for %arg refunds (latest %1$@)."
+                    }
+                  }
+                }
+              }
+            }
           }
         }
       }
@@ -2636,6 +2752,18 @@
         }
       }
     },
+    "To account of a selected transfer": {
+      "comment": "Bulk edit: subtitle of a disabled account in the Account popup: a selected transfer goes to it.",
+      "extractionState": "manual",
+      "localizations": {
+        "en": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "To account of a selected transfer"
+          }
+        }
+      }
+    },
     "Today, %@": {
       "comment": "A backup's date today. %@ is the time, such as 9:12 AM.",
       "extractionState": "manual",
@@ -2644,6 +2772,30 @@
           "stringUnit": {
             "state": "translated",
             "value": "Today, %@"
+          }
+        }
+      }
+    },
+    "Transactions can only move to an account in the same currency.": {
+      "comment": "Bulk edit: footnote under Account when an account is disabled or Account is unavailable (D226.3).",
+      "extractionState": "manual",
+      "localizations": {
+        "en": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Transactions can only move to an account in the same currency."
+          }
+        }
+      }
+    },
+    "Transactions can only move to an account in the same currency. A transfer can’t move to its own To account.": {
+      "comment": "Bulk edit: footnote under Account, as above, when the selection includes a transfer (D226.3).",
+      "extractionState": "manual",
+      "localizations": {
+        "en": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Transactions can only move to an account in the same currency. A transfer can’t move to its own To account."
           }
         }
       }

@@ -65,7 +65,7 @@ struct BulkEditViewModelTests {
         model.editsPayee = true
         model.payeeText = "Corner Bakery"
         model.editsDate = true
-        model.date = F.date(2026, 10, 19)
+        model.day = CalendarDay(year: 2026, month: 10, day: 19)
         #expect(model.canApply)
         let change = try #require(model.apply())
         let saved = try repository.transactions()

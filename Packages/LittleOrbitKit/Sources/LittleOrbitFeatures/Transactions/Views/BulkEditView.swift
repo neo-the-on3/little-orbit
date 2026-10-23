@@ -3,14 +3,18 @@
     import LittleOrbitTheme
     import SwiftUI
 
-    /// "Edit N Transactions" (Figma 29:2012): tick a field to change it for every selected row. Category is
-    /// off for mixed kinds ("Mixed types"), and Payee skips transfers (D114). Return saves, Esc cancels.
+    /// "Edit N Transactions" (Figma 29:2012, #34 frames for D222, D223 and D226): tick a field to change it for
+    /// every selected row. Category is off for mixed kinds ("Mixed types") or a refund ("Includes refunds"),
+    /// Payee skips transfers (D114), and the Account popup disables accounts no row can move to. Return saves,
+    /// Esc cancels. It follows changes from other windows while open (D227.3).
     struct BulkEditView: View {
         @State private var model: BulkEditViewModel
+        let updates: LedgerUpdates
         let onApplied: (TransactionChange) -> Void
 
-        init(model: BulkEditViewModel, onApplied: @escaping (TransactionChange) -> Void) {
+        init(model: BulkEditViewModel, updates: LedgerUpdates, onApplied: @escaping (TransactionChange) -> Void) {
             _model = State(initialValue: model)
+            self.updates = updates
             self.onApplied = onApplied
         }
         @Environment(\.dismiss) private var dismiss
@@ -51,21 +55,14 @@
                     HStack {
                         Toggle("Date", isOn: $model.editsDate)
                             .accessibilityLabel(BulkEditText.changeDate)
-                        DatePicker("Date", selection: $model.date, displayedComponents: .date)
+                        // The picker shows the first row's own day in its stored zone; each row then moves to the
+                        // picked day in its own zone, keeping its time (D229.4, D230.2).
+                        DatePicker("Date", selection: $model.pickerDate, displayedComponents: .date)
                             .labelsHidden()
+                            .environment(\.timeZone, model.pickerTimeZone)
                             .disabled(!model.editsDate)
                     }
-                    HStack {
-                        Toggle("Account", isOn: $model.editsAccount)
-                            .accessibilityLabel(BulkEditText.changeAccount)
-                        Picker("Account", selection: $model.accountID) {
-                            ForEach(model.accountOptions) { option in
-                                Text(option.name).tag(Optional(option.id))
-                            }
-                        }
-                        .labelsHidden()
-                        .disabled(!model.editsAccount)
-                    }
+                    accountRow
                 }
                 HStack {
                     Text("Return saves · Esc cancels")
@@ -75,8 +72,12 @@
                     Button("Cancel") { dismiss() }
                         .keyboardShortcut(.cancelAction)
                     Button(model.applyTitle) {
-                        if let change = model.apply() {
+                        let change = model.apply()
+                        if let change {
                             onApplied(change)
+                        }
+                        // No message means it saved, or nothing changed and there's no step (D231.4).
+                        if model.errorMessage == nil {
                             dismiss()
                         }
                     }
@@ -86,6 +87,16 @@
             }
             .padding(Layout.marginMacOS)
             .frame(minWidth: 460)
+            .onChange(of: updates.revision) { model.reload() }
+            // Nothing was saved and the sheet stays open with the first rule broken (D225.5), as the entry sheet.
+            .alert(
+                "Couldn’t save",
+                isPresented: Binding(get: { model.errorMessage != nil }, set: { _ in }),
+            ) {
+                Button("OK") { model.errorMessage = nil }
+            } message: {
+                Text(model.errorMessage ?? "")
+            }
         }
 
         @ViewBuilder private var categoryRow: some View {
@@ -94,21 +105,56 @@
                     .accessibilityLabel(BulkEditText.changeCategory)
                     .disabled(!model.isCategoryEnabled)
                 // As in the entry sheet: Labels with icons in a section per parent, the chosen value as text,
-                // and VoiceOver reads "Category, Groceries" (Tester's #87 blocker).
+                // and VoiceOver reads "Category, Groceries" (Tester's #87 blocker). When Category is off, the
+                // popup says why: "Includes refunds" or "Mixed types".
                 Picker(selection: $model.categoryID) {
                     Label("Uncategorised", systemImage: "questionmark").tag(UUID?.none)
                     CategoryPickerSections(groups: model.categoryGroups)
                 } label: {
                     Text("Category")
                 } currentValueLabel: {
-                    Text(model.categoryName)
+                    Text(model.categoryPopupText)
                 }
                 .labelsHidden()
-                .accessibilityValue(model.categorySpokenValue)
+                .accessibilityValue(model.isCategoryEnabled ? model.categorySpokenValue : model.categoryPopupText)
                 .disabled(!model.isCategoryEnabled || !model.editsCategory)
             }
-            if let categoryNote = model.categoryNote {
-                note(categoryNote)
+            if let footnote = model.categoryFootnote {
+                note(footnote)
+            }
+        }
+
+        /// Accounts no row can move to are shown but disabled, with why as a subtitle; a mixed-currency selection
+        /// turns Account off with "Mixed currencies" (D223.2, D226.3).
+        @ViewBuilder private var accountRow: some View {
+            HStack {
+                Toggle("Account", isOn: $model.editsAccount)
+                    .accessibilityLabel(BulkEditText.changeAccount)
+                    .disabled(!model.isAccountEnabled)
+                Picker(selection: $model.accountID) {
+                    ForEach(model.accountOptions) { option in
+                        accountItem(option)
+                            .tag(Optional(option.id))
+                            .selectionDisabled(!option.isEnabled)
+                    }
+                } label: {
+                    Text("Account")
+                } currentValueLabel: {
+                    Text(model.accountPopupText)
+                }
+                .labelsHidden()
+                .disabled(!model.isAccountEnabled || !model.editsAccount)
+            }
+            if let footnote = model.accountFootnote {
+                note(footnote)
+            }
+        }
+
+        @ViewBuilder private func accountItem(_ option: BulkAccountOption) -> some View {
+            if let reason = option.disabledReason {
+                Text(option.name) + Text(verbatim: "\n") + Text(reason)
+            } else {
+                Text(option.name)
             }
         }
 

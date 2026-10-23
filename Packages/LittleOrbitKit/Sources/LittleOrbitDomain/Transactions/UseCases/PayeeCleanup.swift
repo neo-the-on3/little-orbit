@@ -61,9 +61,9 @@ struct PayeeCleanup {
 }
 
 extension Payee {
-    /// The one rule for "a payee with this name": live, and the same name ignoring case. `resolvePayee` and
-    /// Redo's same-name check both use it, so they can't drift apart.
-    func isLive(named name: String) -> Bool {
+    /// The one rule for "a payee with this name": live, and the same name ignoring case. `resolvePayee`, the bulk
+    /// sheet and Redo's same-name check all use it, so they can't drift apart.
+    public func isLive(named name: String) -> Bool {
         deletedAt == nil && self.name.compare(name, options: [.caseInsensitive]) == .orderedSame
     }
 }

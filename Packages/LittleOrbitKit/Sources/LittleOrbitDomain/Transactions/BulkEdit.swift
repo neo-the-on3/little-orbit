@@ -6,7 +6,8 @@ public struct BulkEditChanges: Equatable, Sendable {
     public var categoryID: UUID??
     public var payeeID: UUID??
     public var details: String??
-    public var date: Date?
+    /// The picked day. Each row moves to it in its own stored zone, keeping its time of day (D230.2).
+    public var date: CalendarDay?
     public var accountID: UUID?
 
     public init() {}
@@ -31,10 +32,18 @@ public enum CategoryAvailability: Equatable, Sendable {
     case includesRefunds
 }
 
-/// Why a bulk edit saved nothing: one rule, the first broken in the sheet's top-to-bottom order (D223.3,
-/// D226.4, D226.5). The cases are in that order. Each carries what the feature layer needs for its
-/// whole-phrase message: how many selected rows break it, the chosen account and the required currency.
+/// Why a bulk edit saved nothing: one rule, the first broken in the sheet's top-to-bottom order (D225.5, D227.1):
+/// Date (an expense after its refunds, then a refund before its expense), then Account (a transfer's own To
+/// account, then currency). The cases are in that order. Each carries what the feature layer needs for its
+/// whole-phrase message: how many selected rows break it, the deciding day, the chosen account and the required
+/// currency. Counts on (D227.1) joins the Date rules with Schema V2 (#126); on V1 a refund has none to break.
 public enum BulkEditRejection: Error, Equatable, Sendable {
+    /// `count` selected expenses would be dated after one of their refunds (D112, D222.5). `earliestRefund` is
+    /// the earliest such refund's own day, the one that decides (D225.5).
+    case expenseAfterRefunds(count: Int, earliestRefund: CalendarDay)
+    /// `count` selected refunds would be dated before their expense (D112, D225.4). `latestExpense` is the latest
+    /// such expense's own day (D225.5).
+    case refundBeforeExpense(count: Int, latestExpense: CalendarDay)
     /// The chosen account is already the To account of `count` selected transfers (D223.3).
     case ownToAccount(count: Int, accountID: UUID)
     /// The selection is in one currency, `currencyCode`, and the chosen account isn't (D226.2, D226.4). `count`
@@ -73,24 +82,26 @@ public enum BulkEditRules {
         return []
     }
 
+    /// The selection with the ticked fields applied, in the same order, or the first rule it breaks (D225.5).
+    /// `ledger` is the rest of the ledger, so a Date change is checked against refunds and expenses that aren't
+    /// selected; a selected row's new version wins over its stored one.
+    ///
+    /// Date moves each row to the picked day in its own stored zone, keeping its time of day: a daylight-saving
+    /// gap gives the first valid time after it, a repeated hour the first of the two (D230.2, D232). A row
+    /// already on that day comes back unchanged, so the caller doesn't write it (D231.3).
     public static func apply(
         _ changes: BulkEditChanges,
         to selection: [Transaction],
         accounts: [Account],
-        timeZoneID: String,
+        ledger: [Transaction],
     ) throws(BulkEditRejection) -> [Transaction] {
-        if let accountID = changes.accountID,
-            let rejection = accountRejection(moving: selection, to: accountID, accounts: accounts)
-        {
-            throw rejection
-        }
         let categoryAllowed: Bool
         if case .available = categoryAvailability(for: selection) {
             categoryAllowed = true
         } else {
             categoryAllowed = false
         }
-        return selection.map { original in
+        let updated = selection.map { original in
             var transaction = original
             let isTransfer = transaction.type == .transfer
             if categoryAllowed, !isTransfer, let categoryID = changes.categoryID {
@@ -102,22 +113,35 @@ public enum BulkEditRules {
             if let details = changes.details {
                 transaction.details = details.flatMap(LedgerText.trimmedOptional)
             }
-            if let date = changes.date {
-                transaction.date = date
-                transaction.timeZoneID = timeZoneID
+            if let day = changes.date {
+                // The row keeps its stored zone ID, even one that isn't recognised (read as UTC).
+                transaction.date = TransactionCalendar.date(
+                    transaction.date,
+                    movedTo: day,
+                    timeZoneID: transaction.timeZoneID,
+                )
             }
             if let accountID = changes.accountID {
-                // Every row moves, or `accountRejection` stopped the edit (D223.1).
+                // Every row moves, or `accountRejection` stops the edit (D223.1).
                 transaction.accountID = accountID
             }
             return transaction
         }
+        if changes.date != nil, let rejection = dateRejection(moved: updated, from: selection, ledger: ledger) {
+            throw rejection
+        }
+        if let accountID = changes.accountID,
+            let rejection = accountRejection(moving: selection, to: accountID, accounts: accounts)
+        {
+            throw rejection
+        }
+        return updated
     }
 
     /// Why moving every row of `selection` to `accountID` can't be saved, or `nil` when it can. Nothing is ever
     /// converted or skipped (D223.1, D226.2): a transfer can't move to its own To account, and every row,
     /// transfers by their From account, must already be in the chosen account's currency. The To-account rule
-    /// is checked first (D226.5, D227.1). The Date rules come before both once they're checked here.
+    /// is checked first (D226.5, D227.1). The Date rules come before both (`dateRejection`).
     public static func accountRejection(
         moving selection: [Transaction],
         to accountID: UUID,

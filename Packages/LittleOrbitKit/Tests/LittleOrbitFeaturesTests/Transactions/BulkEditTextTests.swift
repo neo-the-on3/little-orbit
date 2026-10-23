@@ -68,3 +68,40 @@ struct BulkEditAccountMessageTests {
         )
     }
 }
+
+/// The bulk Date messages (D225.5): the single editor's phrase for one row, a count and the deciding day for
+/// several. Dates read as the macOS Date column does.
+@Suite("Bulk edit Date messages")
+struct BulkEditDateMessageTests {
+    private let text = TransactionText(locale: Locale(identifier: "en_IN"))
+
+    private func message(_ rejection: BulkEditRejection) -> String {
+        BulkEditText.message(for: rejection, accounts: [], text: text)
+    }
+
+    @Test("An expense after its refunds names the earliest refund's day")
+    func expenseAfterRefunds() {
+        let day = CalendarDay(year: 2026, month: 10, day: 20)
+        #expect(
+            message(.expenseAfterRefunds(count: 1, earliestRefund: day))
+                == "Date can’t be after its refunds (20 Oct 2026)."
+        )
+        #expect(
+            message(.expenseAfterRefunds(count: 2, earliestRefund: day))
+                == "Date can’t be after the refunds of 2 transactions (earliest 20 Oct 2026)."
+        )
+    }
+
+    @Test("A refund before its expense names the latest expense's day")
+    func refundBeforeExpense() {
+        let day = CalendarDay(year: 2026, month: 10, day: 17)
+        #expect(
+            message(.refundBeforeExpense(count: 1, latestExpense: day))
+                == "Refund date can’t be before the original expense (17 Oct 2026)."
+        )
+        #expect(
+            message(.refundBeforeExpense(count: 2, latestExpense: day))
+                == "Refund date can’t be before the original expense for 2 refunds (latest 17 Oct 2026)."
+        )
+    }
+}
