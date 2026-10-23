@@ -26,11 +26,17 @@ public enum CategoryAvailability: Equatable, Sendable {
     case mixedTypes
     /// Only transfers, which never have a category.
     case transfersOnly
+    /// The selection includes a refund, linked or orphaned: Category is off for every row, because a refund
+    /// keeps its expense's category (D222.4). It comes ahead of `mixedTypes` and `transfersOnly`.
+    case includesRefunds
 }
 
 /// Rules for editing several transactions at once (D111, D114). Amounts and types never change.
 public enum BulkEditRules {
     public static func categoryAvailability(for selection: [Transaction]) -> CategoryAvailability {
+        if selection.contains(where: { $0.isRefund || $0.refundOfID != nil }) {
+            return .includesRefunds
+        }
         let types = Set(selection.map(\.type))
         if types == [.transfer] {
             return .transfersOnly

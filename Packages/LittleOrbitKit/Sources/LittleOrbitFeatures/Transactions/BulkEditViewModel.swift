@@ -95,7 +95,8 @@ public final class BulkEditViewModel {
     /// "Mixed types" when kinds are mixed (D114); transfers alone have no category.
     public var categoryNote: String? {
         switch categoryAvailability {
-        case .available: nil
+        // D222.4's "Includes refunds" label and footnote come with the bulk sheet's UI work.
+        case .available, .includesRefunds: nil
         case .mixedTypes:
             FeatureText.string("Mixed types", comment: "Bulk edit: Category is off because the rows mix kinds.")
         case .transfersOnly:
