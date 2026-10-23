@@ -91,16 +91,18 @@ extension BackupPresentation {
         months == 0 ? Self.monthlyOff : FeatureText.plural("%lld Months", one: "%lld Month", months)
     }
 
-    /// 'Delete 4 Backups?' or 'Delete 1 Backup?' (L12, L14).
+    /// 'Delete 4 Backups?' or 'Delete 1 Backup?' (L12, L14, D212).
     public func pruneTitle(_ count: Int) -> String {
         FeatureText.plural("Delete %lld Backups?", one: "Delete %lld Backup?", count)
     }
 
-    /// The destructive button: 'Delete 4 Backups' or 'Delete 1 Backup' (L12, L14).
+    /// The destructive button: 'Delete 4 Backups' or 'Delete 1 Backup' (L12, L14, D212).
     public func pruneConfirm(_ count: Int) -> String {
         FeatureText.plural("Delete %lld Backups", one: "Delete %lld Backup", count)
     }
 
+    /// 'Keeping fewer automatic backups deletes 4 of them now. …' or '… deletes 1 backup now. …', from the catalog's
+    /// plural variants (L12, D212).
     public func pruneMessage(_ count: Int) -> String {
         FeatureText.plural(
             """
@@ -108,7 +110,7 @@ extension BackupPresentation {
             affected.
             """,
             one: """
-                Keeping fewer automatic backups deletes %lld of them now. Manual and Before restore backups aren’t \
+                Keeping fewer automatic backups deletes %lld backup now. Manual and Before restore backups aren’t \
                 affected.
                 """,
             count,
