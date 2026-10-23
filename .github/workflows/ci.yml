@@ -35,7 +35,7 @@ defaults:
 jobs:
   lint:
     name: lint
-    runs-on: ubuntu-latest
+    runs-on: ubuntu-24.04 # pinned until #144: SwiftLint needs libxml2 on 26.04
     timeout-minutes: 45
     steps:
       - name: Checkout
@@ -51,7 +51,7 @@ jobs:
 
   format-check:
     name: format-check
-    runs-on: ubuntu-latest
+    runs-on: ubuntu-24.04 # pinned until #144: SwiftLint needs libxml2 on 26.04
     timeout-minutes: 45
     steps:
       - name: Checkout
@@ -67,7 +67,7 @@ jobs:
 
   linux-tests:
     name: Linux tests
-    runs-on: ubuntu-latest
+    runs-on: ubuntu-24.04 # pinned until #144: SwiftLint needs libxml2 on 26.04
     timeout-minutes: 45
     steps:
       - name: Checkout
@@ -131,7 +131,7 @@ jobs:
 
   validate-project:
     name: validate-project
-    runs-on: ubuntu-latest
+    runs-on: ubuntu-24.04 # pinned until #144: SwiftLint needs libxml2 on 26.04
     timeout-minutes: 45
     steps:
       - name: Checkout
