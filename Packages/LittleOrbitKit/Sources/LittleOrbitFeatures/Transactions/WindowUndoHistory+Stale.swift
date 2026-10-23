@@ -4,7 +4,8 @@ import LittleOrbitDomain
 // MARK: Stale steps
 
 extension WindowUndoHistory {
-    /// "Corner Bakery was changed in another window. Nothing was changed." (D187.5, X1–X6).
+    /// "Corner Bakery has changed since then. Nothing was changed." (D187.5, X1–X6). It never names a cause:
+    /// the check is by value, so a change from another window or from outside any window reads the same (D228).
     func staleMessage(_ reason: StaleReason, _ step: Step) -> String {
         switch reason {
         case .accountDeleted(let ids):

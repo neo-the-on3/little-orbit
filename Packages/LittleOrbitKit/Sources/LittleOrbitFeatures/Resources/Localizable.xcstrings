@@ -631,7 +631,7 @@
       }
     },
     "Can’t Redo %@": {
-      "comment": "Alert title: a Redo that can't run because another window changed its records. %@ is the Redo name, such as \"Delete Transaction\".",
+      "comment": "Alert title: a Redo that can't run because a record it changes was changed or deleted after the step was recorded. %@ is the Redo name, such as \"Delete Transaction\". Don't name a cause: the same check catches a change from anywhere.",
       "extractionState": "manual",
       "localizations": {
         "en": {
@@ -643,7 +643,7 @@
       }
     },
     "Can’t Undo %@": {
-      "comment": "Alert title: an Undo that can't run because another window changed its records. %@ is the Undo name, such as \"Edit Transaction\".",
+      "comment": "Alert title: an Undo that can't run because a record it changes was changed or deleted after the step was recorded. %@ is the Undo name, such as \"Edit Transaction\". Don't name a cause: the same check catches a change from anywhere.",
       "extractionState": "manual",
       "localizations": {
         "en": {
