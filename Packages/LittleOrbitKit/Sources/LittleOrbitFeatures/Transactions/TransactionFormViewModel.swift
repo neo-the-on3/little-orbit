@@ -51,7 +51,7 @@ public final class TransactionFormViewModel {
     @ObservationIgnored private let saveTransactions: any SaveTransactionsUseCase
     @ObservationIgnored let dates: any TransactionDateUseCase
     @ObservationIgnored let locale: Locale
-    @ObservationIgnored private let formatter: MoneyFormatter
+    @ObservationIgnored let formatter: MoneyFormatter
     @ObservationIgnored let text: TransactionText
     @ObservationIgnored let timeZone: TimeZone
     @ObservationIgnored let now: () -> Date
@@ -60,7 +60,7 @@ public final class TransactionFormViewModel {
     @ObservationIgnored private var accounts: [Account] = []
     @ObservationIgnored private var categories: [TransactionCategory] = []
     @ObservationIgnored private var payees: [Payee] = []
-    @ObservationIgnored private var transactions: [Transaction] = []
+    @ObservationIgnored private(set) var transactions: [Transaction] = []
     @ObservationIgnored private(set) var timeZoneID: String
 
     public init(
@@ -162,12 +162,20 @@ public final class TransactionFormViewModel {
     // MARK: Titles
 
     public var title: String {
+        if original?.isRefund == true {
+            return FeatureText.string(
+                "Edit Refund",
+                comment:
+                    "Title of the edit sheet for a refund, linked to its expense or with the expense deleted (D247.1).",
+            )
+        }
         let verb = original == nil ? "New" : "Edit"
         return "\(verb) \(Self.typeName(type))"
     }
 
+    /// A refund offers only Income, so the Expense/Income switch is hidden on it (D247.2).
     public var allowedTypes: [TransactionType] {
-        TransactionTypeRules.allowedTypes(editing: original?.type)
+        TransactionTypeRules.allowedTypes(editing: original?.type, isRefund: original?.isRefund ?? false)
     }
 
     nonisolated public static func typeName(_ type: TransactionType) -> String {
@@ -198,7 +206,7 @@ public final class TransactionFormViewModel {
         try? keypad.evaluate(currencyCode: currencyCode, locale: locale)
     }
 
-    private var currencyCode: String {
+    var currencyCode: String {
         accounts.first { $0.id == accountID }?.currencyCode ?? CurrencyCode.deviceDefault
     }
 
@@ -461,7 +469,7 @@ public final class TransactionFormViewModel {
             let created = resolved.flatMap { $0.isNew ? [$0.payee] : nil } ?? []
             return try saveTransactions.save([transaction], creating: created)
         } catch {
-            errorMessage = AccountHistoryViewModel.message(for: error)
+            errorMessage = Self.saveMessage(for: error)
             return nil
         }
     }

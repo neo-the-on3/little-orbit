@@ -98,16 +98,6 @@
 
         // MARK: - Shared pieces
 
-        private var typePicker: some View {
-            Picker("Type", selection: $model.type) {
-                ForEach(model.allowedTypes, id: \.self) { type in
-                    Text(TransactionFormViewModel.typeName(type)).tag(type)
-                }
-            }
-            .pickerStyle(.segmented)
-            .labelsHidden()
-        }
-
         @ViewBuilder private var accountRows: some View {
             if model.type == .transfer {
                 stackedRow("From", value: model.accountLabel(model.accountID)) {
@@ -363,6 +353,11 @@
                         .foregroundStyle(Color(ThemeColor.statusOverspent))
                 }
             #endif
+            if let refunds = model.refundsFootnote {
+                Text(refunds)
+                    .font(.theme(Self.footnoteStyle))
+                    .foregroundStyle(Color(ThemeColor.labelSecondary))
+            }
             if let issue = model.issueMessage {
                 Label(issue, systemImage: "exclamationmark.triangle")
                     .foregroundStyle(Color(ThemeColor.statusWarning))
@@ -374,7 +369,9 @@
         #if os(macOS)
             private var content: some View {
                 Form {
-                    typePicker
+                    if model.showsTypeSwitch {
+                        typePicker
+                    }
                     TextField("Amount:", text: $model.expressionInput, prompt: Text("0.00 or a sum like 50*20/10"))
                         .onSubmit { model.press(.equals) }
                     if let line = model.expressionLine {
@@ -393,8 +390,10 @@
         #else
             private var content: some View {
                 VStack(spacing: Spacing.space2) {
-                    typePicker
-                        .padding(.horizontal, Layout.marginIOS)
+                    if model.showsTypeSwitch {
+                        typePicker
+                            .padding(.horizontal, Layout.marginIOS)
+                    }
                     TransactionAmountField(model: model, focus: $focus)
                         .padding(.horizontal, Layout.marginIOS)
                     ScrollViewReader { proxy in
@@ -465,5 +464,18 @@
 
             private static let footnoteStyle = Typography.IOS.footnote
         #endif
+    }
+
+    extension TransactionFormView {
+        /// Hidden while the expense has refunds (`showsTypeSwitch`, D222.2).
+        private var typePicker: some View {
+            Picker("Type", selection: $model.type) {
+                ForEach(model.allowedTypes, id: \.self) { type in
+                    Text(TransactionFormViewModel.typeName(type)).tag(type)
+                }
+            }
+            .pickerStyle(.segmented)
+            .labelsHidden()
+        }
     }
 #endif

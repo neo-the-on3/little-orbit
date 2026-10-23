@@ -1603,6 +1603,18 @@
         }
       }
     },
+    "Edit Refund": {
+      "comment": "Title of the edit sheet for a refund, linked to its expense or with the expense deleted (D247.1).",
+      "extractionState": "manual",
+      "localizations": {
+        "en": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Edit Refund"
+          }
+        }
+      }
+    },
     "Edit Transaction": {
       "comment": "Undo name: one transaction edited.",
       "extractionState": "manual",
@@ -2422,6 +2434,18 @@
         }
       }
     },
+    "Refunded %1$@ of %2$@. While these refunds exist, the amount can’t go below %1$@ and the expense can’t become income.": {
+      "comment": "Edit sheet footnote for an expense with refunds (D222.2). %1$@ is what its refunds add up to, such as ₹300.00; %2$@ is the expense’s amount, such as ₹1,000.00.",
+      "extractionState": "manual",
+      "localizations": {
+        "en": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Refunded %1$@ of %2$@. While these refunds exist, the amount can’t go below %1$@ and the expense can’t become income."
+          }
+        }
+      }
+    },
     "Replacing data…": {
       "comment": "Restore progress step under the progress bar.",
       "extractionState": "manual",
@@ -2784,6 +2808,18 @@
           "stringUnit": {
             "state": "translated",
             "value": "This deletes 1 transaction, a transfer to or from another account whose balance will change. Attachments are deleted too. You can undo this. Hide it instead to keep everything; hidden accounts still count toward net wealth."
+          }
+        }
+      }
+    },
+    "This expense has refunds, so it can’t become income.": {
+      "comment": "Edit sheet: Save didn't change an expense to income because refunds are linked to it (D222.3).",
+      "extractionState": "manual",
+      "localizations": {
+        "en": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "This expense has refunds, so it can’t become income."
           }
         }
       }
