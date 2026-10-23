@@ -175,12 +175,16 @@ public final class BackupsViewModel {
     }
 
     /// Reads the list again. A Backups folder that can't be read doesn't throw: it's the list's "Couldn’t Load
-    /// Backups" state, and the next load that works clears it (R3, D211.5). It throws only when cancelled.
+    /// Backups" state, with Keep still showing the saved N and M, and the next load that works clears it (R3,
+    /// D211.5). It throws only when cancelled.
     public func load() async throws {
         let overview: BackupOverview
         do {
             overview = try await useCases.list.overview()
         } catch BackupError.loadFailed {
+            // N and M come from the settings, which don't need the folder, so Keep never shows the defaults or
+            // saves over the user's values from them (UI Designer).
+            presentation.retention = useCases.retention.retention()
             isLoadFailed = true
             return
         }
