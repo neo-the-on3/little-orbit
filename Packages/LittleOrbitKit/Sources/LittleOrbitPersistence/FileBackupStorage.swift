@@ -132,16 +132,27 @@ public final class FileBackupStorage: BackupStorage, @unchecked Sendable {
         let base = url.standardizedFileURL.resolvingSymlinksInPath().path
         var sizes: [String: Int64] = [:]
         var sizesKnown = true
-        let enumerator = fileManager.enumerator(atPath: base)
-        while let relative = enumerator?.nextObject() as? String {
-            // A size that can't be read leaves the file out; the list shows "Unknown" for a never-read folder, and a
-            // backup whose manifest lists the file reads as damaged, as for a missing file (D202.1, L49).
-            guard let attributes = try? fileManager.attributesOfItem(atPath: base + "/" + relative) else {
-                sizesKnown = false
-                continue
-            }
-            if attributes[.type] as? FileAttributeType == .typeRegular {
-                sizes[relative] = (attributes[.size] as? NSNumber)?.int64Value ?? 0
+        // A folder, the backup's own or one inside it, whose contents can't be listed throws a read failure: the
+        // folder can't be read at all, so it's never listed as damaged (R3). Symlinks aren't followed.
+        var pending = [""]
+        while let folderPath = pending.popLast() {
+            let names = try reading { try fileManager.contentsOfDirectory(atPath: base + "/" + folderPath) }
+            for name in names {
+                let relative = folderPath.isEmpty ? name : folderPath + "/" + name
+                // A size that can't be read leaves the file out; the list shows "Unknown" for a never-read folder,
+                // and a backup whose manifest lists the file reads as damaged, as for a missing file (D202.1, L49).
+                guard let attributes = try? fileManager.attributesOfItem(atPath: base + "/" + relative) else {
+                    sizesKnown = false
+                    continue
+                }
+                switch attributes[.type] as? FileAttributeType {
+                case .typeRegular:
+                    sizes[relative] = (attributes[.size] as? NSNumber)?.int64Value ?? 0
+                case .typeDirectory:
+                    pending.append(relative)
+                default:
+                    break
+                }
             }
         }
         let manifestURL = url.appendingPathComponent(Self.manifestName)
@@ -216,14 +227,18 @@ public final class FileBackupStorage: BackupStorage, @unchecked Sendable {
         }
     }
 
+    /// No `status.json` is an empty status. One that can't be read, for lack of permission or an I/O error, throws
+    /// a read failure (`BackupFileReadError`), so nothing is ever saved over it (R3). One that reads but doesn't
+    /// decode is dropped as an empty status, and the next save replaces it: it's only a cache, so that loses the
+    /// failure line, the skip-after-restore marker and what was known about each folder until the next full check.
     public func loadStatus() throws -> BackupStatus {
-        locked {
+        try locked {
             let url = folder.appendingPathComponent(Self.statusName)
             guard fileManager.fileExists(atPath: url.path) else {
                 return BackupStatus()
             }
-            // A status that doesn't decode only loses the failure note and the skip-after-restore marker.
-            return (try? JSONDecoder().decode(BackupStatus.self, from: Data(contentsOf: url))) ?? BackupStatus()
+            let data = try reading { try Data(contentsOf: url) }
+            return (try? JSONDecoder().decode(BackupStatus.self, from: data)) ?? BackupStatus()
         }
     }
 
