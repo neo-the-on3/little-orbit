@@ -2579,6 +2579,19 @@
         }
       }
     },
+    "Refund…": {
+      "comment": "Menu item that opens the refund sheet for the selected expense: Edit menu (⌘R), the table’s context menu and the iOS row menu (#34, D65).",
+      "extractionState": "manual",
+      "generatesSymbol": false,
+      "localizations": {
+        "en": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Refund…"
+          }
+        }
+      }
+    },
     "Replacing data…": {
       "comment": "Restore progress step under the progress bar.",
       "extractionState": "manual",

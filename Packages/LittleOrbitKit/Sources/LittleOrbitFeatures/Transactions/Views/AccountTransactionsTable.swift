@@ -7,6 +7,7 @@
     struct AccountTransactionsTable: View {
         @Bindable var history: AccountHistoryViewModel
         let onEdit: (Set<UUID>) -> Void
+        let onRefund: (UUID) -> Void
         let onDelete: (Set<UUID>) -> Void
 
         private struct TableSection: Identifiable {
@@ -76,6 +77,14 @@
             .contextMenu(forSelectionType: UUID.self) { ids in
                 if !ids.isEmpty {
                     Button(ids.count == 1 ? "Edit Transaction…" : "Edit \(ids.count) Transactions…") { onEdit(ids) }
+                    // One expense offers Refund…; several rows show it disabled, and other rows leave it out
+                    // (D117.3, #31).
+                    if let id = history.refundTarget(ids) {
+                        Button("Refund…") { onRefund(id) }
+                    } else if ids.count > 1 {
+                        Button("Refund…") {}
+                            .disabled(true)
+                    }
                     Divider()
                     Button(
                         ids.count == 1 ? "Delete Transaction" : "Delete \(ids.count) Transactions…",

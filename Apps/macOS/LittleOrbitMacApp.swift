@@ -21,6 +21,8 @@ struct LittleOrbitMacApp: App {
         .defaultSize(width: 1200, height: 760)
         .commands {
             RestoreFromBackupCommand(isPickingFile: $isPickingBackupFile)
+            // Edit > Refund… (⌘R) for the selected expense (#34).
+            TransactionCommands()
         }
 
         // The standard Settings window, opened with Cmd-, from the app menu (D179.5). It's the shared home for

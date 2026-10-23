@@ -39,6 +39,8 @@ public final class AccountHistoryViewModel {
     public private(set) var sections: [TransactionDaySection] = []
     public private(set) var accountExists = true
     public var selection: Set<UUID> = []
+    /// The rows Refund is offered on: expenses that aren't refunds (D65, D117.2, D117.3).
+    public private(set) var refundableIDs: Set<UUID> = []
     public var deletePrompt: BulkDeletePrompt?
     public var errorMessage: String?
 
@@ -105,6 +107,7 @@ public final class AccountHistoryViewModel {
                 accountExists = false
                 upcoming = []
                 sections = []
+                refundableIDs = []
                 return
             }
             let account = page.account
@@ -140,11 +143,24 @@ public final class AccountHistoryViewModel {
                     rows: day.entries.map { context.row($0, isUpcoming: false) },
                 )
             }
+            refundableIDs = Set(
+                (history.upcoming + history.days.flatMap(\.entries)).map(\.transaction)
+                    .filter { TransactionActions(for: $0).canRefund }.map(\.id)
+            )
             let visible = Set(allRows.map(\.id))
             selection = selection.intersection(visible)
         } catch {
             errorMessage = Self.message(for: error)
         }
+    }
+
+    /// The one expense the Refund action and ⌘R work on: `nil` for several rows, none, or a row Refund isn't
+    /// offered on (#31, D65).
+    public func refundTarget(_ ids: Set<UUID>) -> UUID? {
+        guard ids.count == 1, let id = ids.first, refundableIDs.contains(id) else {
+            return nil
+        }
+        return id
     }
 
     /// The stored transactions behind the given rows, for editing.

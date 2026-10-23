@@ -243,4 +243,26 @@ struct RefundFormViewModelTests {
         #expect(model.errorMessage == "Only ₹200.00 is refundable.")
         #expect(try fixture.repository.transactions() == before)
     }
+
+    @Test("S19, S44: Refund and ⌘R are offered on one expense row, never on income, a transfer, a refund or two rows")
+    func refundTarget() throws {
+        let fixture = try F()
+        let expense = try fixture.expense(1_000, on: Self.expenseDate)
+        let other = try fixture.expense(200, on: Self.expenseDate)
+        let refund = try fixture.refund(300, of: expense, on: F.date(2026, 10, 18, zone: F.kolkata))
+        let transfer = try fixture.transfer(100, from: fixture.savings, to: fixture.groceryCash)
+        let history = AccountHistoryViewModel(
+            useCases: fixture.useCases,
+            accountID: fixture.savings.id,
+            locale: Locale(identifier: "en_IN"),
+            timeZone: TimeZone(identifier: F.kolkata)!,
+            now: { F.now },
+        )
+        history.load()
+        #expect(history.refundTarget([expense.id]) == expense.id)
+        #expect(history.refundTarget([refund.id]) == nil)
+        #expect(history.refundTarget([transfer.id]) == nil)
+        #expect(history.refundTarget([expense.id, other.id]) == nil)
+        #expect(history.refundTarget([]) == nil)
+    }
 }

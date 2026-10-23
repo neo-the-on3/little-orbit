@@ -9,6 +9,12 @@
         let model: TransactionFormViewModel
     }
 
+    /// The refund sheet for one expense, iOS and macOS ⌘R (D65), with its view model made when it's requested.
+    struct RefundSheet: Identifiable {
+        let id = UUID()
+        let model: RefundFormViewModel
+    }
+
     /// The macOS bulk edit sheet, with its view model made when the sheet is requested.
     struct BulkEditSheet: Identifiable {
         let id = UUID()
@@ -26,6 +32,7 @@
         @State private var history: AccountHistoryViewModel
         @State private var formSheet: TransactionFormSheet?
         @State private var bulkEditSheet: BulkEditSheet?
+        @State private var refundSheet: RefundSheet?
         /// The step of the delete toast this screen showed.
         @State private var toastStepID: UUID?
         #if os(iOS)
@@ -59,7 +66,12 @@
                         onSaved: record,
                     )
                 }
+                .sheet(item: $refundSheet) { sheet in
+                    RefundFormView(model: sheet.model, updates: transactions.updates, onSaved: record)
+                }
                 #if os(macOS)
+                    // Edit > Refund… (⌘R) works on the one selected expense (D65, #31).
+                    .focusedSceneValue(\.refundSelection, refundSelectionAction)
                     .sheet(item: $bulkEditSheet) { sheet in
                         BulkEditView(
                             model: sheet.model,
@@ -139,6 +151,17 @@
             }
         }
 
+        private func refund(_ id: UUID) {
+            refundSheet = RefundSheet(model: transactions.makeRefund(of: id))
+        }
+
+        #if os(macOS)
+            /// Refund for the selection, or `nil` when it isn't exactly one expense, which disables ⌘R.
+            private var refundSelectionAction: RefundSelectionAction? {
+                history.refundTarget(history.selection).map { id in RefundSelectionAction { refund(id) } }
+            }
+        #endif
+
         // MARK: - Content
 
         @ViewBuilder private var content: some View {
@@ -158,6 +181,7 @@
                         AccountTransactionsTable(
                             history: history,
                             onEdit: edit,
+                            onRefund: refund,
                             onDelete: delete,
                         )
                         Text(history.selectionSummary ?? " ")
@@ -304,6 +328,10 @@
                         formSheet = TransactionFormSheet(model: transactions.makeForm(.edit(row.id)))
                     } label: {
                         Label("Edit Transaction", systemImage: "pencil")
+                    }
+                    // Only an expense offers Refund (D117.2, D117.3).
+                    if history.refundableIDs.contains(row.id) {
+                        Button("Refund…") { refund(row.id) }
                     }
                 }
             }
