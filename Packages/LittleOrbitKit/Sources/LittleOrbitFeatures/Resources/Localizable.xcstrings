@@ -1492,6 +1492,19 @@
         }
       }
     },
+    "Duplicate": {
+      "comment": "Action that copies a transaction, dated now (D65): Edit menu (⌘D), a row’s context and long-press menus, and the iOS swipe. Not shown on a refund.",
+      "extractionState": "manual",
+      "generatesSymbol": false,
+      "localizations": {
+        "en": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Duplicate"
+          }
+        }
+      }
+    },
     "Duplicate Transaction": {
       "comment": "Undo name: one transaction duplicated, when its account couldn’t be read as the step was recorded (D221.3).",
       "extractionState": "manual",
@@ -2469,6 +2482,18 @@
           "stringUnit": {
             "state": "translated",
             "value": "Refund (original deleted) · %@"
+          }
+        }
+      }
+    },
+    "Refund (swipe action)": {
+      "comment": "iOS swipe action that records a refund of the expense: the verb. The row title “Refund” is the noun and has its own entry.",
+      "extractionState": "manual",
+      "localizations": {
+        "en": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Refund"
           }
         }
       }

@@ -7,6 +7,7 @@
     struct AccountTransactionsTable: View {
         @Bindable var history: AccountHistoryViewModel
         let onEdit: (Set<UUID>) -> Void
+        let onDuplicate: (UUID) -> Void
         let onRefund: (UUID) -> Void
         let onDelete: (Set<UUID>) -> Void
 
@@ -77,6 +78,16 @@
             .contextMenu(forSelectionType: UUID.self) { ids in
                 if !ids.isEmpty {
                     Button(ids.count == 1 ? "Edit Transaction…" : "Edit \(ids.count) Transactions…") { onEdit(ids) }
+                    // One row offers Duplicate, a refund leaves it out, and several rows show it disabled (#31,
+                    // S43; UI Designer, 23 Oct).
+                    if ids.count == 1, let id = ids.first {
+                        if !history.refundIDs.contains(id) {
+                            DuplicateMenuButton { onDuplicate(id) }
+                        }
+                    } else {
+                        Button("Duplicate") {}
+                            .disabled(true)
+                    }
                     // One expense offers Refund…; several rows show it disabled, and other rows leave it out
                     // (D117.3, #31).
                     if let id = history.refundTarget(ids) {

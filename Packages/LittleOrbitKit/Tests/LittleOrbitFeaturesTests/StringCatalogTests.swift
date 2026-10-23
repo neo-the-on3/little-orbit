@@ -68,4 +68,12 @@ struct StringCatalogTests {
             }
         }
     }
+
+    @Test("The swipe verb Refund is its own entry, apart from the noun (UI Designer, 23 Oct)")
+    func refundVerb() throws {
+        let entries = try Self.entries()
+        #expect(entries["Refund (swipe action)"] == ["Refund"])
+        #expect(entries["Refund"] == ["Refund"])
+    }
+
 }
