@@ -43,8 +43,9 @@ public final class BackupService: AllBackupUseCases {
         self.timeZone = timeZone
     }
 
+    /// The list. A Backups folder or status file that can't be read is `loadFailed` (D211.5).
     public func overview() async throws -> BackupOverview {
-        let catalog = try await loadCatalog()
+        let catalog = try await Self.mapping(to: .loadFailed) { try await loadCatalog() }
         return BackupOverview(
             backups: catalog.newestFirst,
             lastFailure: catalog.lastFailure,
@@ -52,9 +53,13 @@ public final class BackupService: AllBackupUseCases {
         )
     }
 
+    /// Back Up Now. A full disk stays `notEnoughStorage`, the list's line (D62); any other failure is
+    /// `backUpFailed` (D211.2).
     public func backUpNow() async throws -> BackupRecord {
         try await exclusively {
-            try await makeBackup(.manual, of: source.backupSnapshot(), bytes: source.attachmentBytes())
+            try await Self.mapping(to: .backUpFailed) {
+                try await makeBackup(.manual, of: source.backupSnapshot(), bytes: source.attachmentBytes())
+            }
         }
     }
 
@@ -99,7 +104,8 @@ public final class BackupService: AllBackupUseCases {
             guard exports.count(of: id) == 0 else {
                 throw BackupError.exporting
             }
-            try storage.delete(id: id)
+            // A folder that can't be removed is `deleteFailed` (D211.3).
+            try await Self.mapping(to: .deleteFailed) { try storage.delete(id: id) }
         }
     }
 
@@ -132,10 +138,11 @@ public final class BackupService: AllBackupUseCases {
             let archiving = self.archiving
             let file = BackupExport.fileName(name, id: id)
             let url = try await Self.detached(priority: .userInitiated) {
-                let url = try storage.makeExportFolder().appendingPathComponent(file)
+                let url = try Self.staging { try storage.makeExportFolder().appendingPathComponent(file) }
                 do {
                     try Self.remembering(id, storage: storage) {
-                        try codec.archive(storage.files(id: id), with: archiving, to: url)
+                        let folder = try storage.files(id: id)
+                        try Self.staging { try codec.archive(folder, with: archiving, to: url) }
                     }
                     return url
                 } catch {
@@ -151,16 +158,55 @@ public final class BackupService: AllBackupUseCases {
         }
     }
 
+    /// `work`, with any error that isn't already a `BackupError` or a cancellation reported as `mapped`, so a
+    /// system error's own text, which can name the store's files and folders, never leaves Domain (D211).
+    static func mapping<Value>(to mapped: BackupError, _ work: () async throws -> Value) async throws -> Value {
+        do {
+            return try await work()
+        } catch let thrown as CancellationError {
+            throw thrown
+        } catch let thrown as BackupError {
+            throw thrown
+        } catch {
+            throw mapped
+        }
+    }
+
+    /// `work`, staging an export's file before the save panel opens. Whatever it throws, a full disk included, is
+    /// `exportFailed`, except what the backup itself reports: its files couldn't be read (`unreadableBackup`,
+    /// D208.2), it's damaged or newer, or the task was cancelled (D211.4).
+    private nonisolated static func staging<Value>(_ work: () throws -> Value) throws -> Value {
+        do {
+            return try work()
+        } catch let error as CancellationError {
+            throw error
+        } catch let error as BackupFileReadError {
+            throw error
+        } catch let error as BackupError where error != .notEnoughStorage {
+            throw error
+        } catch {
+            throw BackupError.exportFailed
+        }
+    }
+
     public func exportCount(of id: UUID) -> Int {
         exports.count(of: id)
     }
 
-    /// `work`, with a backup that can't be read reported as `cleanupBlocked`: nothing is deleted (R3, D208.3).
+    /// `work`, with a backup that can't be read reported as `cleanupBlocked` (R3, D208.3) and any other failure as
+    /// `cleanupFailed` (D211.6). Either way nothing is deleted and N and M aren't saved, as both come after it.
+    /// Cancelling passes through.
     private static func blockingCleanup<Value>(_ work: () async throws -> Value) async throws -> Value {
         do {
             return try await work()
+        } catch let error as CancellationError {
+            throw error
         } catch let error where BackupReadFailure.isReadFailure(error) {
             throw BackupError.cleanupBlocked
+        } catch let error as BackupError {
+            throw error
+        } catch {
+            throw BackupError.cleanupFailed
         }
     }
 
@@ -210,9 +256,13 @@ public final class BackupService: AllBackupUseCases {
             progress(.savingCurrentData)
             let before = try await makeBeforeRestoreBackup()
             progress(.replacingData)
-            let (opened, scratch) = try await openForRestore(source)
+            // From here the Before restore backup exists. A read error keeps its own alert (D207.2, D208.2); an
+            // unpack or replace failure is `restoreFailed`, with nothing replaced (D211.1).
+            let (opened, scratch) = try await Self.mapping(to: .restoreFailed) { try await openForRestore(source) }
             defer { scratch?.remove() }
-            try self.source.replaceLedger(with: opened.contents.ledger, attachments: opened.attachments)
+            try await Self.mapping(to: .restoreFailed) {
+                try self.source.replaceLedger(with: opened.contents.ledger, attachments: opened.attachments)
+            }
             changes.ledgerReplaced()
             // The backup read is released by now, before the restored data is read back for the marker.
             try? await markRestored()
@@ -224,7 +274,8 @@ public final class BackupService: AllBackupUseCases {
     /// The Before restore backup of the current data. D63: the data is only replaced once it checked out as
     /// restorable (B3). Any failure to make it, a write, a move, a staging folder or its check, is
     /// `beforeRestoreFailed`, so nothing of the store's own files or folders reaches the user (Tester F3, D207.1).
-    /// Cancelling and a full disk pass through: a full disk is the list's failure line (N4).
+    /// A full disk is `notEnoughStorageToRestore`, and doesn't set the list's failure line, which is Back Up Now's
+    /// only (D62, D211.8). Cancelling passes through.
     private func makeBeforeRestoreBackup() async throws -> BackupRecord {
         do {
             return try await makeBackup(
@@ -236,7 +287,7 @@ public final class BackupService: AllBackupUseCases {
         } catch let error as CancellationError {
             throw error
         } catch BackupError.notEnoughStorage {
-            throw BackupError.notEnoughStorage
+            throw BackupError.notEnoughStorageToRestore
         } catch {
             throw BackupError.beforeRestoreFailed
         }

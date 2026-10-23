@@ -50,7 +50,10 @@
                     }
                     .disabled(!model.actionsEnabled)
                 }
-                if model.isEmpty {
+                if model.isLoadFailed {
+                    BackupLoadFailedView(window: window)
+                        .frame(maxWidth: .infinity, minHeight: 220)
+                } else if model.isEmpty {
                     ContentUnavailableView(
                         BackupPresentation.emptyTitle,
                         systemImage: "clock.arrow.circlepath",
@@ -82,7 +85,8 @@
                     }
                 }
                 HStack {
-                    if let id = selection, model.row(id) != nil {
+                    // No Restore…, Export… or Delete… for a row the list can't show now (UI Designer).
+                    if !model.isLoadFailed, let id = selection, model.row(id) != nil {
                         actions(for: id)
                     }
                     Spacer()
@@ -101,7 +105,7 @@
                 Text(model.presentation.storageFooter)
                     .font(.footnote)
                     .foregroundStyle(.secondary)
-                if let id = selection, let row = model.row(id) {
+                if !model.isLoadFailed, let id = selection, let row = model.row(id) {
                     if let explanation = row.explanation {
                         Label(explanation, systemImage: "exclamationmark.triangle.fill")
                             .font(.footnote)

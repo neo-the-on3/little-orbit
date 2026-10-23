@@ -76,9 +76,12 @@ extension BackupService {
                 return (summary, condition)
             }
         } catch BackupError.notEnoughStorage {
-            var status = (try? storage.loadStatus()) ?? BackupStatus()
-            status.lastFailure = .notEnoughStorage
-            try? storage.saveStatus(status)
+            // The list's line is for Back Up Now and automatic backups only; a restore says so in its alert (D211.8).
+            if kind != .beforeRestore {
+                var status = (try? storage.loadStatus()) ?? BackupStatus()
+                status.lastFailure = .notEnoughStorage
+                try? storage.saveStatus(status)
+            }
             throw BackupError.notEnoughStorage
         }
         let record = BackupRecord(

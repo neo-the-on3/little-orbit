@@ -215,13 +215,15 @@ struct BackupServiceTests {
         let backup = try await harness.service.backUpNow()
         let before = try harness.repository.ledgerSnapshot()
         let contents: BackupSource = .stored(backup.id)
-        await #expect(throws: CocoaError.self) { try await harness.service.restore(contents) { _ in } }
+        await #expect(throws: BackupError.restoreFailed) { try await harness.service.restore(contents) { _ in } }
         #expect(try harness.repository.ledgerSnapshot() == before)
         #expect(try await harness.service.overview().backups.map(\.kind) == [.beforeRestore, .manual])
         #expect(harness.changes.replacements == 0)
     }
 
-    @Test("A full disk while saving the Before restore backup aborts the restore, changing nothing (N4)")
+    @Test(
+        "A full disk while saving the Before restore backup aborts the restore, changing nothing, without the list's line (N4, D211.8)"
+    )
     func fullDiskBeforeRestore() async throws {
         let folder = FileManager.default.temporaryDirectory.appendingPathComponent("filling-\(UUID().uuidString)")
         defer { try? FileManager.default.removeItem(at: folder) }
@@ -234,7 +236,10 @@ struct BackupServiceTests {
         let current = try harness.repository.ledgerSnapshot()
         let contents: BackupSource = .stored(backup.id)
         storage.fill()
-        await #expect(throws: BackupError.notEnoughStorage) { try await harness.service.restore(contents) { _ in } }
+        await #expect(throws: BackupError.notEnoughStorageToRestore) {
+            try await harness.service.restore(contents) { _ in }
+        }
+        #expect(try await harness.service.overview().lastFailure == nil)
         #expect(try harness.repository.ledgerSnapshot() == current)
         #expect(try await harness.service.overview().backups.map(\.id) == [backup.id])
         #expect(harness.changes.replacements == 0)

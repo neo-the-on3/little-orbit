@@ -84,6 +84,46 @@ public struct BackupPresentation: Sendable {
     public static let deleteWhileExportingMessage = FeatureText.format(
         "It’s being exported. Try again when the export has finished."
     )
+    /// A full disk while the Before restore backup was made. Restore only; Back Up Now keeps the list's line (D211.8).
+    public static let notEnoughStorageToRestoreTitle = FeatureText.format("Not Enough Storage to Restore")
+    public static let notEnoughStorageToRestoreMessage = FeatureText.format(
+        "little-orbit needs space to save a copy of your current data before restoring, so nothing was replaced. Free up some storage and try again. Your data hasn’t changed."
+    )
+    /// The export file, staged before the save panel opens, couldn't be created or written (D211.4).
+    public static let exportFailedTitle = FeatureText.format("Couldn’t Export Backup")
+    public static let exportFailedMessage = FeatureText.format(
+        "little-orbit couldn’t create the export file. Make sure there’s enough storage on this device and try again. Your backup hasn’t changed."
+    )
+    /// Lowering N or M failed before anything was saved or deleted, other than an unreadable backup (D211.6).
+    public static let cleanupFailedMessage = FeatureText.format(
+        "little-orbit couldn’t delete your older backups. Try again later. Your setting hasn’t changed."
+    )
+    /// After the Before restore backup was made, unpacking or replacing failed (D211.1). Same title as D207.1's.
+    public static let restoreFailedMessage = FeatureText.format(
+        "little-orbit couldn’t finish restoring this backup, so nothing was replaced. Your data hasn’t changed, and the Before restore backup made just now is in your list."
+    )
+    /// Back Up Now failed other than with a full disk (D211.2).
+    public static let backUpFailedTitle = FeatureText.format("Couldn’t Back Up")
+    public static let backUpFailedMessage = FeatureText.format(
+        "little-orbit couldn’t make a backup right now. Your data hasn’t changed. Try again later."
+    )
+    /// A backup's folder couldn't be removed (D211.3). "Can’t Delete This Backup" stays for the export block only.
+    public static let deleteFailedTitle = FeatureText.format("Couldn’t Delete This Backup")
+    public static let deleteFailedMessage = FeatureText.format(
+        "little-orbit couldn’t remove this backup. Try again later."
+    )
+    /// The list's state when the Backups folder can't be read, with Try Again to reload it (D211.5).
+    public static let loadFailedTitle = FeatureText.format("Couldn’t Load Backups")
+    public static let loadFailedMessage = FeatureText.format(
+        "little-orbit couldn’t read your backups folder. Your backups and data haven’t changed. Try again later."
+    )
+    public static let tryAgain = FeatureText.format("Try Again")
+    /// The catch-all's title, when no other case applies (D211.9).
+    public static let somethingWentWrongTitle = FeatureText.format("Something Went Wrong")
+    /// The catch-all, under "Something Went Wrong", when no other case applies. Never an error's own text (D211.9).
+    public static let somethingWentWrongMessage = FeatureText.format(
+        "little-orbit couldn’t finish this. Try again later."
+    )
     public static let newerFormatMessage = FeatureText.format(
         """
         This backup was made with a newer version of little-orbit. Your data hasn’t changed.

@@ -317,9 +317,11 @@ final class FillingDiskStorage: BackupStorage, @unchecked Sendable {
 @MainActor
 final class FailingReplaceSource: LedgerBackupSource {
     private let base: InMemoryLedgerRepository
+    private let error: any Error
 
-    init(_ base: InMemoryLedgerRepository) {
+    init(_ base: InMemoryLedgerRepository, error: any Error = CocoaError(.fileWriteUnknown)) {
         self.base = base
+        self.error = error
     }
 
     func ledgerSnapshot() throws -> LedgerSnapshot {
@@ -327,7 +329,7 @@ final class FailingReplaceSource: LedgerBackupSource {
     }
 
     func replaceLedger(with snapshot: LedgerSnapshot) throws {
-        throw CocoaError(.fileWriteUnknown)
+        throw error
     }
 }
 
