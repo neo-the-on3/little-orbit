@@ -29,6 +29,7 @@ final class FakeTransactionUseCases {
             changes: self,
             duplicate: self,
             splits: self,
+            refunds: NoRefunds(),
         )
     }
 
@@ -101,3 +102,15 @@ final class FakeTransactionUseCases {
 extension FakeTransactionUseCases: LoadTransactionLedgerUseCase, AccountHistoryUseCase {}
 extension FakeTransactionUseCases: SaveTransactionsUseCase, TransactionChangesUseCase {}
 extension FakeTransactionUseCases: DuplicateTransactionUseCase, SplitTransactionUseCase {}
+
+/// A refund use case with nothing to refund, for tests that only build the feature.
+@MainActor
+struct NoRefunds: RefundTransactionUseCase {
+    func newRefund(of _: UUID, now _: Date, timeZoneID _: String) -> Transaction? { nil }
+
+    func check(_: Transaction) -> RefundCheck? { nil }
+
+    func save(_: Transaction, payeeName _: String) throws -> TransactionChange {
+        throw LedgerValidationError.refundOriginalMissing
+    }
+}

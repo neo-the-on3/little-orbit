@@ -98,6 +98,8 @@ public struct TransactionUseCases {
     public var changes: any TransactionChangesUseCase
     public var duplicate: any DuplicateTransactionUseCase
     public var splits: any SplitTransactionUseCase
+    /// The refund sheet's use case (#34).
+    public var refunds: any RefundTransactionUseCase
     public var dates: any TransactionDateUseCase
 
     public init(
@@ -107,6 +109,7 @@ public struct TransactionUseCases {
         changes: any TransactionChangesUseCase,
         duplicate: any DuplicateTransactionUseCase,
         splits: any SplitTransactionUseCase,
+        refunds: any RefundTransactionUseCase,
         dates: any TransactionDateUseCase = DefaultTransactionDateUseCase(),
     ) {
         self.loadLedger = loadLedger
@@ -115,6 +118,7 @@ public struct TransactionUseCases {
         self.changes = changes
         self.duplicate = duplicate
         self.splits = splits
+        self.refunds = refunds
         self.dates = dates
     }
 
@@ -127,6 +131,7 @@ public struct TransactionUseCases {
             changes: DefaultTransactionChangesUseCase(repository: repository),
             duplicate: DefaultDuplicateTransactionUseCase(repository: repository),
             splits: DefaultSplitTransactionUseCase(repository: repository),
+            refunds: DefaultRefundTransactionUseCase(repository: repository),
         )
     }
 }

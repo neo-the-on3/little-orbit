@@ -14,6 +14,19 @@
         }
       }
     },
+    "%1$@ (%2$@)": {
+      "comment": "Refund sheet Account picker: an account in another currency than the expense. %1$@ is its name, %2$@ its currency code, e.g. “Travel Card (USD)”.",
+      "extractionState": "manual",
+      "generatesSymbol": false,
+      "localizations": {
+        "en": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "%1$@ (%2$@)"
+          }
+        }
+      }
+    },
     "%1$@ from %2$@ to %3$@": {
       "comment": "An Undo or Redo name, delete toast or undo notice, with where it happened: a transfer's two accounts. %1$@ is the action, such as \"Edit Transfer\"; %2$@ and %3$@ are the From and To account names.",
       "extractionState": "manual",
@@ -106,8 +119,20 @@
         }
       }
     },
+    "%1$@ of %2$@": {
+      "comment": "Refund sheet, iOS Refundable row: %1$@ is what can still be refunded, %2$@ the expense’s amount, e.g. “₹700.00 of ₹1,000.00”.",
+      "extractionState": "manual",
+      "localizations": {
+        "en": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "%1$@ of %2$@"
+          }
+        }
+      }
+    },
     "%1$@ · %2$@": {
-      "comment": "A backup's account count (%1$@) and transaction count (%2$@).",
+      "comment": "Two values with a middle dot: a backup’s account count (%1$@) and transaction count (%2$@), or the refund sheet’s Refund of row, the expense’s payee or description (%1$@) and its date (%2$@).",
       "extractionState": "manual",
       "localizations": {
         "en": {
@@ -247,6 +272,30 @@
                 }
               }
             }
+          }
+        }
+      }
+    },
+    "%@ (from the expense)": {
+      "comment": "macOS refund sheet Category value. %@ is the expense’s category, which a refund keeps.",
+      "extractionState": "manual",
+      "localizations": {
+        "en": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "%@ (from the expense)"
+          }
+        }
+      }
+    },
+    "%@ has already been refunded. A refund keeps the expense’s category and uses the same currency.": {
+      "comment": "Refund sheet footnote. %@ is the amount already refunded on the expense, e.g. ₹300.00.",
+      "extractionState": "manual",
+      "localizations": {
+        "en": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "%@ has already been refunded. A refund keeps the expense’s category and uses the same currency."
           }
         }
       }
@@ -391,6 +440,18 @@
                 }
               }
             }
+          }
+        }
+      }
+    },
+    "A refund keeps the expense’s category and uses the same currency.": {
+      "comment": "Refund sheet footnote when nothing has been refunded on the expense yet.",
+      "extractionState": "manual",
+      "localizations": {
+        "en": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "A refund keeps the expense’s category and uses the same currency."
           }
         }
       }
@@ -2304,6 +2365,18 @@
         }
       }
     },
+    "of %@ refundable": {
+      "comment": "macOS refund sheet, after the Amount field. %@ is what can still be refunded, e.g. ₹700.00.",
+      "extractionState": "manual",
+      "localizations": {
+        "en": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "of %@ refundable"
+          }
+        }
+      }
+    },
     "Off": {
       "comment": "Monthly Backups stepper value at 0.",
       "extractionState": "manual",
@@ -2312,6 +2385,18 @@
           "stringUnit": {
             "state": "translated",
             "value": "Off"
+          }
+        }
+      }
+    },
+    "Only %@ is refundable.": {
+      "comment": "Refund sheet error: the amount is more than can still be refunded. %@ is the most that can (D35).",
+      "extractionState": "manual",
+      "localizations": {
+        "en": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Only %@ is refundable."
           }
         }
       }
@@ -2388,6 +2473,30 @@
         }
       }
     },
+    "Refund currency must match the expense.": {
+      "comment": "Refund sheet: the chosen account is in another currency than the expense (D33).",
+      "extractionState": "manual",
+      "localizations": {
+        "en": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Refund currency must match the expense."
+          }
+        }
+      }
+    },
+    "Refund date can’t be before the original expense (%@).": {
+      "comment": "Refund sheet error: the refund is dated before its expense. %@ is the expense’s own date, e.g. 17 Oct 2026 (D97.4, D229.1).",
+      "extractionState": "manual",
+      "localizations": {
+        "en": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Refund date can’t be before the original expense (%@)."
+          }
+        }
+      }
+    },
     "Refund date can’t be before the original expense for %2$lld refunds (latest %1$@).": {
       "comment": "Bulk edit: Apply saved nothing because the new date puts selected refunds before their expense (D225.4, D225.5). %1$@ is the latest such expense’s date, such as 17 Oct 2026; %2$lld is how many selected refunds.",
       "extractionState": "manual",
@@ -2418,6 +2527,30 @@
                 }
               }
             }
+          }
+        }
+      }
+    },
+    "Refund of %1$@ · %2$@ · %3$@": {
+      "comment": "macOS refund sheet caption when nothing has been refunded yet: %1$@ the expense’s payee or description, %2$@ its date, %3$@ its amount.",
+      "extractionState": "manual",
+      "localizations": {
+        "en": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Refund of %1$@ · %2$@ · %3$@"
+          }
+        }
+      }
+    },
+    "Refund of %1$@ · %2$@ · %3$@ · %4$@ already refunded": {
+      "comment": "macOS refund sheet caption: %1$@ the expense’s payee or description, %2$@ its date, %3$@ its amount, %4$@ the amount already refunded.",
+      "extractionState": "manual",
+      "localizations": {
+        "en": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Refund of %1$@ · %2$@ · %3$@ · %4$@ already refunded"
           }
         }
       }

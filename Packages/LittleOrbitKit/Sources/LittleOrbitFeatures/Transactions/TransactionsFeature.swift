@@ -2,7 +2,8 @@ import Foundation
 import LittleOrbitDomain
 
 /// Everything the transaction screens need (#23), built once by the composition root (the App target) from the
-/// injected use cases. It makes the view models for an account's history, the entry sheet and bulk edit.
+/// injected use cases. It makes the view models for an account's history, the entry sheet, bulk edit and the
+/// refund sheet.
 @MainActor
 public final class TransactionsFeature {
     public let useCases: TransactionUseCases
@@ -35,6 +36,18 @@ public final class TransactionsFeature {
 
     public func makeForm(_ mode: TransactionFormMode) -> TransactionFormViewModel {
         TransactionFormViewModel(useCases: useCases, mode: mode, locale: locale, timeZone: timeZone, now: now)
+    }
+
+    /// The refund sheet for one expense, iOS and macOS ⌘R (D65).
+    public func makeRefund(of expenseID: UUID) -> RefundFormViewModel {
+        RefundFormViewModel(
+            refunds: useCases.refunds,
+            dates: useCases.dates,
+            expenseID: expenseID,
+            locale: locale,
+            timeZone: timeZone,
+            now: now,
+        )
     }
 
     public func makeBulkEdit(_ transactionIDs: [UUID]) -> BulkEditViewModel {
