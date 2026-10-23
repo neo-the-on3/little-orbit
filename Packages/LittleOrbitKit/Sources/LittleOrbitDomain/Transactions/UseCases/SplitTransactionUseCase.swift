@@ -10,6 +10,12 @@ public protocol SplitTransactionUseCase {
     /// `.restoringLines` when the lines changed, so Undo restores both. Throws the `LedgerValidationError` a
     /// line breaks, such as `.splitRuleBroken(.linesDoNotMatchTotal)`, and writes nothing.
     func save(_ transaction: Transaction, lines: [TransactionSplit]) throws -> TransactionChange
+    /// `save(_:lines:)` for a save that uses these payees `SaveTransactionsUseCase.resolvePayee` just created.
+    /// The change carries them as stored, so Undo removes them too unless they were used or renamed (D191.4).
+    func save(_ transaction: Transaction, lines: [TransactionSplit], creating payees: [Payee]) throws
+        -> TransactionChange
+    /// The transaction's live lines in editor order; none when it isn't split.
+    func lines(of transactionID: UUID) throws -> [TransactionSplit]
 }
 
 @MainActor
@@ -48,5 +54,20 @@ public struct DefaultSplitTransactionUseCase: SplitTransactionUseCase {
             return SplitLineValue.of(before) == SplitLineValue.of(after)
                 ? change : .restoringLines([transaction.id: before], change)
         }
+    }
+
+    public func save(_ transaction: Transaction, lines: [TransactionSplit], creating payees: [Payee]) throws
+        -> TransactionChange
+    {
+        try repository.atomically {
+            let change = try save(transaction, lines: lines)
+            return .saved(change, creating: try PayeeCleanup(repository: repository).stored(payees))
+        }
+    }
+
+    public func lines(of transactionID: UUID) throws -> [TransactionSplit] {
+        try repository.splits(for: transactionID)
+            .filter { $0.deletedAt == nil }
+            .sorted { ($0.sortOrder, $0.id.uuidString) < ($1.sortOrder, $1.id.uuidString) }
     }
 }

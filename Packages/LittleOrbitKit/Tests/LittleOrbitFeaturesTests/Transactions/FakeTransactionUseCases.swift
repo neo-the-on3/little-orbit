@@ -38,6 +38,14 @@ final class FakeTransactionUseCases {
         return .added([transaction.id])
     }
 
+    func save(_ transaction: Transaction, lines: [TransactionSplit], creating _: [Payee]) throws
+        -> TransactionChange
+    {
+        try save(transaction, lines: lines)
+    }
+
+    func lines(of _: UUID) throws -> [TransactionSplit] { [] }
+
     func duplicate(id: UUID, now: Date) throws -> TransactionChange {
         duplicated.append(id)
         return .added([UUID()])

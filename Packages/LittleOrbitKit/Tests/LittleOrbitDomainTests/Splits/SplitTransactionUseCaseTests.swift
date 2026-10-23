@@ -52,6 +52,35 @@ struct SplitTransactionUseCaseTests {
         #expect(try setup.repository.splits(for: expense.id).isEmpty)
     }
 
+    @Test("A split saved with a payee the form just created is one step; Undo removes the payee too (D191.4)")
+    func newPayee() throws {
+        let setup = try setup()
+        let payee = Payee(name: "Green Basket", createdAt: F.date(2026, 10, 20))
+        try setup.repository.savePayee(payee)
+        var expense = F.expense(90, on: F.date(2026, 10, 20))
+        expense.payeeID = payee.id
+        let change = try setup.useCases.splits.save(
+            expense,
+            lines: [line(setup.first, 40, 0), line(setup.second, 50, 1)],
+            creating: [payee],
+        )
+        #expect(change == .saved(.added([expense.id]), creating: [try #require(try setup.repository.payees().first)]))
+        _ = try setup.useCases.changes.revertNow(change)
+        #expect(try setup.repository.transactions().isEmpty)
+        #expect(try setup.repository.payees().allSatisfy { $0.deletedAt != nil })
+    }
+
+    @Test("lines(of:) gives the live lines in order, and none for a transaction that isn't split")
+    func readLines() throws {
+        let expense = F.expense(90, on: F.date(2026, 10, 20))
+        let plain = F.expense(10, on: F.date(2026, 10, 20))
+        let setup = try setup([expense, plain])
+        let saved = [line(setup.second, 50, 1), line(setup.first, 40, 0)]
+        _ = try setup.useCases.splits.save(expense, lines: saved)
+        #expect(try setup.useCases.splits.lines(of: expense.id).map(\.id) == [saved[1].id, saved[0].id])
+        #expect(try setup.useCases.splits.lines(of: plain.id).isEmpty)
+    }
+
     @Test("Editing the lines and the total is one step; Undo restores both, line IDs and creation dates included")
     func editLines() throws {
         let expense = F.expense(90, on: F.date(2026, 10, 20))
