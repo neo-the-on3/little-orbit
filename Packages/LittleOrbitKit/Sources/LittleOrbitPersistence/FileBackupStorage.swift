@@ -100,9 +100,11 @@ public final class FileBackupStorage: BackupStorage, @unchecked Sendable {
                 continue
             }
             // A folder already known keeps its ID, so one whose manifest goes is still the same backup, now damaged.
-            var id =
-                known[name] ?? BackupFolderNames.manifestID(in: url) ?? UUID(uuidString: name)
-                ?? BackupFolderNames.id(for: name)
+            // One known only by its name's ID, because it couldn't be read, takes its manifest's ID once it can be,
+            // so it lists again as the backup it is (D214.3).
+            let fallback = BackupFolderNames.id(for: name)
+            let previous = known[name].flatMap { $0 == fallback ? nil : $0 }
+            var id = previous ?? BackupFolderNames.manifestID(in: url) ?? UUID(uuidString: name) ?? fallback
             if found[id] != nil {
                 // A copy of another folder, manifest and all: listed on its own.
                 id = BackupFolderNames.id(for: name)
@@ -130,31 +132,7 @@ public final class FileBackupStorage: BackupStorage, @unchecked Sendable {
             throw BackupError.notFound
         }
         let base = url.standardizedFileURL.resolvingSymlinksInPath().path
-        var sizes: [String: Int64] = [:]
-        var sizesKnown = true
-        // A folder, the backup's own or one inside it, whose contents can't be listed throws a read failure: the
-        // folder can't be read at all, so it's never listed as damaged (R3). Symlinks aren't followed.
-        var pending = [""]
-        while let folderPath = pending.popLast() {
-            let names = try reading { try fileManager.contentsOfDirectory(atPath: base + "/" + folderPath) }
-            for name in names {
-                let relative = folderPath.isEmpty ? name : folderPath + "/" + name
-                // A size that can't be read leaves the file out; the list shows "Unknown" for a never-read folder,
-                // and a backup whose manifest lists the file reads as damaged, as for a missing file (D202.1, L49).
-                guard let attributes = try? fileManager.attributesOfItem(atPath: base + "/" + relative) else {
-                    sizesKnown = false
-                    continue
-                }
-                switch attributes[.type] as? FileAttributeType {
-                case .typeRegular:
-                    sizes[relative] = (attributes[.size] as? NSNumber)?.int64Value ?? 0
-                case .typeDirectory:
-                    pending.append(relative)
-                default:
-                    break
-                }
-            }
-        }
+        let (sizes, sizesKnown) = try Self.fileSizes(in: base)
         let manifestURL = url.appendingPathComponent(Self.manifestName)
         let manifest: Data? =
             sizes[Self.manifestName] == nil ? nil : try reading { try Data(contentsOf: manifestURL) }
@@ -172,12 +150,15 @@ public final class FileBackupStorage: BackupStorage, @unchecked Sendable {
         return try Self.readFolder(url)
     }
 
+    /// Throws a read failure when the folder, or one inside it, can't be listed, so a check or a restore says the
+    /// backup can't be read rather than finding its files missing and calling it damaged (D208.2, D214).
     public func files(id: UUID) throws -> any BackupFileReading {
         let url = folderURL(id)
         var isDirectory: ObjCBool = false
         guard fileManager.fileExists(atPath: url.path, isDirectory: &isDirectory), isDirectory.boolValue else {
             throw BackupError.notFound
         }
+        _ = try Self.fileSizes(in: url.standardizedFileURL.resolvingSymlinksInPath().path)
         return StoredBackupFolder(url)
     }
 
@@ -221,8 +202,14 @@ public final class FileBackupStorage: BackupStorage, @unchecked Sendable {
             // Renamed first, in one step, so a cleanup killed midway leaves no part of a listed folder (L17).
             try prepare(staging)
             let deleting = staging.appendingPathComponent("\(id.uuidString).deleting", isDirectory: true)
+            // A folder that can't be read is ours to delete all the same (D214). Moving a folder to another
+            // parent needs write access to it, so a folder without it is given that first.
+            if !fileManager.isWritableFile(atPath: url.path) {
+                try? fileManager.setAttributes([.posixPermissions: 0o700], ofItemAtPath: url.path)
+            }
             try fileManager.moveItem(at: url, to: deleting)
             names.remove(id)
+            Self.makeRemovable(deleting)
             try? fileManager.removeItem(at: deleting)
         }
     }

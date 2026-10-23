@@ -22,6 +22,10 @@ public enum BackupCondition: String, Sendable, Codable, Equatable {
     /// Made by a newer version of little-orbit. Never checksum-checked, never 'Damaged', never pruned or counted
     /// (D197.2, L35, L36).
     case newerFormat
+    /// Its folder couldn't be read at all, and it wasn't listed earlier this session, so nothing is known about it
+    /// (D214). A read error, never damage: not restorable or exportable, never pruned or counted, read again on
+    /// every list, and it can be deleted. Its date is the folder's own if that can be read, and it's never cached.
+    case unreadable
 }
 
 /// One stored backup, as the backup list shows it. Its folder is named by `id`, never by its name (D173.11, D195.1).

@@ -147,6 +147,12 @@ public struct BackupPresentation: Sendable {
         This backup is damaged and can’t be restored. Some of its files are missing or have changed.
         """
     )
+    /// A backup folder that couldn't be read and wasn't listed earlier this session: its list line, and its
+    /// detail's explanation of why Restore… and Export… are unavailable (D214).
+    public static let unreadableLabel = FeatureText.format("Couldn’t be read")
+    public static let unreadableExplanation = FeatureText.format(
+        "little-orbit couldn’t read this backup. Try again later."
+    )
     /// A newer-format backup in the list, and the line its detail adds (D197.2, L35).
     public static let newerFormatNote = FeatureText.format("Made by a newer version of little-orbit.")
     public static let newerFormatDetail = FeatureText.format("Update little-orbit to restore it.")
@@ -331,12 +337,14 @@ public struct BackupPresentation: Sendable {
             case .restorable: nil
             case .damaged: Self.damagedLabel
             case .newerFormat: Self.newerFormatNote
+            case .unreadable: Self.unreadableLabel
             }
         let explanation: String? =
             switch record.condition {
             case .restorable: nil
             case .damaged: Self.damagedExplanation
             case .newerFormat: FeatureText.format("%1$@ %2$@", Self.newerFormatNote, Self.newerFormatDetail)
+            case .unreadable: Self.unreadableExplanation
             }
         return BackupRowModel(
             id: record.id,
@@ -410,12 +418,14 @@ public struct BackupRowModel: Identifiable, Equatable, Sendable {
     public var attachmentCount: Int?
     public var formatVersion: Int
     public var condition: BackupCondition
-    /// 'Damaged' or "Made by a newer version of little-orbit.", shown in the list (L29, L35). `nil` when restorable.
+    /// 'Damaged', "Made by a newer version of little-orbit." or "Couldn’t be read", shown in the list (L29, L35,
+    /// D214). `nil` when restorable.
     public var statusText: String?
-    /// The detail's explanation of why Restore… and Export… are unavailable (D196.3, D197.2).
+    /// The detail's explanation of why Restore… and Export… are unavailable (D196.3, D197.2, D214).
     public var explanation: String?
 
-    /// Restore… and Export… are available. A damaged or newer-format backup can still be deleted (L29, L35, L43).
+    /// Restore… and Export… are available. A damaged, newer-format or unreadable backup can still be deleted (L29,
+    /// L35, L43, D214).
     public var canRestore: Bool {
         condition == .restorable
     }

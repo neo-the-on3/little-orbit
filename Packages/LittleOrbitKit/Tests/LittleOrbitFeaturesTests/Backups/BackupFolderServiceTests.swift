@@ -225,21 +225,24 @@ struct BackupFolderServiceTests {
         #expect(try await harness.service.overview().backups.count == 7)
     }
 
-    @Test("If a manifest can't be read, the list fails and nothing is pruned or listed partly (R3, D211.2, D211.5)")
+    @Test("If a backup's manifest can't be read, that backup gets its own row and nothing is pruned (R3, D208.3, D214)")
     func lockedFiles() async throws {
         let folder = FileManager.default.temporaryDirectory
             .appendingPathComponent("backup-tests-\(UUID().uuidString)", isDirectory: true)
         defer { try? FileManager.default.removeItem(at: folder) }
         let storage = try LockedFilesStorage(folder: folder)
         let harness = try BackupHarness(storage: storage)
-        _ = try await harness.service.backUpNow()
+        let backup = try await harness.service.backUpNow()
         storage.lockFiles()
 
-        // The list's "Couldn’t Load Backups" and Back Up Now's "Couldn’t Back Up", never the system's text (D211).
-        await #expect(throws: BackupError.loadFailed) { try await harness.service.overview() }
-        harness.advance(86_400)
-        await #expect(throws: CocoaError.self) { try await harness.service.backUpAutomaticallyIfNeeded() }
-        await #expect(throws: BackupError.backUpFailed) { try await harness.service.backUpNow() }
+        // Never listed this session, so D214's unreadable row; the list itself loads (only the Backups folder or
+        // status.json give Couldn’t Load Backups, D211.5).
+        let listed = try await harness.service.overview().backups
+        #expect(listed.map(\.id) == [backup.id])
+        #expect(listed.first?.condition == .unreadable)
+        await #expect(throws: BackupError.cleanupBlocked) {
+            try await harness.service.cleanupPlan(for: BackupRetention(recentAutomatic: 1, monthlyMonths: 0))
+        }
         #expect(storage.deletes == 0)
         #expect(try storage.base.storedIDs().count == 1)
     }

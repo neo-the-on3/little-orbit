@@ -3,7 +3,8 @@ import LittleOrbitDomain
 import LittleOrbitPersistence
 
 /// A real folder store with switchable failures: a full disk on writes and export staging, read errors, folders
-/// that can't be removed, and a status that can't be read once a write has found the disk full.
+/// that can't be removed, a status that can't be read once a write has found the disk full, and backup folders
+/// that can't be read at all (D214), with the creation date each one reports.
 final class ScriptedStorage: BackupStorage, @unchecked Sendable {
     let base: FileBackupStorage
     private let lock = NSLock()
@@ -17,6 +18,8 @@ final class ScriptedStorage: BackupStorage, @unchecked Sendable {
         statusErrorAfterFullDisk: (any Error)?.none,
         statusError: (any Error)?.none,
         statusSaves: 0,
+        unreadable: [UUID: Date?](),
+        deletes: 0,
     )
 
     init(folder: URL) throws {
@@ -61,22 +64,52 @@ final class ScriptedStorage: BackupStorage, @unchecked Sendable {
         return .notEnoughStorage
     }
 
+    /// Folders that can't be read at all, as a folder at mode 000: listing and reading them throws a read
+    /// failure. The value is the creation date the folder reports, `nil` for none.
+    var unreadable: [UUID: Date?] {
+        get { lock.withLock { state.unreadable } }
+        set { lock.withLock { state.unreadable = newValue } }
+    }
+    var deletes: Int { lock.withLock { state.deletes } }
+
+    private func checkReadable(_ id: UUID) throws {
+        if lock.withLock({ state.unreadable[id] != nil }) {
+            throw BackupFileReadError(CocoaError(.fileReadNoPermission))
+        }
+    }
+
+    func folderCreationDate(id: UUID) -> Date? {
+        if let scripted = lock.withLock({ state.unreadable[id] }) {
+            return scripted
+        }
+        return base.folderCreationDate(id: id)
+    }
+
     func storedIDs() throws -> [UUID] {
         if let listError { throw listError }
         return try base.storedIDs()
     }
-    func listing(id: UUID) throws -> BackupFolderListing { try base.listing(id: id) }
+    func listing(id: UUID) throws -> BackupFolderListing {
+        try checkReadable(id)
+        return try base.listing(id: id)
+    }
     func read(id: UUID) throws -> BackupSnapshotFiles {
+        try checkReadable(id)
         if let readError { throw readError }
         return try base.read(id: id)
     }
     func files(id: UUID) throws -> any BackupFileReading {
+        try checkReadable(id)
         if let readError { throw readError }
         return try base.files(id: id)
     }
     func delete(id: UUID) throws {
         if let deleteError { throw deleteError }
         try base.delete(id: id)
+        lock.withLock {
+            state.deletes += 1
+            state.unreadable[id] = nil
+        }
     }
     func loadStatus() throws -> BackupStatus {
         if let error = lock.withLock({ state.statusError }) { throw error }

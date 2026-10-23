@@ -726,6 +726,18 @@
         }
       }
     },
+    "Couldn’t be read": {
+      "comment": "Status in the list of a backup whose folder couldn’t be read and that wasn’t listed earlier this session (D214).",
+      "extractionState": "manual",
+      "localizations": {
+        "en": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Couldn’t be read"
+          }
+        }
+      }
+    },
     "Couldn’t Delete Old Backups": {
       "comment": "Alert title after lowering Recent Automatic Backups or Monthly Backups while one backup can’t be read, so nothing was deleted (D208.3). The only button is OK.",
       "extractionState": "manual",
@@ -1720,6 +1732,18 @@
           "stringUnit": {
             "state": "translated",
             "value": "little-orbit couldn’t read one of your backups, so none were deleted. Try again later. Your setting hasn’t changed."
+          }
+        }
+      }
+    },
+    "little-orbit couldn’t read this backup. Try again later.": {
+      "comment": "Detail of a backup whose folder couldn’t be read (D214): why Restore and Export are unavailable.",
+      "extractionState": "manual",
+      "localizations": {
+        "en": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "little-orbit couldn’t read this backup. Try again later."
           }
         }
       }
