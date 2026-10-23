@@ -15,22 +15,22 @@ enum StaleText {
 
     static func changed(_ name: String) -> String {
         FeatureText.string(
-            "\(name) was changed in another window. Nothing was changed.",
-            comment: "Alert message: Undo or Redo of a record another window changed since. The record's name.",
+            "\(name) has changed since then. Nothing was changed.",
+            comment: "Alert message: Undo or Redo of a record changed since the step. Its name. Name no cause.",
         )
     }
 
     static func deleted(_ name: String) -> String {
         FeatureText.string(
-            "\(name) was deleted in another window. Nothing was changed.",
-            comment: "Alert message: Undo or Redo of a record or account another window deleted. Its name.",
+            "\(name) has been deleted. Nothing was changed.",
+            comment: "Alert message: Undo or Redo of a record or account deleted since. Its name. Name no cause.",
         )
     }
 
     /// A bulk step with more than one stale record, changed, deleted or both (D189.2).
     static func changedOrDeleted(_ count: Int) -> String {
         FeatureText.format(
-            "%lld of these transactions were changed or deleted in another window. Nothing was changed.",
+            "%lld of these transactions have changed or been deleted since then. Nothing was changed.",
             count,
         )
     }

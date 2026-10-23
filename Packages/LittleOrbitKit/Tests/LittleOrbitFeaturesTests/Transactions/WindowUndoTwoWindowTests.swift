@@ -145,7 +145,7 @@ struct WindowUndoTwoWindowTests {
         #expect(try setup.stored(corner.id)?.amount == 650)
         #expect(setup.first.history.alert?.title == "Can’t Undo Edit Transaction in Rewards Card")
         #expect(
-            setup.first.history.alert?.message == "Corner Bakery was changed in another window. Nothing was changed."
+            setup.first.history.alert?.message == "Corner Bakery has changed since then. Nothing was changed."
         )
         #expect(setup.first.history.undoTitle == "Delete Transaction in Everyday Savings", "The step below is next")
         #expect(!setup.first.history.canRedo)
@@ -162,7 +162,7 @@ struct WindowUndoTwoWindowTests {
         setup.first.history.undo()
         #expect(try setup.stored(corner.id) == nil)
         #expect(
-            setup.first.history.alert?.message == "Corner Bakery was deleted in another window. Nothing was changed."
+            setup.first.history.alert?.message == "Corner Bakery has been deleted. Nothing was changed."
         )
         #expect(!setup.first.history.canUndo)
     }
@@ -177,7 +177,7 @@ struct WindowUndoTwoWindowTests {
         #expect(try setup.stored(corner.id)?.note == "Birthday cake")
         #expect(setup.first.history.alert?.title == "Can’t Undo New Transaction in Rewards Card")
         #expect(
-            setup.first.history.alert?.message == "Corner Bakery was changed in another window. Nothing was changed."
+            setup.first.history.alert?.message == "Corner Bakery has changed since then. Nothing was changed."
         )
     }
 
@@ -195,7 +195,7 @@ struct WindowUndoTwoWindowTests {
         #expect(!(try setup.repository.accounts().contains { $0.id == F.cardID }))
         #expect(setup.first.history.alert?.title == "Can’t Undo Delete Transaction in Rewards Card")
         #expect(
-            setup.first.history.alert?.message == "Rewards Card was deleted in another window. Nothing was changed."
+            setup.first.history.alert?.message == "Rewards Card has been deleted. Nothing was changed."
         )
         #expect(setup.second.history.undoTitle == "Delete Account Rewards Card")
     }
@@ -221,7 +221,7 @@ struct WindowUndoTwoWindowTests {
         #expect(setup.first.history.alert?.title == "Can’t Undo Edit 5 Transactions in Everyday Savings")
         #expect(
             setup.first.history.alert?.message
-                == "2 of these transactions were changed or deleted in another window. Nothing was changed."
+                == "2 of these transactions have changed or been deleted since then. Nothing was changed."
         )
     }
 
@@ -239,7 +239,7 @@ struct WindowUndoTwoWindowTests {
         #expect(try setup.stored(corner.id)?.amount == 475)
         #expect(setup.first.history.alert?.title == "Can’t Redo Delete Transaction in Rewards Card")
         #expect(
-            setup.first.history.alert?.message == "Corner Bakery was changed in another window. Nothing was changed."
+            setup.first.history.alert?.message == "Corner Bakery has changed since then. Nothing was changed."
         )
         #expect(!setup.first.history.canRedo)
     }
@@ -281,7 +281,7 @@ struct WindowUndoTwoWindowTests {
         setup.first.history.undoToast()
         #expect(setup.first.history.toast == nil)
         #expect(
-            setup.first.history.alert?.message == "Rewards Card was deleted in another window. Nothing was changed."
+            setup.first.history.alert?.message == "Rewards Card has been deleted. Nothing was changed."
         )
         #expect(try setup.repository.transactions().isEmpty)
         #expect(setup.first.announcements.isEmpty)

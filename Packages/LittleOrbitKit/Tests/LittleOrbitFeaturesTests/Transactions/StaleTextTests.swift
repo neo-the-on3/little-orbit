@@ -10,11 +10,11 @@ struct StaleTextTests {
     func counted() {
         #expect(
             StaleText.changedOrDeleted(2)
-                == "2 of these transactions were changed or deleted in another window. Nothing was changed."
+                == "2 of these transactions have changed or been deleted since then. Nothing was changed."
         )
         #expect(
             StaleText.changedOrDeleted(5)
-                == "5 of these transactions were changed or deleted in another window. Nothing was changed."
+                == "5 of these transactions have changed or been deleted since then. Nothing was changed."
         )
     }
 
@@ -23,7 +23,7 @@ struct StaleTextTests {
         func singular() {
             #expect(
                 StaleText.changedOrDeleted(1)
-                    == "1 of these transactions was changed or deleted in another window. Nothing was changed."
+                    == "1 of these transactions has changed or been deleted since then. Nothing was changed."
             )
         }
     #endif

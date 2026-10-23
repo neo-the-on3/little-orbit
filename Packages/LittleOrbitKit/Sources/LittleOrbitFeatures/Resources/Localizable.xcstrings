@@ -109,26 +109,26 @@
         }
       }
     },
-    "%@ was changed in another window. Nothing was changed.": {
-      "comment": "Alert message: Undo or Redo of a record another window changed since. %@ is the transaction's payee or description, or an account name.",
+    "%@ has changed since then. Nothing was changed.": {
+      "comment": "Alert message: an Undo or Redo that can't run because the record changed after the step was recorded, so nothing was changed. %@ is the transaction's payee or description, or an account name. Don't name a cause: the same check catches a change from anywhere.",
       "extractionState": "manual",
       "localizations": {
         "en": {
           "stringUnit": {
             "state": "translated",
-            "value": "%@ was changed in another window. Nothing was changed."
+            "value": "%@ has changed since then. Nothing was changed."
           }
         }
       }
     },
-    "%@ was deleted in another window. Nothing was changed.": {
-      "comment": "Alert message: Undo or Redo of a record or account another window deleted. %@ is the transaction's payee or description, or the account name.",
+    "%@ has been deleted. Nothing was changed.": {
+      "comment": "Alert message: an Undo or Redo that can't run because the record or account was deleted after the step was recorded, so nothing was changed. %@ is the transaction's payee or description, or the account name. Don't name a cause: the same check catches a change from anywhere.",
       "extractionState": "manual",
       "localizations": {
         "en": {
           "stringUnit": {
             "state": "translated",
-            "value": "%@ was deleted in another window. Nothing was changed."
+            "value": "%@ has been deleted. Nothing was changed."
           }
         }
       }
@@ -205,8 +205,8 @@
         }
       }
     },
-    "%lld of these transactions were changed or deleted in another window. Nothing was changed.": {
-      "comment": "Alert message: a bulk Undo or Redo where more than one transaction was changed or deleted in another window, so nothing was changed. %lld is how many.",
+    "%lld of these transactions have changed or been deleted since then. Nothing was changed.": {
+      "comment": "Alert message: a bulk Undo or Redo that can't run because more than one of its transactions changed or was deleted after the step was recorded, so nothing was changed. %lld is how many. Don't name a cause: the same check catches a change from anywhere.",
       "extractionState": "manual",
       "localizations": {
         "en": {
@@ -215,13 +215,13 @@
               "one": {
                 "stringUnit": {
                   "state": "translated",
-                  "value": "%lld of these transactions was changed or deleted in another window. Nothing was changed."
+                  "value": "%lld of these transactions has changed or been deleted since then. Nothing was changed."
                 }
               },
               "other": {
                 "stringUnit": {
                   "state": "translated",
-                  "value": "%lld of these transactions were changed or deleted in another window. Nothing was changed."
+                  "value": "%lld of these transactions have changed or been deleted since then. Nothing was changed."
                 }
               }
             }
