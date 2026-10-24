@@ -16,6 +16,12 @@ enum FeatureText {
             String(localized: value, bundle: .module, comment: comment)
         }
 
+        /// The catalog entry `key`, whose English text is `defaultValue`, for text whose English alone would be
+        /// ambiguous as a key, such as the built-in category “Other” next to the account type “Other”.
+        static func string(key: StaticString, defaultValue: Value, comment: StaticString) -> String {
+            String(localized: key, defaultValue: defaultValue, bundle: .module, comment: comment)
+        }
+
         /// The catalog entry `key`, filled with `arguments`. The catalog holds its comment and any plural
         /// variants; a missing entry falls back to `key`, the English text.
         static func format(_ key: StaticString, _ arguments: any CVarArg...) -> String {
@@ -56,6 +62,10 @@ enum FeatureText {
 
         static func string(_ value: Value, comment _: StaticString) -> String {
             value.text
+        }
+
+        static func string(key _: StaticString, defaultValue: Value, comment _: StaticString) -> String {
+            defaultValue.text
         }
 
         static func format(_ key: StaticString, _ arguments: any CVarArg...) -> String {

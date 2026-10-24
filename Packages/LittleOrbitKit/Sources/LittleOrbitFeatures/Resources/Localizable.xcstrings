@@ -1483,7 +1483,7 @@
         }
       }
     },
-    "Education": {
+    "category.seed.education": {
       "comment": "Built-in expense category name.",
       "extractionState": "manual",
       "localizations": {
@@ -1495,7 +1495,7 @@
         }
       }
     },
-    "Entertainment": {
+    "category.seed.entertainment": {
       "comment": "Built-in expense category name.",
       "extractionState": "manual",
       "localizations": {
@@ -1544,7 +1544,7 @@
         }
       }
     },
-    "Fees & Charges": {
+    "category.seed.fees": {
       "comment": "Built-in expense category name: bank and service fees.",
       "extractionState": "manual",
       "localizations": {
@@ -1556,7 +1556,7 @@
         }
       }
     },
-    "Food & Dining": {
+    "category.seed.food": {
       "comment": "Built-in expense category name.",
       "extractionState": "manual",
       "localizations": {
@@ -1592,7 +1592,7 @@
         }
       }
     },
-    "Gifts Received": {
+    "category.seed.giftsReceived": {
       "comment": "Built-in income category name.",
       "extractionState": "manual",
       "localizations": {
@@ -1604,7 +1604,7 @@
         }
       }
     },
-    "Groceries": {
+    "category.seed.groceries": {
       "comment": "Built-in expense subcategory name, under Food & Dining.",
       "extractionState": "manual",
       "localizations": {
@@ -1616,7 +1616,7 @@
         }
       }
     },
-    "Health": {
+    "category.seed.health": {
       "comment": "Built-in expense category name.",
       "extractionState": "manual",
       "localizations": {
@@ -1628,7 +1628,7 @@
         }
       }
     },
-    "Housing": {
+    "category.seed.housing": {
       "comment": "Built-in expense category name.",
       "extractionState": "manual",
       "localizations": {
@@ -1640,7 +1640,7 @@
         }
       }
     },
-    "Insurance": {
+    "category.seed.insurance": {
       "comment": "Built-in expense category name.",
       "extractionState": "manual",
       "localizations": {
@@ -1652,7 +1652,7 @@
         }
       }
     },
-    "Interest": {
+    "category.seed.interest": {
       "comment": "Built-in income category name: interest earned.",
       "extractionState": "manual",
       "localizations": {
@@ -2140,7 +2140,7 @@
         }
       }
     },
-    "Other": {
+    "category.seed.otherExpense": {
       "comment": "Built-in expense category name, for spending that fits no other.",
       "extractionState": "manual",
       "localizations": {
@@ -2152,7 +2152,7 @@
         }
       }
     },
-    "Other Income": {
+    "category.seed.otherIncome": {
       "comment": "Built-in income category name, for income that fits no other.",
       "extractionState": "manual",
       "localizations": {
@@ -2176,7 +2176,7 @@
         }
       }
     },
-    "Personal Care": {
+    "category.seed.personalCare": {
       "comment": "Built-in expense category name.",
       "extractionState": "manual",
       "localizations": {
@@ -2320,7 +2320,7 @@
         }
       }
     },
-    "Salary": {
+    "category.seed.salary": {
       "comment": "Built-in income category name.",
       "extractionState": "manual",
       "localizations": {
@@ -2332,7 +2332,7 @@
         }
       }
     },
-    "Shopping": {
+    "category.seed.shopping": {
       "comment": "Built-in expense category name.",
       "extractionState": "manual",
       "localizations": {
@@ -2638,7 +2638,7 @@
         }
       }
     },
-    "Transport": {
+    "category.seed.transport": {
       "comment": "Built-in expense category name.",
       "extractionState": "manual",
       "localizations": {
@@ -2650,7 +2650,7 @@
         }
       }
     },
-    "Travel": {
+    "category.seed.travel": {
       "comment": "Built-in expense category name.",
       "extractionState": "manual",
       "localizations": {
@@ -2758,7 +2758,7 @@
         }
       }
     },
-    "Utilities": {
+    "category.seed.utilities": {
       "comment": "Built-in expense category name.",
       "extractionState": "manual",
       "localizations": {
