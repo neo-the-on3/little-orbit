@@ -37,7 +37,7 @@ public final class TransactionFormViewModel {
             }
         }
     }
-    public private(set) var payeeID: UUID?
+    public internal(set) var payeeID: UUID?
     /// The stored moment. The picker edits it through `pickerDate`, which changes only its day (D230.1).
     public internal(set) var date: Date
     public private(set) var details = ""
@@ -58,9 +58,9 @@ public final class TransactionFormViewModel {
     @ObservationIgnored private(set) var original: Transaction?
     @ObservationIgnored private var originalPayeeName = ""
     @ObservationIgnored private var accounts: [Account] = []
-    @ObservationIgnored private var categories: [TransactionCategory] = []
-    @ObservationIgnored private var payees: [Payee] = []
-    @ObservationIgnored private var transactions: [Transaction] = []
+    @ObservationIgnored var categories: [TransactionCategory] = []
+    @ObservationIgnored var payees: [Payee] = []
+    @ObservationIgnored var transactions: [Transaction] = []
     @ObservationIgnored private(set) var timeZoneID: String
 
     public init(
@@ -311,65 +311,6 @@ public final class TransactionFormViewModel {
             return "Enter the amount received in \(code)."
         }
         return nil
-    }
-
-    // MARK: Category and payee
-
-    public var categoryOptions: [TransactionCategoryOption] {
-        guard type != .transfer else {
-            return []
-        }
-        let fitting = categories.filter { !$0.isArchived && $0.deletedAt == nil && $0.kind.matches(type) }
-        let parents = fitting.filter { $0.parentID == nil }.sorted { $0.sortOrder < $1.sortOrder }
-        return parents.flatMap { parent in
-            let children = fitting.filter { $0.parentID == parent.id }.sorted { $0.sortOrder < $1.sortOrder }
-            return ([parent] + children)
-                .map { category in
-                    TransactionCategoryOption(
-                        id: category.id,
-                        name: category.name,
-                        symbolName: category.iconName ?? "tag",
-                        isSubcategory: category.parentID != nil,
-                        parentID: category.parentID,
-                    )
-                }
-        }
-    }
-
-    /// The category picker's sections: each parent, then its subcategories.
-    public var categoryGroups: [TransactionCategoryGroup] {
-        TransactionCategoryGroup.groups(categoryOptions)
-    }
-
-    public var categoryName: String {
-        categories.first { $0.id == categoryID }?.name ?? TransactionText.uncategorised
-    }
-
-    /// The category picker's VoiceOver value, with the parent for a subcategory: "Groceries, under Food".
-    public var categorySpokenValue: String {
-        TransactionCategoryGroup.spokenValue(of: categoryID, in: categories)
-    }
-
-    public var payeeName: String {
-        TransactionText.trimmed(payeeText) ?? "None"
-    }
-
-    public var payeeSuggestions: [TransactionSuggestion] {
-        guard payeeID == nil, TransactionText.trimmed(payeeText) != nil else {
-            return []
-        }
-        return TransactionSuggestions.payees(matching: payeeText, payees: payees, transactions: transactions)
-    }
-
-    /// Picks a suggested payee and, if no category is set, the category last used with it.
-    public func choosePayee(_ suggestion: TransactionSuggestion) {
-        payeeText = suggestion.text
-        payeeID = suggestion.payeeID
-        if categoryID == nil, let suggested = suggestion.categoryID,
-            categories.first(where: { $0.id == suggested })?.kind.matches(type) == true
-        {
-            categoryID = suggested
-        }
     }
 
     // MARK: Description and notes
