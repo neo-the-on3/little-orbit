@@ -93,6 +93,36 @@ struct DismissAttemptRelayTests {
         #expect(root(from: Node(parent: inner)) === inner)
     }
 
+    // MARK: Refusing dismissal while edited (#167)
+
+    @Test("A swipe down is refused while there are unsaved edits, read live, and the original isn't asked")
+    func shouldDismissRefusesWhileDirty() {
+        let relay = DismissAttemptRelay(isDirty: false)
+        let sheet = FakeSheet(isModalInPresentation: false)
+        DismissAttemptInstaller<FakeSheet>(relay: relay).install(on: sheet)
+        var asked = 0
+        let original = {
+            asked += 1
+            return true
+        }
+        #expect(relay.shouldDismiss(original: original))
+        relay.isDirty = true
+        #expect(!relay.shouldDismiss(original: original), "It follows the state after install")
+        #expect(!relay.shouldDismiss(original: nil))
+        #expect(asked == 1, "Only the clean answer asked the original")
+        relay.isDirty = false
+        #expect(relay.shouldDismiss(original: nil))
+        #expect(sheet.modalWrites == 0)
+    }
+
+    @Test("With no unsaved edits the original delegate's answer passes through, and it's true when there's none")
+    func shouldDismissWhenClean() {
+        let relay = DismissAttemptRelay(isDirty: false)
+        #expect(relay.shouldDismiss(original: { true }))
+        #expect(!relay.shouldDismiss(original: { false }), "The original's refusal stands")
+        #expect(relay.shouldDismiss(original: nil))
+    }
+
     // MARK: Installing never touches whether the sheet is modal (#167)
 
     private final class FakeProxy {
