@@ -64,6 +64,28 @@ struct CategoryUseCasesTests {
         }
     }
 
+    @Test("D299: Add takes a top-level name the other kind has, and refuses one its own kind has")
+    func addChecksNamesWithinTheKind() throws {
+        let repository = try repository()
+        let useCases = CategoryUseCases(repository: repository)
+        let incomeFood = try useCases.saveCategory.add(named: "food", kind: .income, parentID: nil)
+        #expect(incomeFood.kind == .income)
+        #expect(try category(incomeFood.id, in: repository)?.name == "food")
+        #expect(throws: LedgerValidationError.duplicateCategoryName) {
+            try useCases.saveCategory.add(named: " SALARY", kind: .income, parentID: nil)
+        }
+        #expect(throws: LedgerValidationError.duplicateCategoryName) {
+            try useCases.saveCategory.add(named: "Food", kind: .expense, parentID: nil)
+        }
+    }
+
+    @Test("D299: renaming a top-level category to a name only the other kind has is allowed")
+    func renameAcrossKinds() throws {
+        let repository = try repository()
+        try CategoryUseCases(repository: repository).saveCategory.rename(salary.id, to: "Shopping")
+        #expect(try category(salary.id, in: repository)?.name == "Shopping")
+    }
+
     @Test("Renaming keeps the id and kind; blank and duplicate names are refused")
     func rename() throws {
         let repository = try repository()
