@@ -1,7 +1,7 @@
 import LittleOrbitDomain
 
 /// The built-in category names from this package's String Catalog (D8). The composition root passes it to the
-/// transaction use cases, which store these names when they seed the default categories.
+/// transaction use cases, which store these names when they seed the default categories once at launch (D291.7).
 public struct CatalogDefaultCategoryNames: DefaultCategoryNaming {
     public init() {}
 
