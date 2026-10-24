@@ -52,7 +52,9 @@
     /// controller for a presentation controller: that controller isn't presented, so UIKit would make a new
     /// one for it that no swipe ever reaches. SwiftUI can set its own delegate again after ours, for example when
     /// `interactiveDismissDisabled` changes, so the bridge installs again as the view appears and lays out, on
-    /// every update, and once more on the next main-queue turn, after SwiftUI's own update. One bridge per sheet.
+    /// every update, and once more on the next main-queue turn, after SwiftUI's own update. It only sets the
+    /// delegate: whether the sheet is modal is left to `interactiveDismissDisabled` (#167). Its proxy also
+    /// refuses dismissal while there are unsaved edits, in case that flag lands late. One bridge per sheet.
     private struct DismissAttemptObserver: UIViewControllerRepresentable {
         let isDirty: Bool
         let onAttempt: (_ isDirty: Bool) -> Void
@@ -73,7 +75,7 @@
 
         final class Controller: UIViewController {
             let relay = DismissAttemptRelay()
-            private var proxy: DismissAttemptProxy?
+            private lazy var installer = DismissAttemptInstaller<PresentedSheet>(relay: relay)
 
             override func viewWillAppear(_ animated: Bool) {
                 super.viewWillAppear(animated)
@@ -90,38 +92,18 @@
                 install()
             }
 
-            /// Makes our proxy the sheet's presentation delegate if it isn't already, and keeps the sheet's
-            /// root modal while there are unsaved edits, since UIKit reports a refused swipe only then. It never
-            /// wraps a proxy, ours or another bridge's, so the delegate chain can't grow or loop.
+            /// Makes our proxy the sheet's presentation delegate if it isn't already. It never wraps a proxy, ours
+            /// or another bridge's, so the delegate chain can't grow or loop. It leaves `isModalInPresentation`
+            /// alone: `interactiveDismissDisabled(isDirty)` is its only writer, and a write here, including from
+            /// the deferred re-install, could put back a stale `false` and let the first swipe close an edited
+            /// sheet (#167).
             func install() {
                 guard let root = sheetRoot(), let presentation = root.presentationController else {
                     return
                 }
-                // SwiftUI's interactiveDismissDisabled should already set this on the same controller; setting it
-                // here too makes sure the controller UIKit checks is the one this bridge listens on.
-                if root.isModalInPresentation != relay.isDirty {
-                    root.isModalInPresentation = relay.isDirty
-                }
-                let current = presentation.delegate
-                let step = DismissAttemptInstall.step(
-                    delegateIsOurProxy: proxy != nil && current === proxy,
-                    delegateIsProxy: current is DismissAttemptProxy,
-                )
-                switch step {
-                case .keep:
-                    return
-                case .adopt:
-                    guard let other = current as? DismissAttemptProxy else {
-                        return
-                    }
-                    other.relay = relay
-                    proxy = other
-                    DiscardBridgeLog.installed(on: root, adopted: true)
-                case .wrap:
-                    let proxy = DismissAttemptProxy(original: current, relay: relay)
-                    presentation.delegate = proxy
-                    self.proxy = proxy
-                    DiscardBridgeLog.installed(on: root, adopted: false)
+                let step = installer.install(on: PresentedSheet(presentation: presentation))
+                if step != .keep {
+                    DiscardBridgeLog.installed(on: root, adopted: step == .adopt)
                 }
             }
 
@@ -160,6 +142,27 @@
         }
     }
 
+    /// The sheet's presentation controller, as the installer sees it: only its delegate.
+    private struct PresentedSheet: DismissAttemptSheet {
+        let presentation: UIPresentationController
+
+        var delegateProxy: DismissAttemptProxy? {
+            presentation.delegate as? DismissAttemptProxy
+        }
+
+        func adopt(_ proxy: DismissAttemptProxy, relay: DismissAttemptRelay) {
+            proxy.relay = relay
+        }
+
+        func wrapDelegate(relay: DismissAttemptRelay) -> DismissAttemptProxy {
+            let proxy = DismissAttemptProxy(original: presentation.delegate, relay: relay)
+            presentation.delegate = proxy
+            return proxy
+        }
+    }
+
+    /// The sheet's presentation delegate while the bridge is installed: it refuses dismissal while there are
+    /// unsaved edits, reports refused swipes, and passes everything else on to the delegate it wraps.
     private final class DismissAttemptProxy: NSObject, UIAdaptivePresentationControllerDelegate {
         private nonisolated(unsafe) weak var original: (any NSObjectProtocol)?
         var relay: DismissAttemptRelay
@@ -167,6 +170,16 @@
         init(original: (any UIAdaptivePresentationControllerDelegate)?, relay: DismissAttemptRelay) {
             self.original = original
             self.relay = relay
+        }
+
+        /// Refuses a swipe down while there are unsaved edits (the relay's live state), so UIKit calls
+        /// presentationControllerDidAttemptToDismiss and the prompt shows even when SwiftUI's
+        /// `interactiveDismissDisabled` lands late (#167). With none, it's the original delegate's answer, or true.
+        /// It doesn't write `isModalInPresentation`: `interactiveDismissDisabled` stays its only writer.
+        func presentationControllerShouldDismiss(_ presentationController: UIPresentationController) -> Bool {
+            let delegate = original as? any UIAdaptivePresentationControllerDelegate
+            let ask = delegate?.presentationControllerShouldDismiss
+            return relay.shouldDismiss(original: ask.map { ask in { ask(presentationController) } })
         }
 
         func presentationControllerDidAttemptToDismiss(_ presentationController: UIPresentationController) {

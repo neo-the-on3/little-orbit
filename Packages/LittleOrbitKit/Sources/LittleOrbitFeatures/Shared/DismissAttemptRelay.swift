@@ -2,7 +2,7 @@ import Foundation
 
 /// Passes a refused swipe down on an edit sheet to its discard prompt (D300.1), with the sheet's unsaved-edits
 /// state as it is when the swipe happens, not when the bridge was installed. The iOS bridge updates `isDirty`
-/// on every view update and calls `attempt()` from the sheet's presentation delegate.
+/// on every view update; the sheet's presentation delegate asks `shouldDismiss(original:)` and calls `attempt()`.
 @MainActor
 final class DismissAttemptRelay {
     var isDirty: Bool
@@ -15,6 +15,17 @@ final class DismissAttemptRelay {
 
     func attempt() {
         request(isDirty)
+    }
+
+    /// Whether a swipe down may close the sheet (presentationControllerShouldDismiss). While there are unsaved
+    /// edits, read now, it refuses, so UIKit reports the refused swipe and the prompt shows, even if
+    /// `interactiveDismissDisabled` hasn't made the sheet modal yet (#167). Otherwise it's the original delegate's
+    /// answer, or true when it has none; the original isn't asked while there are unsaved edits.
+    func shouldDismiss(original: (() -> Bool)?) -> Bool {
+        if isDirty {
+            return false
+        }
+        return original?() ?? true
     }
 }
 
@@ -55,5 +66,56 @@ extension DismissAttemptInstall {
             node = parent(current)
         }
         return nil
+    }
+}
+
+/// The presented sheet as the swipe bridge sees it: only its presentation delegate. The bridge never reads or
+/// writes whether the sheet is modal (`isModalInPresentation`): SwiftUI's `interactiveDismissDisabled` is its
+/// only writer, so a re-install can't put back a stale value and let an edited sheet close (#167).
+@MainActor
+protocol DismissAttemptSheet {
+    associatedtype Proxy: AnyObject
+
+    /// The sheet's presentation delegate, if it's a bridge proxy (ours or another bridge's).
+    var delegateProxy: Proxy? { get }
+
+    /// Points a bridge proxy that's already the delegate at `relay`.
+    func adopt(_ proxy: Proxy, relay: DismissAttemptRelay)
+
+    /// Makes a proxy around the current delegate, sets it as the delegate, and returns it.
+    func wrapDelegate(relay: DismissAttemptRelay) -> Proxy
+}
+
+/// Installs the swipe bridge's proxy on a sheet, as many times as the bridge is asked to: it keeps its own
+/// proxy, adopts another bridge's, and wraps anything else, and touches nothing but the delegate.
+@MainActor
+final class DismissAttemptInstaller<Sheet: DismissAttemptSheet> {
+    let relay: DismissAttemptRelay
+    private(set) var proxy: Sheet.Proxy?
+
+    init(relay: DismissAttemptRelay) {
+        self.relay = relay
+    }
+
+    /// Returns what it did, so the bridge can log a new install.
+    @discardableResult
+    func install(on sheet: Sheet) -> DismissAttemptInstall {
+        let current = sheet.delegateProxy
+        let step = DismissAttemptInstall.step(
+            delegateIsOurProxy: proxy != nil && current === proxy,
+            delegateIsProxy: current != nil,
+        )
+        switch step {
+        case .keep:
+            break
+        case .adopt:
+            if let current {
+                sheet.adopt(current, relay: relay)
+                proxy = current
+            }
+        case .wrap:
+            proxy = sheet.wrapDelegate(relay: relay)
+        }
+        return step
     }
 }
