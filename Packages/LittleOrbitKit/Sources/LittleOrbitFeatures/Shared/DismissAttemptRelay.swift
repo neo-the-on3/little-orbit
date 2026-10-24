@@ -57,3 +57,54 @@ extension DismissAttemptInstall {
         return nil
     }
 }
+
+/// The presented sheet as the swipe bridge sees it: only its presentation delegate. The bridge never reads or
+/// writes whether the sheet is modal (`isModalInPresentation`): SwiftUI's `interactiveDismissDisabled` is its
+/// only writer, so a re-install can't put back a stale value and let an edited sheet close (#167).
+@MainActor
+protocol DismissAttemptSheet {
+    associatedtype Proxy: AnyObject
+
+    /// The sheet's presentation delegate, if it's a bridge proxy (ours or another bridge's).
+    var delegateProxy: Proxy? { get }
+
+    /// Points a bridge proxy that's already the delegate at `relay`.
+    func adopt(_ proxy: Proxy, relay: DismissAttemptRelay)
+
+    /// Makes a proxy around the current delegate, sets it as the delegate, and returns it.
+    func wrapDelegate(relay: DismissAttemptRelay) -> Proxy
+}
+
+/// Installs the swipe bridge's proxy on a sheet, as many times as the bridge is asked to: it keeps its own
+/// proxy, adopts another bridge's, and wraps anything else, and touches nothing but the delegate.
+@MainActor
+final class DismissAttemptInstaller<Sheet: DismissAttemptSheet> {
+    let relay: DismissAttemptRelay
+    private(set) var proxy: Sheet.Proxy?
+
+    init(relay: DismissAttemptRelay) {
+        self.relay = relay
+    }
+
+    /// Returns what it did, so the bridge can log a new install.
+    @discardableResult
+    func install(on sheet: Sheet) -> DismissAttemptInstall {
+        let current = sheet.delegateProxy
+        let step = DismissAttemptInstall.step(
+            delegateIsOurProxy: proxy != nil && current === proxy,
+            delegateIsProxy: current != nil,
+        )
+        switch step {
+        case .keep:
+            break
+        case .adopt:
+            if let current {
+                sheet.adopt(current, relay: relay)
+                proxy = current
+            }
+        case .wrap:
+            proxy = sheet.wrapDelegate(relay: relay)
+        }
+        return step
+    }
+}
