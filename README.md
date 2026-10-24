@@ -180,7 +180,7 @@ SwiftLint reads `.swiftlint.yml` and swift-format reads `.swift-format`. The tas
 
 ### CI
 
-`.github/workflows/ci.yml` runs on pull requests and on pushes to `main`. Linux jobs install the tools in this `mise.toml` with mise. The macOS job selects Xcode 27.2 first, so `mise install` and `mise run test` use that Xcode (`xcrun swift`). Tool versions stay in this file.
+`.github/workflows/ci.yml` runs on pushes to `main`, on pull requests once they're ready for review (draft pull requests skip every job), and by hand: Actions › CI › Run workflow on a branch, or `gh workflow run ci.yml --ref <branch>`. The mise tool cache is saved only from `main`; other runs restore it. Linux jobs install the tools in this `mise.toml` with mise. The macOS job selects Xcode 27.2 first, so `mise install` and `mise run test` use that Xcode (`xcrun swift`). Tool versions stay in this file.
 
 The workflow uses the standard `ubuntu-latest` and `xcode-27` runners. On a pull request the checks are `CI / <job name>`. All five jobs below are required status checks on `main`, and a branch must be up to date with `main` before it merges.
 
