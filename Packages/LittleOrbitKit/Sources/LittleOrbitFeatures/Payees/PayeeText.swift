@@ -120,7 +120,7 @@ enum PayeeText {
     }
 
     static var tryAgain: String {
-        FeatureText.string("Try again.", comment: "Alert message under “Couldn’t Load Payees”.")
+        CategoryText.tryAgain
     }
 
     // MARK: Editor
