@@ -14,6 +14,41 @@
         }
       }
     },
+    "%1$@ are removed from lists, autocomplete and reports.": {
+      "comment": "Merge Payees footnote sentence (D297.3): %1$@ is the payee merged into the one kept, or the payees joined in the system list format (“A, B, and C”); how many there are picks the form.",
+      "extractionState": "manual",
+      "generatesSymbol": false,
+      "localizations": {
+        "en": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "%#@count@"
+          },
+          "substitutions": {
+            "count": {
+              "argNum": 2,
+              "formatSpecifier": "lld",
+              "variations": {
+                "plural": {
+                  "one": {
+                    "stringUnit": {
+                      "state": "translated",
+                      "value": "%1$@ is removed from lists, autocomplete and reports."
+                    }
+                  },
+                  "other": {
+                    "stringUnit": {
+                      "state": "translated",
+                      "value": "%1$@ are removed from lists, autocomplete and reports."
+                    }
+                  }
+                }
+              }
+            }
+          }
+        }
+      }
+    },
     "%1$@ from %2$@ to %3$@": {
       "comment": "An Undo or Redo name, delete toast or undo notice, with where it happened: a transfer's two accounts. %1$@ is the action, such as \"Edit Transfer\"; %2$@ and %3$@ are the From and To account names.",
       "extractionState": "manual",
@@ -72,6 +107,19 @@
         }
       }
     },
+    "%1$@ keeps the most recent last-used category (%2$@).": {
+      "comment": "Merge Payees footnote sentence (D291.5): %1$@ is the payee kept; %2$@ is the category a new transaction with it preselects.",
+      "extractionState": "manual",
+      "generatesSymbol": false,
+      "localizations": {
+        "en": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "%1$@ keeps the most recent last-used category (%2$@)."
+          }
+        }
+      }
+    },
     "%1$@ · %2$@": {
       "comment": "A backup's account count (%1$@) and transaction count (%2$@).",
       "extractionState": "manual",
@@ -80,6 +128,19 @@
           "stringUnit": {
             "state": "translated",
             "value": "%1$@ · %2$@"
+          }
+        }
+      }
+    },
+    "%1$@ · %2$lld": {
+      "comment": "Payee row, right side: %1$@ is the payee’s last-used category; %2$lld is how many transactions use the payee.",
+      "extractionState": "manual",
+      "generatesSymbol": false,
+      "localizations": {
+        "en": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "%1$@ · %2$lld"
           }
         }
       }
@@ -222,6 +283,41 @@
         }
       }
     },
+    "%1$@, %2$lld transactions": {
+      "comment": "VoiceOver value of a payee row: %1$@ is its last-used category, %2$lld how many transactions use the payee.",
+      "extractionState": "manual",
+      "generatesSymbol": false,
+      "localizations": {
+        "en": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "%1$@, %#@count@"
+          },
+          "substitutions": {
+            "count": {
+              "argNum": 2,
+              "formatSpecifier": "lld",
+              "variations": {
+                "plural": {
+                  "one": {
+                    "stringUnit": {
+                      "state": "translated",
+                      "value": "%arg transaction"
+                    }
+                  },
+                  "other": {
+                    "stringUnit": {
+                      "state": "translated",
+                      "value": "%arg transactions"
+                    }
+                  }
+                }
+              }
+            }
+          }
+        }
+      }
+    },
     "%1$@, under %2$@": {
       "comment": "VoiceOver value of the category picker for a subcategory, so its parent is heard: \"Groceries, under Food\". %1$@ is the subcategory, %2$@ its parent category.",
       "extractionState": "manual",
@@ -235,7 +331,7 @@
       }
     },
     "%1$lld transactions will use %2$@.": {
-      "comment": "Merge sheet footnote, first sentence: %1$lld is how many transactions move; %2$@ is the chosen category.",
+      "comment": "Merge sheet footnote, first sentence (categories and payees): %1$lld is how many transactions move; %2$@ is the chosen category or the payee kept.",
       "extractionState": "manual",
       "generatesSymbol": false,
       "localizations": {
@@ -428,8 +524,33 @@
         }
       }
     },
+    "%lld selected": {
+      "comment": "Payees screen, select mode, bottom toolbar: %lld is how many payees are chosen.",
+      "extractionState": "manual",
+      "generatesSymbol": false,
+      "localizations": {
+        "en": {
+          "variations": {
+            "plural": {
+              "one": {
+                "stringUnit": {
+                  "state": "translated",
+                  "value": "%lld selected"
+                }
+              },
+              "other": {
+                "stringUnit": {
+                  "state": "translated",
+                  "value": "%lld selected"
+                }
+              }
+            }
+          }
+        }
+      }
+    },
     "%lld transactions": {
-      "comment": "A backup's transaction count.",
+      "comment": "How many transactions: a backup’s transaction count, a payee row with no last-used category, and the Merge Payees rows.",
       "extractionState": "manual",
       "localizations": {
         "en": {
@@ -922,7 +1043,7 @@
       }
     },
     "Cancel": {
-      "comment": "Category sheets and alerts: close without changing anything.",
+      "comment": "Category and payee sheets and alerts: close without changing anything.",
       "extractionState": "manual",
       "generatesSymbol": false,
       "localizations": {
@@ -1876,6 +1997,19 @@
         }
       }
     },
+    "Couldn’t Load Payees": {
+      "comment": "Alert title: the payee list couldn’t be read. Its only button is OK.",
+      "extractionState": "manual",
+      "generatesSymbol": false,
+      "localizations": {
+        "en": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Couldn’t Load Payees"
+          }
+        }
+      }
+    },
     "Couldn’t Make the Change": {
       "comment": "Alert title after the user's own change: it was saved, but its accounts or its records couldn't be read back (D204). Not used for a failed Undo or Redo.",
       "extractionState": "manual",
@@ -1901,7 +2035,7 @@
       }
     },
     "Couldn’t Save Changes": {
-      "comment": "Alert title: a category change couldn’t be saved and nothing changed. Its only button is OK.",
+      "comment": "Alert title: a category or payee change couldn’t be saved and nothing changed. Its only button is OK.",
       "extractionState": "manual",
       "generatesSymbol": false,
       "localizations": {
@@ -2464,7 +2598,7 @@
       }
     },
     "Done": {
-      "comment": "Categories screen: ends reordering.",
+      "comment": "Categories and Payees screens: ends reordering or selecting.",
       "extractionState": "manual",
       "generatesSymbol": false,
       "localizations": {
@@ -2485,6 +2619,19 @@
           "stringUnit": {
             "state": "translated",
             "value": "Drag the handles to reorder. Subcategories reorder within their parent. A category with subcategories can’t move under another one."
+          }
+        }
+      }
+    },
+    "Each payee shows its last-used category and how many transactions use it. Picking a payee on a new transaction preselects its last-used category. To merge duplicates, tap More, then Select.": {
+      "comment": "Payees screen footer under the list, outside select mode. More is the toolbar menu; Select is its item.",
+      "extractionState": "manual",
+      "generatesSymbol": false,
+      "localizations": {
+        "en": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Each payee shows its last-used category and how many transactions use it. Picking a payee on a new transaction preselects its last-used category. To merge duplicates, tap More, then Select."
           }
         }
       }
@@ -2610,6 +2757,19 @@
           "stringUnit": {
             "state": "translated",
             "value": "Edit Category"
+          }
+        }
+      }
+    },
+    "Edit Payee": {
+      "comment": "Payee editor title: renaming a payee.",
+      "extractionState": "manual",
+      "generatesSymbol": false,
+      "localizations": {
+        "en": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Edit Payee"
           }
         }
       }
@@ -2756,7 +2916,7 @@
       }
     },
     "Enter a name.": {
-      "comment": "Category editor, under the name field: the name is empty or only spaces.",
+      "comment": "Category and payee editors, under the name field: the name is empty or only spaces.",
       "extractionState": "manual",
       "generatesSymbol": false,
       "localizations": {
@@ -3139,6 +3299,19 @@
         }
       }
     },
+    "Keep which name?": {
+      "comment": "Merge Payees: the header over the chosen payees; the one picked keeps its name and the others merge into it.",
+      "extractionState": "manual",
+      "generatesSymbol": false,
+      "localizations": {
+        "en": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Keep which name?"
+          }
+        }
+      }
+    },
     "Keeping fewer automatic backups deletes %lld of them now. Manual and Before restore backups aren’t affected.": {
       "comment": "Message of the confirmation when lowering Keep deletes automatic backups. %lld is how many. The one variant says \"1 backup\" (D212).",
       "extractionState": "manual",
@@ -3407,7 +3580,7 @@
       }
     },
     "Merge": {
-      "comment": "Merge sheet: merges the category into the chosen one.",
+      "comment": "Merge Categories and Merge Payees sheets: does the merge.",
       "extractionState": "manual",
       "generatesSymbol": false,
       "localizations": {
@@ -3441,6 +3614,19 @@
           "stringUnit": {
             "state": "translated",
             "value": "Merge into…"
+          }
+        }
+      }
+    },
+    "Merge Payees": {
+      "comment": "Sheet title: merge the chosen payees into one.",
+      "extractionState": "manual",
+      "generatesSymbol": false,
+      "localizations": {
+        "en": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Merge Payees"
           }
         }
       }
@@ -3480,8 +3666,21 @@
         }
       }
     },
+    "Merge…": {
+      "comment": "Payees screen, select mode: opens Merge Payees for the chosen payees.",
+      "extractionState": "manual",
+      "generatesSymbol": false,
+      "localizations": {
+        "en": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Merge…"
+          }
+        }
+      }
+    },
     "Merging can’t be undone.": {
-      "comment": "Last sentence of the Merge sheet footnote (D287.3).",
+      "comment": "Last sentence of the Merge Categories and Merge Payees footnotes (D287.3).",
       "extractionState": "manual",
       "generatesSymbol": false,
       "localizations": {
@@ -3518,7 +3717,7 @@
       }
     },
     "More": {
-      "comment": "Categories screen: the toolbar menu’s accessibility label.",
+      "comment": "Categories and Payees screens: the toolbar menu’s accessibility label.",
       "extractionState": "manual",
       "generatesSymbol": false,
       "localizations": {
@@ -3640,7 +3839,7 @@
       }
     },
     "Name": {
-      "comment": "Category editor: the name field’s placeholder and VoiceOver label.",
+      "comment": "Category and payee editors: the name field’s placeholder and VoiceOver label.",
       "extractionState": "manual",
       "generatesSymbol": false,
       "localizations": {
@@ -3818,6 +4017,19 @@
         }
       }
     },
+    "No Payees": {
+      "comment": "Payees screen with no payees: the title.",
+      "extractionState": "manual",
+      "generatesSymbol": false,
+      "localizations": {
+        "en": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "No Payees"
+          }
+        }
+      }
+    },
     "Not Enough Storage to Restore": {
       "comment": "Alert title when a restore stopped because the disk was full while the safe copy of the current data was being made (D211.8). Restore only; Back Up Now shows the list's line instead. The only button is OK.",
       "extractionState": "manual",
@@ -3856,7 +4068,7 @@
       }
     },
     "OK": {
-      "comment": "Closes a category alert.",
+      "comment": "Closes a category or payee alert.",
       "extractionState": "manual",
       "generatesSymbol": false,
       "localizations": {
@@ -3928,6 +4140,32 @@
           "stringUnit": {
             "state": "translated",
             "value": "Payee isn’t applied to transfers"
+          }
+        }
+      }
+    },
+    "Payees": {
+      "comment": "Settings row and screen title: the payee manager.",
+      "extractionState": "manual",
+      "generatesSymbol": false,
+      "localizations": {
+        "en": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Payees"
+          }
+        }
+      }
+    },
+    "Payees you enter on transactions appear here.": {
+      "comment": "Payees screen with no payees: the explanation.",
+      "extractionState": "manual",
+      "generatesSymbol": false,
+      "localizations": {
+        "en": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Payees you enter on transactions appear here."
           }
         }
       }
@@ -4117,7 +4355,7 @@
       }
     },
     "Save": {
-      "comment": "Category editor: saves the category.",
+      "comment": "Category and payee editors: saves the change.",
       "extractionState": "manual",
       "generatesSymbol": false,
       "localizations": {
@@ -4125,6 +4363,32 @@
           "stringUnit": {
             "state": "translated",
             "value": "Save"
+          }
+        }
+      }
+    },
+    "Search payees": {
+      "comment": "Payees screen: the search field’s placeholder.",
+      "extractionState": "manual",
+      "generatesSymbol": false,
+      "localizations": {
+        "en": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Search payees"
+          }
+        }
+      }
+    },
+    "Select": {
+      "comment": "Payees screen menu item: choose payees to merge.",
+      "extractionState": "manual",
+      "generatesSymbol": false,
+      "localizations": {
+        "en": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Select"
           }
         }
       }
@@ -4272,6 +4536,19 @@
           "stringUnit": {
             "state": "translated",
             "value": "There’s already a category named “%@” here."
+          }
+        }
+      }
+    },
+    "There’s already a payee named “%@”.": {
+      "comment": "Payee editor, under the name field: another payee has this name, ignoring case. The name typed.",
+      "extractionState": "manual",
+      "generatesSymbol": false,
+      "localizations": {
+        "en": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "There’s already a payee named “%@”."
           }
         }
       }
@@ -4474,6 +4751,19 @@
         }
       }
     },
+    "Try again.": {
+      "comment": "Alert message under “Couldn’t Load Payees”.",
+      "extractionState": "manual",
+      "generatesSymbol": false,
+      "localizations": {
+        "en": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Try again."
+          }
+        }
+      }
+    },
     "Unarchive": {
       "comment": "Button on an archived category: put it back in pickers.",
       "extractionState": "manual",
@@ -4585,7 +4875,7 @@
       }
     },
     "Use 100 characters or fewer.": {
-      "comment": "Category editor, under the name field: the name is longer than 100 characters.",
+      "comment": "Category and payee editors, under the name field: the name is longer than 100 characters.",
       "extractionState": "manual",
       "generatesSymbol": false,
       "localizations": {
@@ -4679,6 +4969,19 @@
           "stringUnit": {
             "state": "translated",
             "value": "Your change was saved, but couldn’t be read back, so it can’t be undone."
+          }
+        }
+      }
+    },
+    "Your payees weren’t changed. Try again.": {
+      "comment": "Alert message under “Couldn’t Save Changes”: a payee rename or merge failed and nothing was saved.",
+      "extractionState": "manual",
+      "generatesSymbol": false,
+      "localizations": {
+        "en": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Your payees weren’t changed. Try again."
           }
         }
       }
