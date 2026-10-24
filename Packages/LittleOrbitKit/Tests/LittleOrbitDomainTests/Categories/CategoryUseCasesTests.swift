@@ -245,3 +245,97 @@ struct CategoryUseCasesTests {
         #expect(try repository.transactions().first?.payeeID == amazonIn.id)
     }
 }
+
+/// Moving a subcategory to another parent (D287.1) and all-or-nothing merges (D287.4).
+@Suite("Moving subcategories and all-or-nothing merges (D287)")
+@MainActor
+struct CategoryMoveTests {
+    private let account = Account(name: "Wallet", type: .cash, currencyCode: "INR")
+    private let food = TransactionCategory(name: "Food", kind: .expense, sortOrder: 0)
+    private let leisure = TransactionCategory(name: "Leisure", kind: .expense, sortOrder: 1)
+    private let entertainment = TransactionCategory(name: "Entertainment", kind: .expense, sortOrder: 2)
+    private let salary = TransactionCategory(name: "Salary", kind: .income, sortOrder: 0)
+    private let movies: TransactionCategory
+    private let snacks: TransactionCategory
+    private let cinema: TransactionCategory
+
+    init() {
+        movies = TransactionCategory(name: "Movies", kind: .expense, parentID: leisure.id, sortOrder: 0)
+        snacks = TransactionCategory(name: "Snacks", kind: .expense, parentID: food.id, sortOrder: 0)
+        cinema = TransactionCategory(name: "movies", kind: .expense, parentID: entertainment.id, sortOrder: 0)
+    }
+
+    private func repository(_ transactions: [Transaction] = []) throws -> FakeLedgerRepository {
+        try FakeLedgerRepository(
+            accounts: [account],
+            categories: [food, leisure, entertainment, salary, movies, snacks, cinema],
+            transactions: transactions,
+        )
+    }
+
+    private func expense(_ categoryID: UUID) -> Transaction {
+        Transaction(type: .expense, amount: 10, accountID: account.id, categoryID: categoryID)
+    }
+
+    @Test("A subcategory moves under another same-kind parent, after its siblings, keeping its transactions")
+    func move() throws {
+        let repository = try repository([expense(snacks.id)])
+        let useCases = CategoryUseCases(repository: repository)
+        try useCases.moveSubcategory.move(snacks.id, toParent: leisure.id)
+        let moved = try #require(try repository.categories().first { $0.id == snacks.id })
+        #expect(moved.parentID == leisure.id)
+        #expect(moved.sortOrder == 1)
+        #expect(moved.kind == .expense)
+        #expect(try repository.transactions().first?.categoryID == snacks.id)
+    }
+
+    @Test("Parent targets are unarchived top-level categories of the subcategory's kind")
+    func parentTargets() throws {
+        let repository = try repository()
+        let useCases = CategoryUseCases(repository: repository)
+        try useCases.archiveCategory.archive(entertainment.id)
+        #expect(try useCases.moveSubcategory.parentTargets(for: snacks.id).map(\.id) == [food.id, leisure.id])
+        #expect(throws: LedgerValidationError.categoryNotSubcategory) {
+            try useCases.moveSubcategory.parentTargets(for: food.id)
+        }
+    }
+
+    @Test("A move to another kind, under a subcategory, or onto a taken name is refused and changes nothing")
+    func moveRefused() throws {
+        let repository = try repository()
+        let useCases = CategoryUseCases(repository: repository)
+        #expect(throws: LedgerValidationError.categoryKindMismatch) {
+            try useCases.moveSubcategory.move(snacks.id, toParent: salary.id)
+        }
+        #expect(throws: LedgerValidationError.categoryNestingTooDeep) {
+            try useCases.moveSubcategory.move(snacks.id, toParent: movies.id)
+        }
+        #expect(throws: LedgerValidationError.duplicateCategoryName) {
+            try useCases.moveSubcategory.move(movies.id, toParent: entertainment.id)
+        }
+        #expect(throws: LedgerValidationError.categoryNotSubcategory) {
+            try useCases.moveSubcategory.move(leisure.id, toParent: food.id)
+        }
+        #expect(try repository.categories().first { $0.id == snacks.id }?.parentID == food.id)
+        #expect(try repository.categories().first { $0.id == movies.id }?.parentID == leisure.id)
+    }
+
+    @Test("A category merge that can't finish leaves every transaction and category where it was (D287.4)")
+    func mergeAllOrNothing() throws {
+        let repository = try repository([expense(leisure.id), expense(movies.id)])
+        let before = try repository.categories()
+        let useCases = CategoryUseCases(repository: repository)
+        // Leisure's "Movies" clashes with Entertainment's "movies", so nothing may move.
+        #expect(throws: LedgerValidationError.duplicateCategoryName) {
+            try useCases.mergeCategories.merge(leisure.id, into: entertainment.id)
+        }
+        #expect(try repository.categories() == before)
+        #expect(try repository.transactions().map(\.categoryID) == [leisure.id, movies.id])
+        // A store failure during the merge's one save also leaves everything in place.
+        repository.failsAfterWrites = repository.writes
+        #expect(throws: FakeLedgerRepository.WriteFailure.self) {
+            try useCases.mergeCategories.merge(food.id, into: leisure.id)
+        }
+        #expect(try repository.categories() == before)
+    }
+}

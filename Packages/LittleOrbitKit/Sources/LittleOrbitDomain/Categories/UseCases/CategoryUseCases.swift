@@ -49,6 +49,17 @@ public protocol SaveCategoryUseCase {
 }
 
 @MainActor
+public protocol MoveSubcategoryUseCase {
+    /// The parents a subcategory can move to: live, unarchived top-level categories of its kind (D287.1).
+    func parentTargets(for subcategoryID: UUID) throws -> [TransactionCategory]
+    /// Moves a subcategory under another top-level category of the same kind, after its new siblings. Its
+    /// transactions keep it, so its history moves with it (D287.1, D217.6). Throws `categoryNotSubcategory` for a
+    /// top-level category, and the ledger's errors for another kind, a subcategory as the parent, or a name
+    /// that's taken under the new parent.
+    func move(_ subcategoryID: UUID, toParent parentID: UUID) throws
+}
+
+@MainActor
 public protocol ReorderCategoriesUseCase {
     /// Orders one group of siblings (same parent and kind). See `LedgerBook.reorderingCategories`.
     func reorder(_ orderedIDs: [UUID]) throws
@@ -67,7 +78,8 @@ public protocol MergeCategoriesUseCase {
     /// The live, unarchived categories `categoryID` can merge into: the same kind, outside its own subtree,
     /// and only top-level ones when it has subcategories. Other kinds are never offered (#24).
     func mergeTargets(for categoryID: UUID) throws -> [TransactionCategory]
-    /// Merges the source into the survivor, all or nothing. See `LedgerBook.mergingCategories`.
+    /// Merges the source into the survivor in one save, all or nothing (D287.4). It isn't an Undo step
+    /// (D287.2). See `LedgerBook.mergingCategories`.
     func merge(_ sourceID: UUID, into survivingID: UUID) throws
 }
 
@@ -78,7 +90,8 @@ public protocol DeleteCategoryUseCase {
     /// The live, unarchived categories Delete can move the category's transactions to: the same kind, outside
     /// its own subtree.
     func moveTargets(forDeleting categoryID: UUID) throws -> [TransactionCategory]
-    /// Applies `choice` to the category and its subcategories, all or nothing (D19).
+    /// Applies `choice` to the category and its subcategories, all or nothing (D19). Moving or leaving
+    /// uncategorised isn't an Undo step (D287.2); Archive is reversed with Unarchive.
     func delete(_ categoryID: UUID, choice: CategoryDeletion) throws
 }
 
@@ -88,17 +101,19 @@ public protocol ManagePayeesUseCase {
     func rename(_ payeeID: UUID, to name: String) throws
     /// Merges every payee in `sourceIDs` into the survivor, all or nothing: their transactions move to it and
     /// they're removed. The survivor itself may be in `sourceIDs`, as when it's one of the selected rows.
+    /// It isn't an Undo step (D287.2).
     func merge(_ sourceIDs: [UUID], into survivingID: UUID) throws
 }
 
 /// Every category use case, which `DefaultCategoryManagementUseCase` implements in one type.
-public typealias CategoryManagementUseCase = SaveCategoryUseCase & ReorderCategoriesUseCase & ArchiveCategoryUseCase
-    & MergeCategoriesUseCase & DeleteCategoryUseCase
+public typealias CategoryManagementUseCase = SaveCategoryUseCase & MoveSubcategoryUseCase & ReorderCategoriesUseCase
+    & ArchiveCategoryUseCase & MergeCategoriesUseCase & DeleteCategoryUseCase
 
 /// The category and payee use cases as one value, for the composition root.
 @MainActor
 public struct CategoryUseCases {
     public var saveCategory: any SaveCategoryUseCase
+    public var moveSubcategory: any MoveSubcategoryUseCase
     public var reorderCategories: any ReorderCategoriesUseCase
     public var archiveCategory: any ArchiveCategoryUseCase
     public var mergeCategories: any MergeCategoriesUseCase
@@ -107,6 +122,7 @@ public struct CategoryUseCases {
 
     public init(
         saveCategory: any SaveCategoryUseCase,
+        moveSubcategory: any MoveSubcategoryUseCase,
         reorderCategories: any ReorderCategoriesUseCase,
         archiveCategory: any ArchiveCategoryUseCase,
         mergeCategories: any MergeCategoriesUseCase,
@@ -114,6 +130,7 @@ public struct CategoryUseCases {
         managePayees: any ManagePayeesUseCase,
     ) {
         self.saveCategory = saveCategory
+        self.moveSubcategory = moveSubcategory
         self.reorderCategories = reorderCategories
         self.archiveCategory = archiveCategory
         self.mergeCategories = mergeCategories
@@ -126,6 +143,7 @@ public struct CategoryUseCases {
         let categories = DefaultCategoryManagementUseCase(repository: repository)
         self.init(
             saveCategory: categories,
+            moveSubcategory: categories,
             reorderCategories: categories,
             archiveCategory: categories,
             mergeCategories: categories,
@@ -169,6 +187,32 @@ public struct DefaultCategoryManagementUseCase: CategoryManagementUseCase {
         var category = try existing(categoryID)
         category.name = name
         try repository.saveCategory(category)
+    }
+
+    public func parentTargets(for subcategoryID: UUID) throws -> [TransactionCategory] {
+        let subcategory = try existing(subcategoryID)
+        guard subcategory.parentID != nil else {
+            throw LedgerValidationError.categoryNotSubcategory
+        }
+        return try repository.categories()
+            .filter { parent in
+                parent.parentID == nil && parent.kind == subcategory.kind && !parent.isArchived
+            }
+    }
+
+    public func move(_ subcategoryID: UUID, toParent parentID: UUID) throws {
+        var subcategory = try existing(subcategoryID)
+        guard subcategory.parentID != nil else {
+            throw LedgerValidationError.categoryNotSubcategory
+        }
+        guard subcategory.parentID != parentID else {
+            return
+        }
+        let siblings = try repository.categories().filter { $0.parentID == parentID }
+        subcategory.parentID = parentID
+        subcategory.sortOrder = (siblings.map(\.sortOrder).max() ?? -1) + 1
+        // One save: `LedgerBook` checks the parent is top-level, of the same kind, and has no sibling of that name.
+        try repository.saveCategory(subcategory)
     }
 
     public func reorder(_ orderedIDs: [UUID]) throws {
