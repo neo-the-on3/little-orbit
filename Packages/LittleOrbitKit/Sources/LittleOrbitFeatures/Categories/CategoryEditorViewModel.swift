@@ -157,20 +157,16 @@ public final class CategoryEditorViewModel {
     /// Empty, longer than 100 characters (graphemes, D39), or another category's name at the same level: the
     /// same parent for a subcategory, the same kind for a top-level category, ignoring case and outer spaces.
     private var nameProblem: String? {
-        let trimmed = name.trimmingCharacters(in: .whitespacesAndNewlines)
-        if trimmed.isEmpty {
-            return CategoryText.emptyName
+        if let problem = EditorName.lengthProblem(name) {
+            return problem
         }
-        if trimmed.count > Self.nameLimit {
-            return CategoryText.nameTooLong
-        }
-        let key = Self.nameKey(trimmed)
+        let key = EditorName.key(name)
         let taken = screen?.listing.categories
             .first { other in
                 other.id != categoryID
                     && other.parentID == parentID
                     && (parentID != nil || other.kind == kind)
-                    && Self.nameKey(other.name) == key
+                    && EditorName.key(other.name) == key
             }
         // It quotes the other category's stored name, not what was typed.
         return taken.map { CategoryText.duplicateName($0.name) }
@@ -178,19 +174,12 @@ public final class CategoryEditorViewModel {
 
     /// The stored name of the category at this level that the ledger says has the name, for its error.
     private var clashingName: String {
-        let key = Self.nameKey(name)
+        let key = EditorName.key(name)
         let other = screen?.listing.categories
             .first { other in
-                other.id != categoryID && other.parentID == parentID && Self.nameKey(other.name) == key
+                other.id != categoryID && other.parentID == parentID && EditorName.key(other.name) == key
             }
-        return other?.name ?? name.trimmingCharacters(in: .whitespacesAndNewlines)
-    }
-
-    private static let nameLimit = 100
-
-    private static func nameKey(_ name: String) -> String {
-        name.trimmingCharacters(in: .whitespacesAndNewlines)
-            .folding(options: .caseInsensitive, locale: Locale(identifier: "en_US_POSIX"))
+        return other?.name ?? EditorName.trimmed(name)
     }
 
     /// Saves in one change. A name the ledger rejects shows under the field; any other failure shows
