@@ -178,7 +178,10 @@ public final class CategoryEditorViewModel {
         let key = EditorName.key(name)
         let other = screen?.listing.categories
             .first { other in
-                other.id != categoryID && other.parentID == parentID && EditorName.key(other.name) == key
+                other.id != categoryID
+                    && other.parentID == parentID
+                    && (parentID != nil || other.kind == kind)
+                    && EditorName.key(other.name) == key
             }
         return other?.name ?? EditorName.trimmed(name)
     }
