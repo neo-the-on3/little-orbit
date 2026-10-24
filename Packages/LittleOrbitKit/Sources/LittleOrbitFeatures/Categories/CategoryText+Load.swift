@@ -5,7 +5,8 @@ extension CategoryText {
     static var couldntLoadTitle: String {
         FeatureText.string(
             "Couldn’t Load Categories",
-            comment: "Alert title: the category list couldn’t be read. Its only button is OK.",
+            comment:
+                "Alert title: the category list, on the Categories screen or in the transaction form’s category picker, couldn’t be read. Its only button is OK.",
         )
     }
 

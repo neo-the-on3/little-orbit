@@ -63,6 +63,10 @@ public final class TransactionFormViewModel {
     @ObservationIgnored let text: TransactionText
     @ObservationIgnored let timeZone: TimeZone
     @ObservationIgnored let now: () -> Date
+    /// The iOS category picker's use cases, with search and inline create (#24); `nil` keeps the menu picker.
+    @ObservationIgnored let categoryPicking: CategoryPickingUseCases?
+    /// Tells every window a category was created from the picker (D187.4).
+    @ObservationIgnored let categoriesChanged: () -> Void
     @ObservationIgnored private(set) var original: Transaction?
     @ObservationIgnored private var originalPayeeName = ""
     @ObservationIgnored private var accounts: [Account] = []
@@ -83,8 +87,12 @@ public final class TransactionFormViewModel {
         locale: Locale = .current,
         timeZone: TimeZone = .current,
         now: @escaping () -> Date = Date.init,
+        categoryPicking: CategoryPickingUseCases? = nil,
+        categoriesChanged: @escaping () -> Void = {},
     ) {
         self.loadLedger = loadLedger
+        self.categoryPicking = categoryPicking
+        self.categoriesChanged = categoriesChanged
         self.saveTransactions = saveTransactions
         self.dates = dates
         self.mode = mode
@@ -105,6 +113,8 @@ public final class TransactionFormViewModel {
         locale: Locale = .current,
         timeZone: TimeZone = .current,
         now: @escaping () -> Date = Date.init,
+        categoryPicking: CategoryPickingUseCases? = nil,
+        categoriesChanged: @escaping () -> Void = {},
     ) {
         self.init(
             loadLedger: useCases.loadLedger,
@@ -114,6 +124,8 @@ public final class TransactionFormViewModel {
             locale: locale,
             timeZone: timeZone,
             now: now,
+            categoryPicking: categoryPicking,
+            categoriesChanged: categoriesChanged,
         )
     }
 

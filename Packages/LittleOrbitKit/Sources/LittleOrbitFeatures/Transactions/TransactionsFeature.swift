@@ -11,14 +11,18 @@ public final class TransactionsFeature {
     private let locale: Locale
     private let timeZone: TimeZone
     private let now: () -> Date
+    /// The entry sheet's category picker on iOS, with search and inline create (#24).
+    private let categoryPicking: CategoryPickingUseCases?
 
     public init(
         useCases: TransactionUseCases,
+        categoryPicking: CategoryPickingUseCases? = nil,
         locale: Locale = .current,
         timeZone: TimeZone = .current,
         now: @escaping () -> Date = Date.init,
     ) {
         self.useCases = useCases
+        self.categoryPicking = categoryPicking
         self.locale = locale
         self.timeZone = timeZone
         self.now = now
@@ -34,7 +38,15 @@ public final class TransactionsFeature {
     }
 
     public func makeForm(_ mode: TransactionFormMode) -> TransactionFormViewModel {
-        TransactionFormViewModel(useCases: useCases, mode: mode, locale: locale, timeZone: timeZone, now: now)
+        TransactionFormViewModel(
+            useCases: useCases,
+            mode: mode,
+            locale: locale,
+            timeZone: timeZone,
+            now: now,
+            categoryPicking: categoryPicking,
+            categoriesChanged: { [weak updates] in updates?.changed() },
+        )
     }
 
     public func makeBulkEdit(_ transactionIDs: [UUID]) -> BulkEditViewModel {
