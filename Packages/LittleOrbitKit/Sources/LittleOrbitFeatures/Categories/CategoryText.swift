@@ -100,10 +100,6 @@ enum CategoryText {
         )
     }
 
-    static var unarchive: String {
-        FeatureText.string("Unarchive", comment: "Button on an archived category: put it back in pickers.")
-    }
-
     static var more: String {
         FeatureText.string("More", comment: "Categories screen: the toolbar menu’s accessibility label.")
     }

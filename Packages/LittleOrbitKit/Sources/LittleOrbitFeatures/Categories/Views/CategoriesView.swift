@@ -12,6 +12,7 @@
         @State private var expanded: Set<UUID> = []
         @State private var isArchivedExpanded = false
         @Environment(\.dynamicTypeSize) private var dynamicTypeSize
+        @ScaledMetric private var subcategoryIndent: CGFloat = 24
         private let onRemoval: () -> Void
 
         /// `onRemoval` clears this window's Undo and Redo history after a merge or delete (D287.4).
@@ -60,6 +61,21 @@
             } message: { alert in
                 Text(alert.message)
             }
+            // Unarchiving a subcategory under an archived parent brings the parent back too, so it asks (D302).
+            .alert(
+                model.unarchivePrompt?.title ?? "",
+                isPresented: Binding(
+                    get: { model.unarchivePrompt != nil },
+                    set: { if !$0 { model.unarchivePrompt = nil } },
+                ),
+                presenting: model.unarchivePrompt,
+            ) { _ in
+                Button(CategoryText.unarchive) { model.confirmUnarchive() }
+                    .keyboardShortcut(.defaultAction)
+                Button(CategoryText.cancel, role: .cancel) { model.unarchivePrompt = nil }
+            } message: { prompt in
+                Text(prompt.message)
+            }
             .onAppear {
                 model.onRemoval = onRemoval
                 model.load()
@@ -105,7 +121,9 @@
                 Section {
                     DisclosureGroup(isExpanded: $isArchivedExpanded) {
                         ForEach(rows) { row in
+                            // An archived subcategory under its archived parent is indented (UI Designer).
                             archivedRow(row)
+                                .padding(.leading, row.isIndented ? subcategoryIndent : 0)
                         }
                     } label: {
                         LabeledContent {
@@ -124,7 +142,7 @@
         /// bordered button keeps a 44 pt target.
         @ViewBuilder
         private func archivedRow(_ row: CategoryRow) -> some View {
-            let unarchive = Button(CategoryText.unarchive) { model.unarchive(row.id) }
+            let unarchive = Button(CategoryText.unarchive) { model.requestUnarchive(row.id) }
                 .buttonStyle(.bordered)
                 .controlSize(.large)
                 .frame(minHeight: 44)

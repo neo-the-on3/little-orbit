@@ -90,7 +90,7 @@ struct CategoriesViewModelTests {
         setup.model.load()
         #expect(setup.model.archive(food))
         #expect(setup.model.groups.allSatisfy { $0.id != food })
-        #expect(setup.model.archivedRows.map(\.id) == [food])
+        #expect(setup.model.archivedRows.map(\.id) == [food, groceries, restaurants])
         #expect(setup.removals == 0, "Archive is reversed with Unarchive, so Undo stays (D287.2)")
         setup.model.kind = .income
         #expect(setup.model.archivedRows.isEmpty)
@@ -101,7 +101,7 @@ struct CategoriesViewModelTests {
         _ = setup.model.archive(restaurants)
         _ = setup.model.archive(food)
         setup.model.load()
-        #expect(setup.model.archivedRows.map(\.id) == [food])
+        #expect(setup.model.archivedRows.map(\.id) == [food, groceries, restaurants])
         try CategoryUseCases(repository: setup.repository).archiveCategory.archive(food)
         setup.model.unarchive(groceries)
         #expect(try setup.category(food)?.isArchived == false)
