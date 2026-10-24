@@ -58,6 +58,7 @@ import SwiftUI
         let transactions: TransactionsFeature
         let backups: BackupsViewModel
         let categories: CategoriesFeature
+        let payees: PayeesFeature
 
         init(repository: some LedgerRepository & LedgerBackupSource, backupStorage: any BackupStorage) {
             let transactionUseCases = TransactionUseCases(
@@ -80,13 +81,22 @@ import SwiftUI
             // Account delete returns its change; the screens record it in the transactions' history (#93).
             accounts = AccountsFeature(useCases: AccountUseCases(repository: repository), ledgerChanges: changes)
             backups = AppComposition.makeBackups(source: repository, storage: backupStorage, changes: changes)
-            // Settings › Categories (#24): the category use cases, and the editor's reads and saves.
+            // Settings › Categories and Payees (#24): the category and payee use cases, the category editor's
+            // reads and saves, and the payee list's reads.
             let editing = DefaultCategoryEditingUseCase(repository: repository)
+            let categoryUseCases = CategoryUseCases(repository: repository)
             categories = CategoriesFeature(
                 useCases: CategoryScreenUseCases(
                     load: editing,
                     edit: editing,
-                    categories: CategoryUseCases(repository: repository),
+                    categories: categoryUseCases,
+                ),
+                updates: transactions.updates,
+            )
+            payees = PayeesFeature(
+                useCases: PayeeScreenUseCases(
+                    load: DefaultLoadPayeesUseCase(repository: repository),
+                    manage: categoryUseCases.managePayees,
                 ),
                 updates: transactions.updates,
             )
@@ -145,6 +155,7 @@ import SwiftUI
                     SettingsView(
                         backups: features.backups,
                         categories: features.categories,
+                        payees: features.payees,
                         onCategoryRemoval: { settingsUndoHistory?.clearAfterRemoval() },
                     )
                 }

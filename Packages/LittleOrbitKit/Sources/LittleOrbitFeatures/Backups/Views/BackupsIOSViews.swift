@@ -12,29 +12,41 @@
         @State private var window: BackupsWindow
         @Environment(\.dismiss) private var dismiss
         private let categories: CategoriesFeature?
+        private let payees: PayeesFeature?
         private let onCategoryRemoval: () -> Void
 
-        /// `categories` adds the Categories row (#24). `onCategoryRemoval` clears this window's Undo and Redo
-        /// history after a category merge or delete (D287.4).
+        /// `categories` and `payees` add the Categories and Payees rows (#24). `onCategoryRemoval` clears this
+        /// window's Undo and Redo history after a category merge or delete, or a payee merge (D287.4).
         public init(
             backups: BackupsViewModel,
             categories: CategoriesFeature? = nil,
+            payees: PayeesFeature? = nil,
             onCategoryRemoval: @escaping () -> Void = {},
         ) {
             _window = State(initialValue: BackupsWindow(model: backups))
             self.categories = categories
+            self.payees = payees
             self.onCategoryRemoval = onCategoryRemoval
         }
 
         public var body: some View {
             NavigationStack {
                 List {
-                    if let categories {
+                    if categories != nil || payees != nil {
                         Section {
-                            NavigationLink {
-                                CategoriesView(feature: categories, onRemoval: onCategoryRemoval)
-                            } label: {
-                                Label(CategoryText.title, systemImage: "tag")
+                            if let categories {
+                                NavigationLink {
+                                    CategoriesView(feature: categories, onRemoval: onCategoryRemoval)
+                                } label: {
+                                    Label(CategoryText.title, systemImage: "tag")
+                                }
+                            }
+                            if let payees {
+                                NavigationLink {
+                                    PayeesView(feature: payees, onRemoval: onCategoryRemoval)
+                                } label: {
+                                    Label(PayeeText.title, systemImage: "storefront")
+                                }
                             }
                         }
                     }
