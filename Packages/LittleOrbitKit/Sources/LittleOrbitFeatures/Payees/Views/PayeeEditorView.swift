@@ -32,10 +32,11 @@
             .toolbar {
                 ToolbarItem(placement: .cancellationAction) {
                     Button(CategoryText.cancel) {
-                        if discard.requestDismiss(isDirty: model.hasUnsavedEdits) {
+                        if discard.requestDismiss(isDirty: model.hasUnsavedEdits, from: .cancel) {
                             dismiss()
                         }
                     }
+                    .discardsChangesFromCancel(confirmation: $discard) { dismiss() }
                 }
                 ToolbarItem(placement: .confirmationAction) {
                     Button(CategoryText.save) {

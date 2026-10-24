@@ -47,11 +47,11 @@ struct DismissAttemptRelayTests {
     @Test("The prompt opens only when the state at the swipe has unsaved edits")
     func requestsDismissWithCurrentState() {
         var confirmation = DiscardConfirmation()
-        let relay = DismissAttemptRelay(isDirty: false) { _ = confirmation.requestDismiss(isDirty: $0) }
+        let relay = DismissAttemptRelay(isDirty: false) { _ = confirmation.requestDismiss(isDirty: $0, from: .swipe) }
         relay.attempt()
         #expect(!confirmation.isPresented)
         relay.isDirty = true
         relay.attempt()
-        #expect(confirmation.isPresented)
+        #expect(confirmation.isPresentedFromSwipe)
     }
 }
