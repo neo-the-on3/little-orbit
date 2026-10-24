@@ -29,12 +29,20 @@ public final class TransactionFormViewModel {
     public var accountID: UUID?
     public var transferAccountID: UUID?
     public var receivedText = ""
-    public var categoryID: UUID?
+    public var categoryID: UUID? {
+        didSet {
+            // A category chosen by hand is the user's; a later payee pick doesn't replace it.
+            if categoryID != preselectedCategoryID {
+                preselectedCategoryID = nil
+            }
+        }
+    }
     public var payeeText = "" {
         didSet {
             if let payeeID, payees.first(where: { $0.id == payeeID })?.name != payeeText {
                 self.payeeID = nil
             }
+            matchTypedPayee()
         }
     }
     public internal(set) var payeeID: UUID?
@@ -62,6 +70,10 @@ public final class TransactionFormViewModel {
     @ObservationIgnored var payees: [Payee] = []
     @ObservationIgnored var transactions: [Transaction] = []
     @ObservationIgnored private(set) var timeZoneID: String
+    /// The category the picked payee preselected, so picking another payee can replace it (#24 AC 4).
+    @ObservationIgnored var preselectedCategoryID: UUID?
+    /// Set once the sheet's own values are in, so opening an edit doesn't count as typing a payee.
+    @ObservationIgnored var isLoaded = false
 
     public init(
         loadLedger: any LoadTransactionLedgerUseCase,
@@ -143,6 +155,7 @@ public final class TransactionFormViewModel {
             details = transaction.details ?? ""
             note = transaction.note ?? ""
         }
+        isLoaded = true
         let visible = accounts.filter { !$0.isHidden || $0.id == accountID || $0.id == transferAccountID }
         accountOptions = visible.sorted { $0.sortOrder < $1.sortOrder }
             .map {
