@@ -53,7 +53,8 @@
     /// one for it that no swipe ever reaches. SwiftUI can set its own delegate again after ours, for example when
     /// `interactiveDismissDisabled` changes, so the bridge installs again as the view appears and lays out, on
     /// every update, and once more on the next main-queue turn, after SwiftUI's own update. It only sets the
-    /// delegate: whether the sheet is modal is left to `interactiveDismissDisabled` (#167). One bridge per sheet.
+    /// delegate: whether the sheet is modal is left to `interactiveDismissDisabled` (#167). Its proxy also
+    /// refuses dismissal while there are unsaved edits, in case that flag lands late. One bridge per sheet.
     private struct DismissAttemptObserver: UIViewControllerRepresentable {
         let isDirty: Bool
         let onAttempt: (_ isDirty: Bool) -> Void
@@ -160,6 +161,8 @@
         }
     }
 
+    /// The sheet's presentation delegate while the bridge is installed: it refuses dismissal while there are
+    /// unsaved edits, reports refused swipes, and passes everything else on to the delegate it wraps.
     private final class DismissAttemptProxy: NSObject, UIAdaptivePresentationControllerDelegate {
         private nonisolated(unsafe) weak var original: (any NSObjectProtocol)?
         var relay: DismissAttemptRelay
@@ -167,6 +170,16 @@
         init(original: (any UIAdaptivePresentationControllerDelegate)?, relay: DismissAttemptRelay) {
             self.original = original
             self.relay = relay
+        }
+
+        /// Refuses a swipe down while there are unsaved edits (the relay's live state), so UIKit calls
+        /// presentationControllerDidAttemptToDismiss and the prompt shows even when SwiftUI's
+        /// `interactiveDismissDisabled` lands late (#167). With none, it's the original delegate's answer, or true.
+        /// It doesn't write `isModalInPresentation`: `interactiveDismissDisabled` stays its only writer.
+        func presentationControllerShouldDismiss(_ presentationController: UIPresentationController) -> Bool {
+            let delegate = original as? any UIAdaptivePresentationControllerDelegate
+            let ask = delegate?.presentationControllerShouldDismiss
+            return relay.shouldDismiss(original: ask.map { ask in { ask(presentationController) } })
         }
 
         func presentationControllerDidAttemptToDismiss(_ presentationController: UIPresentationController) {
