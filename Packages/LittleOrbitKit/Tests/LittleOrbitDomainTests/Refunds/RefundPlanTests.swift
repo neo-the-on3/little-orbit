@@ -51,6 +51,19 @@ struct RefundPlanTests {
         #expect(RefundPlan.issues(of: existing, for: expense, in: fixture.snapshot) == [.exceedsRefundable(1_000)])
     }
 
+    @Test("D257, P45: editing a refund leaves it out and counts only the other refunds")
+    func editingCountsOtherRefunds() throws {
+        var (fixture, expense) = try shoppingWithRefund()
+        var edited = try #require(fixture.snapshot.transactions.first { $0.refundOfID == expense.id })
+        try fixture.refund(200, of: expense, in: fixture.shopping, on: F.date(10, 19))
+        #expect(RefundPlan.refunded(of: expense.id, in: fixture.snapshot.transactions, excluding: edited.id) == 200)
+        #expect(RefundPlan.refundable(for: expense, in: fixture.snapshot.transactions, excluding: edited.id) == 800)
+        edited.amount = 800
+        #expect(RefundPlan.issues(of: edited, for: expense, in: fixture.snapshot).isEmpty)
+        edited.amount = 801
+        #expect(RefundPlan.issues(of: edited, for: expense, in: fixture.snapshot) == [.exceedsRefundable(800)])
+    }
+
     @Test("Another INR account saves; a USD account is blocked (D33, S15)")
     func currency() throws {
         let (fixture, expense) = try shoppingWithRefund()

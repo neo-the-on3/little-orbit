@@ -62,6 +62,37 @@ struct RefundTransactionUseCaseTests {
         #expect(try refunds.check(refund)?.issues == [])
     }
 
+    @Test("D257, P45: checking an existing refund leaves it out: ₹1,000.00 passes and ₹1,001.00 is blocked")
+    func checkEditedRefund() throws {
+        let expense = R.expense(1_000)
+        var edited = R.refund(300, of: expense)
+        let repository = try R.repository([expense, edited])
+        let refunds = DefaultRefundTransactionUseCase(repository: repository)
+        edited.amount = 1_000
+        let check = try #require(try refunds.check(edited))
+        #expect(check.refunded == 0)
+        #expect(check.refundable == 1_000)
+        #expect(check.issues == [])
+        edited.amount = 1_001
+        #expect(try refunds.check(edited)?.issues == [.exceedsRefundable(1_000)])
+    }
+
+    @Test("D257, P45: with a second ₹200.00 refund, the edited ₹300.00 refund can be at most ₹800.00")
+    func checkEditedRefundWithAnother() throws {
+        let expense = R.expense(1_000)
+        var edited = R.refund(300, of: expense)
+        let repository = try R.repository([expense, edited, R.refund(200, of: expense)])
+        let refunds = DefaultRefundTransactionUseCase(repository: repository)
+        let check = try #require(try refunds.check(edited))
+        #expect(check.refunded == 200)
+        #expect(check.refundable == 800)
+        #expect(check.issues == [])
+        edited.amount = 800
+        #expect(try refunds.check(edited)?.issues == [])
+        edited.amount = 801
+        #expect(try refunds.check(edited)?.issues == [.exceedsRefundable(800)])
+    }
+
     @Test("A saved refund is one step: .added, and one Undo removes it")
     func saveAndUndo() throws {
         let expense = R.expense(1_000)
