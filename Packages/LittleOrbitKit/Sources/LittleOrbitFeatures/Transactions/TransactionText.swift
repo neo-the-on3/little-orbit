@@ -8,6 +8,12 @@ struct TransactionText {
     static let uncategorised = "Uncategorised"
     static let transfer = "Transfer"
 
+    /// A split's category in lists and the macOS table: "Split (3)", with its live line count (D64, S1, S45). A
+    /// split has 2 to 20 lines, so there's no singular form.
+    static func split(_ lines: Int) -> String {
+        FeatureText.format("Split (%lld)", lines)
+    }
+
     /// "Today · Tue, 20 Oct", "Yesterday · Mon, 19 Oct", "Sun, 18 Oct", or "Wed, 31 Dec 2025" in another year.
     func dayTitle(_ day: CalendarDay, today: CalendarDay) -> String {
         let template = day.year == today.year ? "EEEdMMM" : "EEEdMMMyyyy"

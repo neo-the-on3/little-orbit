@@ -11,15 +11,44 @@ final class FakeTransactionUseCases {
     var historyError: (any Error)?
     var revertError: (any Error)?
     var impactError: (any Error)?
+    /// What `impact(of:)` returns when it doesn't throw.
+    var impactResult = ChangeImpact()
     var outcomeError: (any Error)?
     /// When set, every step is stale for this reason.
     var staleReason: StaleReason?
     private(set) var saved: [[Transaction]] = []
     private(set) var removed: [[UUID]] = []
     private(set) var reverted: [TransactionChange] = []
+    private(set) var duplicated: [UUID] = []
 
     var useCases: TransactionUseCases {
-        TransactionUseCases(loadLedger: self, accountHistory: self, saveTransactions: self, changes: self)
+        TransactionUseCases(
+            loadLedger: self,
+            accountHistory: self,
+            saveTransactions: self,
+            changes: self,
+            duplicate: self,
+            splits: self,
+            refunds: NoRefunds(),
+        )
+    }
+
+    func save(_ transaction: Transaction, lines: [TransactionSplit]) throws -> TransactionChange {
+        saved.append([transaction])
+        return .added([transaction.id])
+    }
+
+    func save(_ transaction: Transaction, lines: [TransactionSplit], creating _: [Payee]) throws
+        -> TransactionChange
+    {
+        try save(transaction, lines: lines)
+    }
+
+    func lines(of _: UUID) throws -> [TransactionSplit] { [] }
+
+    func duplicate(id: UUID, now: Date) throws -> TransactionChange {
+        duplicated.append(id)
+        return .added([UUID()])
     }
 
     func ledger() throws -> TransactionLedger { contents }
@@ -74,9 +103,24 @@ final class FakeTransactionUseCases {
         if let impactError {
             throw impactError
         }
-        return ChangeImpact()
+        return impactResult
     }
 }
 
 extension FakeTransactionUseCases: LoadTransactionLedgerUseCase, AccountHistoryUseCase {}
 extension FakeTransactionUseCases: SaveTransactionsUseCase, TransactionChangesUseCase {}
+extension FakeTransactionUseCases: DuplicateTransactionUseCase, SplitTransactionUseCase {}
+
+/// A refund use case with nothing to refund, for tests that only build the feature.
+@MainActor
+struct NoRefunds: RefundTransactionUseCase {
+    func newRefund(of _: UUID, now _: Date, timeZoneID _: String) -> Transaction? { nil }
+
+    func check(_: Transaction) -> RefundCheck? { nil }
+
+    func isSplit(_: UUID) -> Bool { false }
+
+    func save(_: Transaction, payeeName _: String) throws -> TransactionChange {
+        throw LedgerValidationError.refundOriginalMissing
+    }
+}

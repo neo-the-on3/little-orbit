@@ -89,6 +89,8 @@ struct TransactionDraftTests {
         #expect(TransactionTypeRules.allowedTypes(editing: .expense) == [.expense, .income])
         #expect(TransactionTypeRules.allowedTypes(editing: .income) == [.expense, .income])
         #expect(TransactionTypeRules.allowedTypes(editing: .transfer) == [.transfer])
+        // D247.2: a refund stays an income.
+        #expect(TransactionTypeRules.allowedTypes(editing: .income, isRefund: true) == [.income])
     }
 
     @Test("Switching to Income clears an expense category; a refund keeps it (S37, S50)")

@@ -18,6 +18,8 @@ final class FakeLedgerRepository: LedgerRepository {
     var failsAfterWrites: Int?
     private(set) var writes = 0
     private(set) var atomicChanges = 0
+    /// Each `splits(for:)` call's argument, in order; nil is a read of every line.
+    var splitReads: [UUID?] = []
     private var tick = 0.0
 
     init(accounts: [Account] = [], categories: [TransactionCategory] = [], transactions: [Transaction] = []) throws {
@@ -105,7 +107,10 @@ final class FakeLedgerRepository: LedgerRepository {
     func tags() throws -> [Tag] { throw Unsupported() }
     func saveTag(_ tag: Tag) throws { throw Unsupported() }
     func deleteTag(id: UUID) throws { throw Unsupported() }
-    func splits(for transactionID: UUID?) throws -> [TransactionSplit] { snapshot.splitsVisible(for: transactionID) }
+    func splits(for transactionID: UUID?) throws -> [TransactionSplit] {
+        splitReads.append(transactionID)
+        return snapshot.splitsVisible(for: transactionID)
+    }
     func replaceSplits(_ splits: [TransactionSplit], for transactionID: UUID) throws {
         try write()
         snapshot = try LedgerBook.replacingSplits(splits, for: transactionID, in: snapshot, now: now())

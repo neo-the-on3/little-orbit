@@ -5,7 +5,10 @@ import LittleOrbitDomain
 public struct TransactionRowModel: Identifiable, Equatable, Sendable {
     public var id: UUID
     public var type: TransactionType
-    /// Payee, else "To/From <account>" for transfers, else the description, category or type.
+    /// "To/From <account>" for a transfer. Otherwise the payee, then the trimmed description, then the type
+    /// ("Expense", "Income"). A refund reads "Refund · <payee or description>", "Refund (original deleted) · …",
+    /// or plain "Refund" or "Refund (original deleted)" (D233.1). The category is never the title: it's first in
+    /// the subtitle (D233.2).
     public var title: String
     /// "Food & Dining · Team lunch", "Utilities · 3 Nov" on Upcoming rows, or "Transfer · received $12.00".
     public var subtitle: String
@@ -27,6 +30,11 @@ public struct TransactionRowModel: Identifiable, Equatable, Sendable {
     public var categoryText: String
     public var accountText: String
     public var accessibilityLabel: String
+    /// A split's lines, which the macOS table shows under its row (S45): each with the line's category as
+    /// its title, its note as the subtitle, and its share of the amount.
+    public var splitLines: [TransactionRowModel] = []
+    /// This row is one line of a split, shown under it.
+    public var isSplitLine = false
 }
 
 /// Which list a row is in, which decides how a transfer's amount reads (UI Designer, #87 U5).
@@ -63,6 +71,9 @@ struct TransactionRowContext {
     let text: TransactionText
     let today: CalendarDay
     var scope: TransactionListScope = .account
+    /// Live split lines per split transaction: its category reads 'Split (3)' and the macOS table lists
+    /// them under its row (D64, S1, S45).
+    var splitLines: [UUID: [TransactionSplit]] = [:]
 
     func row(_ entry: HistoryEntry, isUpcoming: Bool) -> TransactionRowModel {
         let transaction = entry.transaction
@@ -73,11 +84,20 @@ struct TransactionRowContext {
         let details = TransactionText.trimmed(transaction.details)
         let isTransfer = transaction.type == .transfer
 
-        let categoryText = isTransfer ? TransactionText.transfer : category?.name ?? TransactionText.uncategorised
+        let lines = isTransfer ? [] : splitLines[transaction.id] ?? []
+        let lineCount = lines.isEmpty ? nil : lines.count
+        let categoryText =
+            isTransfer
+            ? TransactionText.transfer
+            : lineCount.map(TransactionText.split) ?? category?.name ?? TransactionText.uncategorised
         let title: String
         var detailUsedAsTitle = false
         if isTransfer {
             title = transferTitle(transaction)
+        } else if transaction.isRefund {
+            // Payee, then description, then the plain word; the description isn't repeated below (D233.1, D233.3).
+            title = RefundText.rowTitle(name: payee?.name ?? details, isLinked: transaction.refundOfID != nil)
+            detailUsedAsTitle = true
         } else if let payee {
             title = payee.name
         } else if let details {
@@ -129,11 +149,40 @@ struct TransactionRowContext {
             balanceValueText: balance,
             isUpcoming: isUpcoming,
             symbolName: isTransfer ? "arrow.left.arrow.right" : category?.iconName ?? "questionmark",
-            isUncategorised: !isTransfer && category == nil,
+            isUncategorised: !isTransfer && lineCount == nil && category == nil,
             dateText: text.fullDate(day),
             categoryText: categoryText,
             accountText: account.name,
             accessibilityLabel: spoken.joined(separator: ", "),
+            splitLines: lines.map { lineRow($0, of: entry, isUpcoming: isUpcoming) },
+        )
+    }
+
+    /// One line under a split's row: "Household", "paper towels", "−₹240.00", signed like the split.
+    private func lineRow(_ line: TransactionSplit, of entry: HistoryEntry, isUpcoming: Bool) -> TransactionRowModel {
+        let category = categories.first { $0.id == line.categoryID }
+        let name = category?.name ?? TransactionText.uncategorised
+        let effect = entry.effect < 0 ? -line.amount : line.amount
+        let amount = formatter.string(effect, currencyCode: account.currencyCode, showsPlus: true)
+        let note = TransactionText.trimmed(line.note) ?? ""
+        return TransactionRowModel(
+            id: line.id,
+            type: entry.transaction.type,
+            title: name,
+            subtitle: note,
+            amountText: amount,
+            compactAmountText: amount,
+            amountTone: effect < 0 ? .negative : .positive,
+            balanceText: "",
+            balanceValueText: "",
+            isUpcoming: isUpcoming,
+            symbolName: category?.iconName ?? "questionmark",
+            isUncategorised: category == nil,
+            dateText: "",
+            categoryText: "",
+            accountText: "",
+            accessibilityLabel: [name, note, amount].filter { !$0.isEmpty }.joined(separator: ", "),
+            isSplitLine: true,
         )
     }
 

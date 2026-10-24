@@ -16,6 +16,8 @@ struct LittleOrbitIOSApp: App {
         WindowGroup {
             RootView(features: features, backgroundActivity: backgroundActivity)
         }
+        // Edit > Duplicate (⌘D) and Refund… (⌘R) on iPad with a hardware keyboard (#34, S40).
+        .commands { TransactionCommands() }
     }
 }
 

@@ -19,6 +19,9 @@ extension UndoActionTitle {
         guard !accounts.isEmpty else {
             return base(of: change)
         }
+        if let type = change.duplicatedType {
+            return duplicate(type, accounts, route: route(of: impact))
+        }
         let action: Action
         let count: Int
         let isTransfer: Bool
@@ -32,7 +35,7 @@ extension UndoActionTitle {
         case .replaced(let items):
             (action, count) = (.edit, items.count)
             isTransfer = items.count == 1 && items[0].type == .transfer
-        case .removedAccount, .addedAccount, .createdPayees, .removedPayees:
+        case .removedAccount, .addedAccount, .createdPayees, .removedPayees, .restoringLines, .duplicated:
             return base(of: change)
         }
         if count != 1 {

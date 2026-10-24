@@ -23,6 +23,8 @@ public final class TransactionFormViewModel {
                 payeeText = ""
                 payeeID = nil
             }
+            // A split's lines are all expense or all income, so they go with the type they were made for (D64).
+            split = nil
         }
     }
     private var keypad = AmountKeypad()
@@ -40,33 +42,40 @@ public final class TransactionFormViewModel {
     public private(set) var payeeID: UUID?
     /// The stored moment. The picker edits it through `pickerDate`, which changes only its day (D230.1).
     public internal(set) var date: Date
-    public private(set) var details = ""
-    public private(set) var detailsWasShortened = false
+    public internal(set) var details = ""
+    public internal(set) var detailsWasShortened = false
     public var note = ""
     public var showsMoreOptions = false
     public var errorMessage: String?
     public private(set) var accountOptions: [TransactionAccountOption] = []
+    /// The split lines, when the expense is split across categories; `nil` for one category (#34, D64).
+    public internal(set) var split: SplitEditorViewModel?
 
     @ObservationIgnored private let loadLedger: any LoadTransactionLedgerUseCase
     @ObservationIgnored private let saveTransactions: any SaveTransactionsUseCase
+    @ObservationIgnored let splits: (any SplitTransactionUseCase)?
+    /// The stored lines of the split being edited; none for a transaction that wasn't split.
+    @ObservationIgnored var originalLines: [SplitLineDraft] = []
     @ObservationIgnored let dates: any TransactionDateUseCase
     @ObservationIgnored let locale: Locale
-    @ObservationIgnored private let formatter: MoneyFormatter
+    @ObservationIgnored let formatter: MoneyFormatter
     @ObservationIgnored let text: TransactionText
     @ObservationIgnored let timeZone: TimeZone
     @ObservationIgnored let now: () -> Date
     @ObservationIgnored private(set) var original: Transaction?
     @ObservationIgnored private var originalPayeeName = ""
-    @ObservationIgnored private var accounts: [Account] = []
-    @ObservationIgnored private var categories: [TransactionCategory] = []
+    @ObservationIgnored private(set) var accounts: [Account] = []
+    @ObservationIgnored var categories: [TransactionCategory] = []
     @ObservationIgnored private var payees: [Payee] = []
-    @ObservationIgnored private var transactions: [Transaction] = []
+    /// Observed, so the refunds footnote and the Expense/Income switch follow a reload (D225.1).
+    private(set) var transactions: [Transaction] = []
     @ObservationIgnored private(set) var timeZoneID: String
 
     public init(
         loadLedger: any LoadTransactionLedgerUseCase,
         saveTransactions: any SaveTransactionsUseCase,
         dates: any TransactionDateUseCase = DefaultTransactionDateUseCase(),
+        splits: (any SplitTransactionUseCase)? = nil,
         mode: TransactionFormMode,
         locale: Locale = .current,
         timeZone: TimeZone = .current,
@@ -75,6 +84,7 @@ public final class TransactionFormViewModel {
         self.loadLedger = loadLedger
         self.saveTransactions = saveTransactions
         self.dates = dates
+        self.splits = splits
         self.mode = mode
         self.locale = locale
         self.formatter = MoneyFormatter(locale: locale)
@@ -98,6 +108,7 @@ public final class TransactionFormViewModel {
             loadLedger: useCases.loadLedger,
             saveTransactions: useCases.saveTransactions,
             dates: useCases.dates,
+            splits: useCases.splits,
             mode: mode,
             locale: locale,
             timeZone: timeZone,
@@ -106,6 +117,19 @@ public final class TransactionFormViewModel {
     }
 
     // MARK: Loading
+
+    /// Rereads the ledger after a change in this window or another, the way the bulk sheet follows live data
+    /// (D225.1): refunds recorded or deleted elsewhere hide or show Expense/Income and the refunds footnote.
+    /// Only the ledger is reread; the user's own edits stay as they are.
+    public func reload() {
+        do {
+            let ledger = try loadLedger.ledgerForEntry()
+            accounts = ledger.accounts
+            transactions = ledger.transactions
+        } catch {
+            errorMessage = AccountHistoryViewModel.message(for: error)
+        }
+    }
 
     private func load() {
         do {
@@ -142,6 +166,7 @@ public final class TransactionFormViewModel {
             timeZoneID = transaction.timeZoneID
             details = transaction.details ?? ""
             note = transaction.note ?? ""
+            loadSplit(of: transaction.id)
         }
         let visible = accounts.filter { !$0.isHidden || $0.id == accountID || $0.id == transferAccountID }
         accountOptions = visible.sorted { $0.sortOrder < $1.sortOrder }
@@ -162,12 +187,20 @@ public final class TransactionFormViewModel {
     // MARK: Titles
 
     public var title: String {
+        if original?.isRefund == true {
+            return FeatureText.string(
+                "Edit Refund",
+                comment:
+                    "Title of the edit sheet for a refund, linked to its expense or with the expense deleted (D247.1).",
+            )
+        }
         let verb = original == nil ? "New" : "Edit"
         return "\(verb) \(Self.typeName(type))"
     }
 
+    /// A refund offers only Income, so the Expense/Income switch is hidden on it (D247.2).
     public var allowedTypes: [TransactionType] {
-        TransactionTypeRules.allowedTypes(editing: original?.type)
+        TransactionTypeRules.allowedTypes(editing: original?.type, isRefund: original?.isRefund ?? false)
     }
 
     nonisolated public static func typeName(_ type: TransactionType) -> String {
@@ -198,7 +231,7 @@ public final class TransactionFormViewModel {
         try? keypad.evaluate(currencyCode: currencyCode, locale: locale)
     }
 
-    private var currencyCode: String {
+    var currencyCode: String {
         accounts.first { $0.id == accountID }?.currencyCode ?? CurrencyCode.deviceDefault
     }
 
@@ -372,53 +405,6 @@ public final class TransactionFormViewModel {
         }
     }
 
-    // MARK: Description and notes
-
-    /// Every change to the description goes through the 100-character limit (D55, D105, D111).
-    /// Returns the text the field must show. When typing would pass 100 the old text comes back, and the field
-    /// is reset to it, so typing visibly stops instead of being cut on Save (Tester's #87 B2).
-    @discardableResult
-    public func updateDetails(_ newValue: String) -> String {
-        let edit = DescriptionLimit.apply(old: details, new: newValue)
-        details = edit.text
-        detailsWasShortened = edit.wasShortened
-        return edit.text
-    }
-
-    /// "80 / 100", "120 / 100", or "100 / 100 · Text shortened to fit 100 characters".
-    public var detailsFootnote: String? {
-        let parts = [
-            DescriptionLimit.counter(for: details),
-            detailsWasShortened ? DescriptionText.shortenedNote : nil,
-        ]
-        .compactMap { $0 }
-        return parts.isEmpty ? nil : parts.joined(separator: " · ")
-    }
-
-    public var isDetailsOverLimit: Bool { DescriptionLimit.isOverLimit(details) }
-
-    /// Up to 3, listed under the field so they stay above the keyboard (UI Designer, #87 U1).
-    public var detailsSuggestions: [TransactionSuggestion] {
-        TransactionSuggestions.descriptions(matching: details, in: transactions, limit: Self.detailsSuggestionLimit)
-    }
-
-    public static let detailsSuggestionLimit = 3
-
-    public func chooseDescription(_ suggestion: TransactionSuggestion) {
-        updateDetails(suggestion.text)
-    }
-
-    /// "Used 15 times" under a suggestion.
-    nonisolated public static func usageText(_ suggestion: TransactionSuggestion) -> String {
-        suggestion.useCount == 1 ? "Used once" : "Used \(suggestion.useCount) times"
-    }
-
-    /// "33 / 2,000". Notes are long-form; the description limit doesn't apply (D55).
-    public var noteCounter: String {
-        let limit = NoteLimit.limit.formatted(.number.locale(locale))
-        return "\(note.count.formatted(.number.locale(locale))) / \(limit)"
-    }
-
     // MARK: Saving
 
     public var canSave: Bool {
@@ -426,7 +412,7 @@ public final class TransactionFormViewModel {
             return false
         }
         return draft.issues(accounts: accounts).isEmpty && !isDetailsOverLimit
-            && note.count <= NoteLimit.limit
+            && note.count <= NoteLimit.limit && splitAllowsSave
     }
 
     /// Whether closing the sheet would lose anything, for the discard warning (Figma 26:1276).
@@ -434,12 +420,12 @@ public final class TransactionFormViewModel {
         guard let original else {
             return !keypad.expression.isEmpty || TransactionText.trimmed(payeeText) != nil
                 || TransactionText.trimmed(details) != nil || TransactionText.trimmed(note) != nil
-                || categoryID != nil
+                || categoryID != nil || split != nil
         }
         var saved = TransactionDraft(editing: original)
         saved.details = TransactionText.trimmed(saved.details)
         saved.note = TransactionText.trimmed(saved.note)
-        return draft != saved || payeeText != originalPayeeName
+        return draft != saved || payeeText != originalPayeeName || (split?.lines ?? []) != originalLines
     }
 
     /// Saves and returns the change to register for Undo; `nil` when nothing changed (`isUnchanged`).
@@ -452,6 +438,7 @@ public final class TransactionFormViewModel {
             keypad.reportError(currencyCode: currencyCode, locale: locale)
             return nil
         }
+        var splitting = false
         do {
             var draft = draft
             let resolved = type == .transfer ? nil : try resolvePayee()
@@ -459,9 +446,19 @@ public final class TransactionFormViewModel {
             let transaction = draft.transaction(accounts: accounts, now: now())
             // A payee this save created goes with it on Undo, unless something else uses it by then (D191.4).
             let created = resolved.flatMap { $0.isNew ? [$0.payee] : nil } ?? []
+            if let lines = linesToSave(for: transaction.id), let splits {
+                splitting = !lines.isEmpty
+                return try splits.save(transaction, lines: lines, creating: created)
+            }
             return try saveTransactions.save([transaction], creating: created)
         } catch {
-            errorMessage = AccountHistoryViewModel.message(for: error)
+            var splitRefunds: Int?
+            if splitting, case LedgerValidationError.originalHasRefunds = error {
+                // Refunds were recorded while the split was open: reread them, for the count and the footnote.
+                reload()
+                splitRefunds = linkedRefundCount
+            }
+            errorMessage = saveMessage(for: error, splitRefunds: splitRefunds)
             return nil
         }
     }

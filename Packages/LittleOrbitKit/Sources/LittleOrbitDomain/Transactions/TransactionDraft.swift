@@ -46,7 +46,7 @@ public struct TransactionDraft: Equatable, Sendable {
         createdAt = date
         isRefund = false
         tagIDs = []
-        status = .cleared
+        status = TransactionStatus.newTransactionDefault
     }
 
     public init(editing transaction: Transaction) {
@@ -128,9 +128,13 @@ public struct TransactionDraft: Equatable, Sendable {
 
 /// Which types a transaction can take, and what happens to its category when the type changes (#11).
 public enum TransactionTypeRules {
-    /// A new transaction offers all three. Editing offers Expense ↔ Income, or keeps a Transfer a transfer.
-    public static func allowedTypes(editing original: TransactionType?) -> [TransactionType] {
-        switch original {
+    /// A new transaction offers all three. Editing offers Expense ↔ Income, or keeps a Transfer a transfer. A
+    /// refund, linked or orphaned, stays an income for its whole life (D19, D247.2).
+    public static func allowedTypes(editing original: TransactionType?, isRefund: Bool = false) -> [TransactionType] {
+        if isRefund {
+            return [.income]
+        }
+        return switch original {
         case nil: [.expense, .income, .transfer]
         case .expense, .income: [.expense, .income]
         case .transfer: [.transfer]

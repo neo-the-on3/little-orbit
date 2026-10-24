@@ -101,6 +101,7 @@
                 // #23: the entry sheet, opened from a row's swipe or context menu.
                 TransactionFormView(
                     model: sheet.model,
+                    updates: transactions.updates,
                     onSaved: { change in
                         undoHistory.record(change)
                         model.load()

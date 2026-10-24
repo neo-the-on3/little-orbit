@@ -378,24 +378,26 @@ private func assertSplitsMustSumToTheTransaction(make: MakeRepository) throws {
     let account = try saveCash(in: repository, opening: "10")
     let food = TransactionCategory(name: "Food", kind: .expense)
     try repository.saveCategory(food)
+    let home = TransactionCategory(name: "Home", kind: .expense)
+    try repository.saveCategory(home)
     let transaction = Transaction(type: .expense, amount: decimal("10.00"), accountID: account.id)
     try repository.saveTransaction(transaction)
     XCTAssertThrowsError(
         try repository.replaceSplits(
             [
                 TransactionSplit(categoryID: food.id, amount: decimal("3.00")),
-                TransactionSplit(categoryID: food.id, amount: decimal("6.00")),
+                TransactionSplit(categoryID: home.id, amount: decimal("6.00")),
             ],
             for: transaction.id,
         )
     ) { error in
-        XCTAssertEqual(error as? LedgerValidationError, .splitsDoNotMatchAmount)
+        XCTAssertEqual(error as? LedgerValidationError, .splitRuleBroken(.linesDoNotMatchTotal))
     }
     XCTAssertTrue(try repository.splits(for: transaction.id).isEmpty)
     try repository.replaceSplits(
         [
             TransactionSplit(categoryID: food.id, amount: decimal("4.00")),
-            TransactionSplit(categoryID: food.id, amount: decimal("6.00")),
+            TransactionSplit(categoryID: home.id, amount: decimal("6.00")),
         ],
         for: transaction.id,
     )

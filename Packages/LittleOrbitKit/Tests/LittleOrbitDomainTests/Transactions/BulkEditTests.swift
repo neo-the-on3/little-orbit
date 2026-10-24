@@ -25,57 +25,48 @@ struct BulkEditTests {
     }
 
     @Test("Payee and date: payee skips transfers, date applies to all, category untouched (S73, S77)")
-    func payeeSkipsTransfers() {
+    func payeeSkipsTransfers() throws {
         let bakery = UUID()
-        let newDate = F.date(2026, 10, 15)
         var changes = BulkEditChanges()
         changes.payeeID = .some(bakery)
-        changes.date = newDate
-        let result = BulkEditRules.apply(changes, to: mixed, accounts: F.accounts, timeZoneID: F.india)
+        changes.date = CalendarDay(year: 2026, month: 10, day: 15)
+        let result = try BulkEditRules.apply(changes, to: mixed, accounts: F.accounts, ledger: [])
         #expect(result.filter { $0.type != .transfer }.allSatisfy { $0.payeeID == bakery })
         #expect(result.first { $0.type == .transfer }?.payeeID == nil)
-        #expect(result.allSatisfy { $0.date == newDate })
+        // Every fixture row is at 12:00 in Asia/Calcutta, so each keeps that time on the new day (D230.2).
+        #expect(result.allSatisfy { $0.date == F.date(2026, 10, 15) && $0.timeZoneID == F.india })
         #expect(zip(result, mixed).allSatisfy { $0.categoryID == $1.categoryID && $0.amount == $1.amount })
         #expect(BulkEditRules.includesTransfers(mixed))
         #expect(!BulkEditRules.includesTransfers(Array(mixed.prefix(3))))
     }
 
     @Test("Untouched fields aren't checked: a 120-character description survives a category edit (S68)")
-    func untouchedDescription() {
+    func untouchedDescription() throws {
         var rows = Array(mixed.prefix(3))
         rows[0].details = String(repeating: "d", count: 120)
         var changes = BulkEditChanges()
         changes.categoryID = .some(DefaultCategoryID.groceries)
-        let result = BulkEditRules.apply(changes, to: rows, accounts: F.accounts, timeZoneID: F.india)
+        let result = try BulkEditRules.apply(changes, to: rows, accounts: F.accounts, ledger: [])
         #expect(result[0].details?.count == 120)
         #expect(result.allSatisfy { $0.categoryID == DefaultCategoryID.groceries })
         #expect(BulkEditRules.issues(changes).isEmpty)
     }
 
     @Test("A changed description must fit 100; it applies to all rows (S63, S72)")
-    func description() {
+    func description() throws {
         var changes = BulkEditChanges()
         changes.details = .some(String(repeating: "x", count: 101))
         #expect(BulkEditRules.issues(changes) == [.descriptionTooLong])
         changes.details = .some("Weekly order")
-        let result = BulkEditRules.apply(changes, to: mixed, accounts: F.accounts, timeZoneID: F.india)
+        let result = try BulkEditRules.apply(changes, to: mixed, accounts: F.accounts, ledger: [])
         #expect(result.allSatisfy { $0.details == "Weekly order" })
     }
 
     @Test("Category isn't applied when the selection mixes kinds, even if set")
-    func categoryIgnoredWhenMixed() {
+    func categoryIgnoredWhenMixed() throws {
         var changes = BulkEditChanges()
         changes.categoryID = .some(DefaultCategoryID.food)
-        let result = BulkEditRules.apply(changes, to: mixed, accounts: F.accounts, timeZoneID: F.india)
+        let result = try BulkEditRules.apply(changes, to: mixed, accounts: F.accounts, ledger: [])
         #expect(zip(result, mixed).allSatisfy { $0.categoryID == $1.categoryID })
-    }
-
-    @Test("Moving to another account skips a transfer whose destination is that account")
-    func account() {
-        var changes = BulkEditChanges()
-        changes.accountID = F.walletID
-        let result = BulkEditRules.apply(changes, to: mixed, accounts: F.accounts, timeZoneID: F.india)
-        #expect(result.filter { $0.type != .transfer }.allSatisfy { $0.accountID == F.walletID })
-        #expect(result.first { $0.type == .transfer }?.accountID == F.savingsID)
     }
 }

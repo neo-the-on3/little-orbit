@@ -61,7 +61,7 @@ extension WindowUndoHistory {
         case .removed(let items): return items.first { $0.transaction.id == id }?.transaction
         case .replaced(let versions): return versions.first { $0.id == id }
         case .removedAccount(let removed): return removed.transactions.first { $0.transaction.id == id }?.transaction
-        case .added, .addedAccount, .createdPayees, .removedPayees: return nil
+        case .added, .addedAccount, .createdPayees, .removedPayees, .restoringLines, .duplicated: return nil
         }
     }
 }

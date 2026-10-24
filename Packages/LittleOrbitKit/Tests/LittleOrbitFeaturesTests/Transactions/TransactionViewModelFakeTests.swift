@@ -10,7 +10,12 @@ struct TransactionViewModelFakeTests {
     typealias F = TransactionFeatureFixture  // swiftlint:disable:this type_name
 
     private func feature(_ fake: FakeTransactionUseCases) -> TransactionsFeature {
-        TransactionsFeature(useCases: fake.useCases, locale: F.india, timeZone: F.zone, now: { F.now })
+        TransactionsFeature(
+            useCases: fake.useCases,
+            locale: F.india,
+            timeZone: F.zone,
+            now: { F.now },
+        )
     }
 
     @Test("History for an account the use case can't find shows it as gone")

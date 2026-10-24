@@ -3,18 +3,6 @@
     import LittleOrbitTheme
     import SwiftUI
 
-    /// The state for the transaction entry sheet. Its view model is made once, when the sheet is requested.
-    struct TransactionFormSheet: Identifiable {
-        let id = UUID()
-        let model: TransactionFormViewModel
-    }
-
-    /// The macOS bulk edit sheet, with its view model made when the sheet is requested.
-    struct BulkEditSheet: Identifiable {
-        let id = UUID()
-        let model: BulkEditViewModel
-    }
-
     /// One account: the header, then its history (#23). iOS shows a grouped list (Figma 25:501) and macOS a
     /// table with multi-select (Figma 28:1343). Changes go into this window's undo history (#93, D187.2).
     struct AccountDetailView: View {
@@ -26,6 +14,7 @@
         @State private var history: AccountHistoryViewModel
         @State private var formSheet: TransactionFormSheet?
         @State private var bulkEditSheet: BulkEditSheet?
+        @State private var refundSheet: RefundSheet?
         /// The step of the delete toast this screen showed.
         @State private var toastStepID: UUID?
         #if os(iOS)
@@ -56,13 +45,23 @@
                 .sheet(item: $formSheet) { sheet in
                     TransactionFormView(
                         model: sheet.model,
+                        updates: transactions.updates,
+                        actions: formActions(sheet.model),
                         onSaved: record,
                     )
                 }
+                .sheet(item: $refundSheet) { sheet in
+                    RefundFormView(model: sheet.model, updates: transactions.updates, onSaved: record)
+                }
+                // Edit > Duplicate (⌘D) and Refund… (⌘R) work on the one selected row, on macOS and on iPad with
+                // a hardware keyboard (D65, #31, S40).
+                .focusedSceneValue(\.duplicateSelection, duplicateSelectionAction)
+                .focusedSceneValue(\.refundSelection, refundSelectionAction)
                 #if os(macOS)
                     .sheet(item: $bulkEditSheet) { sheet in
                         BulkEditView(
                             model: sheet.model,
+                            updates: transactions.updates,
                             onApplied: record,
                         )
                     }
@@ -138,6 +137,32 @@
             }
         }
 
+        private func refund(_ id: UUID) {
+            let model = transactions.makeRefund(of: id)
+            // Nothing to refund (split, or changed since the menu was drawn): open no empty sheet (D224.3).
+            guard model.isAvailable else {
+                return
+            }
+            refundSheet = RefundSheet(model: model)
+        }
+
+        /// Copies one row as one Undo step (D65, D221, S29). Adds show no toast (D164.2).
+        private func duplicate(_ id: UUID) {
+            if let change = history.duplicate(id: id) {
+                record(change)
+            }
+        }
+
+        /// Edit > Duplicate for the selection: available on one row, hidden on one refund, else `nil`, which
+        /// disables ⌘D.
+        private var duplicateSelectionAction: DuplicateCommand? {
+            if let id = history.duplicateTarget(history.selection) {
+                return .available(SelectionAction { duplicate(id) })
+            }
+            let selection = history.selection
+            return selection.count == 1 && history.refundIDs.isSuperset(of: selection) ? .hidden : nil
+        }
+
         // MARK: - Content
 
         @ViewBuilder private var content: some View {
@@ -157,6 +182,8 @@
                         AccountTransactionsTable(
                             history: history,
                             onEdit: edit,
+                            onDuplicate: duplicate,
+                            onRefund: refund,
                             onDelete: delete,
                         )
                         Text(history.selectionSummary ?? " ")
@@ -174,7 +201,6 @@
                     if !history.upcoming.isEmpty {
                         Section {
                             ForEach(history.upcoming) { rowButton($0) }
-                                .onDelete { delete(ids(at: $0, in: history.upcoming)) }
                         } header: {
                             sectionHeader("Upcoming", trailing: history.upcomingTotalText, tone: .negative)
                         }
@@ -182,7 +208,6 @@
                     ForEach(history.sections) { section in
                         Section {
                             ForEach(section.rows) { rowButton($0) }
-                                .onDelete { delete(ids(at: $0, in: section.rows)) }
                         } header: {
                             sectionHeader(section.title, trailing: section.netChangeText, tone: section.netChangeTone)
                         }
@@ -283,13 +308,9 @@
                 }
             }
 
-            /// The rows at `offsets`, for the system swipe to delete.
-            private func ids(at offsets: IndexSet, in rows: [TransactionRowModel]) -> Set<UUID> {
-                Set(offsets.map { rows[$0].id })
-            }
-
-            /// Delete is the List's own swipe to delete (`onDelete`), its one VoiceOver action; a custom swipe
-            /// action on this button listed Delete twice (Tester's #87 recheck). The menu offers Edit.
+            /// The swipe is Refund · Duplicate · Delete by the row (D117.2), with no `onDelete` beside it, so
+            /// VoiceOver lists Delete once (Tester's #87 recheck). The long-press menu is Edit, Duplicate, Refund…,
+            /// then Delete last; a refund shows no Duplicate or Refund… (UI Designer, 23 Oct).
             private func editableRow(_ row: TransactionRowModel) -> some View {
                 Button {
                     formSheet = TransactionFormSheet(model: transactions.makeForm(.edit(row.id)))
@@ -298,12 +319,24 @@
                 }
                 .buttonStyle(.plain)
                 .accessibilityHint("Opens the transaction to edit")
+                .modifier(
+                    TransactionSwipeActions(
+                        offersRefund: history.refundableIDs.contains(row.id),
+                        offersDuplicate: !history.refundIDs.contains(row.id),
+                        onRefund: { refund(row.id) },
+                        onDuplicate: { duplicate(row.id) },
+                        onDelete: { delete([row.id]) },
+                    )
+                )
                 .contextMenu {
-                    Button {
-                        formSheet = TransactionFormSheet(model: transactions.makeForm(.edit(row.id)))
-                    } label: {
-                        Label("Edit Transaction", systemImage: "pencil")
-                    }
+                    TransactionRowMenu(
+                        offersDuplicate: !history.refundIDs.contains(row.id),
+                        offersRefund: history.refundableIDs.contains(row.id),
+                        onEdit: { formSheet = TransactionFormSheet(model: transactions.makeForm(.edit(row.id))) },
+                        onDuplicate: { duplicate(row.id) },
+                        onRefund: { refund(row.id) },
+                        onDelete: { delete([row.id]) },
+                    )
                 }
             }
 
@@ -437,5 +470,26 @@
             private static let headerAlignment = HorizontalAlignment.center
             private static let headerFrameAlignment = Alignment.center
         #endif
+    }
+
+    // MARK: - Edit commands
+
+    extension AccountDetailView {
+        /// Edit Expense's Refund…, Duplicate and Delete for the record being edited (Figma 175:1994).
+        private func formActions(_ model: TransactionFormViewModel) -> TransactionFormActions? {
+            guard case .edit(let id) = model.mode else {
+                return nil
+            }
+            return TransactionFormActions(
+                refund: history.refundTarget([id]).map { id in { refund(id) } },
+                duplicate: history.duplicateTarget([id]).map { id in { duplicate(id) } },
+                delete: { delete([id]) },
+            )
+        }
+
+        /// Refund for the selection, or `nil` when it isn't exactly one expense, which disables ⌘R.
+        private var refundSelectionAction: SelectionAction? {
+            history.refundTarget(history.selection).map { id in SelectionAction { refund(id) } }
+        }
     }
 #endif

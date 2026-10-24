@@ -9,12 +9,24 @@
     /// Return saves and Esc cancels.
     struct TransactionFormView: View {
         @State private var model: TransactionFormViewModel
+        let updates: LedgerUpdates
+        /// Edit Expense's Refund…, Duplicate and Delete; `nil` for a new transaction.
+        let actions: TransactionFormActions?
         let onSaved: (TransactionChange) -> Void
 
-        init(model: TransactionFormViewModel, onSaved: @escaping (TransactionChange) -> Void) {
+        init(
+            model: TransactionFormViewModel,
+            updates: LedgerUpdates,
+            actions: TransactionFormActions? = nil,
+            onSaved: @escaping (TransactionChange) -> Void,
+        ) {
+            self.updates = updates
             _model = State(initialValue: model)
+            self.actions = actions
             self.onSaved = onSaved
         }
+        /// A button's action, run once the sheet has gone (`onDisappear`).
+        @State private var afterClose: (() -> Void)?
         @Environment(\.dismiss) private var dismiss
         @Environment(\.dynamicTypeSize) private var dynamicTypeSize
         @State private var confirmingDiscard = false
@@ -23,6 +35,10 @@
         /// The text field being edited. The amount uses the decimal pad with the operator row; description
         /// and notes use the normal keyboard (D163).
         @FocusState private var focus: FormField?
+        #if os(iOS)
+            /// The category list and split editor pushed from the Category row (#34).
+            @State private var path: [TransactionFormRoute] = []
+        #endif
 
         enum FormField: Hashable {
             case amount, received, payee, description, notes
@@ -34,9 +50,11 @@
         }
 
         var body: some View {
-            NavigationStack {
+            stack {
                 content
                     .navigationTitle(model.title)
+                    // Refunds recorded or deleted in another window update the form live (D225.1).
+                    .onChange(of: updates.revision) { model.reload() }
                     #if os(iOS)
                         .navigationBarTitleDisplayMode(.inline)
                     #endif
@@ -74,6 +92,40 @@
             #if os(macOS)
                 .frame(minWidth: 460, minHeight: 520)
             #endif
+            .onDisappear { afterClose?() }
+        }
+
+        /// A Refund…, Duplicate or Delete button, once any discard is confirmed: closes the sheet, then acts.
+        private func close(then action: @escaping () -> Void) {
+            afterClose = action
+            dismiss()
+        }
+
+        @ViewBuilder private var actionSections: some View {
+            if let actions {
+                TransactionFormActionSections(
+                    actions: actions,
+                    deleteTitle: model.deleteTitle,
+                    deleteFootnote: model.deleteFootnote,
+                    hasUnsavedInput: model.hasUnsavedInput,
+                    close: { close(then: $0) },
+                )
+            }
+        }
+
+        /// The sheet's navigation stack; on iOS it can push the category list and the split editor.
+        @ViewBuilder
+        private func stack<Content: View>(@ViewBuilder _ content: () -> Content) -> some View {
+            #if os(iOS)
+                NavigationStack(path: $path) {
+                    content()
+                        .navigationDestination(for: TransactionFormRoute.self) { route in
+                            TransactionFormDestination(route: route, model: model, path: $path)
+                        }
+                }
+            #else
+                NavigationStack { content() }
+            #endif
         }
 
         private func cancel() {
@@ -98,22 +150,12 @@
 
         // MARK: - Shared pieces
 
-        private var typePicker: some View {
-            Picker("Type", selection: $model.type) {
-                ForEach(model.allowedTypes, id: \.self) { type in
-                    Text(TransactionFormViewModel.typeName(type)).tag(type)
-                }
-            }
-            .pickerStyle(.segmented)
-            .labelsHidden()
-        }
-
         @ViewBuilder private var accountRows: some View {
             if model.type == .transfer {
-                stackedRow("From", value: model.accountLabel(model.accountID)) {
+                StackedPickerRow("From", value: model.accountLabel(model.accountID)) {
                     Picker("From", selection: $model.accountID) { accountOptions }
                 }
-                stackedRow("To", value: model.accountLabel(model.transferAccountID)) {
+                StackedPickerRow("To", value: model.accountLabel(model.transferAccountID)) {
                     Picker("To", selection: $model.transferAccountID) {
                         Text("Choose").tag(UUID?.none)
                         accountOptions
@@ -143,70 +185,36 @@
                     }
                 }
             } else {
-                stackedRow("Account", value: model.accountName) {
+                StackedPickerRow("Account", value: model.accountName) {
                     Picker("Account", selection: $model.accountID) { accountOptions }
                 }
-                stackedRow("Category", value: model.categoryName, spoken: model.categorySpokenValue) {
-                    // The menu's items are standard Labels, so each lines up with its icon, in a section per
-                    // parent (UI Designer). The chosen value shows as text only, and its accessibility label
-                    // carries the parent, so VoiceOver reads "Category" then "Groceries, under Food & Dining"
-                    // once each: the iOS picker folds this label into its own, and the macOS one uses it as
-                    // the value (Tester's #87 v11).
-                    Picker(selection: $model.categoryID) {
-                        Label("Uncategorised", systemImage: "questionmark").tag(UUID?.none)
-                        CategoryPickerSections(groups: model.categoryGroups)
-                    } label: {
-                        Text("Category")
-                    } currentValueLabel: {
-                        Text(model.categoryName)
-                            .accessibilityLabel(model.categorySpokenValue)
-                    }
+                if model.offersSplit {
+                    TransactionCategoryRow(model: model)
+                } else {
+                    categoryPicker
                 }
                 payeeField
             }
             dateRow
         }
 
-        /// A picker row. At accessibility sizes the label goes above the value and the value wraps onto more
-        /// lines, never truncated in the middle; the row opens the same choices as a menu. VoiceOver reads the
-        /// label once with the choice as the value, "Account, Everyday Savings" (Tester's #87 B2, B3). At other
-        /// sizes the standard picker reads that way itself. `spoken`, when set, is what VoiceOver reads instead
-        /// of `value`, such as "Groceries, under Food".
-        @ViewBuilder
-        private func stackedRow<Content: View>(
-            _ title: String,
-            value: String,
-            spoken: String? = nil,
-            @ViewBuilder control: () -> Content,
-        ) -> some View {
-            #if os(iOS)
-                if dynamicTypeSize.isAccessibilitySize {
-                    Menu {
-                        control()
-                            .pickerStyle(.inline)
-                            .labelsHidden()
-                    } label: {
-                        VStack(alignment: .leading, spacing: Spacing.spaceHalf) {
-                            Text(title)
-                                .foregroundStyle(Color(ThemeColor.labelPrimary))
-                            Text(value)
-                                .foregroundStyle(Color(ThemeColor.labelSecondary))
-                                .multilineTextAlignment(.leading)
-                                .fixedSize(horizontal: false, vertical: true)
-                        }
-                        .frame(maxWidth: .infinity, alignment: .leading)
-                        .contentShape(Rectangle())
-                    }
-                    .accessibilityElement(children: .ignore)
-                    .accessibilityLabel(title)
-                    .accessibilityValue(spoken ?? value)
-                    .accessibilityAddTraits(.isButton)
-                } else {
-                    control()
+        @ViewBuilder private var categoryPicker: some View {
+            StackedPickerRow("Category", value: model.categoryName, spoken: model.categorySpokenValue) {
+                // The menu's items are standard Labels, so each lines up with its icon, in a section per
+                // parent (UI Designer). The chosen value shows as text only, and its accessibility label
+                // carries the parent, so VoiceOver reads "Category" then "Groceries, under Food & Dining"
+                // once each: the iOS picker folds this label into its own, and the macOS one uses it as
+                // the value (Tester's #87 v11).
+                Picker(selection: $model.categoryID) {
+                    Label("Uncategorised", systemImage: "questionmark").tag(UUID?.none)
+                    CategoryPickerSections(groups: model.categoryGroups)
+                } label: {
+                    Text("Category")
+                } currentValueLabel: {
+                    Text(model.categoryName)
+                        .accessibilityLabel(model.categorySpokenValue)
                 }
-            #else
-                control()
-            #endif
+            }
         }
 
         /// VoiceOver reads "Date, 21 October 2026" (UI Designer, #87 UI3). At accessibility sizes the label
@@ -298,7 +306,7 @@
                 Button {
                     model.choosePayee(suggestion)
                 } label: {
-                    suggestionLabel(suggestion)
+                    SuggestionLabel(suggestion: suggestion)
                 }
                 .buttonStyle(.plain)
             }
@@ -323,7 +331,7 @@
                 Button {
                     model.chooseDescription(suggestion)
                 } label: {
-                    suggestionLabel(suggestion)
+                    SuggestionLabel(suggestion: suggestion)
                 }
                 .buttonStyle(.plain)
             }
@@ -338,43 +346,14 @@
             }
         }
 
-        private func suggestionLabel(_ suggestion: TransactionSuggestion) -> some View {
-            HStack {
-                Image(systemName: "clock.arrow.circlepath")
-                    .foregroundStyle(Color(ThemeColor.labelSecondary))
-                    .accessibilityHidden(true)
-                Text(suggestion.text)
-                    .foregroundStyle(Color(ThemeColor.labelPrimary))
-                Spacer()
-                Text(TransactionFormViewModel.usageText(suggestion))
-                    .font(.theme(Self.footnoteStyle))
-                    .foregroundStyle(Color(ThemeColor.labelSecondary))
-            }
-            .contentShape(Rectangle())
-            .accessibilityElement(children: .combine)
-            .accessibilityHint("Uses this suggestion")
-        }
-
-        @ViewBuilder private var messages: some View {
-            // On iOS the calculator error shows under the amount field instead (D163).
-            #if os(macOS)
-                if let error = model.amountError {
-                    Label(error, systemImage: "exclamationmark.circle")
-                        .foregroundStyle(Color(ThemeColor.statusOverspent))
-                }
-            #endif
-            if let issue = model.issueMessage {
-                Label(issue, systemImage: "exclamationmark.triangle")
-                    .foregroundStyle(Color(ThemeColor.statusWarning))
-            }
-        }
-
         // MARK: - Platform layouts
 
         #if os(macOS)
             private var content: some View {
                 Form {
-                    typePicker
+                    if model.showsTypeSwitch {
+                        typePicker
+                    }
                     TextField("Amount:", text: $model.expressionInput, prompt: Text("0.00 or a sum like 50*20/10"))
                         .onSubmit { model.press(.equals) }
                     if let line = model.expressionLine {
@@ -385,6 +364,8 @@
                     messages
                     accountRows
                     detailsFields
+                    ExpenseRefundsSection(rows: model.refundRows, footnote: model.refundsFootnote)
+                    actionSections
                 }
                 .formStyle(.grouped)
             }
@@ -393,8 +374,10 @@
         #else
             private var content: some View {
                 VStack(spacing: Spacing.space2) {
-                    typePicker
-                        .padding(.horizontal, Layout.marginIOS)
+                    if model.showsTypeSwitch {
+                        typePicker
+                            .padding(.horizontal, Layout.marginIOS)
+                    }
                     TransactionAmountField(model: model, focus: $focus)
                         .padding(.horizontal, Layout.marginIOS)
                     ScrollViewReader { proxy in
@@ -411,6 +394,8 @@
                                     Text("Description, notes")
                                 }
                             }
+                            ExpenseRefundsSection(rows: model.refundRows, footnote: model.refundsFootnote)
+                            actionSections
                         }
                         .scrollDismissesKeyboard(.interactively)
                         // Keep the description and its suggestions above the keyboard (UI Designer, #87 U1).
@@ -465,5 +450,32 @@
 
             private static let footnoteStyle = Typography.IOS.footnote
         #endif
+    }
+
+    extension TransactionFormView {
+        @ViewBuilder private var messages: some View {
+            // On iOS the calculator error shows under the amount field instead (D163).
+            #if os(macOS)
+                if let error = model.amountError {
+                    Label(error, systemImage: "exclamationmark.circle")
+                        .foregroundStyle(Color(ThemeColor.statusOverspent))
+                }
+            #endif
+            if let issue = model.issueMessage {
+                Label(issue, systemImage: "exclamationmark.triangle")
+                    .foregroundStyle(Color(ThemeColor.statusWarning))
+            }
+        }
+
+        /// Hidden while the expense has refunds (`showsTypeSwitch`, D222.2).
+        private var typePicker: some View {
+            Picker("Type", selection: $model.type) {
+                ForEach(model.allowedTypes, id: \.self) { type in
+                    Text(TransactionFormViewModel.typeName(type)).tag(type)
+                }
+            }
+            .pickerStyle(.segmented)
+            .labelsHidden()
+        }
     }
 #endif

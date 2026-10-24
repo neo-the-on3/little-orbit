@@ -263,34 +263,68 @@ extension LedgerBook {
         in snapshot: LedgerSnapshot,
     ) throws {
         if transaction.type == .transfer {
-            throw LedgerValidationError.splitsNotAllowedOnTransfer
+            throw LedgerValidationError.splitRuleBroken(.notOnTransfer)
+        }
+        if transaction.isRefund || transaction.refundOfID != nil {
+            // A refund can't be split (D97.3). Checked before the category, which a linked refund always has.
+            throw LedgerValidationError.splitRuleBroken(.notOnRefund)
         }
         if transaction.categoryID != nil {
-            throw LedgerValidationError.splitsRequireUncategorised
+            throw LedgerValidationError.splitRuleBroken(.transactionHasCategory)
         }
         guard let account = transaction.accountID.flatMap({ activeAccount($0, in: snapshot) }) else {
             throw LedgerValidationError.missingAccount
         }
+        let active = splits.filter { $0.deletedAt == nil }
+        // One line is a normal single-category transaction, and a split has at most 20 lines (D64).
+        if active.count < 2 {
+            throw LedgerValidationError.splitRuleBroken(.tooFewLines)
+        }
+        if active.count > SplitPlan.maximumLines {
+            throw LedgerValidationError.splitRuleBroken(.tooManyLines)
+        }
         var sum = Decimal(0)
-        for split in splits where split.deletedAt == nil {
-            if split.amount <= 0 {
-                throw LedgerValidationError.invalidAmount
-            }
-            try MinorUnitDecimal.validate(split.amount, currencyCode: account.currencyCode)
-            try LedgerText.validateNote(split.note)
-            if let categoryID = split.categoryID {
-                guard let category = activeCategory(categoryID, in: snapshot) else {
-                    throw LedgerValidationError.missingCategory
-                }
-                if !category.kind.matches(transaction.type) {
-                    throw LedgerValidationError.categoryKindMismatch
-                }
+        var used: Set<UUID> = []
+        for split in active {
+            let categoryID = try validateSplitLine(
+                split,
+                of: transaction,
+                currencyCode: account.currencyCode,
+                in: snapshot,
+            )
+            if !used.insert(categoryID).inserted {
+                throw LedgerValidationError.splitRuleBroken(.categoryRepeated)
             }
             sum += split.amount
         }
         if sum != transaction.amount {
-            throw LedgerValidationError.splitsDoNotMatchAmount
+            throw LedgerValidationError.splitRuleBroken(.linesDoNotMatchTotal)
         }
+    }
+
+    /// Checks one line and returns its category. Every line has a positive amount and a category of the
+    /// transaction's kind (D64).
+    static func validateSplitLine(
+        _ split: TransactionSplit,
+        of transaction: Transaction,
+        currencyCode: String,
+        in snapshot: LedgerSnapshot,
+    ) throws -> UUID {
+        if split.amount <= 0 {
+            throw LedgerValidationError.splitRuleBroken(.lineAmountNotPositive)
+        }
+        try MinorUnitDecimal.validate(split.amount, currencyCode: currencyCode)
+        try LedgerText.validateNote(split.note)
+        guard let categoryID = split.categoryID else {
+            throw LedgerValidationError.splitRuleBroken(.lineMissingCategory)
+        }
+        guard let category = activeCategory(categoryID, in: snapshot) else {
+            throw LedgerValidationError.missingCategory
+        }
+        if !category.kind.matches(transaction.type) {
+            throw LedgerValidationError.splitRuleBroken(.lineCategoryKind)
+        }
+        return categoryID
     }
 
     static func validate(_ attachment: Attachment, in snapshot: LedgerSnapshot) throws {

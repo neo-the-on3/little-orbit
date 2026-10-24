@@ -60,6 +60,9 @@ public enum TransactionStatus: String, CaseIterable, Sendable, Codable {
     case cleared
     case reconciled
 
+    /// The status a new transaction or a duplicate starts with (#33, D65).
+    public static let newTransactionDefault: TransactionStatus = .cleared
+
     public init(storedRawValue: String) {
         self = TransactionStatus(rawValue: storedRawValue) ?? .cleared
     }

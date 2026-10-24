@@ -29,11 +29,23 @@ public struct AccountHistoryPage: Equatable, Sendable {
     public var history: AccountHistory
     /// The records a history entry refers to: the other account of a transfer, categories and payees.
     public var ledger: TransactionLedger
+    /// Each split transaction's live lines in order, for its 'Split (3)' category and the macOS table's
+    /// expanded row (D64, S1, S45). Transactions with no split aren't listed.
+    public var splitLines: [UUID: [TransactionSplit]]
 
-    public init(account: Account, history: AccountHistory, ledger: TransactionLedger) {
+    /// How many live lines each split transaction has.
+    public var splitLineCounts: [UUID: Int] { splitLines.mapValues(\.count) }
+
+    public init(
+        account: Account,
+        history: AccountHistory,
+        ledger: TransactionLedger,
+        splitLines: [UUID: [TransactionSplit]] = [:],
+    ) {
         self.account = account
         self.history = history
         self.ledger = ledger
+        self.splitLines = splitLines
     }
 }
 
@@ -80,6 +92,15 @@ public protocol TransactionChangesUseCase {
     func impact(of change: TransactionChange) throws -> ChangeImpact
 }
 
+@MainActor
+public protocol DuplicateTransactionUseCase {
+    /// Saves a copy of the transaction, dated `now`, by the D65 copy rules (`TransactionDuplicate`), and returns
+    /// the change: `.added` with the copy, marked `.duplicated` for its Undo name (D221), so Undo deletes the
+    /// copy and leaves the original unchanged (S29).
+    /// Throws `missingTransaction` when it's gone and `refundCannotBeDuplicated` for a refund.
+    func duplicate(id: UUID, now: Date) throws -> TransactionChange
+}
+
 /// The transaction use cases as one value, for the composition root.
 @MainActor
 public struct TransactionUseCases {
@@ -87,6 +108,10 @@ public struct TransactionUseCases {
     public var accountHistory: any AccountHistoryUseCase
     public var saveTransactions: any SaveTransactionsUseCase
     public var changes: any TransactionChangesUseCase
+    public var duplicate: any DuplicateTransactionUseCase
+    public var splits: any SplitTransactionUseCase
+    /// The refund sheet's use case (#34).
+    public var refunds: any RefundTransactionUseCase
     public var dates: any TransactionDateUseCase
 
     public init(
@@ -94,12 +119,18 @@ public struct TransactionUseCases {
         accountHistory: any AccountHistoryUseCase,
         saveTransactions: any SaveTransactionsUseCase,
         changes: any TransactionChangesUseCase,
+        duplicate: any DuplicateTransactionUseCase,
+        splits: any SplitTransactionUseCase,
+        refunds: any RefundTransactionUseCase,
         dates: any TransactionDateUseCase = DefaultTransactionDateUseCase(),
     ) {
         self.loadLedger = loadLedger
         self.accountHistory = accountHistory
         self.saveTransactions = saveTransactions
         self.changes = changes
+        self.duplicate = duplicate
+        self.splits = splits
+        self.refunds = refunds
         self.dates = dates
     }
 
@@ -110,6 +141,9 @@ public struct TransactionUseCases {
             accountHistory: DefaultAccountHistoryUseCase(repository: repository),
             saveTransactions: DefaultSaveTransactionsUseCase(repository: repository),
             changes: DefaultTransactionChangesUseCase(repository: repository),
+            duplicate: DefaultDuplicateTransactionUseCase(repository: repository),
+            splits: DefaultSplitTransactionUseCase(repository: repository),
+            refunds: DefaultRefundTransactionUseCase(repository: repository),
         )
     }
 }
@@ -138,25 +172,6 @@ public struct DefaultLoadTransactionLedgerUseCase: LoadTransactionLedgerUseCase 
             try repository.seedDefaultCategories()
         }
         return try ledger()
-    }
-}
-
-@MainActor
-public struct DefaultAccountHistoryUseCase: AccountHistoryUseCase {
-    private let ledger: DefaultLoadTransactionLedgerUseCase
-    private let build = BuildAccountHistory()
-
-    public init(repository: any LedgerRepository) {
-        self.ledger = DefaultLoadTransactionLedgerUseCase(repository: repository)
-    }
-
-    public func history(of accountID: UUID, today: CalendarDay) throws -> AccountHistoryPage? {
-        let contents = try ledger.ledger()
-        guard let account = contents.accounts.first(where: { $0.id == accountID }) else {
-            return nil
-        }
-        let history = build(account: account, transactions: contents.transactions, today: today)
-        return AccountHistoryPage(account: account, history: history, ledger: contents)
     }
 }
 
@@ -261,7 +276,7 @@ public struct DefaultTransactionChangesUseCase: TransactionChangesUseCase {
                 previous + current.filter { now in previous.contains { $0.id == now.id } }
             case .added(let ids): current.filter { ids.contains($0.id) }
             // Whole-account changes carry their account in the change itself.
-            case .removedAccount, .addedAccount, .createdPayees, .removedPayees: []
+            case .removedAccount, .addedAccount, .createdPayees, .removedPayees, .restoringLines, .duplicated: []
             }
         let ids = Set(versions.flatMap { [$0.accountID, $0.transferAccountID].compactMap(\.self) })
         let transfers = versions.compactMap { version -> TransferImpact? in
@@ -349,6 +364,11 @@ public struct DefaultTransactionChangesUseCase: TransactionChangesUseCase {
             let inverse = try revertAll(change, expecting: outcome)
             // As stored now: reapplying the transactions sets their default category again.
             return .saved(inverse, creating: try cleanup.stored(restored))
+        case .restoringLines(let lines, let change):
+            return try revertLines(lines, around: change, expecting: outcome)
+        case .duplicated(_, let change):
+            // Undo removes the copy; Redo keeps the name the step was recorded with (D221.5).
+            return try revertAll(change, expecting: outcome)
         case .removed(let items):
             try restore(items)
             return .added(items.map(\.transaction.id))
@@ -363,6 +383,28 @@ public struct DefaultTransactionChangesUseCase: TransactionChangesUseCase {
         case .replaced(let previous):
             return try revertEdits(previous, expecting: outcome)
         }
+    }
+
+    /// Takes the current lines off first, so a transaction can get its category back; reverts the change; then
+    /// puts the earlier lines back with their IDs. The inverse holds the lines this took off.
+    private func revertLines(
+        _ lines: [UUID: [TransactionSplit]],
+        around change: TransactionChange,
+        expecting outcome: ChangeOutcome,
+    ) throws -> TransactionChange {
+        let ids = lines.keys.sorted { $0.uuidString < $1.uuidString }
+        var current: [UUID: [TransactionSplit]] = [:]
+        for id in ids {
+            current[id] = try repository.splits(for: id)
+            try repository.replaceSplits([], for: id)
+        }
+        let inverse = try revertAll(change, expecting: outcome)
+        for id in ids {
+            if let earlier = lines[id], !earlier.isEmpty {
+                try repository.replaceSplits(earlier, for: id)
+            }
+        }
+        return .restoringLines(current, inverse)
     }
 
     private func revertEdits(_ previous: [Transaction], expecting outcome: ChangeOutcome) throws -> TransactionChange {

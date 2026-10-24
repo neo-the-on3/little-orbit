@@ -39,12 +39,18 @@ public final class AccountHistoryViewModel {
     public private(set) var sections: [TransactionDaySection] = []
     public private(set) var accountExists = true
     public var selection: Set<UUID> = []
+    /// The rows Refund is offered on: expenses that aren't refunds (D65, D117.2, D117.3) and aren't split, since
+    /// Schema V1 can't link a refund to a split expense (D35.6, D224.3; split-line refunds come with #126).
+    public private(set) var refundableIDs: Set<UUID> = []
+    /// The rows Duplicate is hidden on: refunds (D65, D117.3, D237.3).
+    public private(set) var refundIDs: Set<UUID> = []
     public var deletePrompt: BulkDeletePrompt?
     public var errorMessage: String?
 
     @ObservationIgnored private let accountHistory: any AccountHistoryUseCase
     @ObservationIgnored private let loadLedger: any LoadTransactionLedgerUseCase
     @ObservationIgnored private let changes: any TransactionChangesUseCase
+    @ObservationIgnored private let duplicates: any DuplicateTransactionUseCase
     @ObservationIgnored private let formatter: MoneyFormatter
     @ObservationIgnored private let text: TransactionText
     @ObservationIgnored private let timeZone: TimeZone
@@ -54,6 +60,7 @@ public final class AccountHistoryViewModel {
         accountHistory: any AccountHistoryUseCase,
         loadLedger: any LoadTransactionLedgerUseCase,
         changes: any TransactionChangesUseCase,
+        duplicate: any DuplicateTransactionUseCase,
         accountID: UUID,
         locale: Locale = .current,
         timeZone: TimeZone = .current,
@@ -62,6 +69,7 @@ public final class AccountHistoryViewModel {
         self.accountHistory = accountHistory
         self.loadLedger = loadLedger
         self.changes = changes
+        self.duplicates = duplicate
         self.accountID = accountID
         self.formatter = MoneyFormatter(locale: locale)
         self.text = TransactionText(locale: locale)
@@ -81,6 +89,7 @@ public final class AccountHistoryViewModel {
             accountHistory: useCases.accountHistory,
             loadLedger: useCases.loadLedger,
             changes: useCases.changes,
+            duplicate: useCases.duplicate,
             accountID: accountID,
             locale: locale,
             timeZone: timeZone,
@@ -105,6 +114,8 @@ public final class AccountHistoryViewModel {
                 accountExists = false
                 upcoming = []
                 sections = []
+                refundableIDs = []
+                refundIDs = []
                 return
             }
             let account = page.account
@@ -120,6 +131,7 @@ public final class AccountHistoryViewModel {
                 formatter: formatter,
                 text: text,
                 today: today,
+                splitLines: page.splitLines,
             )
             let currency = account.currencyCode
             balanceText = formatter.string(history.currentBalance, currencyCode: currency)
@@ -140,10 +152,50 @@ public final class AccountHistoryViewModel {
                     rows: day.entries.map { context.row($0, isUpcoming: false) },
                 )
             }
+            let shown = (history.upcoming + history.days.flatMap(\.entries)).map(\.transaction)
+            // Read once per load, not per row.
+            let splitIDs = Set(page.splitLineCounts.keys)
+            refundableIDs = Set(
+                shown.filter { TransactionActions(for: $0).canRefund && !splitIDs.contains($0.id) }.map(\.id)
+            )
+            refundIDs = Set(shown.filter { TransactionActions(for: $0).duplicate == .disabledForRefund }.map(\.id))
             let visible = Set(allRows.map(\.id))
             selection = selection.intersection(visible)
         } catch {
             errorMessage = Self.message(for: error)
+        }
+    }
+
+    /// The one expense the Refund action and ⌘R work on: `nil` for several rows, none, or a row Refund isn't
+    /// offered on (#31, D65).
+    public func refundTarget(_ ids: Set<UUID>) -> UUID? {
+        guard ids.count == 1, let id = ids.first, refundableIDs.contains(id) else {
+            return nil
+        }
+        return id
+    }
+
+    /// The one row Duplicate and ⌘D work on: `nil` for several rows, none, or a refund (#31, D65, D117.3).
+    public func duplicateTarget(_ ids: Set<UUID>) -> UUID? {
+        guard ids.count == 1, let id = ids.first, !refundIDs.contains(id), allRows.contains(where: { $0.id == id })
+        else {
+            return nil
+        }
+        return id
+    }
+
+    /// Duplicates one row by the D65 and D216 copy rules, dated now, and returns the change to record: one
+    /// Undo step named by D221 that removes only the copy (S29).
+    @discardableResult
+    public func duplicate(id: UUID) -> TransactionChange? {
+        do {
+            let change = try duplicates.duplicate(id: id, now: now())
+            load()
+            return change
+        } catch {
+            errorMessage = Self.message(for: error)
+            load()
+            return nil
         }
     }
 

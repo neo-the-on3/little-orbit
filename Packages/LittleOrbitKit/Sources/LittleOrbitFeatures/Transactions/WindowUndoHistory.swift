@@ -366,7 +366,9 @@ public final class WindowUndoHistory {
             switch step.change.core {
             case .added: .restored
             case .removed: .deleted
-            case .replaced, .removedAccount, .addedAccount, .createdPayees, .removedPayees: .updated
+            case .replaced, .removedAccount, .addedAccount, .createdPayees, .removedPayees, .restoringLines,
+                .duplicated:
+                .updated
             }
         return UndoNotice(
             message: UndoActionTitle.placed(UndoText.notice(effect, count: count), step.impact),
