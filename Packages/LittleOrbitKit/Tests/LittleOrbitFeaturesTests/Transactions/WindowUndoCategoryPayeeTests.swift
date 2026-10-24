@@ -36,7 +36,7 @@ struct WindowUndoCategoryPayeeTests {
 
     private func setup(_ transactions: [Transaction]) throws -> Setup {
         let repository = try F.repository(transactions)
-        let useCases = TransactionUseCases(repository: repository)
+        let useCases = TransactionUseCases(repository: repository, categoryNames: CatalogDefaultCategoryNames())
         let updates = LedgerUpdates()
         let categories = try repository.categories().filter { $0.kind == .expense }.map(\.id)
         let setup = Setup(

@@ -103,10 +103,11 @@ public struct TransactionUseCases {
         self.dates = dates
     }
 
-    /// The default implementations over one repository.
-    public init(repository: any LedgerRepository) {
+    /// The default implementations over one repository. `categoryNames` names the built-in categories when
+    /// they're seeded (D8).
+    public init(repository: any LedgerRepository, categoryNames: any DefaultCategoryNaming) {
         self.init(
-            loadLedger: DefaultLoadTransactionLedgerUseCase(repository: repository),
+            loadLedger: DefaultLoadTransactionLedgerUseCase(repository: repository, categoryNames: categoryNames),
             accountHistory: DefaultAccountHistoryUseCase(repository: repository),
             saveTransactions: DefaultSaveTransactionsUseCase(repository: repository),
             changes: DefaultTransactionChangesUseCase(repository: repository),
@@ -119,12 +120,29 @@ public struct TransactionUseCases {
 @MainActor
 public struct DefaultLoadTransactionLedgerUseCase: LoadTransactionLedgerUseCase {
     private let repository: any LedgerRepository
+    private let categoryNames: any DefaultCategoryNaming
 
-    public init(repository: any LedgerRepository) {
+    public init(repository: any LedgerRepository, categoryNames: any DefaultCategoryNaming) {
         self.repository = repository
+        self.categoryNames = categoryNames
     }
 
     public func ledger() throws -> TransactionLedger {
+        try TransactionLedger.read(from: repository)
+    }
+
+    public func ledgerForEntry() throws -> TransactionLedger {
+        if try repository.categories().isEmpty {
+            try repository.seedDefaultCategories(names: categoryNames)
+        }
+        return try ledger()
+    }
+}
+
+extension TransactionLedger {
+    /// The live accounts, transactions, categories and payees as stored now.
+    @MainActor
+    static func read(from repository: any LedgerRepository) throws -> TransactionLedger {
         TransactionLedger(
             accounts: try repository.accounts().filter { $0.deletedAt == nil },
             transactions: try repository.transactions(),
@@ -132,26 +150,19 @@ public struct DefaultLoadTransactionLedgerUseCase: LoadTransactionLedgerUseCase 
             payees: try repository.payees(),
         )
     }
-
-    public func ledgerForEntry() throws -> TransactionLedger {
-        if try repository.categories().isEmpty {
-            try repository.seedDefaultCategories()
-        }
-        return try ledger()
-    }
 }
 
 @MainActor
 public struct DefaultAccountHistoryUseCase: AccountHistoryUseCase {
-    private let ledger: DefaultLoadTransactionLedgerUseCase
+    private let repository: any LedgerRepository
     private let build = BuildAccountHistory()
 
     public init(repository: any LedgerRepository) {
-        self.ledger = DefaultLoadTransactionLedgerUseCase(repository: repository)
+        self.repository = repository
     }
 
     public func history(of accountID: UUID, today: CalendarDay) throws -> AccountHistoryPage? {
-        let contents = try ledger.ledger()
+        let contents = try TransactionLedger.read(from: repository)
         guard let account = contents.accounts.first(where: { $0.id == accountID }) else {
             return nil
         }

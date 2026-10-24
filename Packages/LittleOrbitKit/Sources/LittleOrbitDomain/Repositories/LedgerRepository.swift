@@ -17,7 +17,8 @@ public protocol LedgerRepository: AnyObject {
     func categories() throws -> [TransactionCategory]
     func saveCategory(_ category: TransactionCategory) throws
     func deleteCategory(id: UUID, reassigningTo categoryID: UUID?) throws
-    func seedDefaultCategories() throws
+    /// Adds the built-in categories that aren't there yet, with the names `names` gives (D8).
+    func seedDefaultCategories(names: any DefaultCategoryNaming) throws
 
     func payees() throws -> [Payee]
     func savePayee(_ payee: Payee) throws

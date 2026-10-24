@@ -21,11 +21,20 @@ struct BackupRestoreUndoTests {
         let disk = FullDiskLedgerRepository(repository)
         let updates = LedgerUpdates()
         updates.follow(harness.changes)
-        let first = TestWindow(TransactionUseCases(repository: disk), updates: updates)
-        let useCases = TransactionUseCases(repository: repository)
+        let first = TestWindow(
+            TransactionUseCases(repository: disk, categoryNames: CatalogDefaultCategoryNames()),
+            updates: updates,
+        )
+        let useCases = TransactionUseCases(repository: repository, categoryNames: CatalogDefaultCategoryNames())
         let second = TestWindow(useCases, updates: updates)
-        first.history.record(try TransactionUseCases(repository: disk).changes.remove(ids: [rows[0].id]))
-        first.history.record(try TransactionUseCases(repository: disk).changes.remove(ids: [rows[1].id]))
+        first.history.record(
+            try TransactionUseCases(repository: disk, categoryNames: CatalogDefaultCategoryNames()).changes
+                .remove(ids: [rows[0].id])
+        )
+        first.history.record(
+            try TransactionUseCases(repository: disk, categoryNames: CatalogDefaultCategoryNames()).changes
+                .remove(ids: [rows[1].id])
+        )
         second.history.record(try useCases.changes.remove(ids: [rows[2].id]))
         second.history.undo()
         #expect(first.history.canUndo)
@@ -66,7 +75,10 @@ struct BackupRestoreUndoTests {
 
         // The block really ended: a new edit after the restore can be undone, in both windows, including the one
         // whose Undo had failed.
-        let windows = [(first, TransactionUseCases(repository: disk)), (second, useCases)]
+        let windows = [
+            (first, TransactionUseCases(repository: disk, categoryNames: CatalogDefaultCategoryNames())),
+            (second, useCases),
+        ]
         for (index, (window, cases)) in windows.enumerated() {
             window.history.record(try cases.changes.remove(ids: [rows[index].id]))
             #expect(window.history.canUndo)
@@ -86,7 +98,7 @@ extension BackupRestoreUndoTests {
         let repository = try F.repository([lunch])
         let harness = try BackupHarness(repository: repository)
         let backup = try await harness.service.backUpNow()
-        let useCases = TransactionUseCases(repository: repository)
+        let useCases = TransactionUseCases(repository: repository, categoryNames: CatalogDefaultCategoryNames())
         let updates = LedgerUpdates()
         updates.follow(harness.changes)
         let first = TestWindow(useCases, updates: updates)

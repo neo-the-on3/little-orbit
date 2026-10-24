@@ -13,7 +13,7 @@ struct AccountDeleteUndoTests {
     func deleteAccountUndo() throws {
         let items = (0..<12).map { F.expense(Decimal($0 + 1), on: F.date(2026, 10, 1 + $0), account: F.cardID) }
         let repository = try F.repository(items)
-        let useCases = TransactionUseCases(repository: repository)
+        let useCases = TransactionUseCases(repository: repository, categoryNames: CatalogDefaultCategoryNames())
         let model = AccountsViewModel(
             useCases: AccountUseCases(
                 repository: repository,
@@ -47,7 +47,7 @@ struct AccountDeleteUndoTests {
     func promptStaysInItsWindow() throws {
         let items = (0..<3).map { F.expense(Decimal($0 + 1), on: F.date(2026, 10, 1 + $0), account: F.cardID) }
         let repository = try F.repository(items)
-        let useCases = TransactionUseCases(repository: repository)
+        let useCases = TransactionUseCases(repository: repository, categoryNames: CatalogDefaultCategoryNames())
         // The windows share the accounts view model and the store, as the app's composition root does.
         let shared = AccountsViewModel(
             useCases: AccountUseCases(

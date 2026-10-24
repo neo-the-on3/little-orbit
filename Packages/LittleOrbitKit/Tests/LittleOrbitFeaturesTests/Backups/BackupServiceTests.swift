@@ -175,7 +175,7 @@ struct BackupServiceTests {
     @Test("A new, empty ledger gets no automatic backup until it has data (D179.3)")
     func emptyLedger() async throws {
         let repository = InMemoryLedgerRepository()
-        try repository.seedDefaultCategories()
+        try repository.seedDefaultCategories(names: CatalogDefaultCategoryNames())
         let harness = try BackupHarness(repository: repository)
         #expect(try await harness.service.backUpAutomaticallyIfNeeded() == nil)
         #expect(try await harness.service.overview().backups.isEmpty)

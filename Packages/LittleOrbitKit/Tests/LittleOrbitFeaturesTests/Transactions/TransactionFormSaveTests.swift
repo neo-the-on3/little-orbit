@@ -11,7 +11,7 @@ struct TransactionFormSaveTests {
 
     private func model(_ repository: InMemoryLedgerRepository, mode: TransactionFormMode) -> TransactionFormViewModel {
         TransactionFormViewModel(
-            useCases: TransactionUseCases(repository: repository),
+            useCases: TransactionUseCases(repository: repository, categoryNames: CatalogDefaultCategoryNames()),
             mode: mode,
             locale: F.india,
             timeZone: F.zone,
@@ -24,8 +24,13 @@ struct TransactionFormSaveTests {
         let kept = F.expense(250, on: F.date(2026, 10, 19), category: DefaultCategoryID.food)
         let other = F.expense(400, on: F.date(2026, 10, 18))
         let repository = try F.repository([kept, other])
-        let window = TestWindow(TransactionUseCases(repository: repository))
-        window.history.record(try TransactionUseCases(repository: repository).changes.remove(ids: [other.id]))
+        let window = TestWindow(
+            TransactionUseCases(repository: repository, categoryNames: CatalogDefaultCategoryNames())
+        )
+        window.history.record(
+            try TransactionUseCases(repository: repository, categoryNames: CatalogDefaultCategoryNames()).changes
+                .remove(ids: [other.id])
+        )
         window.history.undo()
         #expect(window.undoManager.redoNames.count == 1)
         let before = try repository.transactions()

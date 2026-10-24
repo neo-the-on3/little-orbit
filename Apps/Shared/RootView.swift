@@ -59,7 +59,10 @@ import SwiftUI
         let backups: BackupsViewModel
 
         init(repository: some LedgerRepository & LedgerBackupSource, backupStorage: any BackupStorage) {
-            let transactionUseCases = TransactionUseCases(repository: repository)
+            let transactionUseCases = TransactionUseCases(
+                repository: repository,
+                categoryNames: CatalogDefaultCategoryNames(),
+            )
             transactions = TransactionsFeature(useCases: transactionUseCases)
             // One signal for "the whole ledger was replaced" (a restore): the accounts reload, and every window's
             // undo history is cleared, so Undo never replays a step made against the old data (D187.2, N6).

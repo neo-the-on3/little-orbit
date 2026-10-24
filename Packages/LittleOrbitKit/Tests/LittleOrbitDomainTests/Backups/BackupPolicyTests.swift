@@ -70,7 +70,11 @@ struct BackupPolicyTests {
 
     @Test("Default categories alone are an empty ledger; an account isn't (D179.3)")
     func emptyDefinition() {
-        let categories = LedgerBook.seedDefaultCategories(in: LedgerSnapshot(), now: now)
+        let categories = LedgerBook.seedDefaultCategories(
+            names: TestCategoryNames(),
+            in: LedgerSnapshot(),
+            now: now,
+        )
         #expect(!categories.categories.isEmpty)
         #expect(BackupPolicy.isEmpty(categories))
         let account = Account(name: "Wallet", type: .cash, currencyCode: "INR", openingBalance: 0)

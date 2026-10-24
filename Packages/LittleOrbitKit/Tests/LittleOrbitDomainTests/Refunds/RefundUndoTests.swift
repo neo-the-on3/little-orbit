@@ -16,7 +16,7 @@ struct RefundUndoTests {
     func editorNeedsOriginal() throws {
         let orphan = R.refund(1_200, of: nil)
         let repository = try R.repository([orphan])
-        let save = TransactionUseCases(repository: repository).saveTransactions
+        let save = TransactionUseCases(repository: repository, categoryNames: TestCategoryNames()).saveTransactions
         let new = R.refund(2_000, of: nil)
         #expect(throws: LedgerValidationError.refundNeedsOriginal) { try save.save([new]) }
         #expect(try repository.stored(new.id) == nil)
@@ -30,7 +30,7 @@ struct RefundUndoTests {
     func rejectedSaveChangesNothing() throws {
         let expense = R.expense(5_000)
         let repository = try R.repository([expense])
-        let save = TransactionUseCases(repository: repository).saveTransactions
+        let save = TransactionUseCases(repository: repository, categoryNames: TestCategoryNames()).saveTransactions
         let before = repository.snapshot
         let rejected = [
             R.refund(2_000, of: expense, isRefund: false),
@@ -50,7 +50,7 @@ struct RefundUndoTests {
         let first = R.refund(2_000, of: expense)
         let second = R.refund(500, of: expense)
         let repository = try R.repository([expense, first, second])
-        let useCases = TransactionUseCases(repository: repository)
+        let useCases = TransactionUseCases(repository: repository, categoryNames: TestCategoryNames())
         expense.categoryID = R.diningID
         let change = try useCases.saveTransactions.save([expense])
         #expect(Set(change.transactionIDs) == [expense.id, first.id, second.id])
@@ -69,7 +69,7 @@ struct RefundUndoTests {
     func orphanCategoryUndo() throws {
         let orphan = R.refund(2_000, of: nil)
         let repository = try R.repository([orphan])
-        let useCases = TransactionUseCases(repository: repository)
+        let useCases = TransactionUseCases(repository: repository, categoryNames: TestCategoryNames())
         var edited = try #require(try repository.stored(orphan.id))
         edited.categoryID = R.shoppingID
         let change = try useCases.saveTransactions.save([edited])
@@ -85,7 +85,7 @@ struct RefundUndoTests {
         let first = R.refund(200, of: expense)
         let second = R.refund(100, of: expense)
         let repository = try R.repository([expense, first, second])
-        let changes = TransactionUseCases(repository: repository).changes
+        let changes = TransactionUseCases(repository: repository, categoryNames: TestCategoryNames()).changes
         let removed = try changes.remove(ids: [expense.id])
         for id in [first.id, second.id] {
             let refund = try #require(try repository.stored(id))
@@ -114,7 +114,7 @@ struct RefundUndoTests {
         let expense = R.expense(5_000)
         let refunds = [R.refund(3_000, of: expense), R.refund(2_000, of: expense)]
         let repository = try R.repository([expense] + refunds)
-        let changes = TransactionUseCases(repository: repository).changes
+        let changes = TransactionUseCases(repository: repository, categoryNames: TestCategoryNames()).changes
         _ = try changes.revertNow(try changes.remove(ids: [expense.id]))
         #expect(LedgerBook.refundedAmount(of: expense.id, in: repository.snapshot) == 5_000)
     }
@@ -124,7 +124,7 @@ struct RefundUndoTests {
         var expense = R.expense(5_000)
         let refund = R.refund(2_000, of: expense)
         let repository = try R.repository([expense, refund])
-        let useCases = TransactionUseCases(repository: repository)
+        let useCases = TransactionUseCases(repository: repository, categoryNames: TestCategoryNames())
         expense.categoryID = R.diningID
         _ = try useCases.saveTransactions.save([expense])
         _ = try useCases.changes.revertNow(try useCases.changes.remove(ids: [expense.id]))
@@ -139,7 +139,7 @@ struct RefundUndoTests {
         let expense = R.expense(5_000)
         let refund = R.refund(2_000, of: expense)
         let repository = try R.repository([expense, refund])
-        let changes = TransactionUseCases(repository: repository).changes
+        let changes = TransactionUseCases(repository: repository, categoryNames: TestCategoryNames()).changes
         let first = try changes.remove(ids: [expense.id])
         let firstOutcome = try changes.outcome(of: first)
         let second = try changes.remove(ids: [refund.id])
@@ -157,7 +157,7 @@ struct RefundUndoTests {
         let expense = R.expense(5_000)
         let refund = R.refund(2_000, of: expense)
         let repository = try R.repository([expense, refund])
-        let useCases = TransactionUseCases(repository: repository)
+        let useCases = TransactionUseCases(repository: repository, categoryNames: TestCategoryNames())
         _ = try useCases.changes.remove(ids: [expense.id])
         _ = try useCases.saveTransactions.save([R.expense(100, in: R.diningID)])
         // Saving an expense with the same id again (say, from a file) doesn't claim the orphan either.
@@ -170,7 +170,7 @@ struct RefundUndoTests {
         let expense = R.expense(5_000)
         let refund = R.refund(2_000, of: expense)
         let repository = try R.repository([expense, refund])
-        let changes = TransactionUseCases(repository: repository).changes
+        let changes = TransactionUseCases(repository: repository, categoryNames: TestCategoryNames()).changes
         let removed = try changes.remove(ids: [expense.id])
         let outcome = try changes.outcome(of: removed)
         var orphan = try #require(try repository.stored(refund.id))
@@ -187,7 +187,7 @@ struct RefundUndoTests {
             let expense = R.expense(5_000)
             let refund = R.refund(2_000, of: expense)
             let repository = try R.repository([expense, refund])
-            let changes = TransactionUseCases(repository: repository).changes
+            let changes = TransactionUseCases(repository: repository, categoryNames: TestCategoryNames()).changes
             let ids = refundFirst ? [refund.id, expense.id] : [expense.id, refund.id]
             let removed = try changes.remove(ids: ids)
             #expect(try repository.transactions().isEmpty)
@@ -201,7 +201,7 @@ struct RefundUndoTests {
         let expenses = (0..<1_000).map { _ in R.expense(50) }
         let refunds = expenses.map { R.refund(20, of: $0) } + [R.refund(10, of: expenses[0])]
         let repository = try R.repository(expenses + refunds)
-        let changes = TransactionUseCases(repository: repository).changes
+        let changes = TransactionUseCases(repository: repository, categoryNames: TestCategoryNames()).changes
         let removed = try changes.remove(ids: expenses.map(\.id))
         #expect(try repository.transactions().allSatisfy { $0.refundOfID == nil })
         _ = try changes.revertNow(removed)
@@ -215,7 +215,7 @@ struct RefundUndoTests {
         let expense = R.expense(5_000, account: R.cardID)
         let refund = R.refund(2_000, of: expense, account: F.savingsID)
         let repository = try R.repository([expense, refund])
-        let changes = TransactionUseCases(repository: repository).changes
+        let changes = TransactionUseCases(repository: repository, categoryNames: TestCategoryNames()).changes
         let removed = TransactionChange.removedAccount(
             try DefaultDeleteAccountUseCase(repository: repository).delete(R.cardID)
         )

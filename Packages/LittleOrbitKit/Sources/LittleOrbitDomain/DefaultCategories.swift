@@ -34,12 +34,66 @@ public enum DefaultCategoryID {
     }
 }
 
+/// The built-in categories. Their names are user-facing text, so they live in the String Catalog, not in
+/// Domain (D8): `DefaultCategoryNaming` supplies them when the seed is written.
+public enum DefaultCategory: CaseIterable, Sendable {
+    case food
+    case groceries
+    case transport
+    case housing
+    case utilities
+    case health
+    case insurance
+    case shopping
+    case entertainment
+    case personal
+    case education
+    case travel
+    case fees
+    case otherExpense
+    case salary
+    case interest
+    case gifts
+    case otherIncome
+
+    /// The frozen id from `DefaultCategoryID`.
+    public var id: UUID {
+        switch self {
+        case .food: DefaultCategoryID.food
+        case .groceries: DefaultCategoryID.groceries
+        case .transport: DefaultCategoryID.transport
+        case .housing: DefaultCategoryID.housing
+        case .utilities: DefaultCategoryID.utilities
+        case .health: DefaultCategoryID.health
+        case .insurance: DefaultCategoryID.insurance
+        case .shopping: DefaultCategoryID.shopping
+        case .entertainment: DefaultCategoryID.entertainment
+        case .personal: DefaultCategoryID.personal
+        case .education: DefaultCategoryID.education
+        case .travel: DefaultCategoryID.travel
+        case .fees: DefaultCategoryID.fees
+        case .otherExpense: DefaultCategoryID.otherExpense
+        case .salary: DefaultCategoryID.salary
+        case .interest: DefaultCategoryID.interest
+        case .gifts: DefaultCategoryID.gifts
+        case .otherIncome: DefaultCategoryID.otherIncome
+        }
+    }
+}
+
+/// The display name a built-in category is seeded with, in the user's language. The presentation layer
+/// implements it from its String Catalog and the composition root passes it in (D8). The name is stored when
+/// the category is seeded; renaming a seed later keeps its id.
+public protocol DefaultCategoryNaming: Sendable {
+    func name(of category: DefaultCategory) -> String
+}
+
 public enum DefaultCategories {
-    public static func make(now: Date = Date()) -> [TransactionCategory] {
+    public static func make(names: any DefaultCategoryNaming, now: Date = Date()) -> [TransactionCategory] {
         seeds.map { seed in
             TransactionCategory(
-                id: seed.id,
-                name: seed.name,
+                id: seed.category.id,
+                name: names.name(of: seed.category),
                 kind: seed.kind,
                 parentID: seed.parentID,
                 iconName: seed.iconName,
@@ -51,8 +105,7 @@ public enum DefaultCategories {
     }
 
     private struct Seed {
-        var id: UUID
-        var name: String
+        var category: DefaultCategory
         var kind: CategoryKind
         var parentID: UUID?
         var iconName: String
@@ -63,144 +116,126 @@ public enum DefaultCategories {
     /// after Health without renumbering categories that already shipped in the catalogue.
     private static let seeds: [Seed] = [
         Seed(
-            id: DefaultCategoryID.food,
-            name: "Food & Dining",
+            category: .food,
             kind: .expense,
             parentID: nil,
             iconName: "fork.knife",
             sortOrder: 0,
         ),
         Seed(
-            id: DefaultCategoryID.groceries,
-            name: "Groceries",
+            category: .groceries,
             kind: .expense,
             parentID: DefaultCategoryID.food,
             iconName: "basket",
             sortOrder: 0,
         ),
         Seed(
-            id: DefaultCategoryID.transport,
-            name: "Transport",
+            category: .transport,
             kind: .expense,
             parentID: nil,
             iconName: "car",
             sortOrder: 1,
         ),
         Seed(
-            id: DefaultCategoryID.housing,
-            name: "Housing",
+            category: .housing,
             kind: .expense,
             parentID: nil,
             iconName: "house",
             sortOrder: 2,
         ),
         Seed(
-            id: DefaultCategoryID.utilities,
-            name: "Utilities",
+            category: .utilities,
             kind: .expense,
             parentID: nil,
             iconName: "bolt",
             sortOrder: 3,
         ),
         Seed(
-            id: DefaultCategoryID.health,
-            name: "Health",
+            category: .health,
             kind: .expense,
             parentID: nil,
             iconName: "heart",
             sortOrder: 4,
         ),
         Seed(
-            id: DefaultCategoryID.insurance,
-            name: "Insurance",
+            category: .insurance,
             kind: .expense,
             parentID: nil,
             iconName: "shield",
             sortOrder: 4.5,
         ),
         Seed(
-            id: DefaultCategoryID.shopping,
-            name: "Shopping",
+            category: .shopping,
             kind: .expense,
             parentID: nil,
             iconName: "bag",
             sortOrder: 5,
         ),
         Seed(
-            id: DefaultCategoryID.entertainment,
-            name: "Entertainment",
+            category: .entertainment,
             kind: .expense,
             parentID: nil,
             iconName: "tv",
             sortOrder: 6,
         ),
         Seed(
-            id: DefaultCategoryID.personal,
-            name: "Personal Care",
+            category: .personal,
             kind: .expense,
             parentID: nil,
             iconName: "person",
             sortOrder: 7,
         ),
         Seed(
-            id: DefaultCategoryID.education,
-            name: "Education",
+            category: .education,
             kind: .expense,
             parentID: nil,
             iconName: "book",
             sortOrder: 8,
         ),
         Seed(
-            id: DefaultCategoryID.travel,
-            name: "Travel",
+            category: .travel,
             kind: .expense,
             parentID: nil,
             iconName: "airplane",
             sortOrder: 9,
         ),
         Seed(
-            id: DefaultCategoryID.fees,
-            name: "Fees & Charges",
+            category: .fees,
             kind: .expense,
             parentID: nil,
             iconName: "percent",
             sortOrder: 10,
         ),
         Seed(
-            id: DefaultCategoryID.otherExpense,
-            name: "Other",
+            category: .otherExpense,
             kind: .expense,
             parentID: nil,
             iconName: "square.grid.2x2",
             sortOrder: 11,
         ),
         Seed(
-            id: DefaultCategoryID.salary,
-            name: "Salary",
+            category: .salary,
             kind: .income,
             parentID: nil,
             iconName: "banknote",
             sortOrder: 0,
         ),
         Seed(
-            id: DefaultCategoryID.interest,
-            name: "Interest",
+            category: .interest,
             kind: .income,
             parentID: nil,
             iconName: "chart.line.uptrend.xyaxis",
             sortOrder: 1,
         ),
         Seed(
-            id: DefaultCategoryID.gifts,
-            name: "Gifts Received",
+            category: .gifts,
             kind: .income,
             parentID: nil,
             iconName: "gift",
             sortOrder: 2,
         ),
         Seed(
-            id: DefaultCategoryID.otherIncome,
-            name: "Other Income",
+            category: .otherIncome,
             kind: .income,
             parentID: nil,
             iconName: "plus.circle",

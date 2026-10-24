@@ -42,7 +42,7 @@ struct WindowUndoStaleDetailTests {
 
     private func setup(_ transactions: [Transaction]) throws -> Setup {
         let repository = try F.repository(transactions)
-        let useCases = TransactionUseCases(repository: repository)
+        let useCases = TransactionUseCases(repository: repository, categoryNames: CatalogDefaultCategoryNames())
         let updates = LedgerUpdates()
         return Setup(
             repository: repository,

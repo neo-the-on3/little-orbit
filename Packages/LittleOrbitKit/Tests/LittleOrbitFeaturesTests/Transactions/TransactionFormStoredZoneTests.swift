@@ -66,7 +66,10 @@ struct TransactionFormStoredZoneTests {
     private func setup() throws -> Setup {
         let repository = try F.repository([Self.trailhead, Self.refund, Self.bakery, Self.streamBox, Self.lantern])
         try repository.saveTransaction(Self.nightBus)
-        return Setup(repository: repository, useCases: TransactionUseCases(repository: repository))
+        return Setup(
+            repository: repository,
+            useCases: TransactionUseCases(repository: repository, categoryNames: CatalogDefaultCategoryNames()),
+        )
     }
 
     private func form(

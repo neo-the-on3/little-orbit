@@ -11,7 +11,7 @@ struct AccountHistoryViewModelTests {
 
     private func model(_ repository: InMemoryLedgerRepository, account: UUID = F.savingsID) -> AccountHistoryViewModel {
         let model = AccountHistoryViewModel(
-            useCases: TransactionUseCases(repository: repository),
+            useCases: TransactionUseCases(repository: repository, categoryNames: CatalogDefaultCategoryNames()),
             accountID: account,
             locale: F.india,
             timeZone: F.zone,
@@ -181,7 +181,10 @@ struct AccountHistoryViewModelTests {
         #expect(model.balanceText == "₹14,000.00")
         #expect(try repository.attachments(for: lunch.id).isEmpty)
 
-        let window = UndoTestSupport.undo(change, useCases: TransactionUseCases(repository: repository))
+        let window = UndoTestSupport.undo(
+            change,
+            useCases: TransactionUseCases(repository: repository, categoryNames: CatalogDefaultCategoryNames()),
+        )
         model.load()
         #expect(window.history.canRedo)
         #expect(model.balanceText == "₹13,750.00")
@@ -199,7 +202,10 @@ struct AccountHistoryViewModelTests {
         let model = model(repository)
         let change = try #require(model.delete(id: model.sections[0].rows[0].id))
         #expect(model.upcoming.map(\.balanceText) == ["Projected ₹13,250.00"])
-        UndoTestSupport.undo(change, useCases: TransactionUseCases(repository: repository))
+        UndoTestSupport.undo(
+            change,
+            useCases: TransactionUseCases(repository: repository, categoryNames: CatalogDefaultCategoryNames()),
+        )
         model.load()
         #expect(model.upcoming.map(\.balanceText) == ["Projected ₹13,000.00"])
         #expect(model.afterUpcomingText == "After upcoming: ₹13,000.00")
@@ -240,7 +246,10 @@ struct AccountHistoryViewModelTests {
         _ = model.requestDelete(ids: ids)
         let change = try #require(model.confirmDelete())
 
-        let window = UndoTestSupport.undo(change, useCases: TransactionUseCases(repository: repository))
+        let window = UndoTestSupport.undo(
+            change,
+            useCases: TransactionUseCases(repository: repository, categoryNames: CatalogDefaultCategoryNames()),
+        )
         model.load()
         // The bulk includes a transfer, which counts both of its accounts (D166.4).
         window.history.setScreen(.account(F.savingsID))
@@ -273,7 +282,10 @@ struct AccountHistoryViewModelTests {
         let repository = try sample()
         let model = model(repository)
         let change = try #require(model.delete(id: model.sections[0].rows[0].id))
-        let window = UndoTestSupport.undo(change, useCases: TransactionUseCases(repository: repository))
+        let window = UndoTestSupport.undo(
+            change,
+            useCases: TransactionUseCases(repository: repository, categoryNames: CatalogDefaultCategoryNames()),
+        )
         #expect(window.history.canRedo)
         window.history.redo()
         model.load()
@@ -300,7 +312,10 @@ struct AccountHistoryViewModelTests {
             accountID: F.savingsID,
         )
         let model = AccountHistoryViewModel(
-            useCases: TransactionUseCases(repository: try F.repository([late])),
+            useCases: TransactionUseCases(
+                repository: try F.repository([late]),
+                categoryNames: CatalogDefaultCategoryNames(),
+            ),
             accountID: F.savingsID,
             locale: F.india,
             timeZone: TimeZone(identifier: "America/New_York")!,

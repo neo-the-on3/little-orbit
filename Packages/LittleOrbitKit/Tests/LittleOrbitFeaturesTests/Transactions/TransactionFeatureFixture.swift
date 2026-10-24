@@ -66,7 +66,7 @@ enum TransactionFeatureFixture {
         for account in accounts() {
             try repository.saveAccount(account)
         }
-        try repository.seedDefaultCategories()
+        try repository.seedDefaultCategories(names: CatalogDefaultCategoryNames())
         for transaction in transactions {
             try repository.saveTransaction(transaction)
         }

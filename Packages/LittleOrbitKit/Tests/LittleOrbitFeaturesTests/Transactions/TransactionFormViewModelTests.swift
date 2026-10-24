@@ -15,7 +15,7 @@ struct TransactionFormViewModelTests {
         locale: Locale = F.india,
     ) -> TransactionFormViewModel {
         TransactionFormViewModel(
-            useCases: TransactionUseCases(repository: repository),
+            useCases: TransactionUseCases(repository: repository, categoryNames: CatalogDefaultCategoryNames()),
             mode: mode,
             locale: locale,
             timeZone: F.zone,
@@ -222,7 +222,10 @@ struct TransactionFormViewModelTests {
         model.press(.backspace)
         let change = try #require(model.save())
         #expect(try repository.balance(of: F.savingsID, today: F.today) == 9_975)
-        UndoTestSupport.undo(change, useCases: TransactionUseCases(repository: repository))
+        UndoTestSupport.undo(
+            change,
+            useCases: TransactionUseCases(repository: repository, categoryNames: CatalogDefaultCategoryNames()),
+        )
         #expect(try repository.balance(of: F.savingsID, today: F.today) == 9_750)
     }
 

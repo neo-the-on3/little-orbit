@@ -120,8 +120,9 @@ final class LedgerRulesTests: XCTestCase {
     }
 
     func testDefaultCategoryIdentifiersAreStable() {
-        let first = DefaultCategories.make(now: Date(timeIntervalSince1970: 10))
-        let second = DefaultCategories.make(now: Date(timeIntervalSince1970: 99))
+        let names = TestCategoryNames()
+        let first = DefaultCategories.make(names: names, now: Date(timeIntervalSince1970: 10))
+        let second = DefaultCategories.make(names: names, now: Date(timeIntervalSince1970: 99))
         XCTAssertEqual(first.map(\.id), second.map(\.id))
         XCTAssertEqual(
             first.map(\.id),
@@ -155,13 +156,12 @@ final class LedgerRulesTests: XCTestCase {
         let groceries = first.first { $0.id == DefaultCategoryID.groceries }
         XCTAssertEqual(groceries?.parentID, DefaultCategoryID.food)
         XCTAssertEqual(groceries?.kind, .expense)
-        XCTAssertEqual(first.first { $0.id == DefaultCategoryID.food }?.name, "Food & Dining")
-        XCTAssertEqual(first.first { $0.id == DefaultCategoryID.personal }?.name, "Personal Care")
-        XCTAssertEqual(first.first { $0.id == DefaultCategoryID.fees }?.name, "Fees & Charges")
-        XCTAssertEqual(first.first { $0.id == DefaultCategoryID.gifts }?.name, "Gifts Received")
+        // Names come from the naming the caller passes (D8); the catalog's English names are checked in Features.
+        for category in DefaultCategory.allCases {
+            XCTAssertEqual(first.first { $0.id == category.id }?.name, names.name(of: category))
+        }
         XCTAssertEqual(first.first { $0.id == DefaultCategoryID.salary }?.kind, .income)
         let insurance = first.first { $0.id == DefaultCategoryID.insurance }
-        XCTAssertEqual(insurance?.name, "Insurance")
         XCTAssertEqual(insurance?.kind, .expense)
         XCTAssertNil(insurance?.parentID)
         XCTAssertFalse(first.contains { $0.name == "Uncategorised" || $0.name == "Transfer" })

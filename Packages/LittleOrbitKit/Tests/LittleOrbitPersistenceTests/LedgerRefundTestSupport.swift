@@ -31,7 +31,7 @@ func assertRefundsSurviveDeleteAndUndo(make: MakeRepository) throws {
     }
     XCTAssertNil(try repository.transactions().first { $0.id == mismatched.id })
 
-    let changes = TransactionUseCases(repository: repository).changes
+    let changes = TransactionUseCases(repository: repository, categoryNames: TestCategoryNames()).changes
     let removed = try changes.remove(ids: [expense.id])
     let orphan = try XCTUnwrap(try repository.transactions().first { $0.id == refund.id })
     XCTAssertNil(orphan.refundOfID)

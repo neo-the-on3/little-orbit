@@ -21,7 +21,7 @@ struct BulkEditViewModelTests {
 
     private func model(_ repository: InMemoryLedgerRepository, _ ids: [UUID]) -> BulkEditViewModel {
         BulkEditViewModel(
-            useCases: TransactionUseCases(repository: repository),
+            useCases: TransactionUseCases(repository: repository, categoryNames: CatalogDefaultCategoryNames()),
             transactionIDs: ids,
             locale: F.india,
             timeZone: F.zone,
@@ -121,7 +121,10 @@ struct BulkEditViewModelTests {
         model.editsPayee = true
         model.payeeText = "Corner Bakery"
         let change = try #require(model.apply())
-        UndoTestSupport.undo(change, useCases: TransactionUseCases(repository: repository))
+        UndoTestSupport.undo(
+            change,
+            useCases: TransactionUseCases(repository: repository, categoryNames: CatalogDefaultCategoryNames()),
+        )
         let saved = try repository.transactions()
         #expect(saved.first { $0.id == first.id }?.payeeID == oldPayee.id)
         let savedTransfer = try #require(saved.first { $0.id == transfer.id })

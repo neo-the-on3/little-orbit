@@ -93,7 +93,9 @@ final class FakeLedgerRepository: LedgerRepository {
     func categories() throws -> [TransactionCategory] { snapshot.categoriesVisible() }
     func saveCategory(_ category: TransactionCategory) throws { throw Unsupported() }
     func deleteCategory(id: UUID, reassigningTo categoryID: UUID?) throws { throw Unsupported() }
-    func seedDefaultCategories() throws { snapshot = LedgerBook.seedDefaultCategories(in: snapshot, now: now()) }
+    func seedDefaultCategories(names: any DefaultCategoryNaming) throws {
+        snapshot = LedgerBook.seedDefaultCategories(names: names, in: snapshot, now: now())
+    }
     func payees() throws -> [Payee] { snapshot.payeesVisible() }
     func savePayee(_ payee: Payee) throws { snapshot = try LedgerBook.savingPayee(payee, in: snapshot, now: now()) }
     func payeeReferenceCount(_ payeeID: UUID) throws -> Int { snapshot.payeeReferenceCount(payeeID) }

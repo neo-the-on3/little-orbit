@@ -51,7 +51,7 @@
             let corner = F.expense(450, on: F.date(2026, 10, 18), details: "Corner Bakery")
             let tea = F.expense(20, on: F.date(2026, 10, 18))
             let repository = try F.repository([corner, tea])
-            let useCases = TransactionUseCases(repository: repository)
+            let useCases = TransactionUseCases(repository: repository, categoryNames: CatalogDefaultCategoryNames())
             let window = RealWindow(useCases)
             window.record(try useCases.changes.remove(ids: [corner.id]))
             window.record(try useCases.changes.remove(ids: [tea.id]))
@@ -80,7 +80,7 @@
         func bodyEvaluationsSettle() throws {
             let corner = F.expense(450, on: F.date(2026, 10, 18), details: "Corner Bakery")
             let repository = try F.repository([corner])
-            let useCases = TransactionUseCases(repository: repository)
+            let useCases = TransactionUseCases(repository: repository, categoryNames: CatalogDefaultCategoryNames())
             let history = WindowUndoHistory(
                 changes: useCases.changes,
                 loadLedger: useCases.loadLedger,

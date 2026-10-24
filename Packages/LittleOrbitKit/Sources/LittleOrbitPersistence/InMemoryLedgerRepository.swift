@@ -53,8 +53,8 @@ public final class InMemoryLedgerRepository: LedgerRepository {
         snapshot = try LedgerBook.deletingCategory(id: id, reassigningTo: categoryID, in: snapshot, now: now())
     }
 
-    public func seedDefaultCategories() throws {
-        snapshot = LedgerBook.seedDefaultCategories(in: snapshot, now: now())
+    public func seedDefaultCategories(names: any DefaultCategoryNaming) throws {
+        snapshot = LedgerBook.seedDefaultCategories(names: names, in: snapshot, now: now())
     }
 
     public func payees() throws -> [Payee] {

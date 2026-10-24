@@ -46,7 +46,10 @@ struct ChangeOutcomeTests {
 
     private func setup(_ transactions: [Transaction]) throws -> Setup {
         let repository = try FakeLedgerRepository(accounts: F.accounts, transactions: transactions)
-        return Setup(repository: repository, useCases: TransactionUseCases(repository: repository))
+        return Setup(
+            repository: repository,
+            useCases: TransactionUseCases(repository: repository, categoryNames: TestCategoryNames()),
+        )
     }
 
     private var bakery: Transaction { F.expense(450, on: F.date(2026, 10, 18)) }

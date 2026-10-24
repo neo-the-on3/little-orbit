@@ -22,7 +22,7 @@ struct WindowUndoHistoryTests {
 
     static func setup(_ transactions: [Transaction] = []) throws -> Setup {
         let repository = try F.repository(transactions)
-        let useCases = TransactionUseCases(repository: repository)
+        let useCases = TransactionUseCases(repository: repository, categoryNames: CatalogDefaultCategoryNames())
         return Setup(repository: repository, useCases: useCases, window: TestWindow(useCases))
     }
 
