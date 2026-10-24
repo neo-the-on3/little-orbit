@@ -2,21 +2,54 @@ import Foundation
 
 /// The system discard prompt for an edit sheet (D300.1): Cancel, or a swipe down, with unsaved edits asks
 /// “Discard Changes?” with Discard Changes and Keep Editing, and no message; with none, the sheet just closes.
-/// The sheet applies it with `confirmsDiscardingChanges(isDirty:confirmation:onDiscard:)` on iOS.
+/// The sheet applies it with `confirmsDiscardingChanges(isDirty:confirmation:onDiscard:)` and puts
+/// `discardsChangesFromCancel(confirmation:onDiscard:)` on its Cancel button, on iOS. Each has its own dialog, so
+/// the one from Cancel points at Cancel and the one from a swipe shows at the top centre.
 public struct DiscardConfirmation: Equatable, Sendable {
-    /// Whether “Discard Changes?” is on show.
-    public var isPresented = false
+    /// What asked to close the sheet.
+    public enum Source: Equatable, Sendable {
+        case cancel
+        case swipe
+    }
+
+    /// What “Discard Changes?” is on show for, if it's on show.
+    public private(set) var source: Source?
 
     public init() {}
 
-    /// Cancel or a swipe down. With unsaved edits it asks first and returns false; otherwise it returns true,
-    /// and the sheet closes.
-    public mutating func requestDismiss(isDirty: Bool) -> Bool {
+    /// Whether “Discard Changes?” is on show.
+    public var isPresented: Bool {
+        source != nil
+    }
+
+    /// The Cancel button's dialog. Closing it clears the prompt.
+    public var isPresentedFromCancel: Bool {
+        get { source == .cancel }
+        set { set(.cancel, newValue) }
+    }
+
+    /// The swipe-down dialog. Closing it clears the prompt.
+    public var isPresentedFromSwipe: Bool {
+        get { source == .swipe }
+        set { set(.swipe, newValue) }
+    }
+
+    /// Cancel or a swipe down. With unsaved edits it asks first, from `source`, and returns false; otherwise it
+    /// returns true, and the sheet closes.
+    public mutating func requestDismiss(isDirty: Bool, from source: Source) -> Bool {
         if isDirty {
-            isPresented = true
+            self.source = source
             return false
         }
         return true
+    }
+
+    private mutating func set(_ source: Source, _ isPresented: Bool) {
+        if isPresented {
+            self.source = source
+        } else if self.source == source {
+            self.source = nil
+        }
     }
 }
 

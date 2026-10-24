@@ -3,10 +3,11 @@
     import UIKit
 
     extension View {
-        /// The edit sheet's discard prompt (D300.1). While `isDirty`, a swipe down can't close the sheet and
-        /// asks “Discard Changes?” instead, as Cancel does through `confirmation.requestDismiss(isDirty:)`.
-        /// Discard Changes calls `onDiscard`, which closes the sheet; Keep Editing leaves the edits as they are.
-        /// SwiftUI has no hook for a swipe attempt, so a small UIKit bridge reports it.
+        /// The edit sheet's discard prompt for a swipe down (D300.1). While `isDirty`, a swipe down can't close
+        /// the sheet and asks “Discard Changes?” at the top centre instead. Discard Changes calls `onDiscard`, which
+        /// closes the sheet; Keep Editing leaves the edits as they are. SwiftUI has no hook for a swipe attempt, so
+        /// a small UIKit bridge reports it. The Cancel button gets its own dialog with
+        /// `discardsChangesFromCancel(confirmation:onDiscard:)`.
         func confirmsDiscardingChanges(
             isDirty: Bool,
             confirmation: Binding<DiscardConfirmation>,
@@ -15,19 +16,28 @@
             interactiveDismissDisabled(isDirty)
                 .background {
                     DismissAttemptObserver(isDirty: isDirty) { isDirty in
-                        _ = confirmation.wrappedValue.requestDismiss(isDirty: isDirty)
+                        _ = confirmation.wrappedValue.requestDismiss(isDirty: isDirty, from: .swipe)
                     }
                     .frame(width: 0, height: 0)
                     .accessibilityHidden(true)
                 }
-                .confirmationDialog(
-                    DiscardText.title,
-                    isPresented: confirmation.isPresented,
-                    titleVisibility: .visible,
-                ) {
-                    Button(DiscardText.discard, role: .destructive, action: onDiscard)
-                    Button(DiscardText.keepEditing, role: .cancel) {}
-                }
+                .discardDialog(isPresented: confirmation.isPresentedFromSwipe, onDiscard: onDiscard)
+        }
+
+        /// The Cancel button's “Discard Changes?” (D300.1), attached to the button so the iOS 26 popover
+        /// points at it. The button asks with `requestDismiss(isDirty:from: .cancel)`.
+        func discardsChangesFromCancel(
+            confirmation: Binding<DiscardConfirmation>,
+            onDiscard: @escaping () -> Void,
+        ) -> some View {
+            discardDialog(isPresented: confirmation.isPresentedFromCancel, onDiscard: onDiscard)
+        }
+
+        private func discardDialog(isPresented: Binding<Bool>, onDiscard: @escaping () -> Void) -> some View {
+            confirmationDialog(DiscardText.title, isPresented: isPresented, titleVisibility: .visible) {
+                Button(DiscardText.discard, role: .destructive, action: onDiscard)
+                Button(DiscardText.keepEditing, role: .cancel) {}
+            }
         }
     }
 
