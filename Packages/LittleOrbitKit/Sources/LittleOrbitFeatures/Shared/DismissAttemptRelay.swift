@@ -36,3 +36,24 @@ enum DismissAttemptInstall: Equatable {
         return delegateIsProxy ? .adopt : .wrap
     }
 }
+
+extension DismissAttemptInstall {
+    /// The sheet's presented root: `start` or the nearest of its ancestors that was itself presented. The bridge
+    /// installs on that controller's presentation controller, because asking any other controller for one
+    /// (UIKit's `presentationController`) can make a new, unused presentation controller for it, which UIKit
+    /// never calls. Nil while the bridge isn't in a presented sheet yet, so it tries again later.
+    static func presentedRoot<Node: AnyObject>(
+        from start: Node?,
+        parent: (Node) -> Node?,
+        isPresented: (Node) -> Bool,
+    ) -> Node? {
+        var node = start
+        while let current = node {
+            if isPresented(current) {
+                return current
+            }
+            node = parent(current)
+        }
+        return nil
+    }
+}
