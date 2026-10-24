@@ -197,18 +197,55 @@ struct DismissAttemptRelayTests {
 
     @Test("The iOS bridge's source never sets isModalInPresentation (#167)")
     func bridgeSourceHasNoModalWrite() throws {
-        let shared = URL(fileURLWithPath: #filePath)
-            .deletingLastPathComponent().deletingLastPathComponent().deletingLastPathComponent()
-            .deletingLastPathComponent()
-            .appendingPathComponent("Sources/LittleOrbitFeatures/Shared")
-        for name in ["DiscardConfirmationView.swift", "DismissAttemptRelay.swift"] {
+        let shared = try #require(Self.sharedSourcesFolder(), "The Shared sources folder is found from this file")
+        let files = try FileManager.default.contentsOfDirectory(atPath: shared.path).filter { $0.hasSuffix(".swift") }
+        #expect(files.contains("DiscardConfirmationView.swift"), "The bridge's file is scanned")
+        for name in files.sorted() {
             let source = try String(contentsOf: shared.appendingPathComponent(name), encoding: .utf8)
-            let writes = source.split(separator: "\n")
-                .filter { line in
-                    let code = line.split(separator: "//", maxSplits: 1, omittingEmptySubsequences: false).first ?? ""
-                    return code.contains(/isModalInPresentation\s*=(?!=)/)
-                }
+            let writes = Self.modalWrites(in: source)
             #expect(writes.isEmpty, "\(name): \(writes)")
         }
+    }
+
+    @Test("The source check finds every form of a write, and ignores comments and comparisons")
+    func modalWriteScan() {
+        #expect(Self.modalWrites(in: "root.isModalInPresentation = true").count == 1)
+        #expect(Self.modalWrites(in: "  controller .isModalInPresentation=isDirty").count == 1)
+        #expect(Self.modalWrites(in: "isModalInPresentation = false").count == 1)
+        #expect(Self.modalWrites(in: "root.isModalInPresentation.toggle()").count == 1)
+        #expect(Self.modalWrites(in: "x = 1 // root.isModalInPresentation = true").isEmpty)
+        #expect(Self.modalWrites(in: "/// Never set `isModalInPresentation = isDirty` here.").isEmpty)
+        #expect(Self.modalWrites(in: "if root.isModalInPresentation == isDirty {").isEmpty)
+        #expect(Self.modalWrites(in: "if root.isModalInPresentation != isDirty {").isEmpty)
+    }
+
+    /// The package's Sources/LittleOrbitFeatures/Shared, found by walking up from this file to the folder with
+    /// Package.swift, so moving the test within the package doesn't break it.
+    private static func sharedSourcesFolder(from file: String = #filePath) -> URL? {
+        var folder = URL(fileURLWithPath: file).deletingLastPathComponent()
+        while folder.path != "/" {
+            if FileManager.default.fileExists(atPath: folder.appendingPathComponent("Package.swift").path) {
+                return folder.appendingPathComponent("Sources/LittleOrbitFeatures/Shared")
+            }
+            folder = folder.deletingLastPathComponent()
+        }
+        return nil
+    }
+
+    /// The code lines that set `isModalInPresentation` (an assignment with any spacing, or `toggle()`), leaving
+    /// out comment lines and trailing comments.
+    private static func modalWrites(in source: String) -> [String] {
+        source.split(separator: "\n")
+            .compactMap { line in
+                let code = String(
+                    line.split(separator: "//", maxSplits: 1, omittingEmptySubsequences: false).first ?? ""
+                )
+                guard !code.trimmingCharacters(in: .whitespaces).isEmpty,
+                    code.contains(/isModalInPresentation\s*(=(?!=)|\.toggle\(\))/)
+                else {
+                    return nil
+                }
+                return String(line)
+            }
     }
 }
