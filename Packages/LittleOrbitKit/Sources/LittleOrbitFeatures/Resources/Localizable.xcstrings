@@ -1997,6 +1997,19 @@
         }
       }
     },
+    "Couldn’t Load Categories": {
+      "comment": "Alert title: the category list couldn’t be read. Its only button is OK.",
+      "extractionState": "manual",
+      "generatesSymbol": false,
+      "localizations": {
+        "en": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Couldn’t Load Categories"
+          }
+        }
+      }
+    },
     "Couldn’t Load Payees": {
       "comment": "Alert title: the payee list couldn’t be read. Its only button is OK.",
       "extractionState": "manual",
@@ -4791,7 +4804,7 @@
       }
     },
     "Try again.": {
-      "comment": "Alert message under “Couldn’t Load Payees”.",
+      "comment": "Alert message under “Couldn’t Load Payees” or “Couldn’t Load Categories”.",
       "extractionState": "manual",
       "generatesSymbol": false,
       "localizations": {

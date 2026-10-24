@@ -47,7 +47,7 @@ public struct CategoryDeletePrompt: Identifiable, Equatable, Sendable {
 public final class CategoriesViewModel {
     public var kind: CategoryKind = .expense
     public private(set) var listing = CategoryListing(categories: [], usage: [:])
-    /// A failed change, or a refused merge (D291.1).
+    /// A failed load or change, or a refused merge (D291.1).
     public var alert: CategoryAlert?
     public var deletePrompt: CategoryDeletePrompt?
     /// The editor sheet on show. Opening one sets it straight away from the loaded tree, with nothing
@@ -71,7 +71,8 @@ public final class CategoriesViewModel {
             // The built-in categories were seeded once at launch (D291.7); this only reads.
             listing = try useCases.load.listing()
         } catch {
-            alert = CategoryAlert(title: CategoryText.couldntSaveTitle, message: CategoryText.nothingChanged)
+            // A read failure isn't a failed save, so it doesn't say “weren’t changed” (D299).
+            alert = CategoryAlert(title: CategoryText.couldntLoadTitle, message: CategoryText.tryAgain)
         }
     }
 
