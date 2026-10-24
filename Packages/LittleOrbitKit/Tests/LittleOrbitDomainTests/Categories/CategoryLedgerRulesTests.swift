@@ -79,8 +79,37 @@ struct CategoryLedgerRulesTests {
         let leisureMovies = child("Movies", of: leisure)
         let entertainmentMovies = child("movies ", of: entertainment)
         let snapshot = LedgerSnapshot(categories: [leisure, entertainment, leisureMovies, entertainmentMovies])
-        #expect(throws: LedgerValidationError.duplicateCategoryName) {
+        let clash = CategoryMergeClash(
+            sourceID: leisure.id,
+            sourceName: "Leisure",
+            survivorID: entertainment.id,
+            survivorName: "Entertainment",
+            clashingNames: ["movies "],
+        )
+        #expect(throws: LedgerValidationError.subcategoryNamesClash(clash)) {
             try LedgerBook.mergingCategories(leisure.id, into: entertainment.id, in: snapshot, now: now)
+        }
+    }
+
+    @Test("D291.1: the refusal carries both names, every clashing name and their count, and only those")
+    func mergeClashCarriesTheMessageData() throws {
+        let snapshot = LedgerSnapshot(categories: [
+            leisure, entertainment,
+            child("Movies", of: leisure, order: 0), child("Games", of: leisure, order: 1),
+            child("Concerts", of: leisure, order: 2),
+            child("Games", of: entertainment, order: 0), child("Books", of: entertainment, order: 1),
+            child("MOVIES", of: entertainment, order: 2),
+        ])
+        do {
+            _ = try LedgerBook.mergingCategories(leisure.id, into: entertainment.id, in: snapshot, now: now)
+            Issue.record("The merge should be refused")
+        } catch LedgerValidationError.subcategoryNamesClash(let clash) {
+            #expect(clash.sourceID == leisure.id)
+            #expect(clash.sourceName == "Leisure")
+            #expect(clash.survivorID == entertainment.id)
+            #expect(clash.survivorName == "Entertainment")
+            #expect(clash.clashingNames == ["Games", "MOVIES"])
+            #expect(clash.count == 2)
         }
     }
 

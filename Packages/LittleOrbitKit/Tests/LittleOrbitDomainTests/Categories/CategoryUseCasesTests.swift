@@ -326,7 +326,7 @@ struct CategoryMoveTests {
         let before = try repository.categories()
         let useCases = CategoryUseCases(repository: repository)
         // Leisure's "Movies" clashes with Entertainment's "movies", so nothing may move.
-        #expect(throws: LedgerValidationError.duplicateCategoryName) {
+        #expect(throws: LedgerValidationError.self) {
             try useCases.mergeCategories.merge(leisure.id, into: entertainment.id)
         }
         #expect(try repository.categories() == before)
