@@ -179,7 +179,7 @@ struct CategoryReviewFixesTests {
         setup.model.requestDelete(garden)
         #expect(
             setup.model.deletePrompt?.message
-                == "It’s used by 2 transactions. Archive hides it from pickers and keeps its history. Moving or leaving them uncategorised deletes the category and its 1 subcategory. Deleting can’t be undone."
+                == "It’s used by 2 transactions. Archive hides it from pickers and keeps its history. Moving or leaving them uncategorised deletes the category and its subcategory. Deleting can’t be undone."
         )
     }
 

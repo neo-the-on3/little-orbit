@@ -1204,7 +1204,7 @@
                   "one": {
                     "stringUnit": {
                       "state": "translated",
-                      "value": "%arg subcategory"
+                      "value": "subcategory"
                     }
                   },
                   "other": {
