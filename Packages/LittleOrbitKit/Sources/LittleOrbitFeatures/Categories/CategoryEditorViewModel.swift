@@ -91,7 +91,8 @@ public final class CategoryEditorViewModel {
         )
     }
 
-    /// Whether Cancel or a swipe down would lose edits; the sheet blocks the swipe while it's true.
+    /// Whether Cancel or a swipe down would lose edits, so the sheet asks “Discard Changes?” first (D300.1). A new
+    /// category or subcategory has none until something is entered or changed: its name, icon, colour or parent.
     public var hasUnsavedEdits: Bool {
         edit != original
     }
