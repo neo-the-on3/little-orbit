@@ -824,7 +824,7 @@
       }
     },
     "Archived": {
-      "comment": "Categories screen: the section of archived categories.",
+      "comment": "Categories screen: the section of archived categories. Transaction form category picker: the section with the transaction’s own archived category.",
       "extractionState": "manual",
       "generatesSymbol": false,
       "localizations": {
@@ -1113,6 +1113,19 @@
           "stringUnit": {
             "state": "translated",
             "value": "Categories"
+          }
+        }
+      }
+    },
+    "Category": {
+      "comment": "Transaction form: the category picker’s title.",
+      "extractionState": "manual",
+      "generatesSymbol": false,
+      "localizations": {
+        "en": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Category"
           }
         }
       }
@@ -1998,7 +2011,7 @@
       }
     },
     "Couldn’t Load Categories": {
-      "comment": "Alert title: the category list couldn’t be read. Its only button is OK.",
+      "comment": "Alert title: the category list, on the Categories screen or in the transaction form’s category picker, couldn’t be read. Its only button is OK.",
       "extractionState": "manual",
       "generatesSymbol": false,
       "localizations": {
@@ -2104,6 +2117,19 @@
           "stringUnit": {
             "state": "translated",
             "value": "Couldn’t Restore"
+          }
+        }
+      }
+    },
+    "Create “%@”": {
+      "comment": "Transaction form category picker: adds the typed name as a new category. %@ is the name typed, trimmed.",
+      "extractionState": "manual",
+      "generatesSymbol": false,
+      "localizations": {
+        "en": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Create “%@”"
           }
         }
       }
@@ -2637,7 +2663,7 @@
       }
     },
     "Done": {
-      "comment": "Categories and Payees screens: ends reordering or selecting.",
+      "comment": "Categories and Payees screens: ends reordering or selecting. Transaction form category picker: puts the checked category on the form.",
       "extractionState": "manual",
       "generatesSymbol": false,
       "localizations": {
@@ -3006,6 +3032,19 @@
         }
       }
     },
+    "Expense category": {
+      "comment": "Transaction form category picker, beside the Create row on an expense: what it creates.",
+      "extractionState": "manual",
+      "generatesSymbol": false,
+      "localizations": {
+        "en": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Expense category"
+          }
+        }
+      }
+    },
     "Export": {
       "comment": "The iOS Export sheet’s confirm button; the share sheet follows directly, so no ellipsis.",
       "extractionState": "manual",
@@ -3141,6 +3180,19 @@
           "stringUnit": {
             "state": "translated",
             "value": "Income categories can’t be merged with expense ones, so they aren’t listed."
+          }
+        }
+      }
+    },
+    "Income category": {
+      "comment": "Transaction form category picker, beside the Create row on an income: what it creates.",
+      "extractionState": "manual",
+      "generatesSymbol": false,
+      "localizations": {
+        "en": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Income category"
           }
         }
       }
@@ -4069,6 +4121,19 @@
         }
       }
     },
+    "No category": {
+      "comment": "Transaction form category picker: the subtitle under “Uncategorised”.",
+      "extractionState": "manual",
+      "generatesSymbol": false,
+      "localizations": {
+        "en": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "No category"
+          }
+        }
+      }
+    },
     "No Payees": {
       "comment": "Payees screen with no payees: the title.",
       "extractionState": "manual",
@@ -4415,6 +4480,19 @@
           "stringUnit": {
             "state": "translated",
             "value": "Save"
+          }
+        }
+      }
+    },
+    "Search or create": {
+      "comment": "Transaction form category picker: the search field’s placeholder. Typing a new name offers to create it.",
+      "extractionState": "manual",
+      "generatesSymbol": false,
+      "localizations": {
+        "en": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Search or create"
           }
         }
       }
@@ -4838,6 +4916,19 @@
           "stringUnit": {
             "state": "translated",
             "value": "Unarchive puts a category back in pickers. Archived categories stay in reports."
+          }
+        }
+      }
+    },
+    "Uncategorised": {
+      "comment": "Transaction form category picker: the row that saves the transaction without a category.",
+      "extractionState": "manual",
+      "generatesSymbol": false,
+      "localizations": {
+        "en": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Uncategorised"
           }
         }
       }

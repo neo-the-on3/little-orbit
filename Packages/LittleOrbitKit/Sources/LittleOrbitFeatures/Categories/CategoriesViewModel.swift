@@ -113,17 +113,10 @@ public final class CategoriesViewModel {
     }
 
     func row(_ category: TransactionCategory) -> CategoryRow {
-        let subcategoryCount = category.parentID == nil ? liveSubcategories(of: category.id).count : 0
-        return CategoryRow(
+        CategoryRow(
             id: category.id,
             name: category.name,
-            subtitle: subcategoryCount > 0 && !category.isArchived
-                ? CategoryText.parentSummary(
-                    kind: category.kind,
-                    count: listing.uses(of: category.id),
-                    subcategoryCount: subcategoryCount,
-                )
-                : CategoryText.usage(kind: category.kind, count: listing.uses(of: category.id)),
+            subtitle: listing.rowSubtitle(of: category),
             symbolName: CategoryAppearance.symbol(of: category),
             hue: hue(of: category),
             isSubcategory: category.parentID != nil,

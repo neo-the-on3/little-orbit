@@ -1,8 +1,9 @@
 import Foundation
 import LittleOrbitDomain
 
-// The entry sheet's Category and Payee rows (#23, #24): the category choices, payee autocomplete, and the
-// payee's last-used category. Everything here reads the ledger the sheet loaded when it opened.
+// The entry sheet's Category and Payee rows (#23, #24): the category choices and the iOS picker with inline
+// create, payee autocomplete, and the payee's last-used category. Everything here reads the ledger the
+// sheet loaded when it opened.
 extension TransactionFormViewModel {
     public var categoryOptions: [TransactionCategoryOption] {
         guard type != .transfer else {
@@ -37,6 +38,36 @@ extension TransactionFormViewModel {
     /// The category picker's VoiceOver value, with the parent for a subcategory: "Groceries, under Food".
     public var categorySpokenValue: String {
         TransactionCategoryGroup.spokenValue(of: categoryID, in: categories)
+    }
+
+    /// Whether the Category row opens the searchable picker with inline create (#24), rather than the menu.
+    public var hasCategoryPicker: Bool { categoryPicking != nil }
+
+    /// The category picker for this transaction's kind, with the current category checked. Nothing for a
+    /// transfer, which has no category. It reads the categories once, when it's made.
+    public func makeCategoryPicker() -> CategoryPickerViewModel? {
+        guard let categoryPicking, type != .transfer else {
+            return nil
+        }
+        return CategoryPickerViewModel(
+            kind: type == .income ? .income : .expense,
+            selection: categoryID,
+            useCases: categoryPicking,
+            changed: categoriesChanged,
+        )
+    }
+
+    /// Done in the picker: its checked category goes on the form, a category made there included. The amount
+    /// and every other field stay as they were (#24 AC 5).
+    public func chooseCategory(from picker: CategoryPickerViewModel) {
+        if let chosen = picker.selectedCategory {
+            if let index = categories.firstIndex(where: { $0.id == chosen.id }) {
+                categories[index] = chosen
+            } else {
+                categories.append(chosen)
+            }
+        }
+        categoryID = picker.selection
     }
 
     public var payeeName: String {

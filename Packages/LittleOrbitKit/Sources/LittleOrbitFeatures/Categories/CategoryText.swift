@@ -86,7 +86,11 @@ enum CategoryText {
     }
 
     static var archived: String {
-        FeatureText.string("Archived", comment: "Categories screen: the section of archived categories.")
+        FeatureText.string(
+            "Archived",
+            comment:
+                "Categories screen: the section of archived categories. Transaction form category picker: the section with the transaction’s own archived category.",
+        )
     }
 
     static var archivedFooter: String {
@@ -117,7 +121,11 @@ enum CategoryText {
     }
 
     static var done: String {
-        FeatureText.string("Done", comment: "Categories screen: ends reordering.")
+        FeatureText.string(
+            "Done",
+            comment:
+                "Categories and Payees screens: ends reordering or selecting. Transaction form category picker: puts the checked category on the form.",
+        )
     }
 
     static var cancel: String {
