@@ -13,8 +13,8 @@ extension LedgerBook {
     /// - their kinds differ (`reassignCategoryKindMismatch`);
     /// - the source has subcategories and the survivor is a subcategory, because there's one level only
     ///   (`categoryNestingTooDeep`);
-    /// - one of the source's subcategories has the same name as one of the survivor's, so no two siblings share
-    ///   a name (`duplicateCategoryName`).
+    /// - one of the source's subcategories has the same name as one of the survivor's, so no two siblings would
+    ///   share a name (`subcategoryNamesClash`, with the names for the message, D291.1).
     public static func mergingCategories(
         _ sourceID: UUID,
         into survivingID: UUID,
@@ -38,9 +38,18 @@ extension LedgerBook {
             if survivor.parentID != nil {
                 throw LedgerValidationError.categoryNestingTooDeep
             }
-            let taken = Set(survivorChildren.map { LedgerText.nameKey($0.name) })
-            if children.contains(where: { taken.contains(LedgerText.nameKey($0.name)) }) {
-                throw LedgerValidationError.duplicateCategoryName
+            let names = Set(children.map { LedgerText.nameKey($0.name) })
+            let clashing = survivorChildren.filter { names.contains(LedgerText.nameKey($0.name)) }
+            if !clashing.isEmpty {
+                throw LedgerValidationError.subcategoryNamesClash(
+                    CategoryMergeClash(
+                        sourceID: source.id,
+                        sourceName: source.name,
+                        survivorID: survivor.id,
+                        survivorName: survivor.name,
+                        clashingNames: clashing.map(\.name),
+                    )
+                )
             }
         }
         var snapshot = snapshot

@@ -26,6 +26,9 @@ public enum LedgerValidationError: Error, Equatable, Sendable {
     /// Only a subcategory can move to another parent; a top-level category stays top-level (D287.1).
     case categoryNotSubcategory
     case duplicateCategoryName
+    /// A category merge would put two subcategories with the same name under the survivor, so it's refused and
+    /// nothing changes (D291.1). This carries what the “Can’t Merge Categories” message needs.
+    case subcategoryNamesClash(CategoryMergeClash)
     case duplicatePayeeName
     case duplicateTagName
     case missingCategory
@@ -71,4 +74,32 @@ public enum LedgerValidationError: Error, Equatable, Sendable {
     /// The change would leave linked refunds pointing at something that isn't a plain expense: the expense
     /// becomes an income, or it's split while Schema V1 can't link a refund to a line.
     case originalHasRefunds
+}
+
+/// Why a category merge was refused: subcategories of the category being merged have the same names as
+/// subcategories of the survivor (D291.1). Only ids and the names the user typed, no app text; the
+/// presentation layer builds the message and picks which clash to name.
+public struct CategoryMergeClash: Equatable, Sendable {
+    /// The category being merged (%1$@ in the message).
+    public var sourceID: UUID
+    public var sourceName: String
+    /// The category it would merge into (%2$@).
+    public var survivorID: UUID
+    public var survivorName: String
+    /// The survivor's subcategories whose names a subcategory of the source already has, in the survivor's
+    /// order, as the survivor stores them. Never empty.
+    public var clashingNames: [String]
+
+    public init(sourceID: UUID, sourceName: String, survivorID: UUID, survivorName: String, clashingNames: [String]) {
+        self.sourceID = sourceID
+        self.sourceName = sourceName
+        self.survivorID = survivorID
+        self.survivorName = survivorName
+        self.clashingNames = clashingNames
+    }
+
+    /// How many names clash (%3$lld, and the plural choice).
+    public var count: Int {
+        clashingNames.count
+    }
 }
