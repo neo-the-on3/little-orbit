@@ -14,7 +14,7 @@ final class FakeLedgerRepository: LedgerRepository {
     private(set) var snapshot = LedgerSnapshot()
     private(set) var savedAccountIDs: [UUID] = []
     var failsReads = false
-    /// When set, transaction, split and attachment writes after this many fail.
+    /// When set, transaction, split, attachment, category and payee-merge writes after this many fail.
     var failsAfterWrites: Int?
     private(set) var writes = 0
     private(set) var atomicChanges = 0
@@ -91,8 +91,26 @@ final class FakeLedgerRepository: LedgerRepository {
 
     func recordScheduledOccurrence(_ transaction: Transaction) throws -> Transaction { throw Unsupported() }
     func categories() throws -> [TransactionCategory] { snapshot.categoriesVisible() }
-    func saveCategory(_ category: TransactionCategory) throws { throw Unsupported() }
-    func deleteCategory(id: UUID, reassigningTo categoryID: UUID?) throws { throw Unsupported() }
+    func saveCategory(_ category: TransactionCategory) throws {
+        try write()
+        snapshot = try LedgerBook.savingCategory(category, in: snapshot, now: now())
+    }
+    func deleteCategory(id: UUID, reassigningTo categoryID: UUID?) throws {
+        try write()
+        snapshot = try LedgerBook.deletingCategory(id: id, reassigningTo: categoryID, in: snapshot, now: now())
+    }
+    func mergeCategories(_ sourceID: UUID, into survivingID: UUID) throws {
+        try write()
+        snapshot = try LedgerBook.mergingCategories(sourceID, into: survivingID, in: snapshot, now: now())
+    }
+    func archiveCategory(id: UUID, archived: Bool) throws {
+        try write()
+        snapshot = try LedgerBook.archivingCategory(id: id, archived: archived, in: snapshot, now: now())
+    }
+    func reorderCategories(_ orderedIDs: [UUID]) throws {
+        try write()
+        snapshot = try LedgerBook.reorderingCategories(orderedIDs, in: snapshot, now: now())
+    }
     func seedDefaultCategories(names: any DefaultCategoryNaming) throws {
         snapshot = LedgerBook.seedDefaultCategories(names: names, in: snapshot, now: now())
     }
@@ -103,7 +121,10 @@ final class FakeLedgerRepository: LedgerRepository {
         try write()
         snapshot = try LedgerBook.deletingPayee(id: id, in: snapshot, now: now())
     }
-    func mergePayees(_ sourceID: UUID, into survivingID: UUID) throws { throw Unsupported() }
+    func mergePayees(_ sourceID: UUID, into survivingID: UUID) throws {
+        try write()
+        snapshot = try LedgerBook.mergingPayees(sourceID, into: survivingID, in: snapshot, now: now())
+    }
     func tags() throws -> [Tag] { throw Unsupported() }
     func saveTag(_ tag: Tag) throws { throw Unsupported() }
     func deleteTag(id: UUID) throws { throw Unsupported() }

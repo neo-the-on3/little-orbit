@@ -67,6 +67,18 @@
             try mutate { try LedgerBook.deletingCategory(id: id, reassigningTo: categoryID, in: $0, now: now()) }
         }
 
+        public func mergeCategories(_ sourceID: UUID, into survivingID: UUID) throws {
+            try mutate { try LedgerBook.mergingCategories(sourceID, into: survivingID, in: $0, now: now()) }
+        }
+
+        public func archiveCategory(id: UUID, archived: Bool) throws {
+            try mutate { try LedgerBook.archivingCategory(id: id, archived: archived, in: $0, now: now()) }
+        }
+
+        public func reorderCategories(_ orderedIDs: [UUID]) throws {
+            try mutate { try LedgerBook.reorderingCategories(orderedIDs, in: $0, now: now()) }
+        }
+
         public func seedDefaultCategories(names: any DefaultCategoryNaming) throws {
             try mutate { LedgerBook.seedDefaultCategories(names: names, in: $0, now: now()) }
         }

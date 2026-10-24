@@ -218,6 +218,13 @@ extension LedgerBook {
                 throw LedgerValidationError.categoryNestingTooDeep
             }
         }
+        // A subcategory always has its parent's kind, so a parent can't change kind while it has subcategories.
+        let childOfOtherKind = snapshot.categories.contains {
+            $0.parentID == category.id && $0.deletedAt == nil && $0.kind != category.kind
+        }
+        if childOfOtherKind {
+            throw LedgerValidationError.categoryKindMismatch
+        }
         let key = LedgerText.nameKey(category.name)
         let duplicate = snapshot.categories.contains { other in
             other.id != category.id

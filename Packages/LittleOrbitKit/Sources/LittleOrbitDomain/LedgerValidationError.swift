@@ -21,6 +21,8 @@ public enum LedgerValidationError: Error, Equatable, Sendable {
     case tooManyDecimalPlaces
     case amountOutOfRange
     case categoryNestingTooDeep
+    /// A reorder listed categories that aren't one group of siblings (same parent and kind), or listed one twice.
+    case categoriesNotSiblings
     case duplicateCategoryName
     case duplicatePayeeName
     case duplicateTagName

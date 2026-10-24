@@ -44,6 +44,11 @@ final class UnreadableAccountsRepository: LedgerRepository {
     func deleteCategory(id: UUID, reassigningTo categoryID: UUID?) throws {
         try base.deleteCategory(id: id, reassigningTo: categoryID)
     }
+    func mergeCategories(_ sourceID: UUID, into survivingID: UUID) throws {
+        try base.mergeCategories(sourceID, into: survivingID)
+    }
+    func archiveCategory(id: UUID, archived: Bool) throws { try base.archiveCategory(id: id, archived: archived) }
+    func reorderCategories(_ orderedIDs: [UUID]) throws { try base.reorderCategories(orderedIDs) }
     func seedDefaultCategories(names: any DefaultCategoryNaming) throws {
         try base.seedDefaultCategories(names: names)
     }

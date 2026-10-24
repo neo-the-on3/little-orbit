@@ -53,6 +53,18 @@ public final class InMemoryLedgerRepository: LedgerRepository {
         snapshot = try LedgerBook.deletingCategory(id: id, reassigningTo: categoryID, in: snapshot, now: now())
     }
 
+    public func mergeCategories(_ sourceID: UUID, into survivingID: UUID) throws {
+        snapshot = try LedgerBook.mergingCategories(sourceID, into: survivingID, in: snapshot, now: now())
+    }
+
+    public func archiveCategory(id: UUID, archived: Bool) throws {
+        snapshot = try LedgerBook.archivingCategory(id: id, archived: archived, in: snapshot, now: now())
+    }
+
+    public func reorderCategories(_ orderedIDs: [UUID]) throws {
+        snapshot = try LedgerBook.reorderingCategories(orderedIDs, in: snapshot, now: now())
+    }
+
     public func seedDefaultCategories(names: any DefaultCategoryNaming) throws {
         snapshot = LedgerBook.seedDefaultCategories(names: names, in: snapshot, now: now())
     }
