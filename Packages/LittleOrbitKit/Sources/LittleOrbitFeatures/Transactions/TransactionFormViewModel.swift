@@ -458,7 +458,7 @@ public final class TransactionFormViewModel {
                 reload()
                 splitRefunds = linkedRefundCount
             }
-            errorMessage = Self.saveMessage(for: error, splitRefunds: splitRefunds)
+            errorMessage = saveMessage(for: error, splitRefunds: splitRefunds)
             return nil
         }
     }

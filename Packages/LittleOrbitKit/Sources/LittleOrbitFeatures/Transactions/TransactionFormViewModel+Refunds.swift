@@ -64,6 +64,17 @@ extension TransactionFormViewModel {
         )
     }
 
+    /// The currency of the expense the refund being edited is linked to, else the form's own (D258.1).
+    var refundedExpenseCurrencyCode: String {
+        guard let expenseID = original?.refundOfID,
+            let expense = transactions.first(where: { $0.id == expenseID }),
+            let code = accounts.first(where: { $0.id == expense.accountID })?.currencyCode
+        else {
+            return currencyCode
+        }
+        return code
+    }
+
     /// How many live refunds are linked to the expense being edited.
     var linkedRefundCount: Int {
         guard let original, original.type == .expense, !original.isRefund else {
@@ -72,11 +83,23 @@ extension TransactionFormViewModel {
         return transactions.filter { $0.refundOfID == original.id && $0.isRefund && $0.deletedAt == nil }.count
     }
 
-    /// The save alert's message: the D222.3 fallback when the expense has refunds, else the general one. The
-    /// same ledger refusal guards a split, since Schema V1 keeps an expense with refunds unsplit (D35.6, #126),
-    /// so a save that carried lines says that instead, with how many refunds are linked (`splitRefunds`), for
-    /// refunds recorded while the split was open (D248.3).
-    static func saveMessage(for error: any Error, splitRefunds: Int? = nil) -> String {
+    /// The save alert's message. An edited refund over the cap says how much is refundable, in its expense's
+    /// currency, with the refund sheet's own entry (D258.1). Otherwise it's the D222.3 fallback when the expense
+    /// has refunds, else the general one. The same ledger refusal guards a split, since Schema V1 keeps an expense
+    /// with refunds unsplit (D35.6, #126), so a save that carried lines says that instead, with how many refunds
+    /// are linked (`splitRefunds`), for refunds recorded while the split was open (D248.3).
+    func saveMessage(for error: any Error, splitRefunds: Int? = nil) -> String {
+        if case LedgerValidationError.refundsExceedOriginal(let limit) = error,
+            let message = RefundFormText.message(
+                for: .exceedsRefundable(limit),
+                currencyCode: refundedExpenseCurrencyCode,
+                formatter: formatter,
+                text: text,
+            )
+        {
+            // An edited refund over the cap: the refund sheet's own message, nothing saved (D258.1).
+            return message
+        }
         if case LedgerValidationError.originalHasRefunds = error, let count = splitRefunds {
             return FeatureText.plural(
                 "This expense has %lld refunds, so it can’t be split. Remove the split to save your other changes.",

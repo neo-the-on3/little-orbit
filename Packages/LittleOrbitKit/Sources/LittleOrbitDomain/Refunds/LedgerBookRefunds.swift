@@ -55,7 +55,7 @@ extension LedgerBook {
         }
         let refunded = refundedAmount(of: original.id, in: snapshot, excluding: transaction.id)
         if refunded + transaction.amount > original.amount {
-            throw LedgerValidationError.refundsExceedOriginal
+            throw LedgerValidationError.refundsExceedOriginal(max(0, original.amount - refunded))
         }
     }
 

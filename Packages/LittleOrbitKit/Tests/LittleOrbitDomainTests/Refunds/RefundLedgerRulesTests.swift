@@ -126,7 +126,7 @@ struct RefundLedgerRulesTests {
         let expense = R.expense(Decimal(string: "5000.00")!)
         let snapshot = try R.saving([expense])
         _ = try save(R.refund(Decimal(string: "5000.00")!, of: expense), in: snapshot)
-        #expect(throws: LedgerValidationError.refundsExceedOriginal) {
+        #expect(throws: LedgerValidationError.refundsExceedOriginal(5_000)) {
             try save(R.refund(Decimal(string: "5000.01")!, of: expense), in: snapshot)
         }
     }
@@ -135,7 +135,7 @@ struct RefundLedgerRulesTests {
     func capCountsEveryRefund() throws {
         let expense = R.expense(5_000)
         let snapshot = try R.saving([expense, R.refund(2_000, of: expense), R.refund(2_500, of: expense)])
-        #expect(throws: LedgerValidationError.refundsExceedOriginal) {
+        #expect(throws: LedgerValidationError.refundsExceedOriginal(500)) {
             try save(R.refund(Decimal(string: "500.01")!, of: expense), in: snapshot)
         }
         _ = try save(R.refund(500, of: expense), in: snapshot)
@@ -147,7 +147,7 @@ struct RefundLedgerRulesTests {
         var second = R.refund(2_500, of: expense)
         let snapshot = try R.saving([expense, R.refund(2_000, of: expense), second])
         second.amount = Decimal(string: "3000.01")!
-        #expect(throws: LedgerValidationError.refundsExceedOriginal) { try save(second, in: snapshot) }
+        #expect(throws: LedgerValidationError.refundsExceedOriginal(3_000)) { try save(second, in: snapshot) }
         second.amount = 3_000
         #expect(try save(second, in: snapshot).transaction(second.id)?.amount == 3_000)
     }
@@ -158,9 +158,24 @@ struct RefundLedgerRulesTests {
         let snapshot = try R.saving([
             expense, R.refund(Decimal(string: "999.99")!, of: expense), R.refund(1_000, of: expense),
         ])
-        #expect(throws: LedgerValidationError.refundsExceedOriginal) {
+        #expect(throws: LedgerValidationError.refundsExceedOriginal(0)) {
             try save(R.refund(Decimal(string: "0.01")!, of: expense), in: snapshot)
         }
+    }
+
+    @Test("D258, P45: an edited refund over the cap is refused with the limit, leaving the edited refund out")
+    func capCarriesLimit() throws {
+        let expense = R.expense(1_000)
+        var edited = R.refund(300, of: expense)
+        let snapshot = try R.saving([expense, edited])
+        edited.amount = 1_001
+        #expect(throws: LedgerValidationError.refundsExceedOriginal(1_000)) { try save(edited, in: snapshot) }
+        edited.amount = 300
+        let withAnother = try R.saving([expense, edited, R.refund(200, of: expense)])
+        edited.amount = 801
+        #expect(throws: LedgerValidationError.refundsExceedOriginal(800)) { try save(edited, in: withAnother) }
+        edited.amount = 800
+        #expect(try save(edited, in: withAnother).transaction(edited.id)?.amount == 800)
     }
 
     @Test("B6 (D35.1): an expense can't go below its refunds; the error carries their total")

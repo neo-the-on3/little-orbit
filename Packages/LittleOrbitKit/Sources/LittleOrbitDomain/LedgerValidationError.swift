@@ -58,8 +58,9 @@ public enum LedgerValidationError: Error, Equatable, Sendable {
     case refundCategoryMismatch
     /// The refund's account isn't in its original's currency (D33.5).
     case refundCurrencyMismatch
-    /// The refunds linked to one expense would add up to more than its amount (D33.2).
-    case refundsExceedOriginal
+    /// The refunds linked to one expense would add up to more than its amount (D33.2). Carries the most the
+    /// refund being saved can be: the expense's amount minus its other linked refunds, never below 0 (D257, D258).
+    case refundsExceedOriginal(Decimal)
     /// An expense's amount would be below the total of its linked refunds, which this carries (D35.1).
     case amountBelowRefunds(Decimal)
     /// A new refund with no original. Only CSV import or sync may bring in an unlinked refund (D35.2).
