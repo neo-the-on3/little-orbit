@@ -52,6 +52,18 @@ final class FullDiskLedgerRepository: LedgerRepository {
         try write()
         try base.deleteCategory(id: id, reassigningTo: categoryID)
     }
+    func mergeCategories(_ sourceID: UUID, into survivingID: UUID) throws {
+        try write()
+        try base.mergeCategories(sourceID, into: survivingID)
+    }
+    func archiveCategory(id: UUID, archived: Bool) throws {
+        try write()
+        try base.archiveCategory(id: id, archived: archived)
+    }
+    func reorderCategories(_ orderedIDs: [UUID]) throws {
+        try write()
+        try base.reorderCategories(orderedIDs)
+    }
     func seedDefaultCategories(names: any DefaultCategoryNaming) throws {
         try base.seedDefaultCategories(names: names)
     }

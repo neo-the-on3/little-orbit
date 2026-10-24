@@ -45,6 +45,7 @@ func assertLedgerAcceptance(make: MakeRepository) throws {
     try assertCategoryNestingIsOneLevel(make: make)
     try assertDeletingCategoryCanLeaveTransactionsUncategorised(make: make)
     try assertDeletingParentCategoryClearsSubcategoryTransactions(make: make)
+    try assertCategoryManagement(make: make)
     try assertScheduledOccurrenceIsRecordedOnce(make: make)
     try assertCurrencyLocksOnceTransactionsExist(make: make)
     try assertTransactionCannotChangeToOrFromTransfer(make: make)

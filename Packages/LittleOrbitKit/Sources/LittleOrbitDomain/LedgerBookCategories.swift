@@ -29,27 +29,7 @@ extension LedgerBook {
         let subtree = subtreeIDs(of: id, in: snapshot.categories)
         try validateReassignment(of: category, subtree: subtree, to: reassignCategoryID, in: snapshot)
         var snapshot = snapshot
-        for index in snapshot.transactions.indices {
-            guard let categoryID = snapshot.transactions[index].categoryID, subtree.contains(categoryID) else {
-                continue
-            }
-            snapshot.transactions[index].categoryID = reassignCategoryID
-            snapshot.transactions[index].updatedAt = now
-        }
-        for index in snapshot.payees.indices {
-            guard let categoryID = snapshot.payees[index].defaultCategoryID, subtree.contains(categoryID) else {
-                continue
-            }
-            snapshot.payees[index].defaultCategoryID = reassignCategoryID
-            snapshot.payees[index].updatedAt = now
-        }
-        for index in snapshot.splits.indices {
-            guard let categoryID = snapshot.splits[index].categoryID, subtree.contains(categoryID) else {
-                continue
-            }
-            snapshot.splits[index].categoryID = reassignCategoryID
-            snapshot.splits[index].updatedAt = now
-        }
+        reassignReferences(from: subtree, to: reassignCategoryID, in: &snapshot, now: now)
         snapshot.categories.removeAll { subtree.contains($0.id) }
         return snapshot
     }

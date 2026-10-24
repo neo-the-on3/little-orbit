@@ -17,6 +17,12 @@ public protocol LedgerRepository: AnyObject {
     func categories() throws -> [TransactionCategory]
     func saveCategory(_ category: TransactionCategory) throws
     func deleteCategory(id: UUID, reassigningTo categoryID: UUID?) throws
+    /// See `LedgerBook.mergingCategories(_:into:in:now:)`.
+    func mergeCategories(_ sourceID: UUID, into survivingID: UUID) throws
+    /// See `LedgerBook.archivingCategory(id:archived:in:now:)`.
+    func archiveCategory(id: UUID, archived: Bool) throws
+    /// See `LedgerBook.reorderingCategories(_:in:now:)`.
+    func reorderCategories(_ orderedIDs: [UUID]) throws
     /// Adds the built-in categories that aren't there yet, with the names `names` gives (D8).
     func seedDefaultCategories(names: any DefaultCategoryNaming) throws
 
