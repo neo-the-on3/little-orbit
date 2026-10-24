@@ -18,6 +18,8 @@
         @Environment(\.dismiss) private var dismiss
         @Environment(\.dynamicTypeSize) private var dynamicTypeSize
         @State private var confirmingDiscard = false
+        /// The category picker on show (iOS, #24). It reads the categories once, when the row is tapped.
+        @State private var categoryPicker: CategoryPickerViewModel?
         /// The calendar under the Date row at accessibility sizes.
         @State private var showsCalendar = false
         /// The text field being edited. The amount uses the decimal pad with the operator row; description
@@ -73,6 +75,10 @@
             }
             #if os(macOS)
                 .frame(minWidth: 460, minHeight: 520)
+            #else
+                .sheet(item: $categoryPicker) { picker in
+                    CategoryPickerView(model: picker) { model.chooseCategory(from: $0) }
+                }
             #endif
         }
 
@@ -146,25 +152,38 @@
                 stackedRow("Account", value: model.accountName) {
                     Picker("Account", selection: $model.accountID) { accountOptions }
                 }
-                stackedRow("Category", value: model.categoryName, spoken: model.categorySpokenValue) {
-                    // The menu's items are standard Labels, so each lines up with its icon, in a section per
-                    // parent (UI Designer). The chosen value shows as text only, and its accessibility label
-                    // carries the parent, so VoiceOver reads "Category" then "Groceries, under Food & Dining"
-                    // once each: the iOS picker folds this label into its own, and the macOS one uses it as
-                    // the value (Tester's #87 v11).
-                    Picker(selection: $model.categoryID) {
-                        Label("Uncategorised", systemImage: "questionmark").tag(UUID?.none)
-                        CategoryPickerSections(groups: model.categoryGroups)
-                    } label: {
-                        Text("Category")
-                    } currentValueLabel: {
-                        Text(model.categoryName)
-                            .accessibilityLabel(model.categorySpokenValue)
+                #if os(iOS)
+                    if model.hasCategoryPicker {
+                        TransactionCategoryButton(model: model, picker: $categoryPicker)
+                    } else {
+                        categoryMenu
                     }
-                }
+                #else
+                    categoryMenu
+                #endif
                 payeeField
             }
             dateRow
+        }
+
+        /// The Category menu (#23), on macOS and wherever the picker's use cases aren't wired.
+        @ViewBuilder private var categoryMenu: some View {
+            stackedRow("Category", value: model.categoryName, spoken: model.categorySpokenValue) {
+                // The menu's items are standard Labels, so each lines up with its icon, in a section per
+                // parent (UI Designer). The chosen value shows as text only, and its accessibility label
+                // carries the parent, so VoiceOver reads "Category" then "Groceries, under Food & Dining"
+                // once each: the iOS picker folds this label into its own, and the macOS one uses it as
+                // the value (Tester's #87 v11).
+                Picker(selection: $model.categoryID) {
+                    Label("Uncategorised", systemImage: "questionmark").tag(UUID?.none)
+                    CategoryPickerSections(groups: model.categoryGroups)
+                } label: {
+                    Text("Category")
+                } currentValueLabel: {
+                    Text(model.categoryName)
+                        .accessibilityLabel(model.categorySpokenValue)
+                }
+            }
         }
 
         /// A picker row. At accessibility sizes the label goes above the value and the value wraps onto more

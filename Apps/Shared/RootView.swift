@@ -73,7 +73,12 @@ import SwiftUI
             } catch {
                 StoreLog.failure(.defaultSeedFailed, error)
             }
-            transactions = TransactionsFeature(useCases: transactionUseCases)
+            // The entry sheet's category picker reads and adds categories with the editor's use cases (#24).
+            let editing = DefaultCategoryEditingUseCase(repository: repository)
+            transactions = TransactionsFeature(
+                useCases: transactionUseCases,
+                categoryPicking: CategoryPickingUseCases(load: editing, edit: editing),
+            )
             // One signal for "the whole ledger was replaced" (a restore): the accounts reload, and every window's
             // undo history is cleared, so Undo never replays a step made against the old data (D187.2, N6).
             let changes = LedgerChanges()
@@ -83,7 +88,6 @@ import SwiftUI
             backups = AppComposition.makeBackups(source: repository, storage: backupStorage, changes: changes)
             // Settings › Categories and Payees (#24): the category and payee use cases, the category editor's
             // reads and saves, and the payee list's reads.
-            let editing = DefaultCategoryEditingUseCase(repository: repository)
             let categoryUseCases = CategoryUseCases(repository: repository)
             categories = CategoriesFeature(
                 useCases: CategoryScreenUseCases(
