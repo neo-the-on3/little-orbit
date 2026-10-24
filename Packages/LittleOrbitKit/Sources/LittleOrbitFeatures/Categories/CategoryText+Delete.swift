@@ -57,7 +57,8 @@ extension CategoryText {
     }
 
     /// "Moving or leaving them uncategorised deletes the category and its 2 subcategories." `count`, what uses
-    /// it, picks “it” or “them” (D301); each count has its own plural in the catalog.
+    /// it, picks “it” or “them” (D301); each count has its own plural in the catalog. One subcategory reads “and
+    /// its subcategory”, with no number (UI Designer).
     static func movingDeletes(count: Int, subcategoryCount: Int) -> String {
         #if canImport(Darwin)
             if subcategoryCount == 0 {
@@ -72,9 +73,9 @@ extension CategoryText {
             case (false, 0):
                 return "Moving or leaving them uncategorised deletes the category."
             case (true, 1):
-                return "Moving or leaving it uncategorised deletes the category and its 1 subcategory."
+                return "Moving or leaving it uncategorised deletes the category and its subcategory."
             case (false, 1):
-                return "Moving or leaving them uncategorised deletes the category and its 1 subcategory."
+                return "Moving or leaving them uncategorised deletes the category and its subcategory."
             case (true, _):
                 return String(
                     format: "Moving or leaving it uncategorised deletes the category and its %lld subcategories.",
