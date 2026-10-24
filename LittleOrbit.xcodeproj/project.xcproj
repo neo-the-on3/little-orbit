@@ -27,10 +27,11 @@
       "kind": "group",
       "path": "Config",
       "children": [
+        { "path": "Local.xcconfig.example" },
+        { "path": "LittleOrbit.entitlements" },
         { "path": "LittleOrbit-Info.plist" },
         { "path": "Shared.xcconfig" },
         { "path": "Signing.xcconfig" },
-        { "path": "Signing.local.xcconfig.example" },
         { "path": "iOS.xcconfig" },
         { "path": "macOS.xcconfig" },
         { "path": "watchOS.xcconfig" },

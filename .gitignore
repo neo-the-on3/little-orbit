@@ -235,5 +235,9 @@ mise.*.local.lock
 *.p12
 *.mobileprovision
 
-# Personal team ID for local device builds. Copy the example, do not commit the copy.
+# Per-builder signing overrides (team, bundle ID base, App Group ID). Copy
+# Config/Local.xcconfig.example; do not commit the copy.
+Config/Local.xcconfig
+# Signing.local.xcconfig: legacy; no longer read, kept so an old copy with a team
+# ID isn't committed.
 Config/Signing.local.xcconfig

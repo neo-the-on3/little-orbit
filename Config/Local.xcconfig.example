@@ -1,0 +1,35 @@
+// Per-builder overrides for Little Orbit. Copy this file to Config/Local.xcconfig and edit the copy.
+// Local.xcconfig is gitignored and included at the end of Config/Shared.xcconfig, so it overrides the
+// committed defaults. Do not commit it, and do not put certificates, private keys, or provisioning
+// profiles in it. Every line below is commented out, so a copy left as-is changes nothing.
+
+// Your 10-character Team ID: Xcode > Settings > Accounts, or developer.apple.com > Membership details.
+// A free personal team or the paid team both work.
+// LITTLEORBIT_DEVELOPMENT_TEAM = YOUR_TEAM_ID
+
+// Bundle ID base. The apps become <base>.ios, <base>.macos and <base>.watchos, and the App Group
+// becomes group.<base>. Default: app.littleorbit. Use a reverse-DNS name you control.
+// LITTLEORBIT_BUNDLE_ID_BASE = com.example.yourname.littleorbit
+
+// Alternatively, keep the base and add a suffix with a leading dot. It is appended to every bundle ID
+// and to the App Group ID. Profiles from a free personal team expire after 7 days.
+// LITTLEORBIT_BUNDLE_ID_SUFFIX = .yourname
+
+// Set the App Group ID yourself only if it can't follow the base, for example the team-prefixed form
+// on macOS. Default: group.$(LITTLEORBIT_BUNDLE_ID_BASE)$(LITTLEORBIT_BUNDLE_ID_SUFFIX).
+// LITTLEORBIT_APP_GROUP_IDENTIFIER = group.com.example.yourname.littleorbit
+
+// After LITTLEORBIT_DEVELOPMENT_TEAM is a real team, uncomment the next line so local Mac builds use
+// your development certificate. With an empty team it fails the macOS build with
+// "requires a development team".
+// CODE_SIGN_IDENTITY[sdk=macosx*] = Apple Development
+
+// The App Group entitlement is off in the committed config (#52, needs-kiran): LITTLEORBIT_ENTITLEMENTS
+// is empty, so the store stays in Application Support. Leaving it empty is right if your team can't
+// register the App Group, and for builds with no Apple account (D183). To turn it on for your own
+// iOS and macOS builds, register the App Group for your team and uncomment the next line. The watch
+// app never gets an entitlement.
+// LITTLEORBIT_ENTITLEMENTS = Config/LittleOrbit.entitlements
+// The iOS simulator embeds entitlements only when it signs (ad-hoc is enough):
+// CODE_SIGNING_ALLOWED[sdk=iphonesimulator*] = YES
+// CODE_SIGN_IDENTITY[sdk=iphonesimulator*] = -

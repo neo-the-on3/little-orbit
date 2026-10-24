@@ -3,20 +3,50 @@
 // Deployment targets match the SDKs that ship with Xcode 27.2.
 // Platform xcconfig files set the per-target values:
 //
-//   Target              SDK        Deployment   Bundle ID                  Product
+//   Target              SDK        Deployment   Bundle ID (default)        Product
 //   LittleOrbit iOS     iphoneos   27.0         app.littleorbit.ios        LittleOrbit.app
 //   LittleOrbit macOS   macosx     27.0         app.littleorbit.macos      LittleOrbitMac.app
 //   LittleOrbit watchOS watchos    27.0         app.littleorbit.watchos    LittleOrbitWatch.app
 //
+// Each bundle ID is $(LITTLEORBIT_BUNDLE_ID_BASE).<platform>$(LITTLEORBIT_BUNDLE_ID_SUFFIX).
 // Display name on every platform: Little Orbit
 // The watchOS app is standalone. It is not embedded in the iOS app.
 //
-// Signing is automatic. The committed Team ID is empty.
-// Local team and optional bundle ID suffix: Config/Signing.local.xcconfig
-// (see Config/Signing.local.xcconfig.example).
+// Signing is automatic. The committed Team ID is empty (Signing.xcconfig).
+// A builder overrides the team, bundle ID base and App Group ID in the optional, gitignored
+// Config/Local.xcconfig (copy Config/Local.xcconfig.example). It is included at the end of this file, so it
+// wins over every default here and in Signing.xcconfig. Without it, a build is unchanged.
 
 MARKETING_VERSION = 1.0
 CURRENT_PROJECT_VERSION = 1
 GENERATE_INFOPLIST_FILE = YES
 ENABLE_PREVIEWS = YES
 SWIFT_EMIT_LOC_STRINGS = YES
+
+// Per-builder identity. These defaults are the project's own IDs; Config/Local.xcconfig overrides them.
+LITTLEORBIT_BUNDLE_ID_BASE = app.littleorbit
+// Optional suffix with a leading dot, such as .yourname, when a free personal team can't register the base.
+LITTLEORBIT_BUNDLE_ID_SUFFIX =
+// 10-character Team ID. Never commit one; set it in Config/Local.xcconfig.
+LITTLEORBIT_DEVELOPMENT_TEAM =
+
+// App Group for the shared on-device store (#52, D34.1), group.app.littleorbit by default. The iOS and macOS
+// apps write it into Info.plist (Config/LittleOrbit-Info.plist) and, once enabled, into their entitlements
+// (Config/LittleOrbit.entitlements). The app reads it only from Info.plist. It follows the bundle ID base and
+// suffix, or a builder sets it in Config/Local.xcconfig, for example to the team-prefixed form on macOS. The
+// watchOS app keeps its own store (#48) and doesn't use it.
+//
+// The store uses the group container only when the app is signed with this entitlement. Until then it falls
+// back to Application Support/<bundle id> (StoreLocation in LittleOrbitPersistence).
+LITTLEORBIT_APP_GROUP_IDENTIFIER = group.$(LITTLEORBIT_BUNDLE_ID_BASE)$(LITTLEORBIT_BUNDLE_ID_SUFFIX)
+
+// Entitlements file for the iOS and macOS apps (their CODE_SIGN_ENTITLEMENTS). Empty, so the App Group
+// entitlement is off (#52, needs-kiran). Enabling it is setting this to Config/LittleOrbit.entitlements. It is a
+// variable so Config/Local.xcconfig can turn it on or off for one builder; leaving it empty is right for a
+// team that can't register the group and for builds with no Apple account (D183). watchOS doesn't use it.
+LITTLEORBIT_ENTITLEMENTS =
+
+#include "Signing.xcconfig"
+
+// Last, so a builder's values override everything above. Optional and gitignored.
+#include? "Local.xcconfig"

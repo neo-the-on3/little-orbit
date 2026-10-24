@@ -212,7 +212,7 @@
             }
             let modelConfiguration = try modelConfiguration(for: configuration)
             // The model-type initializer is what actually applies `LittleOrbitMigrationPlan`.
-            return try ModelContainer(
+            let container = try ModelContainer(
                 for: LittleOrbitSchemaV1.AccountRecord.self,
                 LittleOrbitSchemaV1.TransactionRecord.self,
                 LittleOrbitSchemaV1.CategoryRecord.self,
@@ -223,6 +223,14 @@
                 migrationPlan: LittleOrbitMigrationPlan.self,
                 configurations: modelConfiguration,
             )
+            // Record where the store is right after it opens, before any user write (#52). Only when it changes,
+            // and a failed write is logged, never thrown, so it can't fail the launch.
+            if let record = configuration.homeRecord, !configuration.readOnly, !configuration.inMemory,
+                let fileURL = configuration.fileURL
+            {
+                StoreHomeRecorder.record(record, storeURL: fileURL)
+            }
+            return container
         }
 
         public static func makeRepository(
@@ -239,7 +247,14 @@
             }
             // Never SwiftData's shared `default.store`: with no explicit URL, use the app folder.
             let fileURL = try configuration.fileURL ?? StoreLocation.prepareStoreURL()
-            return ModelConfiguration(url: fileURL, cloudKitDatabase: .none)
+            // A read-only store can't create or migrate its file. An extension that runs before the app has
+            // created the store fails here instead of leaving an empty file. An extension that runs after an
+            // update but before the app has migrated the store must also fail, never migrate; #38 and #39
+            // handle that when the schema gets a second version.
+            if configuration.readOnly, !FileManager.default.fileExists(atPath: fileURL.path) {
+                throw StoreError.readOnlyStoreMissing
+            }
+            return ModelConfiguration(url: fileURL, allowsSave: !configuration.readOnly, cloudKitDatabase: .none)
         }
     }
 #endif
