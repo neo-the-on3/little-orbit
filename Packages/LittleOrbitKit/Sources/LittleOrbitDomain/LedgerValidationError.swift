@@ -23,6 +23,8 @@ public enum LedgerValidationError: Error, Equatable, Sendable {
     case categoryNestingTooDeep
     /// A reorder listed categories that aren't one group of siblings (same parent and kind), or listed one twice.
     case categoriesNotSiblings
+    /// Only a subcategory can move to another parent; a top-level category stays top-level (D287.1).
+    case categoryNotSubcategory
     case duplicateCategoryName
     case duplicatePayeeName
     case duplicateTagName
