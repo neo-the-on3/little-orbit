@@ -14,7 +14,9 @@
 
         private func setup(_ transactions: [Transaction]) throws -> (InMemoryLedgerRepository, TransactionUseCases) {
             let repository = try F.repository(transactions)
-            return (repository, TransactionUseCases(repository: repository))
+            return (
+                repository, TransactionUseCases(repository: repository, categoryNames: CatalogDefaultCategoryNames()),
+            )
         }
 
         /// Undo and Redo through the `UndoManager` keep the user's name for the whole cycle.

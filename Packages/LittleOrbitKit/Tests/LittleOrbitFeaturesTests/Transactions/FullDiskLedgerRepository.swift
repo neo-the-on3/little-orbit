@@ -52,7 +52,9 @@ final class FullDiskLedgerRepository: LedgerRepository {
         try write()
         try base.deleteCategory(id: id, reassigningTo: categoryID)
     }
-    func seedDefaultCategories() throws { try base.seedDefaultCategories() }
+    func seedDefaultCategories(names: any DefaultCategoryNaming) throws {
+        try base.seedDefaultCategories(names: names)
+    }
 
     func payees() throws -> [Payee] { try base.payees() }
     func savePayee(_ payee: Payee) throws {

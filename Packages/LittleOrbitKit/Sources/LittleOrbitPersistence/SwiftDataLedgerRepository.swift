@@ -67,8 +67,8 @@
             try mutate { try LedgerBook.deletingCategory(id: id, reassigningTo: categoryID, in: $0, now: now()) }
         }
 
-        public func seedDefaultCategories() throws {
-            try mutate { LedgerBook.seedDefaultCategories(in: $0, now: now()) }
+        public func seedDefaultCategories(names: any DefaultCategoryNaming) throws {
+            try mutate { LedgerBook.seedDefaultCategories(names: names, in: $0, now: now()) }
         }
 
         public func payees() throws -> [Payee] {

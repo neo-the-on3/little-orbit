@@ -38,7 +38,7 @@
         @Test("Three adds, then one Undo reverts exactly one add; Redo puts it back (Tech Architect)")
         func threeAddsOneUndo() throws {
             let repository = try F.repository([])
-            let useCases = TransactionUseCases(repository: repository)
+            let useCases = TransactionUseCases(repository: repository, categoryNames: CatalogDefaultCategoryNames())
             let window = RealWindow(useCases)
             for amount in [15, 20, 30] as [Decimal] {
                 window.record(try add(amount, useCases))
@@ -66,7 +66,7 @@
             let income = F.income(250, on: F.date(2026, 10, 17))
             let cafe = F.expense(120, on: F.date(2026, 10, 18), details: "Cafe Orbit")
             let repository = try F.repository([income, cafe])
-            let useCases = TransactionUseCases(repository: repository)
+            let useCases = TransactionUseCases(repository: repository, categoryNames: CatalogDefaultCategoryNames())
             let window = RealWindow(useCases)
             window.history.setScreen(.account(F.savingsID))
             window.record(try useCases.changes.remove(ids: [income.id]))
@@ -85,7 +85,7 @@
         @Test("Three adds and a bulk delete, then one Undo brings back only the deleted rows (Tester's iPad repro)")
         func bulkDeleteAfterAdds() throws {
             let repository = try F.repository([])
-            let useCases = TransactionUseCases(repository: repository)
+            let useCases = TransactionUseCases(repository: repository, categoryNames: CatalogDefaultCategoryNames())
             let window = RealWindow(useCases)
             for amount in [15, 20, 30] as [Decimal] {
                 window.record(try add(amount, useCases))
@@ -103,7 +103,7 @@
         @Test("W3: two windows, two histories; Cmd-Z in one moves only that window, by exactly one step")
         func twoWindows() throws {
             let repository = try F.repository([])
-            let useCases = TransactionUseCases(repository: repository)
+            let useCases = TransactionUseCases(repository: repository, categoryNames: CatalogDefaultCategoryNames())
             let updates = LedgerUpdates()
             let first = RealWindow(useCases, updates: updates)
             let second = RealWindow(useCases, updates: updates)

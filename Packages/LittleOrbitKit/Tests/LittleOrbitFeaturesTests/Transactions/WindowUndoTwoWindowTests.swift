@@ -38,7 +38,7 @@ struct WindowUndoTwoWindowTests {
 
     private func setup(_ transactions: [Transaction] = []) throws -> Setup {
         let repository = try F.repository(transactions)
-        let useCases = TransactionUseCases(repository: repository)
+        let useCases = TransactionUseCases(repository: repository, categoryNames: CatalogDefaultCategoryNames())
         let updates = LedgerUpdates()
         return Setup(
             repository: repository,
@@ -424,7 +424,7 @@ struct LedgerReplacedUndoTests {
         let lunch = F.expense(250, on: F.date(2026, 10, 18))
         let tea = F.expense(20, on: F.date(2026, 10, 18))
         let repository = try F.repository([lunch, tea])
-        let useCases = TransactionUseCases(repository: repository)
+        let useCases = TransactionUseCases(repository: repository, categoryNames: CatalogDefaultCategoryNames())
         let updates = LedgerUpdates()
         let first = TestWindow(useCases, updates: updates)
         let second = TestWindow(useCases, updates: updates)

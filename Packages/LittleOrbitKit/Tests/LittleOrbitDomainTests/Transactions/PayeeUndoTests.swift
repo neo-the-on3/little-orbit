@@ -42,7 +42,10 @@ struct PayeeUndoTests {
 
     private func ledger(_ transactions: [Transaction] = []) throws -> Ledger {
         let repository = try FakeLedgerRepository(accounts: F.accounts, transactions: transactions)
-        return Ledger(repository: repository, useCases: TransactionUseCases(repository: repository))
+        return Ledger(
+            repository: repository,
+            useCases: TransactionUseCases(repository: repository, categoryNames: TestCategoryNames()),
+        )
     }
 
     @Test("N3: Undo removes the new transaction and its unused new payee; Redo puts both back, same IDs")
@@ -108,7 +111,7 @@ struct PayeeUndoTests {
     @Test("N7: a save with a category sets the payee's default; Undo still removes it, and Redo brings both back")
     func withCategory() throws {
         let ledger = try ledger()
-        try ledger.repository.seedDefaultCategories()
+        try ledger.repository.seedDefaultCategories(names: TestCategoryNames())
         let category = try #require(try ledger.repository.categories().first { $0.kind == .expense }).id
         var spend = F.expense(2_500, on: F.date(2026, 10, 21))
         spend.categoryID = category
@@ -126,7 +129,7 @@ struct PayeeUndoTests {
     @Test("N7: a payee whose default category another window changed stays on Undo")
     func defaultCategoryEditedElsewhere() throws {
         let ledger = try ledger()
-        try ledger.repository.seedDefaultCategories()
+        try ledger.repository.seedDefaultCategories(names: TestCategoryNames())
         let category = try #require(try ledger.repository.categories().first { $0.kind == .expense }).id
         let added = try ledger.save(F.expense(2_500, on: F.date(2026, 10, 21)), payee: "Trailhead Sports")
         var payee = try #require(try ledger.payee(named: "Trailhead Sports"))

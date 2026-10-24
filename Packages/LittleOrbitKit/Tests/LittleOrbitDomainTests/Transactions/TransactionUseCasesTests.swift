@@ -15,7 +15,7 @@ struct TransactionUseCasesTests {
     @Test("The entry ledger seeds the default categories once; the plain ledger never writes")
     func ledgerSeeding() throws {
         let repository = try repository()
-        let useCases = TransactionUseCases(repository: repository)
+        let useCases = TransactionUseCases(repository: repository, categoryNames: TestCategoryNames())
         #expect(try useCases.loadLedger.ledger().categories.isEmpty)
         let seeded = try useCases.loadLedger.ledgerForEntry().categories
         #expect(!seeded.isEmpty)
@@ -25,7 +25,7 @@ struct TransactionUseCasesTests {
     @Test("History for a missing account is nil; for a live one it carries the account and its rows")
     func history() throws {
         let repository = try repository([F.expense(500, on: F.date(2026, 10, 19))])
-        let history = TransactionUseCases(repository: repository).accountHistory
+        let history = TransactionUseCases(repository: repository, categoryNames: TestCategoryNames()).accountHistory
         #expect(try history.history(of: UUID(), today: F.day(2026, 10, 20)) == nil)
         let page = try #require(try history.history(of: F.savingsID, today: F.day(2026, 10, 20)))
         #expect(page.account.id == F.savingsID)
@@ -37,7 +37,7 @@ struct TransactionUseCasesTests {
     func saveChanges() throws {
         let original = F.expense(500, on: F.date(2026, 10, 19))
         let repository = try repository([original])
-        let save = TransactionUseCases(repository: repository).saveTransactions
+        let save = TransactionUseCases(repository: repository, categoryNames: TestCategoryNames()).saveTransactions
         let new = F.expense(20, on: F.date(2026, 10, 20))
         #expect(try save.save([new]) == .added([new.id]))
         var edited = try #require(try repository.transactions().first { $0.id == original.id })
@@ -49,7 +49,7 @@ struct TransactionUseCasesTests {
     @Test("Payees resolve by name, case-insensitively, and a new name saves one payee")
     func resolvePayee() throws {
         let repository = try repository()
-        let save = TransactionUseCases(repository: repository).saveTransactions
+        let save = TransactionUseCases(repository: repository, categoryNames: TestCategoryNames()).saveTransactions
         let when = F.date(2026, 10, 20)
         #expect(try save.resolvePayee(named: "   ", createdAt: when) == nil)
         let created = try #require(try save.resolvePayee(named: " Corner Shop ", createdAt: when))
@@ -64,7 +64,7 @@ struct TransactionUseCasesTests {
     func removeAndRevert() throws {
         let spend = F.expense(500, on: F.date(2026, 10, 19))
         let repository = try repository([spend])
-        let changes = TransactionUseCases(repository: repository).changes
+        let changes = TransactionUseCases(repository: repository, categoryNames: TestCategoryNames()).changes
         let removed = try changes.remove(ids: [spend.id])
         #expect(try repository.transactions().isEmpty)
         #expect(try changes.revertNow(removed) == .added([spend.id]))
@@ -82,7 +82,7 @@ struct TransactionUseCasesTests {
         let repository = try repository([first, second])
         let before = repository.snapshot
         repository.failsAfterWrites = 1
-        let changes = TransactionUseCases(repository: repository).changes
+        let changes = TransactionUseCases(repository: repository, categoryNames: TestCategoryNames()).changes
         #expect(throws: FakeLedgerRepository.WriteFailure.self) {
             try changes.remove(ids: [first.id, second.id])
         }
@@ -98,7 +98,7 @@ struct TransactionUseCasesTests {
         var edited = try #require(try repository.transactions().first)
         edited.amount = 150
         repository.failsAfterWrites = 1
-        let save = TransactionUseCases(repository: repository).saveTransactions
+        let save = TransactionUseCases(repository: repository, categoryNames: TestCategoryNames()).saveTransactions
         #expect(throws: FakeLedgerRepository.WriteFailure.self) {
             try save.save([edited, F.expense(20, on: F.date(2026, 10, 20))])
         }
@@ -113,7 +113,7 @@ struct TransactionUseCasesTests {
         try repository.saveAttachment(
             Attachment(transactionID: first.id, fileName: "receipt.jpg", contentType: "image/jpeg")
         )
-        let changes = TransactionUseCases(repository: repository).changes
+        let changes = TransactionUseCases(repository: repository, categoryNames: TestCategoryNames()).changes
         let removed = try changes.remove(ids: [first.id, second.id])
         let afterDelete = repository.snapshot
 
@@ -138,7 +138,7 @@ struct TransactionUseCasesTests {
         let one = F.expense(100, on: F.date(2026, 10, 18))
         let two = F.expense(200, on: F.date(2026, 10, 19))
         let repository = try repository([one, two])
-        let save = TransactionUseCases(repository: repository).saveTransactions
+        let save = TransactionUseCases(repository: repository, categoryNames: TestCategoryNames()).saveTransactions
         var edits = try repository.transactions()
         for index in edits.indices {
             edits[index].amount += 1
@@ -147,7 +147,8 @@ struct TransactionUseCasesTests {
         let afterEdit = repository.snapshot
         repository.failsAfterWrites = repository.writes + 1
         #expect(throws: FakeLedgerRepository.WriteFailure.self) {
-            try TransactionUseCases(repository: repository).changes.revertNow(change)
+            try TransactionUseCases(repository: repository, categoryNames: TestCategoryNames()).changes
+                .revertNow(change)
         }
         #expect(repository.snapshot == afterEdit)
     }
@@ -162,7 +163,7 @@ struct TransactionUseCasesTests {
             )
         }
         let before = repository.snapshot
-        let changes = TransactionUseCases(repository: repository).changes
+        let changes = TransactionUseCases(repository: repository, categoryNames: TestCategoryNames()).changes
         let removed = try changes.remove(ids: items.map(\.id))
         #expect(removed.transactionIDs == items.map(\.id))
         #expect(try repository.transactions().isEmpty)
@@ -192,7 +193,7 @@ struct TransactionUseCasesTests {
         let lunch = F.expense(100, on: F.date(2026, 10, 18))
         let move = F.transfer(50, on: F.date(2026, 10, 19), from: F.walletID, to: F.usdID, received: 1)
         let repository = try repository([lunch, move])
-        let changes = TransactionUseCases(repository: repository).changes
+        let changes = TransactionUseCases(repository: repository, categoryNames: TestCategoryNames()).changes
         func names(_ change: TransactionChange) throws -> Set<String> {
             Set(try changes.impact(of: change).accounts.map(\.name))
         }
@@ -209,7 +210,7 @@ struct TransactionUseCasesTests {
     func transferAccounts() throws {
         let move = F.transfer(50, on: F.date(2026, 10, 19), from: F.walletID, to: F.usdID, received: 1)
         let repository = try repository([move])
-        let changes = TransactionUseCases(repository: repository).changes
+        let changes = TransactionUseCases(repository: repository, categoryNames: TestCategoryNames()).changes
         var edited = move
         edited.amount = 60
         try repository.saveTransaction(edited)
@@ -225,7 +226,7 @@ struct TransactionUseCasesTests {
     func transferChangedAccounts() throws {
         let move = F.transfer(50, on: F.date(2026, 10, 19), from: F.walletID, to: F.usdID, received: 1)
         let repository = try repository([move])
-        let changes = TransactionUseCases(repository: repository).changes
+        let changes = TransactionUseCases(repository: repository, categoryNames: TestCategoryNames()).changes
         var edited = move
         edited.transferAccountID = F.savingsID
         edited.destinationAmount = nil
@@ -241,7 +242,7 @@ struct TransactionUseCasesTests {
         let lunch = F.expense(100, on: F.date(2026, 10, 18), account: F.walletID)
         let move = F.transfer(50, on: F.date(2026, 10, 19), from: F.walletID, to: F.usdID, received: 1)
         let repository = try repository([lunch, move])
-        let changes = TransactionUseCases(repository: repository).changes
+        let changes = TransactionUseCases(repository: repository, categoryNames: TestCategoryNames()).changes
         let impact = try changes.impact(of: try changes.remove(ids: [lunch.id, move.id]))
         #expect(Set(impact.accounts.map(\.name)) == ["Corner Wallet", "USD Wallet"])
         #expect(impact.transactionIDs == [lunch.id, move.id])
@@ -250,7 +251,7 @@ struct TransactionUseCasesTests {
 
     @Test("A whole-account change has no transaction impact; the account is in the change (#93)")
     func accountChangeImpact() throws {
-        let changes = TransactionUseCases(repository: try repository()).changes
+        let changes = TransactionUseCases(repository: try repository(), categoryNames: TestCategoryNames()).changes
         #expect(try changes.impact(of: .addedAccount(F.walletID)) == ChangeImpact())
     }
 
@@ -264,7 +265,7 @@ struct TransactionUseCasesTests {
             Attachment(transactionID: items[0].id, fileName: "receipt.jpg", contentType: "image/jpeg")
         )
         let before = repository.snapshot
-        let changes = TransactionUseCases(repository: repository).changes
+        let changes = TransactionUseCases(repository: repository, categoryNames: TestCategoryNames()).changes
         // The one account delete (Tech Architect, #87): the same use case with or without Undo.
         let delete = AccountUseCases(repository: repository).deleteAccount
 

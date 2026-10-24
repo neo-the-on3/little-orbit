@@ -32,7 +32,7 @@
         private func setup() throws -> Setup {
             let rows = (0..<4).map { F.expense(Decimal(100 * ($0 + 1)), on: F.date(2026, 10, 10 + $0)) }
             let disk = FullDiskLedgerRepository(try F.repository(rows))
-            let useCases = TransactionUseCases(repository: disk)
+            let useCases = TransactionUseCases(repository: disk, categoryNames: CatalogDefaultCategoryNames())
             let window = RealWindow(useCases)
             window.history.setScreen(.account(F.savingsID))
             window.record(try useCases.changes.remove(ids: [rows[0].id]))
@@ -48,7 +48,7 @@
         private func withRedo() throws -> Setup {
             let rows = (0..<6).map { F.expense(Decimal(100 * ($0 + 1)), on: F.date(2026, 10, 10 + $0)) }
             let disk = FullDiskLedgerRepository(try F.repository(rows))
-            let useCases = TransactionUseCases(repository: disk)
+            let useCases = TransactionUseCases(repository: disk, categoryNames: CatalogDefaultCategoryNames())
             let window = RealWindow(useCases)
             window.history.setScreen(.account(F.savingsID))
             window.record(try useCases.changes.remove(ids: [rows[0].id]))

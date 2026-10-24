@@ -12,7 +12,7 @@ struct TransactionAmountEntryTests {
 
     private func model(_ repository: InMemoryLedgerRepository, locale: Locale = F.india) -> TransactionFormViewModel {
         TransactionFormViewModel(
-            useCases: TransactionUseCases(repository: repository),
+            useCases: TransactionUseCases(repository: repository, categoryNames: CatalogDefaultCategoryNames()),
             mode: .new(accountID: F.savingsID),
             locale: locale,
             timeZone: F.zone,

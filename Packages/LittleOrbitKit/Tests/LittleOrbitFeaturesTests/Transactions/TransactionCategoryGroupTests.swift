@@ -44,7 +44,10 @@ struct TransactionCategoryGroupTests {
     @Test("The entry sheet's sections hold every option once, parents first, in the picker's order")
     func entrySheet() throws {
         let model = TransactionFormViewModel(
-            useCases: TransactionUseCases(repository: try F.repository()),
+            useCases: TransactionUseCases(
+                repository: try F.repository(),
+                categoryNames: CatalogDefaultCategoryNames(),
+            ),
             mode: .new(accountID: F.savingsID),
             locale: F.india,
             timeZone: F.zone,
@@ -61,7 +64,10 @@ struct TransactionCategoryGroupTests {
     func bulkEdit() throws {
         let rows = [F.expense(100, on: F.date(2026, 10, 15)), F.expense(200, on: F.date(2026, 10, 16))]
         let model = BulkEditViewModel(
-            useCases: TransactionUseCases(repository: try F.repository(rows)),
+            useCases: TransactionUseCases(
+                repository: try F.repository(rows),
+                categoryNames: CatalogDefaultCategoryNames(),
+            ),
             transactionIDs: rows.map(\.id),
             locale: F.india,
             timeZone: F.zone,
@@ -78,7 +84,10 @@ struct TransactionCategoryGroupTests {
     @Test("VoiceOver's value, read once: Uncategorised, a parent, or a subcategory with its parent (both pickers)")
     func spokenValue() throws {
         let rows = [F.expense(100, on: F.date(2026, 10, 15)), F.expense(200, on: F.date(2026, 10, 16))]
-        let useCases = TransactionUseCases(repository: try F.repository(rows))
+        let useCases = TransactionUseCases(
+            repository: try F.repository(rows),
+            categoryNames: CatalogDefaultCategoryNames(),
+        )
         let form = TransactionFormViewModel(
             useCases: useCases,
             mode: .new(accountID: F.savingsID),

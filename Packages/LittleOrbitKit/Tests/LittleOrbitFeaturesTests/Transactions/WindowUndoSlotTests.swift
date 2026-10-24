@@ -12,7 +12,9 @@ struct WindowUndoSlotTests {
     @Test("The slot makes the history on first use and hands back the same one after that")
     func madeOnce() throws {
         let repository = try TransactionFeatureFixture.repository([])
-        let feature = TransactionsFeature(useCases: TransactionUseCases(repository: repository))
+        let feature = TransactionsFeature(
+            useCases: TransactionUseCases(repository: repository, categoryNames: CatalogDefaultCategoryNames())
+        )
         let slot = WindowUndoSlot()
         let history = slot.history(from: feature)
         #expect(slot.history(from: feature) === history)

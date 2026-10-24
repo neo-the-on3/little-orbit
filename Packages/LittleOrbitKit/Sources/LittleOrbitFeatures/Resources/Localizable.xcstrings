@@ -1483,6 +1483,30 @@
         }
       }
     },
+    "Education": {
+      "comment": "Built-in expense category name.",
+      "extractionState": "manual",
+      "localizations": {
+        "en": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Education"
+          }
+        }
+      }
+    },
+    "Entertainment": {
+      "comment": "Built-in expense category name.",
+      "extractionState": "manual",
+      "localizations": {
+        "en": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Entertainment"
+          }
+        }
+      }
+    },
     "Export": {
       "comment": "The iOS Export sheet’s confirm button; the share sheet follows directly, so no ellipsis.",
       "extractionState": "manual",
@@ -1520,6 +1544,30 @@
         }
       }
     },
+    "Fees & Charges": {
+      "comment": "Built-in expense category name: bank and service fees.",
+      "extractionState": "manual",
+      "localizations": {
+        "en": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Fees & Charges"
+          }
+        }
+      }
+    },
+    "Food & Dining": {
+      "comment": "Built-in expense category name.",
+      "extractionState": "manual",
+      "localizations": {
+        "en": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Food & Dining"
+          }
+        }
+      }
+    },
     "Format %lld": {
       "comment": "A backup's format in the list. %lld is the format version.",
       "extractionState": "manual",
@@ -1540,6 +1588,78 @@
           "stringUnit": {
             "state": "translated",
             "value": "Format unknown"
+          }
+        }
+      }
+    },
+    "Gifts Received": {
+      "comment": "Built-in income category name.",
+      "extractionState": "manual",
+      "localizations": {
+        "en": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Gifts Received"
+          }
+        }
+      }
+    },
+    "Groceries": {
+      "comment": "Built-in expense subcategory name, under Food & Dining.",
+      "extractionState": "manual",
+      "localizations": {
+        "en": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Groceries"
+          }
+        }
+      }
+    },
+    "Health": {
+      "comment": "Built-in expense category name.",
+      "extractionState": "manual",
+      "localizations": {
+        "en": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Health"
+          }
+        }
+      }
+    },
+    "Housing": {
+      "comment": "Built-in expense category name.",
+      "extractionState": "manual",
+      "localizations": {
+        "en": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Housing"
+          }
+        }
+      }
+    },
+    "Insurance": {
+      "comment": "Built-in expense category name.",
+      "extractionState": "manual",
+      "localizations": {
+        "en": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Insurance"
+          }
+        }
+      }
+    },
+    "Interest": {
+      "comment": "Built-in income category name: interest earned.",
+      "extractionState": "manual",
+      "localizations": {
+        "en": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Interest"
           }
         }
       }
@@ -2020,6 +2140,30 @@
         }
       }
     },
+    "Other": {
+      "comment": "Built-in expense category name, for spending that fits no other.",
+      "extractionState": "manual",
+      "localizations": {
+        "en": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Other"
+          }
+        }
+      }
+    },
+    "Other Income": {
+      "comment": "Built-in income category name, for income that fits no other.",
+      "extractionState": "manual",
+      "localizations": {
+        "en": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Other Income"
+          }
+        }
+      }
+    },
     "Payee isn’t applied to transfers": {
       "comment": "Bulk edit: under Payee when the selection includes a transfer.",
       "extractionState": "manual",
@@ -2028,6 +2172,18 @@
           "stringUnit": {
             "state": "translated",
             "value": "Payee isn’t applied to transfers"
+          }
+        }
+      }
+    },
+    "Personal Care": {
+      "comment": "Built-in expense category name.",
+      "extractionState": "manual",
+      "localizations": {
+        "en": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Personal Care"
           }
         }
       }
@@ -2160,6 +2316,30 @@
           "stringUnit": {
             "state": "translated",
             "value": "Restoring Backup"
+          }
+        }
+      }
+    },
+    "Salary": {
+      "comment": "Built-in income category name.",
+      "extractionState": "manual",
+      "localizations": {
+        "en": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Salary"
+          }
+        }
+      }
+    },
+    "Shopping": {
+      "comment": "Built-in expense category name.",
+      "extractionState": "manual",
+      "localizations": {
+        "en": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Shopping"
           }
         }
       }
@@ -2458,6 +2638,30 @@
         }
       }
     },
+    "Transport": {
+      "comment": "Built-in expense category name.",
+      "extractionState": "manual",
+      "localizations": {
+        "en": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Transport"
+          }
+        }
+      }
+    },
+    "Travel": {
+      "comment": "Built-in expense category name.",
+      "extractionState": "manual",
+      "localizations": {
+        "en": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Travel"
+          }
+        }
+      }
+    },
     "Try Again": {
       "comment": "Button under “Couldn’t Load Backups” in the Backups list. Reads the list again (D211.5).",
       "extractionState": "manual",
@@ -2550,6 +2754,18 @@
                 }
               }
             }
+          }
+        }
+      }
+    },
+    "Utilities": {
+      "comment": "Built-in expense category name.",
+      "extractionState": "manual",
+      "localizations": {
+        "en": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Utilities"
           }
         }
       }

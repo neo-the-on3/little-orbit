@@ -26,7 +26,7 @@ struct WindowUndoTitleTests {
         let card = (0..<2).map { F.expense(Decimal($0 + 1), on: F.date(2026, 10, 10 + $0), account: F.cardID) }
         let savings = F.expense(300, on: F.date(2026, 10, 12))
         let repository = try F.repository(card + [savings])
-        let useCases = TransactionUseCases(repository: repository)
+        let useCases = TransactionUseCases(repository: repository, categoryNames: CatalogDefaultCategoryNames())
         let window = TestWindow(useCases)
         window.history.setScreen(.account(F.cardID))
         window.history.record(try useCases.changes.remove(ids: [card[0].id]))

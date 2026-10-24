@@ -54,7 +54,7 @@ struct AccountsUpcomingTests {
             locale: F.india,
         )
         let form = TransactionFormViewModel(
-            useCases: TransactionUseCases(repository: repository),
+            useCases: TransactionUseCases(repository: repository, categoryNames: CatalogDefaultCategoryNames()),
             mode: .new(accountID: F.walletID),
             locale: F.india,
             timeZone: F.zone,
@@ -65,7 +65,10 @@ struct AccountsUpcomingTests {
         let change = try #require(form.save())
         model.load()
         #expect(model.row(id: F.walletID)?.balanceText == "₹950.00")
-        let window = UndoTestSupport.undo(change, useCases: TransactionUseCases(repository: repository))
+        let window = UndoTestSupport.undo(
+            change,
+            useCases: TransactionUseCases(repository: repository, categoryNames: CatalogDefaultCategoryNames()),
+        )
         model.load()
         #expect(window.history.canRedo)
         #expect(model.row(id: F.walletID)?.balanceText == "₹1,000.00")

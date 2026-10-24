@@ -102,7 +102,7 @@ struct RefundUndoStepNameTests {
         try repository.saveCategory(groceries)
         try repository.saveTransaction(expense)
         try repository.saveTransaction(refund)
-        let useCases = TransactionUseCases(repository: repository)
+        let useCases = TransactionUseCases(repository: repository, categoryNames: CatalogDefaultCategoryNames())
         let windowA = TestWindow(useCases)
         windowA.history.record(try useCases.changes.remove(ids: [refund.id]))
 
@@ -123,7 +123,7 @@ struct RefundUndoStepNameTests {
     @Test("S23(d): B moves Trailhead Sports after R1, and A's Undo names Trailhead Sports")
     func refundDeleteNamesExpense() throws {
         let s23 = try fixture(refundAccount: savings)
-        let useCases = TransactionUseCases(repository: s23.repository)
+        let useCases = TransactionUseCases(repository: s23.repository, categoryNames: CatalogDefaultCategoryNames())
         let windowA = TestWindow(useCases)
         windowA.history.record(try useCases.changes.remove(ids: [s23.refund.id]))
 
@@ -142,7 +142,7 @@ struct RefundUndoStepNameTests {
     @Test("S23(d) on an account delete: A's Undo names Trailhead Sports, not the deleted account")
     func accountDeleteNamesExpense() throws {
         let s23 = try fixture(refundAccount: cash)
-        let useCases = TransactionUseCases(repository: s23.repository)
+        let useCases = TransactionUseCases(repository: s23.repository, categoryNames: CatalogDefaultCategoryNames())
         let windowA = TestWindow(useCases)
         windowA.history.record(
             .removedAccount(try AccountUseCases(repository: s23.repository).deleteAccount.delete(cash.id))
@@ -160,7 +160,7 @@ struct RefundUndoStepNameTests {
     @Test("D228.4: an account delete's Undo never names the account for a changed, unnamed expense")
     func accountDeleteNeverNamesAccount() throws {
         let s23 = try fixture(refundAccount: cash, named: false)
-        let useCases = TransactionUseCases(repository: s23.repository)
+        let useCases = TransactionUseCases(repository: s23.repository, categoryNames: CatalogDefaultCategoryNames())
         let windowA = TestWindow(useCases)
         windowA.history.record(
             .removedAccount(try AccountUseCases(repository: s23.repository).deleteAccount.delete(cash.id))
@@ -178,7 +178,7 @@ struct RefundUndoStepNameTests {
     @Test("S23(d) with an unnamed expense: A's Undo reads “The transaction has changed since then.”")
     func unnamedExpense() throws {
         let s23 = try fixture(refundAccount: savings, named: false)
-        let useCases = TransactionUseCases(repository: s23.repository)
+        let useCases = TransactionUseCases(repository: s23.repository, categoryNames: CatalogDefaultCategoryNames())
         let windowA = TestWindow(useCases)
         windowA.history.record(try useCases.changes.remove(ids: [s23.refund.id]))
 

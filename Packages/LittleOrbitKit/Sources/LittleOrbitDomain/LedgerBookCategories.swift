@@ -54,9 +54,14 @@ extension LedgerBook {
         return snapshot
     }
 
-    public static func seedDefaultCategories(in snapshot: LedgerSnapshot, now: Date) -> LedgerSnapshot {
+    /// Adds the built-in categories that aren't there yet, named by `names` (D8).
+    public static func seedDefaultCategories(
+        names: any DefaultCategoryNaming,
+        in snapshot: LedgerSnapshot,
+        now: Date,
+    ) -> LedgerSnapshot {
         var snapshot = snapshot
-        for category in DefaultCategories.make(now: now) {
+        for category in DefaultCategories.make(names: names, now: now) {
             if snapshot.categories.contains(where: { $0.id == category.id }) {
                 continue
             }

@@ -93,7 +93,7 @@ struct TransactionDraftTests {
 
     @Test("Switching to Income clears an expense category; a refund keeps it (S37, S50)")
     func categoryOnTypeChange() {
-        let categories = DefaultCategories.make()
+        let categories = DefaultCategories.make(names: TestCategoryNames())
         #expect(
             TransactionTypeRules.category(
                 DefaultCategoryID.food,

@@ -334,19 +334,20 @@ private func assertDeletedRecordsAreHiddenFromQueries(make: MakeRepository) thro
 @MainActor
 private func assertSeedCategoriesAreIdempotent(make: MakeRepository) throws {
     let repository = try make()
-    try repository.seedDefaultCategories()
-    try repository.seedDefaultCategories()
+    let names = TestCategoryNames()
+    try repository.seedDefaultCategories(names: names)
+    try repository.seedDefaultCategories(names: names)
     let categories = try repository.categories()
-    XCTAssertEqual(categories.count, DefaultCategories.make().count)
+    XCTAssertEqual(categories.count, DefaultCategories.make(names: names).count)
     XCTAssertEqual(categories.filter { $0.id == DefaultCategoryID.food }.count, 1)
-    XCTAssertEqual(categories.first { $0.id == DefaultCategoryID.food }?.name, "Food & Dining")
+    XCTAssertEqual(categories.first { $0.id == DefaultCategoryID.food }?.name, names.name(of: .food))
     XCTAssertEqual(
         categories.first { $0.id == DefaultCategoryID.groceries }?.parentID,
         DefaultCategoryID.food,
     )
     let insurance = categories.filter { $0.id == DefaultCategoryID.insurance }
     XCTAssertEqual(insurance.count, 1)
-    XCTAssertEqual(insurance.first?.name, "Insurance")
+    XCTAssertEqual(insurance.first?.name, names.name(of: .insurance))
     XCTAssertEqual(insurance.first?.kind, .expense)
     XCTAssertNil(insurance.first?.parentID)
     XCTAssertFalse(categories.contains { $0.name == "Uncategorised" || $0.name == "Transfer" })
