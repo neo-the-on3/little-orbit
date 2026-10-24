@@ -57,6 +57,7 @@ import SwiftUI
         let accounts: AccountsFeature
         let transactions: TransactionsFeature
         let backups: BackupsViewModel
+        let categories: CategoriesFeature
 
         init(repository: some LedgerRepository & LedgerBackupSource, backupStorage: any BackupStorage) {
             let transactionUseCases = TransactionUseCases(
@@ -79,6 +80,16 @@ import SwiftUI
             // Account delete returns its change; the screens record it in the transactions' history (#93).
             accounts = AccountsFeature(useCases: AccountUseCases(repository: repository), ledgerChanges: changes)
             backups = AppComposition.makeBackups(source: repository, storage: backupStorage, changes: changes)
+            // Settings › Categories (#24): the category use cases, and the editor's reads and saves.
+            let editing = DefaultCategoryEditingUseCase(repository: repository)
+            categories = CategoriesFeature(
+                useCases: CategoryScreenUseCases(
+                    load: editing,
+                    edit: editing,
+                    categories: CategoryUseCases(repository: repository),
+                ),
+                updates: transactions.updates,
+            )
         }
     }
 
@@ -91,6 +102,8 @@ import SwiftUI
         @Environment(\.scenePhase) private var scenePhase
         #if os(iOS)
             @State private var isShowingSettings = false
+            /// The undo history of the window Settings was opened from (D287.4).
+            @State private var settingsUndoHistory: WindowUndoHistory?
         #endif
 
         var body: some View {
@@ -123,10 +136,17 @@ import SwiftUI
                 AccountsHomeView(
                     feature: features.accounts,
                     transactions: features.transactions,
-                    onShowSettings: { isShowingSettings = true },
+                    onShowSettings: { history in
+                        settingsUndoHistory = history
+                        isShowingSettings = true
+                    },
                 )
                 .sheet(isPresented: $isShowingSettings) {
-                    SettingsView(backups: features.backups)
+                    SettingsView(
+                        backups: features.backups,
+                        categories: features.categories,
+                        onCategoryRemoval: { settingsUndoHistory?.clearAfterRemoval() },
+                    )
                 }
             #endif
         }
