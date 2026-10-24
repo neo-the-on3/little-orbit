@@ -8,7 +8,8 @@
         /// the sheet and asks “Discard Changes?” at the top centre instead. Discard Changes calls `onDiscard`, which
         /// closes the sheet; Keep Editing leaves the edits as they are. SwiftUI has no hook for a swipe attempt, so
         /// a small UIKit bridge reports it. The Cancel button gets its own dialog with
-        /// `discardsChangesFromCancel(confirmation:onDiscard:)`.
+        /// `discardsChangesFromCancel(confirmation:onDiscard:)`. Use it once per sheet, on the sheet's root view:
+        /// one discard bridge per sheet.
         func confirmsDiscardingChanges(
             isDirty: Bool,
             confirmation: Binding<DiscardConfirmation>,
@@ -51,7 +52,7 @@
     /// controller for a presentation controller: that controller isn't presented, so UIKit would make a new
     /// one for it that no swipe ever reaches. SwiftUI can set its own delegate again after ours, for example when
     /// `interactiveDismissDisabled` changes, so the bridge installs again as the view appears and lays out, on
-    /// every update, and once more on the next main-queue turn, after SwiftUI's own update.
+    /// every update, and once more on the next main-queue turn, after SwiftUI's own update. One bridge per sheet.
     private struct DismissAttemptObserver: UIViewControllerRepresentable {
         let isDirty: Bool
         let onAttempt: (_ isDirty: Bool) -> Void
