@@ -225,15 +225,21 @@ extension LedgerBook {
         if childOfOtherKind {
             throw LedgerValidationError.categoryKindMismatch
         }
+        if categoryNameIsTaken(by: category, in: snapshot.categories) {
+            throw LedgerValidationError.duplicateCategoryName
+        }
+    }
+
+    /// Whether another live category at `category`'s level has its name, trimmed and ignoring case, archived
+    /// ones included: a top-level category of the same kind, or a subcategory of the same parent (D299, #11).
+    static func categoryNameIsTaken(by category: TransactionCategory, in categories: [TransactionCategory]) -> Bool {
         let key = LedgerText.nameKey(category.name)
-        let duplicate = snapshot.categories.contains { other in
+        return categories.contains { other in
             other.id != category.id
                 && other.deletedAt == nil
                 && other.parentID == category.parentID
+                && (category.parentID != nil || other.kind == category.kind)
                 && LedgerText.nameKey(other.name) == key
-        }
-        if duplicate {
-            throw LedgerValidationError.duplicateCategoryName
         }
     }
 

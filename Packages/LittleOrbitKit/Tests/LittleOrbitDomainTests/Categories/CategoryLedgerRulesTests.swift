@@ -248,6 +248,82 @@ struct CategoryLedgerRulesTests {
         #expect(category(movies.id, in: saved)?.name == "Cinema")
     }
 
+    // MARK: - Names (D299)
+
+    @Test("D299: an income Gifts saves next to an expense Gifts, archived or not")
+    func topLevelNameIsUniqueWithinItsKind() throws {
+        let gifts = TransactionCategory(name: "Gifts", kind: .expense, sortOrder: 3)
+        var archivedGifts = gifts
+        archivedGifts.isArchived = true
+        let incomeGifts = TransactionCategory(name: " gifts ", kind: .income, sortOrder: 1)
+        for expenseGifts in [gifts, archivedGifts] {
+            let snapshot = LedgerSnapshot(categories: [food, expenseGifts, salary])
+            let saved = try LedgerBook.savingCategory(incomeGifts, in: snapshot, now: now)
+            #expect(category(incomeGifts.id, in: saved)?.name == "gifts")
+            #expect(category(incomeGifts.id, in: saved)?.kind == .income)
+            #expect(saved.categories.count == 4)
+        }
+    }
+
+    @Test("D299: a top-level name taken in the same kind is refused, ignoring case and outer spaces, archived too")
+    func topLevelNameTakenInTheSameKind() {
+        var archivedSalary = salary
+        archivedSalary.isArchived = true
+        for existing in [salary, archivedSalary] {
+            let snapshot = LedgerSnapshot(categories: [food, existing])
+            #expect(throws: LedgerValidationError.duplicateCategoryName) {
+                try LedgerBook.savingCategory(
+                    TransactionCategory(name: "  SALARY ", kind: .income),
+                    in: snapshot,
+                    now: now,
+                )
+            }
+            #expect(throws: LedgerValidationError.duplicateCategoryName) {
+                try LedgerBook.savingCategory(
+                    TransactionCategory(name: "food", kind: .expense),
+                    in: snapshot,
+                    now: now,
+                )
+            }
+        }
+    }
+
+    @Test("D299: a top-level category can change kind onto a name only the other kind has, not one its new kind has")
+    func kindChangeChecksTheNewKind() throws {
+        let incomeFood = TransactionCategory(name: "Food", kind: .income, sortOrder: 1)
+        let bonus = TransactionCategory(name: "Bonus", kind: .expense, sortOrder: 3)
+        let snapshot = LedgerSnapshot(categories: [food, leisure, incomeFood, bonus])
+        var foodAsIncome = food
+        foodAsIncome.kind = .income
+        #expect(throws: LedgerValidationError.duplicateCategoryName) {
+            try LedgerBook.savingCategory(foodAsIncome, in: snapshot, now: now)
+        }
+        var bonusAsIncome = bonus
+        bonusAsIncome.kind = .income
+        let saved = try LedgerBook.savingCategory(bonusAsIncome, in: snapshot, now: now)
+        #expect(category(bonus.id, in: saved)?.kind == .income)
+    }
+
+    @Test("D299: subcategory names stay unique under their parent only, archived ones included")
+    func subcategoryNamesStayUniqueUnderTheirParent() throws {
+        var movies = child("Movies", of: leisure)
+        movies.isArchived = true
+        let snapshot = LedgerSnapshot(categories: [food, leisure, entertainment, salary, movies])
+        #expect(throws: LedgerValidationError.duplicateCategoryName) {
+            try LedgerBook.savingCategory(child(" movies", of: leisure, order: 1), in: snapshot, now: now)
+        }
+        let otherParent = try LedgerBook.savingCategory(child("Movies", of: entertainment), in: snapshot, now: now)
+        #expect(otherParent.categories.count == 6)
+        let topLevelName = try LedgerBook.savingCategory(child("Food", of: leisure, order: 1), in: snapshot, now: now)
+        #expect(topLevelName.categories.count == 6)
+        let otherKindName = try LedgerBook.savingCategory(
+            child("Salary", of: leisure, order: 1),
+            in: snapshot,
+            now: now,
+        )
+        #expect(otherKindName.categories.count == 6)
+    }
+
     // MARK: - Payee merge
 
     @Test("Merged payees: the survivor keeps the category used most recently by either")

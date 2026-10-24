@@ -204,6 +204,9 @@ private func assertCategoryNestingIsOneLevel(make: MakeRepository) throws {
         XCTAssertEqual(error as? LedgerValidationError, .duplicateCategoryName)
     }
     XCTAssertEqual(try repository.categories().count, 2)
+    // D299: top-level names are unique within their kind, so an income Food saves beside the expense one.
+    try repository.saveCategory(TransactionCategory(name: "food", kind: .income))
+    XCTAssertEqual(try repository.categories().count, 3)
 }
 
 @MainActor
