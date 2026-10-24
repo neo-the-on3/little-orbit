@@ -5,14 +5,16 @@
 
     /// The category and subcategory editor (#24 design, Edit Subcategory): the chip, the name, then Kind,
     /// Parent (a subcategory only, D287.1), Icon and Colour, and for an existing category Merge into… and
-    /// Delete…. Adding and editing both show it in a sheet with Cancel and Save; a swipe down can't close it
-    /// while it has unsaved edits. A name error shows under the name field (D295.4).
+    /// Delete…. Adding and editing both show it in a sheet with Cancel and Save. With nothing entered or changed,
+    /// Cancel closes it; otherwise Cancel, or a swipe down, asks “Discard Changes?” first (D300.1 and its
+    /// amendment). A name error shows under the name field (D295.4).
     struct CategoryEditorView: View {
         @State private var model: CategoryEditorViewModel
         private let screen: CategoriesViewModel
         @State private var choice: CategoryTargetChoice?
         /// Set when the category was merged or deleted, so the editor closes once its sheet has.
         @State private var isRemoved = false
+        @State private var discard = DiscardConfirmation()
         @Environment(\.dismiss) private var dismiss
 
         init(model: CategoryEditorViewModel, screen: CategoriesViewModel) {
@@ -77,12 +79,17 @@
                     }
                 }
             }
-            .interactiveDismissDisabled(model.hasUnsavedEdits)
+            .confirmsDiscardingChanges(isDirty: model.hasUnsavedEdits, confirmation: $discard) { dismiss() }
             .navigationTitle(model.title)
             .navigationBarTitleDisplayMode(.inline)
             .toolbar {
                 ToolbarItem(placement: .cancellationAction) {
-                    Button(CategoryText.cancel) { dismiss() }
+                    Button(CategoryText.cancel) {
+                        if discard.requestDismiss(isDirty: model.hasUnsavedEdits, from: .cancel) {
+                            dismiss()
+                        }
+                    }
+                    .discardsChangesFromCancel(confirmation: $discard) { dismiss() }
                 }
                 ToolbarItem(placement: .confirmationAction) {
                     Button(CategoryText.save) {
