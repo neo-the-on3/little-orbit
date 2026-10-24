@@ -11,6 +11,9 @@
         private let now: @MainActor () -> Date
         /// While `atomically` runs, reads and writes use this snapshot, and one save at the end stores it.
         private var batch: LedgerSnapshot?
+        /// See `LedgerRepository.isNewStore` (D291.7). `LittleOrbitStore.makeRepository` says whether its open
+        /// created the store file; the first successful save clears it.
+        public private(set) var isNewStore = false
 
         public init(context: ModelContext, now: @escaping @MainActor () -> Date = { Date() }) {
             self.container = context.container
@@ -18,10 +21,15 @@
             self.now = now
         }
 
-        public init(container: ModelContainer, now: @escaping @MainActor () -> Date = { Date() }) {
+        public init(
+            container: ModelContainer,
+            now: @escaping @MainActor () -> Date = { Date() },
+            isNewStore: Bool = false,
+        ) {
             self.container = container
             self.context = container.mainContext
             self.now = now
+            self.isNewStore = isNewStore
         }
 
         public func accounts() throws -> [Account] {
@@ -224,6 +232,7 @@
             do {
                 try apply(snapshot, attachmentBytes: attachmentBytes)
                 try context.save()
+                isNewStore = false
             } catch {
                 context.rollback()
                 throw error

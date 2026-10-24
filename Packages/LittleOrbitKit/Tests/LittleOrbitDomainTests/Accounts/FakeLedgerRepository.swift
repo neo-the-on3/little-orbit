@@ -11,7 +11,11 @@ final class FakeLedgerRepository: LedgerRepository {
     struct ReadFailure: Error {}
     struct WriteFailure: Error {}
 
-    private(set) var snapshot = LedgerSnapshot()
+    private(set) var snapshot = LedgerSnapshot() {
+        didSet { isNewStore = false }
+    }
+    /// New until the first write, like `InMemoryLedgerRepository` (D291.7).
+    private(set) var isNewStore = true
     private(set) var savedAccountIDs: [UUID] = []
     var failsReads = false
     /// When set, transaction, split, attachment, category and payee-merge writes after this many fail.

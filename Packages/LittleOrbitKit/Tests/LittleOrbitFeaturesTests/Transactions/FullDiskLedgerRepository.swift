@@ -13,6 +13,8 @@ final class FullDiskLedgerRepository: LedgerRepository {
         self.base = base
     }
 
+    var isNewStore: Bool { base.isNewStore }
+
     private func write() throws {
         if isFull {
             throw CocoaError(.fileWriteOutOfSpace)

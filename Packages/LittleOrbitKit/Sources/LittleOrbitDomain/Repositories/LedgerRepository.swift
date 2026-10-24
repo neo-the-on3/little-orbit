@@ -23,8 +23,14 @@ public protocol LedgerRepository: AnyObject {
     func archiveCategory(id: UUID, archived: Bool) throws
     /// See `LedgerBook.reorderingCategories(_:in:now:)`.
     func reorderCategories(_ orderedIDs: [UUID]) throws
-    /// Adds the built-in categories that aren't there yet, with the names `names` gives (D8).
+    /// Adds the built-in categories that aren't there yet, with the names `names` gives (D8). Only
+    /// `SeedDefaultCategoriesUseCase` calls it, once per store (D291.7).
     func seedDefaultCategories(names: any DefaultCategoryNaming) throws
+    /// Whether this store was created on this launch and nothing has been written to it yet (D291.7). The
+    /// SwiftData store is new when its file didn't exist before the container opened it; an in-memory store
+    /// starts new. Any successful write, a restore included, makes it not new for the rest of the launch, and a
+    /// store reopened on a later launch is never new. Nothing is stored for it, so there's no schema change.
+    var isNewStore: Bool { get }
 
     func payees() throws -> [Payee]
     func savePayee(_ payee: Payee) throws

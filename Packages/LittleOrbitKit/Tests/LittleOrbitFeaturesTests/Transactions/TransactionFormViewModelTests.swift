@@ -419,12 +419,13 @@ struct TransactionFormViewModelTests {
         #expect(model.accountName == "Corner Wallet")
     }
 
-    @Test("Categories are seeded if the store has none")
+    @Test("Opening the form never seeds categories: that happens once at launch (D291.7)")
     func seeding() throws {
         let repository = InMemoryLedgerRepository(now: { F.now })
         try repository.saveAccount(F.accounts()[0])
         let model = model(repository)
-        #expect(!model.categoryOptions.isEmpty)
+        #expect(model.categoryOptions.isEmpty)
+        #expect(try repository.categories().isEmpty)
     }
 
     private func dec(_ text: String) -> Decimal {

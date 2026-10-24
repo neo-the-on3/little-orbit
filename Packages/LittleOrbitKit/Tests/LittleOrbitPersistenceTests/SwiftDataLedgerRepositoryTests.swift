@@ -141,6 +141,33 @@
             )
         }
 
+        /// D291.7: only a store whose file this open created is new. Deleting every category, then relaunching
+        /// on the same file, seeds nothing.
+        func testDefaultsAreSeededOnlyWhenTheStoreFileIsNew() throws {
+            let directory = FileManager.default.temporaryDirectory
+                .appendingPathComponent("little-orbit-\(UUID().uuidString)", isDirectory: true)
+            try FileManager.default.createDirectory(at: directory, withIntermediateDirectories: true)
+            defer { try? FileManager.default.removeItem(at: directory) }
+            let configuration = StoreConfiguration(fileURL: directory.appendingPathComponent("ledger.store"))
+            try onMain {
+                let repository = try LittleOrbitStore.makeRepository(configuration: configuration)
+                XCTAssertTrue(repository.isNewStore)
+                let seeding = DefaultSeedDefaultCategoriesUseCase(repository: repository, names: TestCategoryNames())
+                XCTAssertTrue(try seeding.seedIfFirstLaunch())
+                XCTAssertEqual(try repository.categories().count, 18)
+                for category in try repository.categories() where category.parentID == nil {
+                    try repository.deleteCategory(id: category.id, reassigningTo: nil)
+                }
+            }
+            try onMain {
+                let relaunched = try LittleOrbitStore.makeRepository(configuration: configuration)
+                XCTAssertFalse(relaunched.isNewStore)
+                let seeding = DefaultSeedDefaultCategoriesUseCase(repository: relaunched, names: TestCategoryNames())
+                XCTAssertFalse(try seeding.seedIfFirstLaunch())
+                XCTAssertTrue(try relaunched.categories().isEmpty)
+            }
+        }
+
         private func indexDefinitions(in url: URL) throws -> [String] {
             var database: OpaquePointer?
             defer { sqlite3_close(database) }
