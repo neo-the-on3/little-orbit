@@ -298,7 +298,7 @@
                 Button {
                     model.choosePayee(suggestion)
                 } label: {
-                    suggestionLabel(suggestion)
+                    TransactionSuggestionLabel(suggestion: suggestion)
                 }
                 .buttonStyle(.plain)
             }
@@ -323,7 +323,7 @@
                 Button {
                     model.chooseDescription(suggestion)
                 } label: {
-                    suggestionLabel(suggestion)
+                    TransactionSuggestionLabel(suggestion: suggestion)
                 }
                 .buttonStyle(.plain)
             }
@@ -336,23 +336,6 @@
                     .font(.theme(Self.footnoteStyle))
                     .foregroundStyle(Color(ThemeColor.labelSecondary))
             }
-        }
-
-        private func suggestionLabel(_ suggestion: TransactionSuggestion) -> some View {
-            HStack {
-                Image(systemName: "clock.arrow.circlepath")
-                    .foregroundStyle(Color(ThemeColor.labelSecondary))
-                    .accessibilityHidden(true)
-                Text(suggestion.text)
-                    .foregroundStyle(Color(ThemeColor.labelPrimary))
-                Spacer()
-                Text(TransactionFormViewModel.usageText(suggestion))
-                    .font(.theme(Self.footnoteStyle))
-                    .foregroundStyle(Color(ThemeColor.labelSecondary))
-            }
-            .contentShape(Rectangle())
-            .accessibilityElement(children: .combine)
-            .accessibilityHint("Uses this suggestion")
         }
 
         @ViewBuilder private var messages: some View {
