@@ -39,6 +39,16 @@ enum CategoryPickerText {
         )
     }
 
+    /// Under the Create row when an archived category already has the typed name (D303), quoting its stored
+    /// name.
+    static func archivedName(_ name: String) -> String {
+        FeatureText.string(
+            "There’s an archived category named “\(name)”. Unarchive it in Categories to use it.",
+            comment:
+                "Transaction form category picker, under the Create row: an archived top-level category of the same kind has the typed name, ignoring case and spaces, so it can’t be created. %@ is the archived category’s name as stored.",
+        )
+    }
+
     /// “Expense category”, beside the Create row: the kind the new category takes from the transaction.
     static func newKind(_ kind: CategoryKind) -> String {
         switch kind {

@@ -193,28 +193,87 @@ struct CategoryPickerViewModelTests {
         #expect(try setup.repository.categories().first { $0.name == "Freelance" }?.kind == .income)
     }
 
-    @Test("A name the ledger refuses shows “Couldn’t Save Changes” with why, and adds nothing")
+    @Test("A name that’s too long shows “Couldn’t Save Changes” with why, and adds nothing")
     func createRefused() throws {
         let setup = try Setup()
-        let pets = try CategoryUseCases(repository: setup.repository).saveCategory
-            .add(
-                named: "Pet care",
-                kind: .expense,
-                parentID: nil,
-            )
-        try setup.repository.archiveCategory(id: pets.id, archived: true)
         let picker = setup.picker()
-        picker.query = "pet care"
-        #expect(picker.createName == "pet care", "The archived one isn’t shown, so Create is offered")
         let before = try setup.repository.categories().count
+        picker.query = String(repeating: "a", count: 101)
+        #expect(picker.createError == nil)
         #expect(!picker.create())
         #expect(picker.alert?.title == "Couldn’t Save Changes")
-        #expect(picker.alert?.message == "There’s already a category named “pet care” here.")
+        #expect(picker.alert?.message == "Use 100 characters or fewer.")
         #expect(try setup.repository.categories().count == before)
         #expect(setup.changes == 0)
-        picker.query = String(repeating: "a", count: 101)
+    }
+
+    // MARK: Archived names (D303)
+
+    private func archive(
+        _ name: String,
+        kind: CategoryKind = .expense,
+        under parentID: UUID? = nil,
+        in setup: Setup,
+    ) throws {
+        let category = try CategoryUseCases(repository: setup.repository).saveCategory
+            .add(named: name, kind: kind, parentID: parentID)
+        try setup.repository.archiveCategory(id: category.id, archived: true)
+    }
+
+    @Test("An archived category’s name, trimmed and in any case, is refused inline, quoting its stored name (D303)")
+    func archivedNameRefused() throws {
+        let setup = try Setup()
+        try archive("Pet care", in: setup)
+        let picker = setup.picker()
+        #expect(picker.createError == nil, "Nothing typed, nothing said (D151)")
+        picker.query = "  pet CARE "
+        #expect(picker.createTitle == "Create “pet CARE”", "The archived one isn’t listed, so the row shows")
+        #expect(
+            picker.createError
+                == "There’s an archived category named “Pet care”. Unarchive it in Categories to use it."
+        )
+        let before = try setup.repository.categories().count
+        let reads = setup.load.reads
         #expect(!picker.create())
-        #expect(picker.alert?.message == "Use 100 characters or fewer.")
+        #expect(picker.alert == nil, "Said inline, not in an alert")
+        #expect(try setup.repository.categories().count == before)
+        #expect(setup.load.reads == reads, "Refusing reads nothing")
+        #expect(setup.changes == 0)
+        #expect(picker.query == "  pet CARE ", "The typed name stays to edit")
+        picker.query = "Pet care 2"
+        #expect(picker.createError == nil, "Editing the name clears it")
+        #expect(picker.create())
+    }
+
+    @Test("Only archived top-level names of the same kind count: other kinds and subcategories don’t (D299 scope)")
+    func archivedNameScope() throws {
+        let setup = try Setup()
+        try archive("Pet care", kind: .income, in: setup)
+        try archive("Vet", under: food, in: setup)
+        let picker = setup.picker()
+        picker.query = "pet care"
+        // Creating it still meets the ledger's cross-kind name check, the known D299 follow-up, so only the
+        // inline error is checked here.
+        #expect(picker.createError == nil, "An archived income category doesn’t block an expense one")
+        picker.query = "vet"
+        #expect(picker.createError == nil, "An archived subcategory’s name is only taken under its parent")
+        #expect(picker.create())
+        let expenseTops = try setup.repository.categories()
+            .filter { $0.kind == .expense && $0.parentID == nil && !$0.isArchived }
+            .map(\.name)
+        #expect(expenseTops.contains("vet"))
+    }
+
+    @Test("On an income, an archived income category’s name is refused")
+    func archivedIncomeName() throws {
+        let setup = try Setup()
+        try archive("Tips", kind: .income, in: setup)
+        let picker = setup.picker(.income)
+        picker.query = "tips"
+        #expect(
+            picker.createError == "There’s an archived category named “Tips”. Unarchive it in Categories to use it."
+        )
+        #expect(!picker.create())
     }
 
     @Test("A list that can’t be read shows “Couldn’t Load Categories” / “Try again.” (D299)")
