@@ -112,8 +112,19 @@ extension LedgerBook {
             snapshot.transactions[index].payeeID = survivingID
             snapshot.transactions[index].updatedAt = now
         }
-        // The survivor pre-selects the category the merged payees used most recently (#24 QA): the source's
-        // when it was used later, otherwise the survivor's own, falling back to whichever one has a default.
+        surviving = mergedPayee(source, into: surviving)
+        surviving.updatedAt = now
+        replace(&snapshot.payees, with: surviving)
+        snapshot.payees.removeAll { $0.id == sourceID }
+        return snapshot
+    }
+
+    /// The survivor of a payee merge, before it's saved. It pre-selects the category the merged payees used most
+    /// recently (#24 QA, D291.5): the source's when it was used later, otherwise the survivor's own, falling back
+    /// to whichever one has a default. It keeps the later of the two last-used dates. The Merge Payees sheet
+    /// shows the kept category with this same rule.
+    public static func mergedPayee(_ source: Payee, into surviving: Payee) -> Payee {
+        var surviving = surviving
         let sourceUsedLater =
             source.lastUsedAt.map { sourceLast in
                 surviving.lastUsedAt.map { sourceLast > $0 } ?? true
@@ -130,10 +141,7 @@ extension LedgerBook {
                 surviving.lastUsedAt = sourceLast
             }
         }
-        surviving.updatedAt = now
-        replace(&snapshot.payees, with: surviving)
-        snapshot.payees.removeAll { $0.id == sourceID }
-        return snapshot
+        return surviving
     }
 
     public static func savingTag(_ tag: Tag, in snapshot: LedgerSnapshot, now: Date) throws -> LedgerSnapshot {
