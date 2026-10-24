@@ -26,12 +26,21 @@ struct CatalogDefaultCategoryNamesTests {
         }
     }
 
-    @Test("Every built-in category name is a String Catalog entry with its English value")
+    @Test("Every built-in category name is its own category.seed key with its English value, no bare English key")
     func catalogEntries() throws {
         let entries = try StringCatalogTests.entries()
+        let keys: [DefaultCategory: String] = [
+            .food: "food", .groceries: "groceries", .transport: "transport", .housing: "housing",
+            .utilities: "utilities", .health: "health", .insurance: "insurance", .shopping: "shopping",
+            .entertainment: "entertainment", .personal: "personalCare", .education: "education",
+            .travel: "travel", .fees: "fees", .otherExpense: "otherExpense", .salary: "salary",
+            .interest: "interest", .gifts: "giftsReceived", .otherIncome: "otherIncome",
+        ]
         for category in DefaultCategory.allCases {
-            let key = try #require(english[category])
-            #expect(entries[key] == [key], "\(key) is missing from the catalog")
+            let name = try #require(english[category])
+            let key = "category.seed.\(try #require(keys[category]))"
+            #expect(entries[key] == [name], "\(key) is missing from the catalog")
+            #expect(entries[name] == nil, "\(name) is still a bare key")
         }
     }
 

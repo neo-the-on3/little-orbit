@@ -112,6 +112,9 @@ public enum DefaultCategories {
         var sortOrder: Double
     }
 
+    /// The symbols are the approved PR #51 set (D292). Seeding never rewrites a stored category, so changing one
+    /// here only affects new stores.
+    ///
     /// `sortOrder` of existing rows stays put. Insurance uses 4.5 so it sits
     /// after Health without renumbering categories that already shipped in the catalogue.
     private static let seeds: [Seed] = [
@@ -126,70 +129,70 @@ public enum DefaultCategories {
             category: .groceries,
             kind: .expense,
             parentID: DefaultCategoryID.food,
-            iconName: "basket",
+            iconName: "cart.fill",
             sortOrder: 0,
         ),
         Seed(
             category: .transport,
             kind: .expense,
             parentID: nil,
-            iconName: "car",
+            iconName: "car.fill",
             sortOrder: 1,
         ),
         Seed(
             category: .housing,
             kind: .expense,
             parentID: nil,
-            iconName: "house",
+            iconName: "house.fill",
             sortOrder: 2,
         ),
         Seed(
             category: .utilities,
             kind: .expense,
             parentID: nil,
-            iconName: "bolt",
+            iconName: "bolt.fill",
             sortOrder: 3,
         ),
         Seed(
             category: .health,
             kind: .expense,
             parentID: nil,
-            iconName: "heart",
+            iconName: "cross.case.fill",
             sortOrder: 4,
         ),
         Seed(
             category: .insurance,
             kind: .expense,
             parentID: nil,
-            iconName: "shield",
+            iconName: "umbrella.fill",
             sortOrder: 4.5,
         ),
         Seed(
             category: .shopping,
             kind: .expense,
             parentID: nil,
-            iconName: "bag",
+            iconName: "bag.fill",
             sortOrder: 5,
         ),
         Seed(
             category: .entertainment,
             kind: .expense,
             parentID: nil,
-            iconName: "tv",
+            iconName: "popcorn.fill",
             sortOrder: 6,
         ),
         Seed(
             category: .personal,
             kind: .expense,
             parentID: nil,
-            iconName: "person",
+            iconName: "person.fill",
             sortOrder: 7,
         ),
         Seed(
             category: .education,
             kind: .expense,
             parentID: nil,
-            iconName: "book",
+            iconName: "graduationcap.fill",
             sortOrder: 8,
         ),
         Seed(
@@ -203,42 +206,42 @@ public enum DefaultCategories {
             category: .fees,
             kind: .expense,
             parentID: nil,
-            iconName: "percent",
+            iconName: "doc.text.fill",
             sortOrder: 10,
         ),
         Seed(
             category: .otherExpense,
             kind: .expense,
             parentID: nil,
-            iconName: "square.grid.2x2",
+            iconName: "ellipsis.circle.fill",
             sortOrder: 11,
         ),
         Seed(
             category: .salary,
             kind: .income,
             parentID: nil,
-            iconName: "banknote",
+            iconName: "briefcase.fill",
             sortOrder: 0,
         ),
         Seed(
             category: .interest,
             kind: .income,
             parentID: nil,
-            iconName: "chart.line.uptrend.xyaxis",
+            iconName: "percent",
             sortOrder: 1,
         ),
         Seed(
             category: .gifts,
             kind: .income,
             parentID: nil,
-            iconName: "gift",
+            iconName: "gift.fill",
             sortOrder: 2,
         ),
         Seed(
             category: .otherIncome,
             kind: .income,
             parentID: nil,
-            iconName: "plus.circle",
+            iconName: "plus.circle.fill",
             sortOrder: 3,
         ),
     ]
