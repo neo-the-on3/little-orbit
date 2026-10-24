@@ -1,4 +1,5 @@
 #if canImport(SwiftUI) && canImport(UIKit) && os(iOS)
+    import OSLog
     import SwiftUI
     import UIKit
 
@@ -43,9 +44,14 @@
 
     /// Reports a swipe down that the sheet refused (UIAdaptivePresentationControllerDelegate's
     /// presentationControllerDidAttemptToDismiss). It wraps the sheet's existing delegate and passes everything
-    /// else on to it, so SwiftUI's own handling is unchanged. SwiftUI can set its own delegate again after ours,
-    /// for example when `interactiveDismissDisabled` changes, so the bridge installs again as the view appears and
-    /// lays out, on every update, and once more on the next main-queue turn, after SwiftUI's own update.
+    /// else on to it, so SwiftUI's own handling is unchanged.
+    ///
+    /// It installs on the presentation controller of the sheet's presented root controller, found through the
+    /// bridge's parents or, if those don't lead to it, the view's responder chain. It never asks its own
+    /// controller for a presentation controller: that controller isn't presented, so UIKit would make a new
+    /// one for it that no swipe ever reaches. SwiftUI can set its own delegate again after ours, for example when
+    /// `interactiveDismissDisabled` changes, so the bridge installs again as the view appears and lays out, on
+    /// every update, and once more on the next main-queue turn, after SwiftUI's own update.
     private struct DismissAttemptObserver: UIViewControllerRepresentable {
         let isDirty: Bool
         let onAttempt: (_ isDirty: Bool) -> Void
@@ -83,11 +89,17 @@
                 install()
             }
 
-            /// Makes our proxy the sheet's presentation delegate if it isn't already. It never wraps a proxy,
-            /// ours or another bridge's, so the delegate chain can't grow or loop.
+            /// Makes our proxy the sheet's presentation delegate if it isn't already, and keeps the sheet's
+            /// root modal while there are unsaved edits, since UIKit reports a refused swipe only then. It never
+            /// wraps a proxy, ours or another bridge's, so the delegate chain can't grow or loop.
             func install() {
-                guard let presentation = presentationController else {
+                guard let root = sheetRoot(), let presentation = root.presentationController else {
                     return
+                }
+                // SwiftUI's interactiveDismissDisabled should already set this on the same controller; setting it
+                // here too makes sure the controller UIKit checks is the one this bridge listens on.
+                if root.isModalInPresentation != relay.isDirty {
+                    root.isModalInPresentation = relay.isDirty
                 }
                 let current = presentation.delegate
                 let step = DismissAttemptInstall.step(
@@ -103,11 +115,46 @@
                     }
                     other.relay = relay
                     proxy = other
+                    DiscardBridgeLog.installed(on: root, adopted: true)
                 case .wrap:
                     let proxy = DismissAttemptProxy(original: current, relay: relay)
                     presentation.delegate = proxy
                     self.proxy = proxy
+                    DiscardBridgeLog.installed(on: root, adopted: false)
                 }
+            }
+
+            /// The sheet's presented root: up the parents first, then, if they don't reach it, from the first
+            /// controller in the view's responder chain. Only a presented controller is asked for its
+            /// presentation controller.
+            private func sheetRoot() -> UIViewController? {
+                let isPresented: (UIViewController) -> Bool = { controller in
+                    controller.presentingViewController?.presentedViewController === controller
+                }
+                let parentOf: (UIViewController) -> UIViewController? = { $0.parent }
+                let own: UIViewController = self
+                if let root = DismissAttemptInstall.presentedRoot(
+                    from: own,
+                    parent: parentOf,
+                    isPresented: isPresented,
+                ) {
+                    return root
+                }
+                guard isViewLoaded else {
+                    return nil
+                }
+                var responder = view.next
+                while let next = responder {
+                    if let controller = next as? UIViewController, controller !== self {
+                        return DismissAttemptInstall.presentedRoot(
+                            from: controller,
+                            parent: parentOf,
+                            isPresented: isPresented,
+                        )
+                    }
+                    responder = next.next
+                }
+                return nil
             }
         }
     }
@@ -124,6 +171,7 @@
         func presentationControllerDidAttemptToDismiss(_ presentationController: UIPresentationController) {
             (original as? any UIAdaptivePresentationControllerDelegate)?
                 .presentationControllerDidAttemptToDismiss?(presentationController)
+            DiscardBridgeLog.attempt(isDirty: relay.isDirty)
             relay.attempt()
         }
 
@@ -133,6 +181,30 @@
 
         nonisolated override func forwardingTarget(for selector: Selector!) -> Any? {
             original?.responds(to: selector) == true ? original : super.forwardingTarget(for: selector)
+        }
+    }
+
+    /// Debug builds only: where the discard bridge installed and when a refused swipe reached it, to check D300.1
+    /// in Console (subsystem LittleOrbit, category DiscardBridge). Only controller type names and a flag: never a
+    /// path, a name or any other user data.
+    @MainActor
+    private enum DiscardBridgeLog {
+        #if DEBUG
+            private static let logger = Logger(subsystem: "LittleOrbit", category: "DiscardBridge")
+        #endif
+
+        static func installed(on controller: UIViewController, adopted: Bool) {
+            #if DEBUG
+                let kind = String(describing: type(of: controller))
+                let how = adopted ? "adopted an existing proxy" : "installed"
+                logger.debug("Discard bridge \(how, privacy: .public) on \(kind, privacy: .public)")
+            #endif
+        }
+
+        static func attempt(isDirty: Bool) {
+            #if DEBUG
+                logger.debug("Discard bridge: refused swipe reported, unsaved edits: \(isDirty, privacy: .public)")
+            #endif
         }
     }
 #endif

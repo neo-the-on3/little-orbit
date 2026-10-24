@@ -54,4 +54,42 @@ struct DismissAttemptRelayTests {
         relay.attempt()
         #expect(confirmation.isPresentedFromSwipe)
     }
+
+    /// A stand-in for a view controller: its parent, and whether it was itself presented.
+    private final class Node {
+        let parent: Node?
+        let isPresented: Bool
+
+        init(parent: Node? = nil, isPresented: Bool = false) {
+            self.parent = parent
+            self.isPresented = isPresented
+        }
+    }
+
+    private func root(from node: Node?) -> Node? {
+        DismissAttemptInstall.presentedRoot(from: node, parent: { $0.parent }, isPresented: { $0.isPresented })
+    }
+
+    @Test("The bridge installs on the sheet's presented root, found up its parents, never on itself")
+    func findsPresentedRoot() {
+        let sheet = Node(isPresented: true)
+        let navigation = Node(parent: sheet)
+        let bridge = Node(parent: navigation)
+        #expect(root(from: bridge) === sheet)
+        #expect(root(from: sheet) === sheet)
+    }
+
+    @Test("With no presented ancestor yet there's nothing to install on, so it tries again later")
+    func noPresentedRoot() {
+        let detached = Node()
+        #expect(root(from: Node(parent: detached)) == nil)
+        #expect(root(from: nil) == nil)
+    }
+
+    @Test("It stops at the nearest presented controller")
+    func nearestPresented() {
+        let outer = Node(isPresented: true)
+        let inner = Node(parent: outer, isPresented: true)
+        #expect(root(from: Node(parent: inner)) === inner)
+    }
 }
