@@ -11,6 +11,16 @@ public struct CategoryRow: Identifiable, Equatable, Sendable {
     public let symbolName: String
     public let hue: CategoryHue
     public let isSubcategory: Bool
+    /// An archived subcategory listed under its archived parent in the Archived section, so it's indented.
+    public var isIndented = false
+}
+
+/// The confirmation before unarchiving a subcategory whose parent is archived too, since that brings back
+/// the parent as well (D291.3, D302). Unarchive is the default button; Cancel changes nothing.
+public struct CategoryUnarchivePrompt: Identifiable, Equatable, Sendable {
+    public let id: UUID
+    public let title: String
+    public let message: String
 }
 
 /// A top-level category with its subcategories.
@@ -50,6 +60,7 @@ public final class CategoriesViewModel {
     /// A failed load or change, or a refused merge (D291.1).
     public var alert: CategoryAlert?
     public var deletePrompt: CategoryDeletePrompt?
+    public var unarchivePrompt: CategoryUnarchivePrompt?
     /// The editor sheet on show. Opening one sets it straight away from the loaded tree, with nothing
     /// to wait for, so a tap on a row presents its sheet at once.
     public var editor: CategoryEditorViewModel?
@@ -87,20 +98,32 @@ public final class CategoriesViewModel {
             }
     }
 
-    /// Archived categories of the chosen kind: archived top-level ones, and archived subcategories of live
-    /// parents. A subcategory of an archived parent comes back with it.
+    /// Archived categories of the chosen kind (UI Designer, #24 part 4). An archived top-level category is
+    /// followed by its archived subcategories, indented; an archived subcategory of a live parent stands on
+    /// its own. Every archived subcategory's subtitle is its parent's name.
     public var archivedRows: [CategoryRow] {
-        listing.categories
-            .filter { category in
-                guard category.kind == kind, category.isArchived else {
-                    return false
-                }
-                guard let parentID = category.parentID else {
-                    return true
-                }
-                return listing.category(parentID)?.isArchived == false
+        let archived = listing.categories.filter { $0.kind == kind && $0.isArchived }
+        return archived.filter { $0.parentID == nil }
+            .flatMap { parent in
+                [row(parent)] + archived.filter { $0.parentID == parent.id }.map { archivedRow($0, isIndented: true) }
             }
-            .map(row)
+            + archived.filter { category in
+                category.parentID.flatMap(listing.category).map { !$0.isArchived } ?? false
+            }
+            .map { archivedRow($0, isIndented: false) }
+    }
+
+    private func archivedRow(_ category: TransactionCategory, isIndented: Bool) -> CategoryRow {
+        let base = row(category)
+        return CategoryRow(
+            id: base.id,
+            name: base.name,
+            subtitle: category.parentID.flatMap(listing.category)?.name ?? base.subtitle,
+            symbolName: base.symbolName,
+            hue: base.hue,
+            isSubcategory: base.isSubcategory,
+            isIndented: isIndented,
+        )
     }
 
     public func category(_ id: UUID) -> TransactionCategory? {
@@ -150,6 +173,31 @@ public final class CategoriesViewModel {
     /// Unarchiving a subcategory brings back its parent, but not the parent's other subcategories (D291.3).
     public func unarchive(_ id: UUID) {
         perform { try useCases.categories.archiveCategory.unarchive(id) }
+    }
+
+    /// Unarchive on a row. A subcategory whose parent is archived asks first, because the parent comes back
+    /// too (D302); anything else is unarchived straight away.
+    public func requestUnarchive(_ id: UUID) {
+        guard let category = listing.category(id), let parentID = category.parentID,
+            let parent = listing.category(parentID), parent.isArchived
+        else {
+            unarchive(id)
+            return
+        }
+        unarchivePrompt = CategoryUnarchivePrompt(
+            id: id,
+            title: CategoryText.unarchiveTitle(category.name),
+            message: CategoryText.unarchivesParent(parent.name),
+        )
+    }
+
+    /// Unarchive in the confirmation.
+    public func confirmUnarchive() {
+        guard let prompt = unarchivePrompt else {
+            return
+        }
+        unarchivePrompt = nil
+        unarchive(prompt.id)
     }
 
     // MARK: Delete (D19, D287)

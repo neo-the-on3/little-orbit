@@ -3282,6 +3282,19 @@
         }
       }
     },
+    "Its parent, “%1$@”, is archived too, so it’s unarchived as well. Other subcategories in “%1$@” stay archived.": {
+      "comment": "Alert message under “Unarchive “%1$@”?” (D302). %1$@ is the archived parent, named twice: it comes back too, and its other subcategories don’t.",
+      "extractionState": "manual",
+      "generatesSymbol": false,
+      "localizations": {
+        "en": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Its parent, “%1$@”, is archived too, so it’s unarchived as well. Other subcategories in “%1$@” stay archived."
+          }
+        }
+      }
+    },
     "It’s being exported. Try again when the export has finished.": {
       "comment": "Alert message under “Can’t Delete This Backup” (D208.1). “It” is the backup being deleted; nothing is deleted later either.",
       "extractionState": "manual",
@@ -4895,7 +4908,7 @@
       }
     },
     "Unarchive": {
-      "comment": "Button on an archived category: put it back in pickers.",
+      "comment": "Button on an archived category: put it back in pickers. Also the default button of the “Unarchive “%1$@”?” alert (D302).",
       "extractionState": "manual",
       "generatesSymbol": false,
       "localizations": {
@@ -4916,6 +4929,19 @@
           "stringUnit": {
             "state": "translated",
             "value": "Unarchive puts a category back in pickers. Archived categories stay in reports."
+          }
+        }
+      }
+    },
+    "Unarchive “%1$@”?": {
+      "comment": "Alert title (D302): unarchiving a subcategory whose parent is archived too. %1$@ is the subcategory. Buttons: Unarchive (default) and Cancel.",
+      "extractionState": "manual",
+      "generatesSymbol": false,
+      "localizations": {
+        "en": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Unarchive “%1$@”?"
           }
         }
       }
