@@ -91,16 +91,19 @@
 
         @ViewBuilder private var emptyState: some View {
             if !model.hasPayees {
-                // The storefront is decorative, so VoiceOver reads only the title and message.
-                ContentUnavailableView {
-                    Label {
+                ContentUnavailableView(
+                    PayeeText.emptyTitle,
+                    systemImage: "storefront",
+                    description: Text(PayeeText.emptyMessage),
+                )
+                // The storefront is decorative. Hiding the icon inside the label didn't take effect in
+                // ContentUnavailableView, so VoiceOver gets this instead: just the title and the message.
+                .accessibilityRepresentation {
+                    VStack {
                         Text(PayeeText.emptyTitle)
-                    } icon: {
-                        Image(systemName: "storefront")
-                            .accessibilityHidden(true)
+                            .accessibilityAddTraits(.isHeader)
+                        Text(PayeeText.emptyMessage)
                     }
-                } description: {
-                    Text(PayeeText.emptyMessage)
                 }
             } else if model.rows.isEmpty {
                 ContentUnavailableView.search(text: model.searchText)
