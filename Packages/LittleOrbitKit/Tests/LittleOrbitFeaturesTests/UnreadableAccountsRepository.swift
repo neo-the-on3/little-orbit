@@ -15,7 +15,8 @@ final class UnreadableAccountsRepository: LedgerRepository {
         self.base = base
     }
 
-    var isNewStore: Bool { base.isNewStore }
+    var isDefaultSeedPending: Bool { base.isDefaultSeedPending }
+    func markDefaultSeedDone() { base.markDefaultSeedDone() }
 
     func accounts() throws -> [Account] {
         if failsReads {
