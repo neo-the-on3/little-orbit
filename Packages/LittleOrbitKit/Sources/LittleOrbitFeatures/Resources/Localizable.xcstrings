@@ -84,6 +84,131 @@
         }
       }
     },
+    "%1$@ · %2$lld subcategories": {
+      "comment": "Category row subtitle for a top-level category with subcategories: %1$@ is the kind (Expense or Income); %2$lld is how many subcategories it has.",
+      "extractionState": "manual",
+      "generatesSymbol": false,
+      "localizations": {
+        "en": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "%1$@ · %#@count@"
+          },
+          "substitutions": {
+            "count": {
+              "argNum": 2,
+              "formatSpecifier": "lld",
+              "variations": {
+                "plural": {
+                  "one": {
+                    "stringUnit": {
+                      "state": "translated",
+                      "value": "%arg subcategory"
+                    }
+                  },
+                  "other": {
+                    "stringUnit": {
+                      "state": "translated",
+                      "value": "%arg subcategories"
+                    }
+                  }
+                }
+              }
+            }
+          }
+        }
+      }
+    },
+    "%1$@ · %2$lld transactions": {
+      "comment": "Category row subtitle: %1$@ is the kind (Expense or Income); %2$lld is how many transactions and split lines use the category itself.",
+      "extractionState": "manual",
+      "generatesSymbol": false,
+      "localizations": {
+        "en": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "%1$@ · %#@count@"
+          },
+          "substitutions": {
+            "count": {
+              "argNum": 2,
+              "formatSpecifier": "lld",
+              "variations": {
+                "plural": {
+                  "one": {
+                    "stringUnit": {
+                      "state": "translated",
+                      "value": "%arg transaction"
+                    }
+                  },
+                  "other": {
+                    "stringUnit": {
+                      "state": "translated",
+                      "value": "%arg transactions"
+                    }
+                  }
+                }
+              }
+            }
+          }
+        }
+      }
+    },
+    "%1$@ · %2$lld transactions · %3$lld subcategories": {
+      "comment": "Categories list subtitle for a category with subcategories: %1$@ is its kind, %2$lld how many transactions use the category itself (not its subcategories), %3$lld how many subcategories it has.",
+      "extractionState": "manual",
+      "generatesSymbol": false,
+      "localizations": {
+        "en": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "%1$@ · %#@count@ · %#@subcategories@"
+          },
+          "substitutions": {
+            "count": {
+              "argNum": 2,
+              "formatSpecifier": "lld",
+              "variations": {
+                "plural": {
+                  "one": {
+                    "stringUnit": {
+                      "state": "translated",
+                      "value": "%arg transaction"
+                    }
+                  },
+                  "other": {
+                    "stringUnit": {
+                      "state": "translated",
+                      "value": "%arg transactions"
+                    }
+                  }
+                }
+              }
+            },
+            "subcategories": {
+              "argNum": 3,
+              "formatSpecifier": "lld",
+              "variations": {
+                "plural": {
+                  "one": {
+                    "stringUnit": {
+                      "state": "translated",
+                      "value": "%arg subcategory"
+                    }
+                  },
+                  "other": {
+                    "stringUnit": {
+                      "state": "translated",
+                      "value": "%arg subcategories"
+                    }
+                  }
+                }
+              }
+            }
+          }
+        }
+      }
+    },
     "%1$@, %2$@": {
       "comment": "Two parts joined with a comma: a backup's day and time (%1$@ the day, %2$@ the time), or its account and transaction counts as VoiceOver reads them.",
       "extractionState": "manual",
@@ -109,6 +234,54 @@
         }
       }
     },
+    "%1$lld transactions will use %2$@.": {
+      "comment": "Merge sheet footnote, first sentence: %1$lld is how many transactions move; %2$@ is the chosen category.",
+      "extractionState": "manual",
+      "generatesSymbol": false,
+      "localizations": {
+        "en": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "%#@count@ will use %2$@."
+          },
+          "substitutions": {
+            "count": {
+              "argNum": 1,
+              "formatSpecifier": "lld",
+              "variations": {
+                "plural": {
+                  "one": {
+                    "stringUnit": {
+                      "state": "translated",
+                      "value": "%arg transaction"
+                    }
+                  },
+                  "other": {
+                    "stringUnit": {
+                      "state": "translated",
+                      "value": "%arg transactions"
+                    }
+                  }
+                }
+              }
+            }
+          }
+        }
+      }
+    },
+    "%@ are deleted after the move.": {
+      "comment": "Move To sheet footer sentence. The category and its subcategories, as a list.",
+      "extractionState": "manual",
+      "generatesSymbol": false,
+      "localizations": {
+        "en": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "%@ are deleted after the move."
+          }
+        }
+      }
+    },
     "%@ has changed since then. Nothing was changed.": {
       "comment": "Alert message: an Undo or Redo that can't run because the record changed after the step was recorded, so nothing was changed. %@ is the transaction's payee or description, or an account name. Don't name a cause: the same check catches a change from anywhere.",
       "extractionState": "manual",
@@ -129,6 +302,32 @@
           "stringUnit": {
             "state": "translated",
             "value": "%@ has been deleted. Nothing was changed."
+          }
+        }
+      }
+    },
+    "%@ is deleted after the move.": {
+      "comment": "Move To sheet footer sentence. The category’s name.",
+      "extractionState": "manual",
+      "generatesSymbol": false,
+      "localizations": {
+        "en": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "%@ is deleted after the move."
+          }
+        }
+      }
+    },
+    "%@ is then deleted.": {
+      "comment": "Merge sheet footnote sentence. The merged category.",
+      "extractionState": "manual",
+      "generatesSymbol": false,
+      "localizations": {
+        "en": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "%@ is then deleted."
           }
         }
       }
@@ -253,6 +452,19 @@
         }
       }
     },
+    "A subcategory always has its parent’s kind, so Kind can’t change. One level only: subcategories can’t have their own. Names must be unique within the same parent.": {
+      "comment": "Category editor footnote for a subcategory.",
+      "extractionState": "manual",
+      "generatesSymbol": false,
+      "localizations": {
+        "en": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "A subcategory always has its parent’s kind, so Kind can’t change. One level only: subcategories can’t have their own. Names must be unique within the same parent."
+          }
+        }
+      }
+    },
     "Add %1$lld Transactions in %2$@": {
       "comment": "Undo name: several transactions added at once in one account (D198). %1$lld is the number of transactions; %2$@ is the account name.",
       "extractionState": "manual",
@@ -365,6 +577,32 @@
         }
       }
     },
+    "Add Category": {
+      "comment": "Categories screen menu item: add a top-level category.",
+      "extractionState": "manual",
+      "generatesSymbol": false,
+      "localizations": {
+        "en": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Add Category"
+          }
+        }
+      }
+    },
+    "Add Subcategory": {
+      "comment": "Categories screen menu item: add a subcategory.",
+      "extractionState": "manual",
+      "generatesSymbol": false,
+      "localizations": {
+        "en": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Add Subcategory"
+          }
+        }
+      }
+    },
     "All data on this %1$@ will be replaced with this backup (%2$@). Your current data is saved first as a Before restore backup, so you can go back. App Lock, Hide amounts, report exclusions and theme on this %1$@ don’t change.": {
       "comment": "Warning before a restore. %1$@ is the device; %2$@ is the backup's summary, such as “Today, 9:12 AM · 3 accounts · 120 transactions”.",
       "extractionState": "manual",
@@ -373,6 +611,19 @@
           "stringUnit": {
             "state": "translated",
             "value": "All data on this %1$@ will be replaced with this backup (%2$@). Your current data is saved first as a Before restore backup, so you can go back. App Lock, Hide amounts, report exclusions and theme on this %1$@ don’t change."
+          }
+        }
+      }
+    },
+    "Amber": {
+      "comment": "Category colour name.",
+      "extractionState": "manual",
+      "generatesSymbol": false,
+      "localizations": {
+        "en": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Amber"
           }
         }
       }
@@ -421,6 +672,45 @@
           "stringUnit": {
             "state": "translated",
             "value": "Any backup can be deleted. Delete asks you to confirm, and asks for the app passcode first when App Lock is on."
+          }
+        }
+      }
+    },
+    "Archive Category": {
+      "comment": "Category delete alert: the default, safe choice (D19).",
+      "extractionState": "manual",
+      "generatesSymbol": false,
+      "localizations": {
+        "en": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Archive Category"
+          }
+        }
+      }
+    },
+    "Archive hides it from pickers and keeps its history.": {
+      "comment": "Category delete alert sentence, after what uses the category.",
+      "extractionState": "manual",
+      "generatesSymbol": false,
+      "localizations": {
+        "en": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Archive hides it from pickers and keeps its history."
+          }
+        }
+      }
+    },
+    "Archived": {
+      "comment": "Categories screen: the section of archived categories.",
+      "extractionState": "manual",
+      "generatesSymbol": false,
+      "localizations": {
+        "en": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Archived"
           }
         }
       }
@@ -618,6 +908,32 @@
         }
       }
     },
+    "Blue": {
+      "comment": "Category colour name.",
+      "extractionState": "manual",
+      "generatesSymbol": false,
+      "localizations": {
+        "en": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Blue"
+          }
+        }
+      }
+    },
+    "Cancel": {
+      "comment": "Category sheets and alerts: close without changing anything.",
+      "extractionState": "manual",
+      "generatesSymbol": false,
+      "localizations": {
+        "en": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Cancel"
+          }
+        }
+      }
+    },
     "Can’t Delete This Backup": {
       "comment": "Alert title when Delete is confirmed while the backup is being exported, in this or another window (D208.1). Nothing is deleted. The only button is OK.",
       "extractionState": "manual",
@@ -626,6 +942,19 @@
           "stringUnit": {
             "state": "translated",
             "value": "Can’t Delete This Backup"
+          }
+        }
+      }
+    },
+    "Can’t Merge Categories": {
+      "comment": "Alert title: a merge would put two subcategories with the same name under one parent (D291.1).",
+      "extractionState": "manual",
+      "generatesSymbol": false,
+      "localizations": {
+        "en": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Can’t Merge Categories"
           }
         }
       }
@@ -650,6 +979,109 @@
           "stringUnit": {
             "state": "translated",
             "value": "Can’t Undo %@"
+          }
+        }
+      }
+    },
+    "Categories": {
+      "comment": "Settings row and screen title: the category manager.",
+      "extractionState": "manual",
+      "generatesSymbol": false,
+      "localizations": {
+        "en": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Categories"
+          }
+        }
+      }
+    },
+    "category.delete.movingDeletes": {
+      "comment": "Category delete alert sentence, for a category with no subcategories: %lld is how many transactions and split lines use it, which picks “it” or “them”.",
+      "extractionState": "manual",
+      "generatesSymbol": false,
+      "localizations": {
+        "en": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "%#@moving@"
+          },
+          "substitutions": {
+            "moving": {
+              "argNum": 1,
+              "formatSpecifier": "lld",
+              "variations": {
+                "plural": {
+                  "one": {
+                    "stringUnit": {
+                      "state": "translated",
+                      "value": "Moving or leaving it uncategorised deletes the category."
+                    }
+                  },
+                  "other": {
+                    "stringUnit": {
+                      "state": "translated",
+                      "value": "Moving or leaving them uncategorised deletes the category."
+                    }
+                  }
+                }
+              }
+            }
+          }
+        }
+      }
+    },
+    "category.delete.movingDeletesWithSubcategories": {
+      "comment": "Category delete alert sentence: the first number is how many transactions and split lines use the category and its subcategories, which picks “it” or “them”; the second is how many subcategories are deleted with it.",
+      "extractionState": "manual",
+      "generatesSymbol": false,
+      "localizations": {
+        "en": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "%#@moving@"
+          },
+          "substitutions": {
+            "moving": {
+              "argNum": 1,
+              "formatSpecifier": "lld",
+              "variations": {
+                "plural": {
+                  "one": {
+                    "stringUnit": {
+                      "state": "translated",
+                      "value": "Moving or leaving it uncategorised deletes the category and its %#@subcategories@."
+                    }
+                  },
+                  "other": {
+                    "stringUnit": {
+                      "state": "translated",
+                      "value": "Moving or leaving them uncategorised deletes the category and its %#@subcategories@."
+                    }
+                  }
+                }
+              }
+            },
+            "subcategories": {
+              "argNum": 2,
+              "formatSpecifier": "lld",
+              "variations": {
+                "plural": {
+                  "one": {
+                    "stringUnit": {
+                      "state": "translated",
+                      "value": "%arg subcategory"
+                    }
+                  },
+                  "other": {
+                    "stringUnit": {
+                      "state": "translated",
+                      "value": "%arg subcategories"
+                    }
+                  }
+                }
+              }
+            }
           }
         }
       }
@@ -870,6 +1302,435 @@
         }
       }
     },
+    "category.symbol.banknote": {
+      "comment": "Category icon name, shown in the editor’s Icon row and read by VoiceOver.",
+      "extractionState": "manual",
+      "generatesSymbol": false,
+      "localizations": {
+        "en": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Banknote"
+          }
+        }
+      }
+    },
+    "category.symbol.book": {
+      "comment": "Category icon name, shown in the editor’s Icon row and read by VoiceOver.",
+      "extractionState": "manual",
+      "generatesSymbol": false,
+      "localizations": {
+        "en": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Book"
+          }
+        }
+      }
+    },
+    "category.symbol.briefcase": {
+      "comment": "Category icon name, shown in the editor’s Icon row and read by VoiceOver.",
+      "extractionState": "manual",
+      "generatesSymbol": false,
+      "localizations": {
+        "en": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Briefcase"
+          }
+        }
+      }
+    },
+    "category.symbol.car": {
+      "comment": "Category icon name, shown in the editor’s Icon row and read by VoiceOver.",
+      "extractionState": "manual",
+      "generatesSymbol": false,
+      "localizations": {
+        "en": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Car"
+          }
+        }
+      }
+    },
+    "category.symbol.cart": {
+      "comment": "Category icon name, shown in the editor’s Icon row and read by VoiceOver.",
+      "extractionState": "manual",
+      "generatesSymbol": false,
+      "localizations": {
+        "en": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Cart"
+          }
+        }
+      }
+    },
+    "category.symbol.creditCard": {
+      "comment": "Category icon name, shown in the editor’s Icon row and read by VoiceOver.",
+      "extractionState": "manual",
+      "generatesSymbol": false,
+      "localizations": {
+        "en": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Credit Card"
+          }
+        }
+      }
+    },
+    "category.symbol.cupAndSaucer": {
+      "comment": "Category icon name, shown in the editor’s Icon row and read by VoiceOver.",
+      "extractionState": "manual",
+      "generatesSymbol": false,
+      "localizations": {
+        "en": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Cup and Saucer"
+          }
+        }
+      }
+    },
+    "category.symbol.document": {
+      "comment": "Category icon name, shown in the editor’s Icon row and read by VoiceOver.",
+      "extractionState": "manual",
+      "generatesSymbol": false,
+      "localizations": {
+        "en": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Document"
+          }
+        }
+      }
+    },
+    "category.symbol.dumbbell": {
+      "comment": "Category icon name, shown in the editor’s Icon row and read by VoiceOver.",
+      "extractionState": "manual",
+      "generatesSymbol": false,
+      "localizations": {
+        "en": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Dumbbell"
+          }
+        }
+      }
+    },
+    "category.symbol.firstAidKit": {
+      "comment": "Category icon name, shown in the editor’s Icon row and read by VoiceOver.",
+      "extractionState": "manual",
+      "generatesSymbol": false,
+      "localizations": {
+        "en": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "First Aid Kit"
+          }
+        }
+      }
+    },
+    "category.symbol.forkAndKnife": {
+      "comment": "Category icon name, shown in the editor’s Icon row and read by VoiceOver.",
+      "extractionState": "manual",
+      "generatesSymbol": false,
+      "localizations": {
+        "en": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Fork and Knife"
+          }
+        }
+      }
+    },
+    "category.symbol.fuelPump": {
+      "comment": "Category icon name, shown in the editor’s Icon row and read by VoiceOver.",
+      "extractionState": "manual",
+      "generatesSymbol": false,
+      "localizations": {
+        "en": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Fuel Pump"
+          }
+        }
+      }
+    },
+    "category.symbol.gameController": {
+      "comment": "Category icon name, shown in the editor’s Icon row and read by VoiceOver.",
+      "extractionState": "manual",
+      "generatesSymbol": false,
+      "localizations": {
+        "en": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Game Controller"
+          }
+        }
+      }
+    },
+    "category.symbol.gift": {
+      "comment": "Category icon name, shown in the editor’s Icon row and read by VoiceOver.",
+      "extractionState": "manual",
+      "generatesSymbol": false,
+      "localizations": {
+        "en": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Gift"
+          }
+        }
+      }
+    },
+    "category.symbol.graduationCap": {
+      "comment": "Category icon name, shown in the editor’s Icon row and read by VoiceOver.",
+      "extractionState": "manual",
+      "generatesSymbol": false,
+      "localizations": {
+        "en": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Graduation Cap"
+          }
+        }
+      }
+    },
+    "category.symbol.heart": {
+      "comment": "Category icon name, shown in the editor’s Icon row and read by VoiceOver.",
+      "extractionState": "manual",
+      "generatesSymbol": false,
+      "localizations": {
+        "en": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Heart"
+          }
+        }
+      }
+    },
+    "category.symbol.house": {
+      "comment": "Category icon name, shown in the editor’s Icon row and read by VoiceOver.",
+      "extractionState": "manual",
+      "generatesSymbol": false,
+      "localizations": {
+        "en": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "House"
+          }
+        }
+      }
+    },
+    "category.symbol.lightningBolt": {
+      "comment": "Category icon name, shown in the editor’s Icon row and read by VoiceOver.",
+      "extractionState": "manual",
+      "generatesSymbol": false,
+      "localizations": {
+        "en": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Lightning Bolt"
+          }
+        }
+      }
+    },
+    "category.symbol.more": {
+      "comment": "Category icon name, shown in the editor’s Icon row and read by VoiceOver.",
+      "extractionState": "manual",
+      "generatesSymbol": false,
+      "localizations": {
+        "en": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "More"
+          }
+        }
+      }
+    },
+    "category.symbol.pawPrint": {
+      "comment": "Category icon name, shown in the editor’s Icon row and read by VoiceOver.",
+      "extractionState": "manual",
+      "generatesSymbol": false,
+      "localizations": {
+        "en": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Paw Print"
+          }
+        }
+      }
+    },
+    "category.symbol.percent": {
+      "comment": "Category icon name, shown in the editor’s Icon row and read by VoiceOver.",
+      "extractionState": "manual",
+      "generatesSymbol": false,
+      "localizations": {
+        "en": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Percent"
+          }
+        }
+      }
+    },
+    "category.symbol.person": {
+      "comment": "Category icon name, shown in the editor’s Icon row and read by VoiceOver.",
+      "extractionState": "manual",
+      "generatesSymbol": false,
+      "localizations": {
+        "en": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Person"
+          }
+        }
+      }
+    },
+    "category.symbol.phone": {
+      "comment": "Category icon name, shown in the editor’s Icon row and read by VoiceOver.",
+      "extractionState": "manual",
+      "generatesSymbol": false,
+      "localizations": {
+        "en": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Phone"
+          }
+        }
+      }
+    },
+    "category.symbol.plane": {
+      "comment": "Category icon name, shown in the editor’s Icon row and read by VoiceOver.",
+      "extractionState": "manual",
+      "generatesSymbol": false,
+      "localizations": {
+        "en": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Plane"
+          }
+        }
+      }
+    },
+    "category.symbol.plus": {
+      "comment": "Category icon name, shown in the editor’s Icon row and read by VoiceOver.",
+      "extractionState": "manual",
+      "generatesSymbol": false,
+      "localizations": {
+        "en": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Plus"
+          }
+        }
+      }
+    },
+    "category.symbol.popcorn": {
+      "comment": "Category icon name, shown in the editor’s Icon row and read by VoiceOver.",
+      "extractionState": "manual",
+      "generatesSymbol": false,
+      "localizations": {
+        "en": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Popcorn"
+          }
+        }
+      }
+    },
+    "category.symbol.shoppingBag": {
+      "comment": "Category icon name, shown in the editor’s Icon row and read by VoiceOver.",
+      "extractionState": "manual",
+      "generatesSymbol": false,
+      "localizations": {
+        "en": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Shopping Bag"
+          }
+        }
+      }
+    },
+    "category.symbol.tag": {
+      "comment": "Category icon name, shown in the editor’s Icon row and read by VoiceOver.",
+      "extractionState": "manual",
+      "generatesSymbol": false,
+      "localizations": {
+        "en": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Tag"
+          }
+        }
+      }
+    },
+    "category.symbol.tools": {
+      "comment": "Category icon name, shown in the editor’s Icon row and read by VoiceOver.",
+      "extractionState": "manual",
+      "generatesSymbol": false,
+      "localizations": {
+        "en": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Tools"
+          }
+        }
+      }
+    },
+    "category.symbol.tram": {
+      "comment": "Category icon name, shown in the editor’s Icon row and read by VoiceOver.",
+      "extractionState": "manual",
+      "generatesSymbol": false,
+      "localizations": {
+        "en": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Tram"
+          }
+        }
+      }
+    },
+    "category.symbol.tShirt": {
+      "comment": "Category icon name, shown in the editor’s Icon row and read by VoiceOver.",
+      "extractionState": "manual",
+      "generatesSymbol": false,
+      "localizations": {
+        "en": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "T-Shirt"
+          }
+        }
+      }
+    },
+    "category.symbol.umbrella": {
+      "comment": "Category icon name, shown in the editor’s Icon row and read by VoiceOver.",
+      "extractionState": "manual",
+      "generatesSymbol": false,
+      "localizations": {
+        "en": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Umbrella"
+          }
+        }
+      }
+    },
+    "category.symbol.wifi": {
+      "comment": "Category icon name, shown in the editor’s Icon row and read by VoiceOver.",
+      "extractionState": "manual",
+      "generatesSymbol": false,
+      "localizations": {
+        "en": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Wi-Fi"
+          }
+        }
+      }
+    },
     "Change Account": {
       "comment": "Bulk edit: VoiceOver name of the toggle that turns on Account, so it reads apart from the Account field next to it.",
       "extractionState": "manual",
@@ -926,6 +1787,19 @@
           "stringUnit": {
             "state": "translated",
             "value": "Change Payee"
+          }
+        }
+      }
+    },
+    "Colour": {
+      "comment": "Category editor row: the category’s colour.",
+      "extractionState": "manual",
+      "generatesSymbol": false,
+      "localizations": {
+        "en": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Colour"
           }
         }
       }
@@ -1026,6 +1900,19 @@
         }
       }
     },
+    "Couldn’t Save Changes": {
+      "comment": "Alert title: a category change couldn’t be saved and nothing changed. Its only button is OK.",
+      "extractionState": "manual",
+      "generatesSymbol": false,
+      "localizations": {
+        "en": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Couldn’t Save Changes"
+          }
+        }
+      }
+    },
     "Couldn’t Undo %@": {
       "comment": "Alert title: an Undo failed with an error, for example on a full disk, and nothing changed (D201). %@ is the Undo name, such as \"Edit Transaction in Household Card\".",
       "extractionState": "manual",
@@ -1086,6 +1973,32 @@
         }
       }
     },
+    "Current Icon": {
+      "comment": "Category editor: the category’s own icon, listed first when it isn’t one of the usual icons.",
+      "extractionState": "manual",
+      "generatesSymbol": false,
+      "localizations": {
+        "en": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Current Icon"
+          }
+        }
+      }
+    },
+    "Cyan": {
+      "comment": "Category colour name.",
+      "extractionState": "manual",
+      "generatesSymbol": false,
+      "localizations": {
+        "en": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Cyan"
+          }
+        }
+      }
+    },
     "Damaged": {
       "comment": "Status of a damaged backup in the list.",
       "extractionState": "manual",
@@ -1094,6 +2007,19 @@
           "stringUnit": {
             "state": "translated",
             "value": "Damaged"
+          }
+        }
+      }
+    },
+    "Delete": {
+      "comment": "Delete alert for a category nothing uses.",
+      "extractionState": "manual",
+      "generatesSymbol": false,
+      "localizations": {
+        "en": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Delete"
           }
         }
       }
@@ -1283,6 +2209,32 @@
         }
       }
     },
+    "Delete Category…": {
+      "comment": "Category editor: delete button.",
+      "extractionState": "manual",
+      "generatesSymbol": false,
+      "localizations": {
+        "en": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Delete Category…"
+          }
+        }
+      }
+    },
+    "Delete Subcategory…": {
+      "comment": "Category editor: delete button.",
+      "extractionState": "manual",
+      "generatesSymbol": false,
+      "localizations": {
+        "en": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Delete Subcategory…"
+          }
+        }
+      }
+    },
     "Delete This Backup?": {
       "comment": "Title of the confirmation before deleting one backup.",
       "extractionState": "manual",
@@ -1411,6 +2363,32 @@
         }
       }
     },
+    "Delete “%@”?": {
+      "comment": "Category delete alert title. The category’s name.",
+      "extractionState": "manual",
+      "generatesSymbol": false,
+      "localizations": {
+        "en": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Delete “%@”?"
+          }
+        }
+      }
+    },
+    "Delete, Leave Uncategorised": {
+      "comment": "Category delete alert: delete it and leave its transactions with no category.",
+      "extractionState": "manual",
+      "generatesSymbol": false,
+      "localizations": {
+        "en": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Delete, Leave Uncategorised"
+          }
+        }
+      }
+    },
     "Deleted %@": {
       "comment": "Off-screen notice after Redo deletes an account again. %@ is the account's name.",
       "extractionState": "manual",
@@ -1455,6 +2433,58 @@
           "stringUnit": {
             "state": "translated",
             "value": "Delete…"
+          }
+        }
+      }
+    },
+    "Deleting can’t be undone.": {
+      "comment": "Last sentence of the category delete alerts (D287.3).",
+      "extractionState": "manual",
+      "generatesSymbol": false,
+      "localizations": {
+        "en": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Deleting can’t be undone."
+          }
+        }
+      }
+    },
+    "Details": {
+      "comment": "Category editor: the section header over Kind, Parent, Icon, Colour.",
+      "extractionState": "manual",
+      "generatesSymbol": false,
+      "localizations": {
+        "en": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Details"
+          }
+        }
+      }
+    },
+    "Done": {
+      "comment": "Categories screen: ends reordering.",
+      "extractionState": "manual",
+      "generatesSymbol": false,
+      "localizations": {
+        "en": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Done"
+          }
+        }
+      }
+    },
+    "Drag the handles to reorder. Subcategories reorder within their parent. A category with subcategories can’t move under another one.": {
+      "comment": "Categories screen footer while reordering.",
+      "extractionState": "manual",
+      "generatesSymbol": false,
+      "localizations": {
+        "en": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Drag the handles to reorder. Subcategories reorder within their parent. A category with subcategories can’t move under another one."
           }
         }
       }
@@ -1567,6 +2597,32 @@
                 }
               }
             }
+          }
+        }
+      }
+    },
+    "Edit Category": {
+      "comment": "Category editor title: editing.",
+      "extractionState": "manual",
+      "generatesSymbol": false,
+      "localizations": {
+        "en": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Edit Category"
+          }
+        }
+      }
+    },
+    "Edit Subcategory": {
+      "comment": "Category editor title: editing.",
+      "extractionState": "manual",
+      "generatesSymbol": false,
+      "localizations": {
+        "en": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Edit Subcategory"
           }
         }
       }
@@ -1699,6 +2755,58 @@
         }
       }
     },
+    "Enter a name.": {
+      "comment": "Category editor, under the name field: the name is empty or only spaces.",
+      "extractionState": "manual",
+      "generatesSymbol": false,
+      "localizations": {
+        "en": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Enter a name."
+          }
+        }
+      }
+    },
+    "Expense": {
+      "comment": "A category's kind, and the Categories screen's Expense tab.",
+      "extractionState": "manual",
+      "generatesSymbol": false,
+      "localizations": {
+        "en": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Expense"
+          }
+        }
+      }
+    },
+    "Expense (from parent)": {
+      "comment": "Category editor: a subcategory’s fixed kind.",
+      "extractionState": "manual",
+      "generatesSymbol": false,
+      "localizations": {
+        "en": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Expense (from parent)"
+          }
+        }
+      }
+    },
+    "Expense categories can’t be merged with income ones, so they aren’t listed.": {
+      "comment": "Merge sheet footnote sentence, merging an income category.",
+      "extractionState": "manual",
+      "generatesSymbol": false,
+      "localizations": {
+        "en": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Expense categories can’t be merged with income ones, so they aren’t listed."
+          }
+        }
+      }
+    },
     "Export": {
       "comment": "The iOS Export sheet’s confirm button; the share sheet follows directly, so no ellipsis.",
       "extractionState": "manual",
@@ -1760,6 +2868,97 @@
         }
       }
     },
+    "Gray": {
+      "comment": "Category colour name.",
+      "extractionState": "manual",
+      "generatesSymbol": false,
+      "localizations": {
+        "en": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Gray"
+          }
+        }
+      }
+    },
+    "Green": {
+      "comment": "Category colour name.",
+      "extractionState": "manual",
+      "generatesSymbol": false,
+      "localizations": {
+        "en": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Green"
+          }
+        }
+      }
+    },
+    "Icon": {
+      "comment": "Category editor row: the category’s symbol.",
+      "extractionState": "manual",
+      "generatesSymbol": false,
+      "localizations": {
+        "en": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Icon"
+          }
+        }
+      }
+    },
+    "Income": {
+      "comment": "A category's kind, and the Categories screen's Income tab.",
+      "extractionState": "manual",
+      "generatesSymbol": false,
+      "localizations": {
+        "en": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Income"
+          }
+        }
+      }
+    },
+    "Income (from parent)": {
+      "comment": "Category editor: a subcategory’s fixed kind.",
+      "extractionState": "manual",
+      "generatesSymbol": false,
+      "localizations": {
+        "en": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Income (from parent)"
+          }
+        }
+      }
+    },
+    "Income categories can’t be merged with expense ones, so they aren’t listed.": {
+      "comment": "Merge sheet footnote sentence, merging an expense category.",
+      "extractionState": "manual",
+      "generatesSymbol": false,
+      "localizations": {
+        "en": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Income categories can’t be merged with expense ones, so they aren’t listed."
+          }
+        }
+      }
+    },
+    "Indigo": {
+      "comment": "Category colour name.",
+      "extractionState": "manual",
+      "generatesSymbol": false,
+      "localizations": {
+        "en": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Indigo"
+          }
+        }
+      }
+    },
     "It can’t be restored. Your data hasn’t changed.": {
       "comment": "Alert message under “This Backup Is Damaged”.",
       "extractionState": "manual",
@@ -1768,6 +2967,66 @@
           "stringUnit": {
             "state": "translated",
             "value": "It can’t be restored. Your data hasn’t changed."
+          }
+        }
+      }
+    },
+    "Its %1$lld subcategories move to “%2$@”.": {
+      "comment": "Merge sheet footnote sentence, before “Merging can’t be undone.”: %1$lld is how many subcategories the merged category has; %2$@ is the category they move to (D301).",
+      "extractionState": "manual",
+      "generatesSymbol": false,
+      "localizations": {
+        "en": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "%#@count@"
+          },
+          "substitutions": {
+            "count": {
+              "argNum": 1,
+              "formatSpecifier": "lld",
+              "variations": {
+                "plural": {
+                  "one": {
+                    "stringUnit": {
+                      "state": "translated",
+                      "value": "Its subcategory moves to “%2$@”."
+                    }
+                  },
+                  "other": {
+                    "stringUnit": {
+                      "state": "translated",
+                      "value": "Its %arg subcategories move to “%2$@”."
+                    }
+                  }
+                }
+              }
+            }
+          }
+        }
+      }
+    },
+    "Its %lld subcategories are deleted too.": {
+      "comment": "Delete alert sentence for an unused category, before “Deleting can’t be undone.”: %lld is how many subcategories are deleted with it. The one form has no number.",
+      "extractionState": "manual",
+      "generatesSymbol": false,
+      "localizations": {
+        "en": {
+          "variations": {
+            "plural": {
+              "one": {
+                "stringUnit": {
+                  "state": "translated",
+                  "value": "Its subcategory is deleted too."
+                }
+              },
+              "other": {
+                "stringUnit": {
+                  "state": "translated",
+                  "value": "Its %lld subcategories are deleted too."
+                }
+              }
+            }
           }
         }
       }
@@ -1792,6 +3051,66 @@
           "stringUnit": {
             "state": "translated",
             "value": "It’s removed from this %@. This can’t be undone."
+          }
+        }
+      }
+    },
+    "It’s used by %1$lld transactions, including those in %2$@.": {
+      "comment": "Category delete alert, first sentence for a parent: %1$lld is how many transactions and split lines use it and its subcategories; %2$@ lists the subcategories that have transactions. With one transaction it names the one subcategory it’s in.",
+      "extractionState": "manual",
+      "generatesSymbol": false,
+      "localizations": {
+        "en": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "%#@count@"
+          },
+          "substitutions": {
+            "count": {
+              "argNum": 1,
+              "formatSpecifier": "lld",
+              "variations": {
+                "plural": {
+                  "one": {
+                    "stringUnit": {
+                      "state": "translated",
+                      "value": "It’s used by %arg transaction, in %2$@."
+                    }
+                  },
+                  "other": {
+                    "stringUnit": {
+                      "state": "translated",
+                      "value": "It’s used by %arg transactions, including those in %2$@."
+                    }
+                  }
+                }
+              }
+            }
+          }
+        }
+      }
+    },
+    "It’s used by %lld transactions.": {
+      "comment": "Category delete alert, first sentence: %lld is how many transactions and split lines use the category.",
+      "extractionState": "manual",
+      "generatesSymbol": false,
+      "localizations": {
+        "en": {
+          "variations": {
+            "plural": {
+              "one": {
+                "stringUnit": {
+                  "state": "translated",
+                  "value": "It’s used by %lld transaction."
+                }
+              },
+              "other": {
+                "stringUnit": {
+                  "state": "translated",
+                  "value": "It’s used by %lld transactions."
+                }
+              }
+            }
           }
         }
       }
@@ -1844,6 +3163,32 @@
         }
       }
     },
+    "Kind": {
+      "comment": "Categories screen: the Expense or Income picker, and the editor’s row.",
+      "extractionState": "manual",
+      "generatesSymbol": false,
+      "localizations": {
+        "en": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Kind"
+          }
+        }
+      }
+    },
+    "Kind comes from the tab it’s added on and can’t change later. Names must be unique among categories of the same kind.": {
+      "comment": "Category editor footnote for a top-level category.",
+      "extractionState": "manual",
+      "generatesSymbol": false,
+      "localizations": {
+        "en": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Kind comes from the tab it’s added on and can’t change later. Names must be unique among categories of the same kind."
+          }
+        }
+      }
+    },
     "Last backup failed: not enough storage. Free up space on this %@, then click Back Up Now. No older backup was removed.": {
       "comment": "macOS: the last backup failed for lack of storage. %@ is the device: Mac.",
       "extractionState": "manual",
@@ -1876,6 +3221,19 @@
           "stringUnit": {
             "state": "translated",
             "value": "Last backup: %@. little-orbit backs up once a day after you change something."
+          }
+        }
+      }
+    },
+    "Lime": {
+      "comment": "Category colour name.",
+      "extractionState": "manual",
+      "generatesSymbol": false,
+      "localizations": {
+        "en": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Lime"
           }
         }
       }
@@ -2048,6 +3406,93 @@
         }
       }
     },
+    "Merge": {
+      "comment": "Merge sheet: merges the category into the chosen one.",
+      "extractionState": "manual",
+      "generatesSymbol": false,
+      "localizations": {
+        "en": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Merge"
+          }
+        }
+      }
+    },
+    "Merge %@": {
+      "comment": "Merge sheet title. The category being merged.",
+      "extractionState": "manual",
+      "generatesSymbol": false,
+      "localizations": {
+        "en": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Merge %@"
+          }
+        }
+      }
+    },
+    "Merge into…": {
+      "comment": "Category editor row: opens the Merge sheet.",
+      "extractionState": "manual",
+      "generatesSymbol": false,
+      "localizations": {
+        "en": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Merge into…"
+          }
+        }
+      }
+    },
+    "Merge “%1$@” (%2$lld transactions) into:": {
+      "comment": "Merge sheet header: %1$@ is the category being merged; %2$lld is how many transactions use it.",
+      "extractionState": "manual",
+      "generatesSymbol": false,
+      "localizations": {
+        "en": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Merge “%1$@” (%#@count@) into:"
+          },
+          "substitutions": {
+            "count": {
+              "argNum": 2,
+              "formatSpecifier": "lld",
+              "variations": {
+                "plural": {
+                  "one": {
+                    "stringUnit": {
+                      "state": "translated",
+                      "value": "%arg transaction"
+                    }
+                  },
+                  "other": {
+                    "stringUnit": {
+                      "state": "translated",
+                      "value": "%arg transactions"
+                    }
+                  }
+                }
+              }
+            }
+          }
+        }
+      }
+    },
+    "Merging can’t be undone.": {
+      "comment": "Last sentence of the Merge sheet footnote (D287.3).",
+      "extractionState": "manual",
+      "generatesSymbol": false,
+      "localizations": {
+        "en": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Merging can’t be undone."
+          }
+        }
+      }
+    },
     "Mixed types": {
       "comment": "Bulk edit: Category is off because the rows mix kinds.",
       "extractionState": "manual",
@@ -2072,6 +3517,141 @@
         }
       }
     },
+    "More": {
+      "comment": "Categories screen: the toolbar menu’s accessibility label.",
+      "extractionState": "manual",
+      "generatesSymbol": false,
+      "localizations": {
+        "en": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "More"
+          }
+        }
+      }
+    },
+    "Move": {
+      "comment": "Move To sheet: moves the transactions and deletes the category.",
+      "extractionState": "manual",
+      "generatesSymbol": false,
+      "localizations": {
+        "en": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Move"
+          }
+        }
+      }
+    },
+    "Move %1$lld transactions from %2$@ and its subcategories to:": {
+      "comment": "Move To sheet header: %1$lld is how many transactions move; %2$@ is the category being deleted.",
+      "extractionState": "manual",
+      "generatesSymbol": false,
+      "localizations": {
+        "en": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Move %#@count@ from %2$@ and its subcategories to:"
+          },
+          "substitutions": {
+            "count": {
+              "argNum": 1,
+              "formatSpecifier": "lld",
+              "variations": {
+                "plural": {
+                  "one": {
+                    "stringUnit": {
+                      "state": "translated",
+                      "value": "%arg transaction"
+                    }
+                  },
+                  "other": {
+                    "stringUnit": {
+                      "state": "translated",
+                      "value": "%arg transactions"
+                    }
+                  }
+                }
+              }
+            }
+          }
+        }
+      }
+    },
+    "Move %1$lld transactions from %2$@ to:": {
+      "comment": "Move To sheet header: %1$lld is how many transactions move; %2$@ is the category being deleted.",
+      "extractionState": "manual",
+      "generatesSymbol": false,
+      "localizations": {
+        "en": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Move %#@count@ from %2$@ to:"
+          },
+          "substitutions": {
+            "count": {
+              "argNum": 1,
+              "formatSpecifier": "lld",
+              "variations": {
+                "plural": {
+                  "one": {
+                    "stringUnit": {
+                      "state": "translated",
+                      "value": "%arg transaction"
+                    }
+                  },
+                  "other": {
+                    "stringUnit": {
+                      "state": "translated",
+                      "value": "%arg transactions"
+                    }
+                  }
+                }
+              }
+            }
+          }
+        }
+      }
+    },
+    "Move To": {
+      "comment": "Sheet title: choose where a deleted category’s transactions go.",
+      "extractionState": "manual",
+      "generatesSymbol": false,
+      "localizations": {
+        "en": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Move To"
+          }
+        }
+      }
+    },
+    "Move to Another Category…": {
+      "comment": "Category delete alert: move its transactions, then delete it.",
+      "extractionState": "manual",
+      "generatesSymbol": false,
+      "localizations": {
+        "en": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Move to Another Category…"
+          }
+        }
+      }
+    },
+    "Name": {
+      "comment": "Category editor: the name field’s placeholder and VoiceOver label.",
+      "extractionState": "manual",
+      "generatesSymbol": false,
+      "localizations": {
+        "en": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Name"
+          }
+        }
+      }
+    },
     "New Account": {
       "comment": "Undo name: an account added.",
       "extractionState": "manual",
@@ -2080,6 +3660,32 @@
           "stringUnit": {
             "state": "translated",
             "value": "New Account"
+          }
+        }
+      }
+    },
+    "New Category": {
+      "comment": "Category editor title: adding.",
+      "extractionState": "manual",
+      "generatesSymbol": false,
+      "localizations": {
+        "en": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "New Category"
+          }
+        }
+      }
+    },
+    "New Subcategory": {
+      "comment": "Category editor title: adding.",
+      "extractionState": "manual",
+      "generatesSymbol": false,
+      "localizations": {
+        "en": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "New Subcategory"
           }
         }
       }
@@ -2224,6 +3830,19 @@
         }
       }
     },
+    "Nothing uses it.": {
+      "comment": "Delete alert sentence for a category no transaction or split line uses.",
+      "extractionState": "manual",
+      "generatesSymbol": false,
+      "localizations": {
+        "en": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Nothing uses it."
+          }
+        }
+      }
+    },
     "Off": {
       "comment": "Monthly Backups stepper value at 0.",
       "extractionState": "manual",
@@ -2232,6 +3851,71 @@
           "stringUnit": {
             "state": "translated",
             "value": "Off"
+          }
+        }
+      }
+    },
+    "OK": {
+      "comment": "Closes a category alert.",
+      "extractionState": "manual",
+      "generatesSymbol": false,
+      "localizations": {
+        "en": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "OK"
+          }
+        }
+      }
+    },
+    "Only expense categories are offered.": {
+      "comment": "Move To sheet footer sentence.",
+      "extractionState": "manual",
+      "generatesSymbol": false,
+      "localizations": {
+        "en": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Only expense categories are offered."
+          }
+        }
+      }
+    },
+    "Only income categories are offered.": {
+      "comment": "Move To sheet footer sentence.",
+      "extractionState": "manual",
+      "generatesSymbol": false,
+      "localizations": {
+        "en": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Only income categories are offered."
+          }
+        }
+      }
+    },
+    "Orange": {
+      "comment": "Category colour name.",
+      "extractionState": "manual",
+      "generatesSymbol": false,
+      "localizations": {
+        "en": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Orange"
+          }
+        }
+      }
+    },
+    "Parent": {
+      "comment": "Category editor row: the subcategory’s parent category.",
+      "extractionState": "manual",
+      "generatesSymbol": false,
+      "localizations": {
+        "en": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Parent"
           }
         }
       }
@@ -2248,6 +3932,32 @@
         }
       }
     },
+    "Pink": {
+      "comment": "Category colour name.",
+      "extractionState": "manual",
+      "generatesSymbol": false,
+      "localizations": {
+        "en": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Pink"
+          }
+        }
+      }
+    },
+    "Purple": {
+      "comment": "Category colour name.",
+      "extractionState": "manual",
+      "generatesSymbol": false,
+      "localizations": {
+        "en": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Purple"
+          }
+        }
+      }
+    },
     "Recent Automatic Backups": {
       "comment": "Stepper label: how many recent automatic backups are kept (1–30).",
       "extractionState": "manual",
@@ -2260,6 +3970,19 @@
         }
       }
     },
+    "Red": {
+      "comment": "Category colour name.",
+      "extractionState": "manual",
+      "generatesSymbol": false,
+      "localizations": {
+        "en": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Red"
+          }
+        }
+      }
+    },
     "Redid %@": {
       "comment": "VoiceOver announcement after Redo. %@ is the Redo name, such as \"Delete Transaction\".",
       "extractionState": "manual",
@@ -2268,6 +3991,19 @@
           "stringUnit": {
             "state": "translated",
             "value": "Redid %@"
+          }
+        }
+      }
+    },
+    "Reorder": {
+      "comment": "Categories screen menu item: drag categories into a new order.",
+      "extractionState": "manual",
+      "generatesSymbol": false,
+      "localizations": {
+        "en": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Reorder"
           }
         }
       }
@@ -2380,6 +4116,19 @@
         }
       }
     },
+    "Save": {
+      "comment": "Category editor: saves the category.",
+      "extractionState": "manual",
+      "generatesSymbol": false,
+      "localizations": {
+        "en": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Save"
+          }
+        }
+      }
+    },
     "Something Went Wrong": {
       "comment": "Alert title in Backups when no other case applies (D211.9). Its message is the catalog's own, never the error's text. The only button is OK.",
       "extractionState": "manual",
@@ -2400,6 +4149,32 @@
           "stringUnit": {
             "state": "translated",
             "value": "Something went wrong saving your change. Please try again."
+          }
+        }
+      }
+    },
+    "Tap a category’s arrow to show its subcategories (one level). Archived categories stay out of pickers but keep their history in reports. Uncategorised isn’t a category: expenses and income without one show the gray ? chip; transfers never have a category.": {
+      "comment": "Categories screen footer under the list.",
+      "extractionState": "manual",
+      "generatesSymbol": false,
+      "localizations": {
+        "en": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Tap a category’s arrow to show its subcategories (one level). Archived categories stay out of pickers but keep their history in reports. Uncategorised isn’t a category: expenses and income without one show the gray ? chip; transfers never have a category."
+          }
+        }
+      }
+    },
+    "Teal": {
+      "comment": "Category colour name.",
+      "extractionState": "manual",
+      "generatesSymbol": false,
+      "localizations": {
+        "en": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Teal"
           }
         }
       }
@@ -2484,6 +4259,19 @@
           "stringUnit": {
             "state": "translated",
             "value": "The transfer"
+          }
+        }
+      }
+    },
+    "There’s already a category named “%@” here.": {
+      "comment": "Category editor, under the name field: another category at the same level (the same parent, or the same kind at the top level) has this name, ignoring case and spaces. The name typed.",
+      "extractionState": "manual",
+      "generatesSymbol": false,
+      "localizations": {
+        "en": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "There’s already a category named “%@” here."
           }
         }
       }
@@ -2686,6 +4474,32 @@
         }
       }
     },
+    "Unarchive": {
+      "comment": "Button on an archived category: put it back in pickers.",
+      "extractionState": "manual",
+      "generatesSymbol": false,
+      "localizations": {
+        "en": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Unarchive"
+          }
+        }
+      }
+    },
+    "Unarchive puts a category back in pickers. Archived categories stay in reports.": {
+      "comment": "Categories screen footer under the Archived section.",
+      "extractionState": "manual",
+      "generatesSymbol": false,
+      "localizations": {
+        "en": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Unarchive puts a category back in pickers. Archived categories stay in reports."
+          }
+        }
+      }
+    },
     "Undid %@": {
       "comment": "VoiceOver announcement after Undo. %@ is the Undo name, such as \"Delete Transaction in Household Card\".",
       "extractionState": "manual",
@@ -2770,6 +4584,19 @@
         }
       }
     },
+    "Use 100 characters or fewer.": {
+      "comment": "Category editor, under the name field: the name is longer than 100 characters.",
+      "extractionState": "manual",
+      "generatesSymbol": false,
+      "localizations": {
+        "en": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Use 100 characters or fewer."
+          }
+        }
+      }
+    },
     "Version %lld": {
       "comment": "A backup's format version in its detail. %lld is the version number.",
       "extractionState": "manual",
@@ -2806,6 +4633,19 @@
         }
       }
     },
+    "Yellow": {
+      "comment": "Category colour name.",
+      "extractionState": "manual",
+      "generatesSymbol": false,
+      "localizations": {
+        "en": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Yellow"
+          }
+        }
+      }
+    },
     "Yesterday, %@": {
       "comment": "A backup's date yesterday. %@ is the time.",
       "extractionState": "manual",
@@ -2814,6 +4654,19 @@
           "stringUnit": {
             "state": "translated",
             "value": "Yesterday, %@"
+          }
+        }
+      }
+    },
+    "Your categories weren’t changed. Try again.": {
+      "comment": "Alert message: a category change failed and nothing was saved.",
+      "extractionState": "manual",
+      "generatesSymbol": false,
+      "localizations": {
+        "en": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Your categories weren’t changed. Try again."
           }
         }
       }
@@ -2934,6 +4787,41 @@
           "stringUnit": {
             "state": "translated",
             "value": "little-orbit makes a backup once a day after you change something. Backups stay on this %@."
+          }
+        }
+      }
+    },
+    "“%1$@” and “%2$@” both have subcategories with %3$lld of the same names, including “%4$@”. Rename or merge one of each pair first.": {
+      "comment": "Can’t Merge Categories alert message (D291.1): %1$@ is the category being merged, %2$@ the chosen one, %3$lld how many subcategory names both have, %4$@ the first of those names in sorted order. One: “%1$@” and “%2$@” both have a subcategory named “%4$@”.",
+      "extractionState": "manual",
+      "generatesSymbol": false,
+      "localizations": {
+        "en": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "%#@count@"
+          },
+          "substitutions": {
+            "count": {
+              "argNum": 3,
+              "formatSpecifier": "lld",
+              "variations": {
+                "plural": {
+                  "one": {
+                    "stringUnit": {
+                      "state": "translated",
+                      "value": "“%1$@” and “%2$@” both have a subcategory named “%4$@”. Rename or merge one of them first."
+                    }
+                  },
+                  "other": {
+                    "stringUnit": {
+                      "state": "translated",
+                      "value": "“%1$@” and “%2$@” both have subcategories with %arg of the same names, including “%4$@”. Rename or merge one of each pair first."
+                    }
+                  }
+                }
+              }
+            }
           }
         }
       }
