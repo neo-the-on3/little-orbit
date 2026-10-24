@@ -2597,6 +2597,32 @@
         }
       }
     },
+    "Discard Changes": {
+      "comment": "Discard confirmations (D300): closes the sheet with nothing saved.",
+      "extractionState": "manual",
+      "generatesSymbol": false,
+      "localizations": {
+        "en": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Discard Changes"
+          }
+        }
+      }
+    },
+    "Discard Changes?": {
+      "comment": "Edit sheet confirmation title: Cancel or a swipe down with unsaved edits. It has no message.",
+      "extractionState": "manual",
+      "generatesSymbol": false,
+      "localizations": {
+        "en": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Discard Changes?"
+          }
+        }
+      }
+    },
     "Done": {
       "comment": "Categories and Payees screens: ends reordering or selecting.",
       "extractionState": "manual",
@@ -3283,6 +3309,19 @@
           "stringUnit": {
             "state": "translated",
             "value": "Keep"
+          }
+        }
+      }
+    },
+    "Keep Editing": {
+      "comment": "Discard confirmations (D300): goes back to the sheet with the edits intact.",
+      "extractionState": "manual",
+      "generatesSymbol": false,
+      "localizations": {
+        "en": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Keep Editing"
           }
         }
       }
