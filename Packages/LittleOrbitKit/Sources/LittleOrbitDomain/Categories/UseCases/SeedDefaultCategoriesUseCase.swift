@@ -1,10 +1,11 @@
 import Foundation
 
-/// Seeds the built-in categories once, on a store's first launch (D291.7).
+/// Seeds the built-in categories once per store, on the first launch of an empty store (D291.7, D293).
 @MainActor
 public protocol SeedDefaultCategoriesUseCase {
-    /// Adds the default categories only to a brand-new, empty store; otherwise does nothing. Returns whether it
-    /// added them.
+    /// Adds the default categories while the store's seeding is still pending and the store is empty;
+    /// otherwise does nothing. Returns whether it added them. A failed save throws and leaves the seeding
+    /// pending, so the next launch tries again.
     @discardableResult
     func seedIfFirstLaunch() throws -> Bool
 }
@@ -19,24 +20,29 @@ public struct DefaultSeedDefaultCategoriesUseCase: SeedDefaultCategoriesUseCase 
         self.names = names
     }
 
-    /// Seeds only when both hold, with no marker and no schema change:
-    /// - the store is new (`LedgerRepository.isNewStore`): created on this launch and not written to yet;
-    /// - it holds no categories (archived ones included), no accounts and no transactions.
+    /// Seeds only when both hold (D293.1):
+    /// - the seeding is still pending (`LedgerRepository.isDefaultSeedPending`): the store was created brand
+    ///   new and no seed, restore or import has completed since;
+    /// - the store holds no categories (archived ones included), no accounts and no transactions.
     ///
-    /// So deleting every category never brings the defaults back, even if nothing else is left: on a later
-    /// launch the store file already exists, and on this launch the deletes were writes. A restore or an import
-    /// writes too, so neither seeds, whatever it brought in. The composition root calls this once at launch,
-    /// before anything else writes; `ledgerForEntry` calls it again, which is a no-op by then.
+    /// The seeding is marked done after the seed save succeeds, or when a retry finds the store no longer empty. Deleting every category never makes it
+    /// pending again, and a completed restore or import marks it done, so none of them leads to a seed. Only the
+    /// composition root calls this, once at launch; nothing else seeds, the transaction form included.
     @discardableResult
     public func seedIfFirstLaunch() throws -> Bool {
-        guard repository.isNewStore,
-            try repository.categories().isEmpty,
+        guard repository.isDefaultSeedPending else {
+            return false
+        }
+        guard try repository.categories().isEmpty,
             try repository.accounts().isEmpty,
             try repository.transactions().isEmpty
         else {
+            // The user added something before a retry: nothing is seeded, now or after they delete it all.
+            repository.markDefaultSeedDone()
             return false
         }
         try repository.seedDefaultCategories(names: names)
+        repository.markDefaultSeedDone()
         return true
     }
 }

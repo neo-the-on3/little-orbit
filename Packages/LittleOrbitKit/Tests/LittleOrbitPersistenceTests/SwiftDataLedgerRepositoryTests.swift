@@ -141,29 +141,129 @@
             )
         }
 
-        /// D291.7: only a store whose file this open created is new. Deleting every category, then relaunching
-        /// on the same file, seeds nothing.
-        func testDefaultsAreSeededOnlyWhenTheStoreFileIsNew() throws {
+        private func storeFolder() throws -> URL {
             let directory = FileManager.default.temporaryDirectory
                 .appendingPathComponent("little-orbit-\(UUID().uuidString)", isDirectory: true)
             try FileManager.default.createDirectory(at: directory, withIntermediateDirectories: true)
+            return directory
+        }
+
+        private func markerExists(for configuration: StoreConfiguration) throws -> Bool {
+            let marker = StoreLocation.pendingSeedMarkerURL(forStore: try XCTUnwrap(configuration.fileURL))
+            return FileManager.default.fileExists(atPath: marker.path)
+        }
+
+        /// D293: opening a store file that doesn't exist yet writes the pending-seed marker beside it, named after
+        /// the store. Reopening an existing store never writes one.
+        func testANewStoreFileGetsAPendingSeedMarkerBesideIt() throws {
+            let directory = try storeFolder()
+            defer { try? FileManager.default.removeItem(at: directory) }
+            let url = directory.appendingPathComponent("ledger.store")
+            XCTAssertEqual(
+                StoreLocation.pendingSeedMarkerURL(forStore: url),
+                directory.appendingPathComponent("ledger.store.pending-seed"),
+            )
+            let configuration = StoreConfiguration(fileURL: url)
+            try onMain {
+                let repository = try LittleOrbitStore.makeRepository(configuration: configuration)
+                XCTAssertTrue(try markerExists(for: configuration))
+                XCTAssertTrue(repository.isDefaultSeedPending)
+                repository.markDefaultSeedDone()
+                XCTAssertFalse(try markerExists(for: configuration))
+            }
+            try onMain {
+                let relaunched = try LittleOrbitStore.makeRepository(configuration: configuration)
+                XCTAssertFalse(try markerExists(for: configuration))
+                XCTAssertFalse(relaunched.isDefaultSeedPending)
+            }
+        }
+
+        /// D293.5: the first seed save fails; on the next launch the 18 defaults appear and the marker is gone.
+        func testAFailedFirstSeedIsRetriedOnTheNextLaunch() throws {
+            let directory = try storeFolder()
+            defer { try? FileManager.default.removeItem(at: directory) }
+            let configuration = StoreConfiguration(fileURL: directory.appendingPathComponent("ledger.store"))
+            try onMain {
+                let repository = SeedFailingRepository(
+                    try LittleOrbitStore.makeRepository(configuration: configuration)
+                )
+                XCTAssertThrowsError(try seeding(repository).seedIfFirstLaunch())
+                XCTAssertTrue(try markerExists(for: configuration))
+            }
+            try onMain {
+                let relaunched = try LittleOrbitStore.makeRepository(configuration: configuration)
+                XCTAssertTrue(relaunched.isDefaultSeedPending)
+                XCTAssertTrue(try seeding(relaunched).seedIfFirstLaunch())
+                XCTAssertEqual(try relaunched.categories().count, 18)
+                XCTAssertFalse(try markerExists(for: configuration))
+            }
+            try onMain {
+                let again = try LittleOrbitStore.makeRepository(configuration: configuration)
+                XCTAssertFalse(try seeding(again).seedIfFirstLaunch())
+                XCTAssertEqual(try again.categories().count, 18)
+            }
+        }
+
+        /// D293.5: after a restore, of an empty backup into a fresh store included, the store counts as seeded
+        /// (the pending marker is gone), and a following launch seeds nothing.
+        func testARestoreCountsAsSeededOnTheNextLaunch() throws {
+            let directory = try storeFolder()
+            defer { try? FileManager.default.removeItem(at: directory) }
+            let configuration = StoreConfiguration(fileURL: directory.appendingPathComponent("ledger.store"))
+            try onMain {
+                let fresh = try LittleOrbitStore.makeRepository(configuration: configuration)
+                XCTAssertTrue(fresh.isDefaultSeedPending)
+                try fresh.replaceLedger(with: LedgerSnapshot())
+                XCTAssertFalse(try markerExists(for: configuration))
+            }
+            try onMain {
+                let relaunched = try LittleOrbitStore.makeRepository(configuration: configuration)
+                XCTAssertFalse(relaunched.isDefaultSeedPending)
+                XCTAssertFalse(try seeding(relaunched).seedIfFirstLaunch())
+                XCTAssertTrue(try relaunched.categories().isEmpty)
+            }
+        }
+
+        /// D293: an existing install's store file has no pending marker, so it counts as seeded: it's never
+        /// seeded, even with no categories, and deleting every category and relaunching brings nothing back.
+        func testAStoreWithoutAPendingMarkerIsNeverSeeded() throws {
+            let directory = try storeFolder()
+            defer { try? FileManager.default.removeItem(at: directory) }
+            let configuration = StoreConfiguration(fileURL: directory.appendingPathComponent("ledger.store"))
+            try onMain {
+                // A store created before this change: the container alone, with no marker.
+                _ = try LittleOrbitStore.makeContainer(configuration: configuration)
+            }
+            try onMain {
+                let existing = try LittleOrbitStore.makeRepository(configuration: configuration)
+                XCTAssertFalse(try markerExists(for: configuration))
+                XCTAssertFalse(existing.isDefaultSeedPending)
+                XCTAssertFalse(try seeding(existing).seedIfFirstLaunch())
+                XCTAssertTrue(try existing.categories().isEmpty)
+            }
+            try onMain {
+                let unmarked = SwiftDataLedgerRepository(
+                    container: try LittleOrbitStore.makeContainer(configuration: .inMemory)
+                )
+                XCTAssertFalse(unmarked.isDefaultSeedPending)
+            }
+        }
+
+        /// D291.7: deleting every category, then relaunching on the same file, seeds nothing.
+        func testDeletingEveryCategoryThenRelaunchingSeedsNothing() throws {
+            let directory = try storeFolder()
             defer { try? FileManager.default.removeItem(at: directory) }
             let configuration = StoreConfiguration(fileURL: directory.appendingPathComponent("ledger.store"))
             try onMain {
                 let repository = try LittleOrbitStore.makeRepository(configuration: configuration)
-                XCTAssertTrue(repository.isNewStore)
-                let seeding = DefaultSeedDefaultCategoriesUseCase(repository: repository, names: TestCategoryNames())
-                XCTAssertTrue(try seeding.seedIfFirstLaunch())
-                XCTAssertEqual(try repository.categories().count, 18)
+                XCTAssertTrue(try seeding(repository).seedIfFirstLaunch())
                 for category in try repository.categories() where category.parentID == nil {
                     try repository.deleteCategory(id: category.id, reassigningTo: nil)
                 }
             }
             try onMain {
                 let relaunched = try LittleOrbitStore.makeRepository(configuration: configuration)
-                XCTAssertFalse(relaunched.isNewStore)
-                let seeding = DefaultSeedDefaultCategoriesUseCase(repository: relaunched, names: TestCategoryNames())
-                XCTAssertFalse(try seeding.seedIfFirstLaunch())
+                XCTAssertFalse(try seeding(relaunched).seedIfFirstLaunch())
                 XCTAssertTrue(try relaunched.categories().isEmpty)
             }
         }

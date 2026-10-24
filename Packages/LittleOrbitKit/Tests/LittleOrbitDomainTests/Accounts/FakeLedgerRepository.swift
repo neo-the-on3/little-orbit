@@ -11,11 +11,10 @@ final class FakeLedgerRepository: LedgerRepository {
     struct ReadFailure: Error {}
     struct WriteFailure: Error {}
 
-    private(set) var snapshot = LedgerSnapshot() {
-        didSet { isNewStore = false }
-    }
-    /// New until the first write, like `InMemoryLedgerRepository` (D291.7).
-    private(set) var isNewStore = true
+    private(set) var snapshot = LedgerSnapshot()
+    /// The pending-seed marker as a flag, like `InMemoryLedgerRepository` (D293). Pass `seedPending: false` for an
+    /// existing install.
+    private(set) var isDefaultSeedPending = true
     private(set) var savedAccountIDs: [UUID] = []
     var failsReads = false
     /// When set, transaction, split, attachment, category and payee-merge writes after this many fail.
@@ -24,7 +23,13 @@ final class FakeLedgerRepository: LedgerRepository {
     private(set) var atomicChanges = 0
     private var tick = 0.0
 
-    init(accounts: [Account] = [], categories: [TransactionCategory] = [], transactions: [Transaction] = []) throws {
+    init(
+        accounts: [Account] = [],
+        categories: [TransactionCategory] = [],
+        transactions: [Transaction] = [],
+        seedPending: Bool = true,
+    ) throws {
+        isDefaultSeedPending = seedPending
         for account in accounts {
             try saveAccount(account)
         }
@@ -35,6 +40,10 @@ final class FakeLedgerRepository: LedgerRepository {
             snapshot = try LedgerBook.savingTransaction(transaction, in: snapshot, now: now())
         }
         savedAccountIDs = []
+    }
+
+    func markDefaultSeedDone() {
+        isDefaultSeedPending = false
     }
 
     private func write() throws {

@@ -26,11 +26,15 @@ public protocol LedgerRepository: AnyObject {
     /// Adds the built-in categories that aren't there yet, with the names `names` gives (D8). Only
     /// `SeedDefaultCategoriesUseCase` calls it, once per store (D291.7).
     func seedDefaultCategories(names: any DefaultCategoryNaming) throws
-    /// Whether this store was created on this launch and nothing has been written to it yet (D291.7). The
-    /// SwiftData store is new when its file didn't exist before the container opened it; an in-memory store
-    /// starts new. Any successful write, a restore included, makes it not new for the rest of the launch, and a
-    /// store reopened on a later launch is never new. Nothing is stored for it, so there's no schema change.
-    var isNewStore: Bool { get }
+    /// Whether this store's one-time default-category seeding is still pending (D291.7, D293). It's pending
+    /// only from the moment a brand-new store is created until a seed save succeeds or a restore or import
+    /// completes, and it survives relaunches in between, so a failed first seed is retried. A store with no
+    /// pending marker counts as seeded: existing installs never seed.
+    var isDefaultSeedPending: Bool { get }
+    /// Records that the seeding is done, for good. Called after a successful seed save, by `replaceLedger` when a
+    /// restore completes, and by an import when it completes (#30, #60: none exists yet). It never throws: if the
+    /// marker can't be removed it's logged, and the empty-store check still prevents a seed.
+    func markDefaultSeedDone()
 
     func payees() throws -> [Payee]
     func savePayee(_ payee: Payee) throws

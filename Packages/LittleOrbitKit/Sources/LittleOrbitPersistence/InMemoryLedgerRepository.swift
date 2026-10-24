@@ -4,16 +4,19 @@ import LittleOrbitDomain
 /// Process-local ledger. Used on Linux and in tests. It applies the same `LedgerBook` rules as the SwiftData store.
 @MainActor
 public final class InMemoryLedgerRepository: LedgerRepository {
-    private var snapshot = LedgerSnapshot() {
-        didSet { isNewStore = false }
-    }
-    /// A new repository is a new store until its first write (D291.7). A rolled-back change also counts, which
-    /// only ever makes seeding less likely.
-    public private(set) var isNewStore = true
+    private var snapshot = LedgerSnapshot()
+    /// The pending-seed marker as a flag (D293): a new in-memory store is a brand-new store, so it starts pending.
+    public private(set) var isDefaultSeedPending: Bool
     private let now: @MainActor () -> Date
 
-    public init(now: @escaping @MainActor () -> Date = { Date() }) {
+    /// `seedPending: false` stands in for an existing install, whose store has no pending marker.
+    public init(now: @escaping @MainActor () -> Date = { Date() }, seedPending: Bool = true) {
         self.now = now
+        self.isDefaultSeedPending = seedPending
+    }
+
+    public func markDefaultSeedDone() {
+        isDefaultSeedPending = false
     }
 
     public func accounts() throws -> [Account] {
@@ -151,7 +154,9 @@ extension InMemoryLedgerRepository: LedgerBackupSource {
         snapshot
     }
 
+    /// A completed restore marks the seeding done, so even an empty backup never leads to a seed (D293.2).
     public func replaceLedger(with snapshot: LedgerSnapshot) throws {
         self.snapshot = snapshot
+        markDefaultSeedDone()
     }
 }

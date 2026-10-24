@@ -39,6 +39,8 @@ public struct AppGroupContainerLookup: Sendable {
 /// No App Group is configured yet: that needs an entitlement and a provisioning profile (D154).
 public enum StoreLocation {
     public static let fileName = "LittleOrbit.store"
+    /// The pending-seed marker's name suffix (D293). See `pendingSeedMarkerURL(forStore:)`.
+    public static let pendingSeedMarkerSuffix = ".pending-seed"
     /// Folder name when there is no bundle identifier, such as in a command-line test run.
     public static let fallbackFolderName = "LittleOrbit"
     /// The optional Info.plist key that holds the App Group identifier.
@@ -69,6 +71,20 @@ public enum StoreLocation {
             return nil
         }
         return container.appendingPathComponent(fileName, isDirectory: false)
+    }
+
+    /// The pending-seed marker for the store at `storeURL`: an empty file beside it, in the same folder, named
+    /// `LittleOrbit.store.pending-seed` (D293). `LittleOrbitStore.makeRepository` writes it, atomically, just
+    /// before the container creates a store file that didn't exist, and removes it once a seed save succeeds or a
+    /// restore or import completes. A missing marker means seeded, so existing installs never seed. It holds no
+    /// data, and backups never include it: they hold the ledger's records, not files from this folder.
+    ///
+    /// Note for #98: the App Group move must resolve the store's final URL first, then decide whether the store is
+    /// new and carry this marker with it. If the store isn't empty, drop the marker instead. An existing install
+    /// must never seed an empty group store.
+    public static func pendingSeedMarkerURL(forStore storeURL: URL) -> URL {
+        storeURL.deletingLastPathComponent()
+            .appendingPathComponent(storeURL.lastPathComponent + pendingSeedMarkerSuffix, isDirectory: false)
     }
 
     /// The store URL with its folder created if missing. SwiftData creates the store file itself.

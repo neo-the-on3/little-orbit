@@ -19,6 +19,16 @@ final class InMemoryLedgerRepositoryTests: XCTestCase {
         }
     }
 
+    /// D293: an existing install's store has no pending marker, so it counts as seeded and is never seeded.
+    func testAStoreWithoutAPendingMarkerIsNeverSeeded() throws {
+        try onMain {
+            let repository = InMemoryLedgerRepository(seedPending: false)
+            XCTAssertFalse(repository.isDefaultSeedPending)
+            XCTAssertFalse(try seeding(repository).seedIfFirstLaunch())
+            XCTAssertTrue(try repository.categories().isEmpty)
+        }
+    }
+
     func testUpdatedAtBumpsOnEdit() throws {
         try onMain {
             let clock = TestClock(Date(timeIntervalSince1970: 1_000))

@@ -11,25 +11,51 @@
         private let now: @MainActor () -> Date
         /// While `atomically` runs, reads and writes use this snapshot, and one save at the end stores it.
         private var batch: LedgerSnapshot?
-        /// See `LedgerRepository.isNewStore` (D291.7). `LittleOrbitStore.makeRepository` says whether its open
-        /// created the store file; the first successful save clears it.
-        public private(set) var isNewStore = false
+        /// The store's pending-seed marker file (D293, `StoreLocation.pendingSeedMarkerURL`), or `nil` for a store
+        /// with none, which counts as seeded. An in-memory container keeps the marker as `pendingInMemory`.
+        private let seedMarkerURL: URL?
+        private var pendingInMemory: Bool
 
         public init(context: ModelContext, now: @escaping @MainActor () -> Date = { Date() }) {
             self.container = context.container
             self.context = context
             self.now = now
+            self.seedMarkerURL = nil
+            self.pendingInMemory = false
         }
 
+        /// `seedMarker` is the pending-seed marker file, `seedPendingInMemory` the flag for an in-memory container.
+        /// Both default to none, so a repository built some other way never seeds.
         public init(
             container: ModelContainer,
             now: @escaping @MainActor () -> Date = { Date() },
-            isNewStore: Bool = false,
+            seedMarker: URL? = nil,
+            seedPendingInMemory: Bool = false,
         ) {
             self.container = container
             self.context = container.mainContext
             self.now = now
-            self.isNewStore = isNewStore
+            self.seedMarkerURL = seedMarker
+            self.pendingInMemory = seedPendingInMemory
+        }
+
+        public var isDefaultSeedPending: Bool {
+            if let seedMarkerURL {
+                return FileManager.default.fileExists(atPath: seedMarkerURL.path)
+            }
+            return pendingInMemory
+        }
+
+        public func markDefaultSeedDone() {
+            pendingInMemory = false
+            guard let seedMarkerURL, FileManager.default.fileExists(atPath: seedMarkerURL.path) else {
+                return
+            }
+            do {
+                try FileManager.default.removeItem(at: seedMarkerURL)
+            } catch {
+                StoreLog.failure(.seedMarkerNotRemoved, error)
+            }
         }
 
         public func accounts() throws -> [Account] {
@@ -232,7 +258,6 @@
             do {
                 try apply(snapshot, attachmentBytes: attachmentBytes)
                 try context.save()
-                isNewStore = false
             } catch {
                 context.rollback()
                 throw error
@@ -440,8 +465,10 @@
 
         /// `persist` upserts and deletes every record, then saves once; a failed save rolls back, so the store
         /// is either fully replaced or unchanged (D63).
+        /// A completed restore also marks the seeding done, so even an empty backup never leads to a seed (D293.2).
         public func replaceLedger(with snapshot: LedgerSnapshot) throws {
             try persist(snapshot)
+            markDefaultSeedDone()
         }
 
         public func backupSnapshot() throws -> LedgerSnapshot {
@@ -460,6 +487,7 @@
         /// SwiftData writes them to its own file on save (B1).
         public func replaceLedger(with snapshot: LedgerSnapshot, attachments: any BackupAttachmentReading) throws {
             try write(snapshot, attachmentBytes: attachments)
+            markDefaultSeedDone()
         }
     }
 #endif

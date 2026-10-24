@@ -63,10 +63,14 @@ import SwiftUI
                 repository: repository,
                 categoryNames: CatalogDefaultCategoryNames(),
             )
-            // The default categories are seeded here, once, on the first launch of an empty store, before any
-            // screen can write (D291.7). Never from the transaction form. If the save fails, the app still opens
-            // without them rather than refusing to open.
-            _ = try? transactionUseCases.seedDefaults?.seedIfFirstLaunch()
+            // The default categories are seeded here, at launch, before any screen can write (D291.7, D293.4), and
+            // nowhere else. A failed seed is only logged (D293.3): the app opens as normal and the next launch
+            // tries again while the store is still empty.
+            do {
+                try transactionUseCases.seedDefaults?.seedIfFirstLaunch()
+            } catch {
+                StoreLog.failure(.defaultSeedFailed, error)
+            }
             transactions = TransactionsFeature(useCases: transactionUseCases)
             // One signal for "the whole ledger was replaced" (a restore): the accounts reload, and every window's
             // undo history is cleared, so Undo never replays a step made against the old data (D187.2, N6).

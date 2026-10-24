@@ -229,17 +229,25 @@
             configuration: StoreConfiguration = .local,
             now: @escaping @MainActor () -> Date = { Date() },
         ) throws -> SwiftDataLedgerRepository {
-            // Whether this open creates the store, for the one-time default-category seeding (D291.7). Checked
-            // before the container opens, since opening creates the file. An in-memory store is always new.
+            if configuration.inMemory {
+                let container = try makeContainer(configuration: configuration)
+                return SwiftDataLedgerRepository(container: container, now: now, seedPendingInMemory: true)
+            }
             var configuration = configuration
-            var isNewStore = true
-            if !configuration.inMemory {
-                let fileURL = try configuration.fileURL ?? StoreLocation.prepareStoreURL()
-                configuration.fileURL = fileURL
-                isNewStore = !FileManager.default.fileExists(atPath: fileURL.path)
+            let fileURL = try configuration.fileURL ?? StoreLocation.prepareStoreURL()
+            configuration.fileURL = fileURL
+            let marker = StoreLocation.pendingSeedMarkerURL(forStore: fileURL)
+            // D293: a store file that doesn't exist yet is about to be created, so write the pending-seed marker
+            // first, atomically. A crash between the two leaves the marker, and seeding still needs an empty store.
+            if !FileManager.default.fileExists(atPath: fileURL.path) {
+                do {
+                    try Data().write(to: marker, options: .atomic)
+                } catch {
+                    StoreLog.failure(.seedMarkerNotWritten, error)
+                }
             }
             let container = try makeContainer(configuration: configuration)
-            return SwiftDataLedgerRepository(container: container, now: now, isNewStore: isNewStore)
+            return SwiftDataLedgerRepository(container: container, now: now, seedMarker: marker)
         }
 
         private static func modelConfiguration(for configuration: StoreConfiguration) throws -> ModelConfiguration {
