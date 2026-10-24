@@ -92,4 +92,93 @@ struct DismissAttemptRelayTests {
         let inner = Node(parent: outer, isPresented: true)
         #expect(root(from: Node(parent: inner)) === inner)
     }
+
+    // MARK: Installing never touches whether the sheet is modal (#167)
+
+    private final class FakeProxy {
+        var relay: DismissAttemptRelay
+
+        init(relay: DismissAttemptRelay) {
+            self.relay = relay
+        }
+    }
+
+    /// A presented sheet: its delegate, and whether it's modal, which only SwiftUI's interactiveDismissDisabled
+    /// sets. It counts every change to `isModalInPresentation` the installer could make.
+    private final class FakeSheet: DismissAttemptSheet {
+        var delegate: AnyObject?
+        var modalWrites = 0
+        var isModalInPresentation: Bool {
+            didSet { modalWrites += 1 }
+        }
+
+        init(isModalInPresentation: Bool) {
+            self.isModalInPresentation = isModalInPresentation
+        }
+
+        var delegateProxy: FakeProxy? { delegate as? FakeProxy }
+
+        func adopt(_ proxy: FakeProxy, relay: DismissAttemptRelay) {
+            proxy.relay = relay
+        }
+
+        func wrapDelegate(relay: DismissAttemptRelay) -> FakeProxy {
+            let proxy = FakeProxy(relay: relay)
+            delegate = proxy
+            return proxy
+        }
+    }
+
+    @Test("Installing and re-installing never changes whether the sheet is modal, edited or not")
+    func installLeavesModalAlone() {
+        for isDirty in [true, false] {
+            let sheet = FakeSheet(isModalInPresentation: isDirty)
+            let relay = DismissAttemptRelay(isDirty: isDirty)
+            let installer = DismissAttemptInstaller<FakeSheet>(relay: relay)
+            #expect(installer.install(on: sheet) == .wrap)
+            // The deferred re-install, and the appear and layout ones, with the state flipped in between.
+            relay.isDirty.toggle()
+            #expect(installer.install(on: sheet) == .keep)
+            #expect(installer.install(on: sheet) == .keep)
+            // SwiftUI sets its own delegate again, then the bridge installs again.
+            sheet.delegate = NSObject()
+            #expect(installer.install(on: sheet) == .wrap)
+            #expect(sheet.isModalInPresentation == isDirty, "Only interactiveDismissDisabled sets it")
+            #expect(sheet.modalWrites == 0)
+        }
+    }
+
+    @Test("A re-install keeps one proxy, and adopts another bridge's proxy instead of wrapping it")
+    func installerProxies() {
+        let sheet = FakeSheet(isModalInPresentation: true)
+        let relay = DismissAttemptRelay(isDirty: true)
+        let installer = DismissAttemptInstaller<FakeSheet>(relay: relay)
+        installer.install(on: sheet)
+        let first = installer.proxy
+        installer.install(on: sheet)
+        #expect(installer.proxy === first)
+        #expect(sheet.delegate === first)
+        let other = DismissAttemptInstaller<FakeSheet>(relay: DismissAttemptRelay())
+        #expect(other.install(on: sheet) == .adopt)
+        #expect(sheet.delegate === first, "Not wrapped again")
+        #expect(sheet.delegateProxy?.relay === other.relay)
+        #expect(sheet.modalWrites == 0)
+    }
+
+    @Test("The iOS bridge's source never sets isModalInPresentation (#167)")
+    func bridgeSourceHasNoModalWrite() throws {
+        let shared = URL(fileURLWithPath: #filePath)
+            .deletingLastPathComponent().deletingLastPathComponent().deletingLastPathComponent()
+            .deletingLastPathComponent()
+            .appendingPathComponent("Sources/LittleOrbitFeatures/Shared")
+        for name in ["DiscardConfirmationView.swift", "DismissAttemptRelay.swift"] {
+            let source = try String(contentsOf: shared.appendingPathComponent(name), encoding: .utf8)
+            let writes = source.split(separator: "\n")
+                .filter { line in
+                    let code = line.split(separator: "//", maxSplits: 1, omittingEmptySubsequences: false).first ?? ""
+                    return code.contains(/isModalInPresentation\s*=(?!=)/)
+                }
+            #expect(writes.isEmpty, "\(name): \(writes)")
+        }
+    }
 }
