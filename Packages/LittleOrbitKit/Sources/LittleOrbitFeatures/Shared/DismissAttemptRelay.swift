@@ -2,7 +2,7 @@ import Foundation
 
 /// Passes a refused swipe down on an edit sheet to its discard prompt (D300.1), with the sheet's unsaved-edits
 /// state as it is when the swipe happens, not when the bridge was installed. The iOS bridge updates `isDirty`
-/// on every view update and calls `attempt()` from the sheet's presentation delegate.
+/// on every view update; the sheet's presentation delegate asks `shouldDismiss(original:)` and calls `attempt()`.
 @MainActor
 final class DismissAttemptRelay {
     var isDirty: Bool
@@ -15,6 +15,17 @@ final class DismissAttemptRelay {
 
     func attempt() {
         request(isDirty)
+    }
+
+    /// Whether a swipe down may close the sheet (presentationControllerShouldDismiss). While there are unsaved
+    /// edits, read now, it refuses, so UIKit reports the refused swipe and the prompt shows, even if
+    /// `interactiveDismissDisabled` hasn't made the sheet modal yet (#167). Otherwise it's the original delegate's
+    /// answer, or true when it has none; the original isn't asked while there are unsaved edits.
+    func shouldDismiss(original: (() -> Bool)?) -> Bool {
+        if isDirty {
+            return false
+        }
+        return original?() ?? true
     }
 }
 
