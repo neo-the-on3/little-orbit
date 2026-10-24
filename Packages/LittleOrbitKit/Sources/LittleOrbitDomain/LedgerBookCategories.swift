@@ -112,6 +112,15 @@ extension LedgerBook {
             snapshot.transactions[index].payeeID = survivingID
             snapshot.transactions[index].updatedAt = now
         }
+        // The survivor pre-selects the category the merged payees used most recently (#24 QA): the source's
+        // when it was used later, otherwise the survivor's own, falling back to whichever one has a default.
+        let sourceUsedLater =
+            source.lastUsedAt.map { sourceLast in
+                surviving.lastUsedAt.map { sourceLast > $0 } ?? true
+            } ?? false
+        if surviving.defaultCategoryID == nil || (sourceUsedLater && source.defaultCategoryID != nil) {
+            surviving.defaultCategoryID = source.defaultCategoryID
+        }
         if let sourceLast = source.lastUsedAt {
             if let current = surviving.lastUsedAt {
                 if sourceLast > current {
@@ -120,9 +129,6 @@ extension LedgerBook {
             } else {
                 surviving.lastUsedAt = sourceLast
             }
-        }
-        if surviving.defaultCategoryID == nil {
-            surviving.defaultCategoryID = source.defaultCategoryID
         }
         surviving.updatedAt = now
         replace(&snapshot.payees, with: surviving)

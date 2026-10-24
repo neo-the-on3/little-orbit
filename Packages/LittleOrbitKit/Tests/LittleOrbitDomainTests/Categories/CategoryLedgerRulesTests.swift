@@ -218,6 +218,31 @@ struct CategoryLedgerRulesTests {
         let saved = try LedgerBook.savingCategory(renamed, in: snapshot, now: now)
         #expect(category(movies.id, in: saved)?.name == "Cinema")
     }
+
+    // MARK: - Payee merge
+
+    @Test("Merged payees: the survivor keeps the category used most recently by either")
+    func payeeMergeKeepsLatestCategory() throws {
+        let amazon = Payee(name: "Amazon", defaultCategoryID: food.id, lastUsedAt: Date(timeIntervalSince1970: 100))
+        let amazonIn = Payee(
+            name: "AMAZON.IN",
+            defaultCategoryID: leisure.id,
+            lastUsedAt: Date(timeIntervalSince1970: 200),
+        )
+        let snapshot = LedgerSnapshot(
+            transactions: [expense(food.id, payeeID: amazon.id), expense(leisure.id, payeeID: amazonIn.id)],
+            categories: [food, leisure],
+            payees: [amazon, amazonIn],
+        )
+        let merged = try LedgerBook.mergingPayees(amazonIn.id, into: amazon.id, in: snapshot, now: now)
+        #expect(merged.payees.map(\.id) == [amazon.id])
+        #expect(merged.payees.first?.defaultCategoryID == leisure.id)
+        #expect(merged.payees.first?.lastUsedAt == Date(timeIntervalSince1970: 200))
+        #expect(merged.transactions.allSatisfy { $0.payeeID == amazon.id })
+
+        let older = try LedgerBook.mergingPayees(amazon.id, into: amazonIn.id, in: snapshot, now: now)
+        #expect(older.payees.first?.defaultCategoryID == leisure.id)
+    }
 }
 
 /// Split lines for these tests. The rules under test don't validate the split against its transaction.
