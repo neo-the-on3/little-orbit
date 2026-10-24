@@ -10,16 +10,22 @@
 name: CI
 
 on:
+  # Draft PRs don't run the jobs (each job's `if:` below). Marking a PR ready for review runs the
+  # full suite once, and every later push to a ready PR runs it again. Kiran's direction, #24 batch.
   pull_request:
+    types: [opened, synchronize, reopened, ready_for_review]
   push:
     branches:
       - main
+  # A manual run on any branch: Actions > CI > Run workflow, or `gh workflow run ci.yml --ref <branch>`.
+  # Its check runs land on the branch's head commit, so they count for that PR's required checks.
+  workflow_dispatch:
 
 concurrency:
-  group: ${{ github.workflow }}-${{ github.ref }}
-  # Pull requests cancel older runs on the same ref. Pushes to main do not,
-  # so a merge does not cancel the run for the commit it landed on.
-  cancel-in-progress: ${{ github.event_name == 'pull_request' }}
+  # One group per pull request, or per ref for a push or a manual run. A newer run cancels an older
+  # one in the same group, except on main, so a merge never cancels the run for the commit it landed on.
+  group: ${{ github.workflow }}-${{ github.event.pull_request.number || github.ref }}
+  cancel-in-progress: ${{ github.ref != 'refs/heads/main' }}
 
 # contents: read checks out the repo. Cache save and restore use the runner
 # cache token, so this workflow does not grant actions: write. No secrets.
@@ -35,6 +41,9 @@ defaults:
 jobs:
   lint:
     name: lint
+    # Skipped while the PR is a draft. A skipped required check counts as passing, but a draft can't
+    # merge, and ready_for_review runs every job at the same head. Pushes and manual runs always run.
+    if: ${{ github.event_name != 'pull_request' || !github.event.pull_request.draft }}
     runs-on: ubuntu-24.04 # pinned until #144: SwiftLint needs libxml2 on 26.04
     timeout-minutes: 45
     steps:
@@ -51,6 +60,9 @@ jobs:
 
   format-check:
     name: format-check
+    # Skipped while the PR is a draft. A skipped required check counts as passing, but a draft can't
+    # merge, and ready_for_review runs every job at the same head. Pushes and manual runs always run.
+    if: ${{ github.event_name != 'pull_request' || !github.event.pull_request.draft }}
     runs-on: ubuntu-24.04 # pinned until #144: SwiftLint needs libxml2 on 26.04
     timeout-minutes: 45
     steps:
@@ -67,6 +79,9 @@ jobs:
 
   linux-tests:
     name: Linux tests
+    # Skipped while the PR is a draft. A skipped required check counts as passing, but a draft can't
+    # merge, and ready_for_review runs every job at the same head. Pushes and manual runs always run.
+    if: ${{ github.event_name != 'pull_request' || !github.event.pull_request.draft }}
     runs-on: ubuntu-24.04 # pinned until #144: SwiftLint needs libxml2 on 26.04
     timeout-minutes: 45
     steps:
@@ -131,6 +146,9 @@ jobs:
 
   validate-project:
     name: validate-project
+    # Skipped while the PR is a draft. A skipped required check counts as passing, but a draft can't
+    # merge, and ready_for_review runs every job at the same head. Pushes and manual runs always run.
+    if: ${{ github.event_name != 'pull_request' || !github.event.pull_request.draft }}
     runs-on: ubuntu-24.04 # pinned until #144: SwiftLint needs libxml2 on 26.04
     timeout-minutes: 45
     steps:
@@ -147,6 +165,9 @@ jobs:
 
   apple:
     name: macOS build and test
+    # Skipped while the PR is a draft. A skipped required check counts as passing, but a draft can't
+    # merge, and ready_for_review runs every job at the same head. Pushes and manual runs always run.
+    if: ${{ github.event_name != 'pull_request' || !github.event.pull_request.draft }}
     runs-on: xcode-27
     timeout-minutes: 60
     steps:

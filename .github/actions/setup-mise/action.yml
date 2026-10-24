@@ -53,10 +53,14 @@ runs:
         sudo apt-get install -y --no-install-recommends "${common[@]}" "${compiler[@]}"
 
     # jdx/mise-action @ 0cc9f843d6d05e847c460bf6b36b9f7c7c04727a (2026-10-19, includes v5.2.1).
-    # version matches the mise release recorded in the README. Caching is the
-    # action default and stays inside the repo's 10 GB Actions cache.
+    # version matches the mise release recorded in the README. The cache is
+    # restored on every run and saved only from main (cache_save below).
     - name: Install pinned tools
       uses: jdx/mise-action@0cc9f843d6d05e847c460bf6b36b9f7c7c04727a
       with:
         version: "2026.10.14"
         cache: true
+        # Restore everywhere, save only from pushes to main (and manual runs on main). Pull requests
+        # restore main's cache instead of each saving a ~1.1 GB copy on their own merge ref, which kept
+        # the repo over the 10 GB Actions cache limit. Keys are unchanged, so main's cache still matches.
+        cache_save: ${{ github.ref == 'refs/heads/main' }}
