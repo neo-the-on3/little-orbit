@@ -229,8 +229,17 @@
             configuration: StoreConfiguration = .local,
             now: @escaping @MainActor () -> Date = { Date() },
         ) throws -> SwiftDataLedgerRepository {
+            // Whether this open creates the store, for the one-time default-category seeding (D291.7). Checked
+            // before the container opens, since opening creates the file. An in-memory store is always new.
+            var configuration = configuration
+            var isNewStore = true
+            if !configuration.inMemory {
+                let fileURL = try configuration.fileURL ?? StoreLocation.prepareStoreURL()
+                configuration.fileURL = fileURL
+                isNewStore = !FileManager.default.fileExists(atPath: fileURL.path)
+            }
             let container = try makeContainer(configuration: configuration)
-            return SwiftDataLedgerRepository(container: container, now: now)
+            return SwiftDataLedgerRepository(container: container, now: now, isNewStore: isNewStore)
         }
 
         private static func modelConfiguration(for configuration: StoreConfiguration) throws -> ModelConfiguration {

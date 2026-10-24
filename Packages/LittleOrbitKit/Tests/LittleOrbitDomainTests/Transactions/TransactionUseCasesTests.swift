@@ -12,14 +12,14 @@ struct TransactionUseCasesTests {
         try FakeLedgerRepository(accounts: F.accounts, transactions: transactions)
     }
 
-    @Test("The entry ledger seeds the default categories once; the plain ledger never writes")
+    @Test("Neither ledger seeds; a store that has accounts isn't seeded at launch either (D291.7)")
     func ledgerSeeding() throws {
         let repository = try repository()
         let useCases = TransactionUseCases(repository: repository, categoryNames: TestCategoryNames())
         #expect(try useCases.loadLedger.ledger().categories.isEmpty)
-        let seeded = try useCases.loadLedger.ledgerForEntry().categories
-        #expect(!seeded.isEmpty)
-        #expect(try useCases.loadLedger.ledgerForEntry().categories.count == seeded.count)
+        #expect(try useCases.loadLedger.ledgerForEntry().categories.isEmpty)
+        #expect(try useCases.seedDefaults?.seedIfFirstLaunch() == false)
+        #expect(try useCases.loadLedger.ledgerForEntry().categories.isEmpty)
     }
 
     @Test("History for a missing account is nil; for a live one it carries the account and its rows")

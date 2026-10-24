@@ -4,7 +4,12 @@ import LittleOrbitDomain
 /// Process-local ledger. Used on Linux and in tests. It applies the same `LedgerBook` rules as the SwiftData store.
 @MainActor
 public final class InMemoryLedgerRepository: LedgerRepository {
-    private var snapshot = LedgerSnapshot()
+    private var snapshot = LedgerSnapshot() {
+        didSet { isNewStore = false }
+    }
+    /// A new repository is a new store until its first write (D291.7). A rolled-back change also counts, which
+    /// only ever makes seeding less likely.
+    public private(set) var isNewStore = true
     private let now: @MainActor () -> Date
 
     public init(now: @escaping @MainActor () -> Date = { Date() }) {

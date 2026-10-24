@@ -40,7 +40,8 @@ public struct AccountHistoryPage: Equatable, Sendable {
 @MainActor
 public protocol LoadTransactionLedgerUseCase {
     func ledger() throws -> TransactionLedger
-    /// The same, for entering transactions: seeds the default categories first if there are none.
+    /// The same, for entering transactions. It never seeds: the default categories are seeded once at launch
+    /// (`SeedDefaultCategoriesUseCase`, D291.7), so a form opened later finds what the store holds.
     func ledgerForEntry() throws -> TransactionLedger
 }
 
@@ -88,6 +89,9 @@ public struct TransactionUseCases {
     public var saveTransactions: any SaveTransactionsUseCase
     public var changes: any TransactionChangesUseCase
     public var dates: any TransactionDateUseCase
+    /// Seeds the default categories on the first launch of an empty store. The composition root calls it once
+    /// at launch, before anything else writes (D291.7).
+    public var seedDefaults: (any SeedDefaultCategoriesUseCase)?
 
     public init(
         loadLedger: any LoadTransactionLedgerUseCase,
@@ -95,22 +99,25 @@ public struct TransactionUseCases {
         saveTransactions: any SaveTransactionsUseCase,
         changes: any TransactionChangesUseCase,
         dates: any TransactionDateUseCase = DefaultTransactionDateUseCase(),
+        seedDefaults: (any SeedDefaultCategoriesUseCase)? = nil,
     ) {
         self.loadLedger = loadLedger
         self.accountHistory = accountHistory
         self.saveTransactions = saveTransactions
         self.changes = changes
         self.dates = dates
+        self.seedDefaults = seedDefaults
     }
 
     /// The default implementations over one repository. `categoryNames` names the built-in categories when
-    /// they're seeded (D8).
+    /// they're seeded at launch (D8, D291.7).
     public init(repository: any LedgerRepository, categoryNames: any DefaultCategoryNaming) {
         self.init(
-            loadLedger: DefaultLoadTransactionLedgerUseCase(repository: repository, categoryNames: categoryNames),
+            loadLedger: DefaultLoadTransactionLedgerUseCase(repository: repository),
             accountHistory: DefaultAccountHistoryUseCase(repository: repository),
             saveTransactions: DefaultSaveTransactionsUseCase(repository: repository),
             changes: DefaultTransactionChangesUseCase(repository: repository),
+            seedDefaults: DefaultSeedDefaultCategoriesUseCase(repository: repository, names: categoryNames),
         )
     }
 }
@@ -120,11 +127,9 @@ public struct TransactionUseCases {
 @MainActor
 public struct DefaultLoadTransactionLedgerUseCase: LoadTransactionLedgerUseCase {
     private let repository: any LedgerRepository
-    private let categoryNames: any DefaultCategoryNaming
 
-    public init(repository: any LedgerRepository, categoryNames: any DefaultCategoryNaming) {
+    public init(repository: any LedgerRepository) {
         self.repository = repository
-        self.categoryNames = categoryNames
     }
 
     public func ledger() throws -> TransactionLedger {
@@ -132,10 +137,7 @@ public struct DefaultLoadTransactionLedgerUseCase: LoadTransactionLedgerUseCase 
     }
 
     public func ledgerForEntry() throws -> TransactionLedger {
-        if try repository.categories().isEmpty {
-            try repository.seedDefaultCategories(names: categoryNames)
-        }
-        return try ledger()
+        try ledger()
     }
 }
 

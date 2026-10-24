@@ -44,10 +44,11 @@ struct CatalogDefaultCategoryNamesTests {
         }
     }
 
-    @Test("Seeding on first entry stores the catalog names under the fixed ids")
+    @Test("Launch seeding stores the catalog names under the fixed ids")
     func seededNames() throws {
         let repository = InMemoryLedgerRepository()
         let useCases = TransactionUseCases(repository: repository, categoryNames: names)
+        try useCases.seedDefaults?.seedIfFirstLaunch()
         let categories = try useCases.loadLedger.ledgerForEntry().categories
         #expect(categories.count == DefaultCategory.allCases.count)
         for category in DefaultCategory.allCases {
@@ -57,5 +58,11 @@ struct CatalogDefaultCategoryNamesTests {
             categories.first { $0.id == DefaultCategoryID.food }?.id.uuidString
                 == "E1E10000-0000-4000-8000-000000000001"
         )
+    }
+
+    @Test("A form opened on a fresh store before launch seeding finds no categories: the form never seeds")
+    func formNeverSeeds() throws {
+        let useCases = TransactionUseCases(repository: InMemoryLedgerRepository(), categoryNames: names)
+        #expect(try useCases.loadLedger.ledgerForEntry().categories.isEmpty)
     }
 }

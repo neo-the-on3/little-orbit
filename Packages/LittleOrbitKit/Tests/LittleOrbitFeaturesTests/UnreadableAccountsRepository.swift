@@ -15,6 +15,8 @@ final class UnreadableAccountsRepository: LedgerRepository {
         self.base = base
     }
 
+    var isNewStore: Bool { base.isNewStore }
+
     func accounts() throws -> [Account] {
         if failsReads {
             throw ReadFailure()

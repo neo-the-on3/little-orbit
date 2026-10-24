@@ -50,3 +50,94 @@ private func assertCategoryArchiveAndReorder(make: MakeRepository) throws {
     let order = try repository.categories().filter { $0.parentID == nil }.sorted { $0.sortOrder < $1.sortOrder }
     XCTAssertEqual(order.map(\.id), [travel.id, leisure.id])
 }
+
+/// The real stores relink records in one save: categories are cleared, removed ones deleted (a category's
+/// subcategories cascade), then the rest relinked. These check that merge, delete and move survive that order.
+@MainActor
+func assertCategoryTreeChanges(make: MakeRepository) throws {
+    try assertMergingAParentMovesItsSubcategoriesAndSplitLines(make: make)
+    try assertDeletingAParentRemovesItsSubcategories(make: make)
+    try assertMovingASubcategoryKeepsItsTransactions(make: make)
+}
+
+@MainActor
+private func assertMergingAParentMovesItsSubcategoriesAndSplitLines(make: MakeRepository) throws {
+    let repository = try make()
+    let account = try saveCash(in: repository, opening: "100")
+    let leisure = TransactionCategory(name: "Leisure", kind: .expense, sortOrder: 0)
+    let entertainment = TransactionCategory(name: "Entertainment", kind: .expense, sortOrder: 1)
+    let movies = TransactionCategory(name: "Movies", kind: .expense, parentID: leisure.id, sortOrder: 0)
+    let games = TransactionCategory(name: "Games", kind: .expense, parentID: leisure.id, sortOrder: 1)
+    let concerts = TransactionCategory(name: "Concerts", kind: .expense, parentID: entertainment.id, sortOrder: 0)
+    for category in [leisure, entertainment, movies, games, concerts] {
+        try repository.saveCategory(category)
+    }
+    let onMovies = Transaction(type: .expense, amount: decimal("4.00"), accountID: account.id, categoryID: movies.id)
+    let split = Transaction(type: .expense, amount: decimal("10.00"), accountID: account.id)
+    try repository.saveTransaction(onMovies)
+    try repository.saveTransaction(split)
+    try repository.replaceSplits(
+        [
+            TransactionSplit(transactionID: split.id, categoryID: leisure.id, amount: decimal("6.00")),
+            TransactionSplit(transactionID: split.id, categoryID: games.id, amount: decimal("4.00")),
+        ],
+        for: split.id,
+    )
+
+    try repository.mergeCategories(leisure.id, into: entertainment.id)
+
+    let categories = try repository.categories()
+    XCTAssertEqual(Set(categories.map(\.id)), [entertainment.id, movies.id, games.id, concerts.id])
+    XCTAssertEqual(categories.first { $0.id == movies.id }?.parentID, entertainment.id)
+    XCTAssertEqual(categories.first { $0.id == games.id }?.parentID, entertainment.id)
+    XCTAssertEqual(categories.first { $0.id == concerts.id }?.parentID, entertainment.id)
+    XCTAssertEqual(try repository.transactions().first { $0.id == onMovies.id }?.categoryID, movies.id)
+    let lines = try repository.splits(for: split.id).sorted { $0.amount > $1.amount }
+    XCTAssertEqual(lines.map(\.categoryID), [entertainment.id, games.id])
+}
+
+@MainActor
+private func assertDeletingAParentRemovesItsSubcategories(make: MakeRepository) throws {
+    let repository = try make()
+    let account = try saveCash(in: repository, opening: "100")
+    let leisure = TransactionCategory(name: "Leisure", kind: .expense, sortOrder: 0)
+    let travel = TransactionCategory(name: "Travel", kind: .expense, sortOrder: 1)
+    let movies = TransactionCategory(name: "Movies", kind: .expense, parentID: leisure.id)
+    let flights = TransactionCategory(name: "Flights", kind: .expense, parentID: travel.id)
+    for category in [leisure, travel, movies, flights] {
+        try repository.saveCategory(category)
+    }
+    let onMovies = Transaction(type: .expense, amount: decimal("4.00"), accountID: account.id, categoryID: movies.id)
+    try repository.saveTransaction(onMovies)
+
+    try repository.deleteCategory(id: leisure.id, reassigningTo: travel.id)
+
+    let categories = try repository.categories()
+    XCTAssertEqual(Set(categories.map(\.id)), [travel.id, flights.id])
+    XCTAssertEqual(categories.first { $0.id == flights.id }?.parentID, travel.id)
+    XCTAssertEqual(try repository.transactions().first { $0.id == onMovies.id }?.categoryID, travel.id)
+}
+
+@MainActor
+private func assertMovingASubcategoryKeepsItsTransactions(make: MakeRepository) throws {
+    let repository = try make()
+    let account = try saveCash(in: repository, opening: "100")
+    let leisure = TransactionCategory(name: "Leisure", kind: .expense, sortOrder: 0)
+    let entertainment = TransactionCategory(name: "Entertainment", kind: .expense, sortOrder: 1)
+    let movies = TransactionCategory(name: "Movies", kind: .expense, parentID: leisure.id)
+    let games = TransactionCategory(name: "Games", kind: .expense, parentID: leisure.id, sortOrder: 1)
+    for category in [leisure, entertainment, movies, games] {
+        try repository.saveCategory(category)
+    }
+    let onMovies = Transaction(type: .expense, amount: decimal("4.00"), accountID: account.id, categoryID: movies.id)
+    try repository.saveTransaction(onMovies)
+
+    let useCases = CategoryUseCases(repository: repository)
+    try useCases.moveSubcategory.move(movies.id, toParent: entertainment.id)
+
+    let categories = try repository.categories()
+    XCTAssertEqual(categories.count, 4)
+    XCTAssertEqual(categories.first { $0.id == movies.id }?.parentID, entertainment.id)
+    XCTAssertEqual(categories.first { $0.id == games.id }?.parentID, leisure.id)
+    XCTAssertEqual(try repository.transactions().first { $0.id == onMovies.id }?.categoryID, movies.id)
+}
