@@ -4696,6 +4696,19 @@
         }
       }
     },
+    "There’s an archived category named “%@”. Unarchive it in Categories to use it.": {
+      "comment": "Transaction form category picker, under the Create row: an archived top-level category of the same kind has the typed name, ignoring case and spaces, so it can’t be created. %@ is the archived category’s name as stored.",
+      "extractionState": "manual",
+      "generatesSymbol": false,
+      "localizations": {
+        "en": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "There’s an archived category named “%@”. Unarchive it in Categories to use it."
+          }
+        }
+      }
+    },
     "This account has no transactions. You can undo this. Hide it instead to keep it; hidden accounts still count toward net wealth.": {
       "comment": "Account delete confirmation message: the account has no transactions.",
       "extractionState": "manual",

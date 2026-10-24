@@ -127,6 +127,20 @@ public final class CategoryPickerViewModel {
         return rows.contains { EditorName.key($0.name) == key } ? nil : name
     }
 
+    /// Why Create can't use the typed name: an archived category of the transaction's kind at the top level,
+    /// where Create adds it, already has it, trimmed and ignoring case (D303, D299's scope). It quotes the
+    /// stored name. Typing is editing the name, so it shows as soon as the name matches (D151), under the
+    /// Create row, which is then off; there's no Unarchive here.
+    public var createError: String? {
+        guard let name = createName else {
+            return nil
+        }
+        let key = EditorName.key(name)
+        return listing.categories
+            .first { $0.isArchived && $0.parentID == nil && $0.kind == kind && EditorName.key($0.name) == key }
+            .map { CategoryPickerText.archivedName($0.name) }
+    }
+
     public var createTitle: String? { createName.map(CategoryPickerText.create) }
     public var createDetail: String { CategoryPickerText.newKind(kind) }
 
@@ -138,10 +152,11 @@ public final class CategoryPickerViewModel {
 
     /// Adds the typed name as a top-level category of the transaction's kind, with the icon and colour Add
     /// Category starts with, checks it and clears the search, so Done puts it on the form. The form's other
-    /// fields aren't touched. A name the ledger refuses shows in an alert and nothing changes.
+    /// fields aren't touched. An archived category's name is refused with `createError`, without reading or
+    /// writing the store; a name the ledger refuses shows in an alert. Either way nothing changes.
     @discardableResult
     public func create() -> Bool {
-        guard let name = createName else {
+        guard let name = createName, createError == nil else {
             return false
         }
         if let problem = EditorName.lengthProblem(name) {

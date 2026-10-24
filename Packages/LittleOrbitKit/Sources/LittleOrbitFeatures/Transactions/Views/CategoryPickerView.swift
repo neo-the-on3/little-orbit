@@ -38,6 +38,7 @@
                         }
                     }
                     if let title = model.createTitle {
+                        let error = model.createError
                         Section {
                             Button {
                                 model.create()
@@ -47,6 +48,13 @@
                                 } label: {
                                     Label(title, systemImage: "plus.circle")
                                 }
+                            }
+                            .disabled(error != nil)
+                        } footer: {
+                            // An archived category has the name (D303): said inline, like the editor's errors.
+                            if let error {
+                                Text(error)
+                                    .foregroundStyle(.red)
                             }
                         }
                     }
