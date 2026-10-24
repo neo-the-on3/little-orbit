@@ -11,14 +11,33 @@
     public struct SettingsView: View {
         @State private var window: BackupsWindow
         @Environment(\.dismiss) private var dismiss
+        private let categories: CategoriesFeature?
+        private let onCategoryRemoval: () -> Void
 
-        public init(backups: BackupsViewModel) {
+        /// `categories` adds the Categories row (#24). `onCategoryRemoval` clears this window's Undo and Redo
+        /// history after a category merge or delete (D287.4).
+        public init(
+            backups: BackupsViewModel,
+            categories: CategoriesFeature? = nil,
+            onCategoryRemoval: @escaping () -> Void = {},
+        ) {
             _window = State(initialValue: BackupsWindow(model: backups))
+            self.categories = categories
+            self.onCategoryRemoval = onCategoryRemoval
         }
 
         public var body: some View {
             NavigationStack {
                 List {
+                    if let categories {
+                        Section {
+                            NavigationLink {
+                                CategoriesView(feature: categories, onRemoval: onCategoryRemoval)
+                            } label: {
+                                Label(CategoryText.title, systemImage: "tag")
+                            }
+                        }
+                    }
                     Section {
                         NavigationLink {
                             AdvancedSettingsView(window: window)
