@@ -172,6 +172,30 @@ struct CategoryEditorViewModelTests {
         #expect(editor.canSave)
     }
 
+    @Test("A name the ledger refuses quotes only a same-kind top-level category, never another kind’s")
+    func refusedNameQuotesSameKind() throws {
+        let setup = try Setup()
+        let editing = DefaultCategoryEditingUseCase(repository: setup.repository)
+        let tips = try setup.add("TIPS", kind: .income)
+        setup.model.load()
+        // Another window renames the income category and adds an expense “Tips”, so this list is stale.
+        try editing.save(tips, CategoryEdit(name: "Gratuity", iconName: nil, colorHex: nil, parentID: nil))
+        _ = try setup.add("Tips")
+        let expense = setup.model.makeNewCategory()
+        expense.name = "tips "
+        #expect(expense.nameError == nil, "The listed income “TIPS” doesn’t clash with an expense name")
+        #expect(!expense.save())
+        #expect(
+            expense.nameError == "There’s already a category named “tips” here.",
+            "It doesn’t quote the income category",
+        )
+        setup.model.load()
+        let again = setup.model.makeNewCategory()
+        again.name = "tips "
+        #expect(again.nameError == "There’s already a category named “Tips” here.", "Same kind clashes")
+        #expect(!again.canSave)
+    }
+
     // MARK: Failed save (D295.5)
 
     @Test("A save that fails for another reason says “Couldn’t Save Changes”, and nothing changes")
