@@ -91,11 +91,17 @@
 
         @ViewBuilder private var emptyState: some View {
             if !model.hasPayees {
-                ContentUnavailableView(
-                    PayeeText.emptyTitle,
-                    systemImage: "storefront",
-                    description: Text(PayeeText.emptyMessage),
-                )
+                // The storefront is decorative, so VoiceOver reads only the title and message.
+                ContentUnavailableView {
+                    Label {
+                        Text(PayeeText.emptyTitle)
+                    } icon: {
+                        Image(systemName: "storefront")
+                            .accessibilityHidden(true)
+                    }
+                } description: {
+                    Text(PayeeText.emptyMessage)
+                }
             } else if model.rows.isEmpty {
                 ContentUnavailableView.search(text: model.searchText)
             }
