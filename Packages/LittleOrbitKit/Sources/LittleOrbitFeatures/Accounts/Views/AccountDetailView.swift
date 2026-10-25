@@ -33,6 +33,9 @@
         @State private var toastStepID: UUID?
         #if os(iOS)
             @State private var editMode: EditMode = .inactive
+            /// Pull down on the history to search this account (#28 platforms, #187, D322.2); `nil` when search
+            /// isn't wired in.
+            @State private var search: TransactionSearchViewModel?
             /// Compact width (iPhone): the toolbar has Undo and + only, and Redo is in More (UI Designer, Figma).
             @Environment(\.horizontalSizeClass) private var horizontalSizeClass
         #endif
@@ -52,6 +55,9 @@
             self.onEdit = onEdit
             self.onChange = onChange
             _history = State(initialValue: transactions.makeHistory(accountID: row.id))
+            #if os(iOS)
+                _search = State(initialValue: transactions.makeSearch(accountID: row.id))
+            #endif
         }
 
         var body: some View {
@@ -98,6 +104,11 @@
                 // window, where each window's detail used to load it again (Tester2's N5 at 4c6a128).
                 .onChange(of: transactions.updates.revision) {
                     Task { await history.refresh(after: transactions.updates) }
+                    #if os(iOS)
+                        if isSearching {
+                            search?.load()
+                        }
+                    #endif
                 }
                 // Registered, so each change starts its refresh as it's posted (B2); a row that changed with that
                 // change, such as its balance, doesn't load it again (Tester2's five windows at 3dc318b).
@@ -197,28 +208,14 @@
                 }
             #else
                 List(selection: $history.selection) {
-                    Section { header }
-                    if history.isEmpty {
-                        Section { emptyState }
-                    }
-                    if !history.upcoming.isEmpty {
-                        Section {
-                            ForEach(history.upcoming) { rowButton($0) }
-                                .onDelete { delete(ids(at: $0, in: history.upcoming)) }
-                        } header: {
-                            sectionHeader("Upcoming", trailing: history.upcomingTotalText, tone: .negative)
-                        }
-                    }
-                    ForEach(history.sections) { section in
-                        Section {
-                            ForEach(section.rows) { rowButton($0) }
-                                .onDelete { delete(ids(at: $0, in: section.rows)) }
-                        } header: {
-                            sectionHeader(section.title, trailing: section.netChangeText, tone: section.netChangeTone)
-                        }
+                    if let search, isSearching {
+                        AccountSearchResults(search: search) { rowButton($0) }
+                    } else {
+                        historyRows
                     }
                 }
                 .listStyle(.insetGrouped)
+                .modifier(AccountSearchField(search: search))
                 // iPadOS and iOS multi-select: Select, pick rows, then Delete (D161.2).
                 .environment(\.editMode, $editMode)
                 .toolbar(editMode.isEditing ? .visible : .hidden, for: .bottomBar)
@@ -237,6 +234,37 @@
                 .animation(.default, value: undoHistory.toast)
             #endif
         }
+
+        #if os(iOS)
+            /// A query is typed in the pulled-down search field.
+            private var isSearching: Bool {
+                !(search?.query.trimmingCharacters(in: .whitespacesAndNewlines).isEmpty ?? true)
+            }
+
+            /// The account's history: the header, Upcoming, then each day.
+            @ViewBuilder private var historyRows: some View {
+                Section { header }
+                if history.isEmpty {
+                    Section { emptyState }
+                }
+                if !history.upcoming.isEmpty {
+                    Section {
+                        ForEach(history.upcoming) { rowButton($0) }
+                            .onDelete { delete(ids(at: $0, in: history.upcoming)) }
+                    } header: {
+                        sectionHeader("Upcoming", trailing: history.upcomingTotalText, tone: .negative)
+                    }
+                }
+                ForEach(history.sections) { section in
+                    Section {
+                        ForEach(section.rows) { rowButton($0) }
+                            .onDelete { delete(ids(at: $0, in: section.rows)) }
+                    } header: {
+                        sectionHeader(section.title, trailing: section.netChangeText, tone: section.netChangeTone)
+                    }
+                }
+            }
+        #endif
 
         #if os(macOS)
             private func emptyContent(fillsHeight: Bool) -> some View {
