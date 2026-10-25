@@ -49,6 +49,9 @@ public protocol LoadScheduledUseCase {
     func today() -> CalendarDay
     /// The device's time zone now: a new item is dated in it, and the form's date pickers work in it.
     func currentTimeZoneID() -> String
+    /// How many scheduled occurrences not yet recorded or skipped were moved to `accountID` with "This occurrence
+    /// only", for the account delete confirmation (D372).
+    func movedOccurrenceCount(toAccount accountID: UUID) throws -> Int
 }
 
 /// Adds, changes and deletes scheduled items, and pays or skips their occurrences (#26).
@@ -207,6 +210,11 @@ public struct DefaultScheduledUseCases: LoadScheduledUseCase, ManageScheduledUse
 
     public func currentTimeZoneID() -> String {
         timeZone().identifier
+    }
+
+    public func movedOccurrenceCount(toAccount accountID: UUID) throws -> Int {
+        try repository.scheduleLedger().scheduledItemsVisible()
+            .reduce(0) { $0 + $1.openOccurrenceCount(movedTo: accountID) }
     }
 
     public func listing() throws -> ScheduledListing {
