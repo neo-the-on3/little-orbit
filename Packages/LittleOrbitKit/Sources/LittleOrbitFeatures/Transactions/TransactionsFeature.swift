@@ -13,10 +13,13 @@ public final class TransactionsFeature {
     private let now: () -> Date
     /// The entry sheet's category picker on iOS, with search and inline create (#24).
     private let categoryPicking: CategoryPickingUseCases?
+    /// Transaction search (#28). Without it the screens offer no search.
+    private let search: (any SearchTransactionsUseCase)?
 
     public init(
         useCases: TransactionUseCases,
         categoryPicking: CategoryPickingUseCases? = nil,
+        search: (any SearchTransactionsUseCase)? = nil,
         locale: Locale = .current,
         timeZone: TimeZone = .current,
         now: @escaping () -> Date = Date.init,
@@ -25,6 +28,7 @@ public final class TransactionsFeature {
         self.useCases = useCases
         self.updates = updates
         self.categoryPicking = categoryPicking
+        self.search = search
         self.locale = locale
         self.timeZone = timeZone
         self.now = now
@@ -40,6 +44,24 @@ public final class TransactionsFeature {
         // dropped one still held as the view's initial value refreshed after each change too (Tester2's five windows
         // at 3dc318b). Its view registers the one it keeps (`appeared(in:)`).
         AccountHistoryViewModel(useCases: useCases, accountID: accountID, locale: locale, timeZone: timeZone, now: now)
+    }
+
+    /// Whether search is wired in, so the screens show it.
+    public var hasSearch: Bool { search != nil }
+
+    /// A search screen's view model (#28), or `nil` when search isn't wired in. `accountID` limits it to one account.
+    /// It reads the store again only when `updates` moves on.
+    public func makeSearch(accountID: UUID? = nil) -> TransactionSearchViewModel? {
+        search.map {
+            TransactionSearchViewModel(
+                search: $0,
+                accountID: accountID,
+                updates: updates,
+                locale: locale,
+                timeZone: timeZone,
+                now: now,
+            )
+        }
     }
 
     public func makeForm(_ mode: TransactionFormMode) -> TransactionFormViewModel {

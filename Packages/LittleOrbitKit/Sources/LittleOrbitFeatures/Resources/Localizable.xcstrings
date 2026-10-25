@@ -394,6 +394,32 @@
         }
       }
     },
+    "%1$@: Income %2$@, Expenses %3$@, Net %4$@": {
+      "comment": "VoiceOver’s reading of one currency’s search totals. %1$@ is the currency’s name, such as Indian Rupee, so the code isn’t spelled out; %2$@, %3$@ and %4$@ are the amounts.",
+      "extractionState": "manual",
+      "generatesSymbol": false,
+      "localizations": {
+        "en": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "%1$@: Income %2$@, Expenses %3$@, Net %4$@"
+          }
+        }
+      }
+    },
+    "%1$@: Moved between your accounts %2$@": {
+      "comment": "VoiceOver’s reading of one currency’s search total when only transfers match. %1$@ is the currency’s name, such as Indian Rupee; %2$@ the amount.",
+      "extractionState": "manual",
+      "generatesSymbol": false,
+      "localizations": {
+        "en": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "%1$@: Moved between your accounts %2$@"
+          }
+        }
+      }
+    },
     "%1$@: “%2$@”": {
       "comment": "CSV import Review: under a row issue, the column’s header (%1$@) and the raw value in that column (%2$@), as in Withdrawal: “1.250,00/-” (D323.3, D269).",
       "extractionState": "manual",
@@ -566,6 +592,19 @@
         }
       }
     },
+    "%@ moved": {
+      "comment": "Search day header: a currency with only transfers that day. %@ is the amount, such as ₹1,000.00.",
+      "extractionState": "manual",
+      "generatesSymbol": false,
+      "localizations": {
+        "en": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "%@ moved"
+          }
+        }
+      }
+    },
     "%lld Months": {
       "comment": "Monthly Backups stepper value. %lld is the number of months (1–24).",
       "extractionState": "manual",
@@ -734,6 +773,31 @@
         }
       }
     },
+    "%lld results": {
+      "comment": "Search summary: how many transactions match, upcoming ones included (D47).",
+      "extractionState": "manual",
+      "generatesSymbol": false,
+      "localizations": {
+        "en": {
+          "variations": {
+            "plural": {
+              "one": {
+                "stringUnit": {
+                  "state": "translated",
+                  "value": "%lld result"
+                }
+              },
+              "other": {
+                "stringUnit": {
+                  "state": "translated",
+                  "value": "%lld results"
+                }
+              }
+            }
+          }
+        }
+      }
+    },
     "%lld refunds were imported without links to their expenses. They show as “Refund (original deleted)”.": {
       "comment": "CSV import summary: refunds the file had, imported without a link to their expense because the file has none (D323.5). “Refund (original deleted)” is the label those refunds show with.",
       "extractionState": "manual",
@@ -824,6 +888,31 @@
                 "stringUnit": {
                   "state": "translated",
                   "value": "%lld transactions"
+                }
+              }
+            }
+          }
+        }
+      }
+    },
+    "%lld upcoming matches are listed but not counted.": {
+      "comment": "iOS search summary note (D134): %lld is how many results are dated after today. It’s hidden when there are none.",
+      "extractionState": "manual",
+      "generatesSymbol": false,
+      "localizations": {
+        "en": {
+          "variations": {
+            "plural": {
+              "one": {
+                "stringUnit": {
+                  "state": "translated",
+                  "value": "%lld upcoming match is listed but not counted."
+                }
+              },
+              "other": {
+                "stringUnit": {
+                  "state": "translated",
+                  "value": "%lld upcoming matches are listed but not counted."
                 }
               }
             }
@@ -1054,6 +1143,19 @@
           "stringUnit": {
             "state": "translated",
             "value": "Add Subcategory"
+          }
+        }
+      }
+    },
+    "All": {
+      "comment": "Search scope bar: every type of transaction.",
+      "extractionState": "manual",
+      "generatesSymbol": false,
+      "localizations": {
+        "en": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "All"
           }
         }
       }
@@ -1744,6 +1846,234 @@
           "stringUnit": {
             "state": "translated",
             "value": "Category"
+          }
+        }
+      }
+    },
+    "Check the spelling or try fewer words. Search looks at description, category, payee, tag and notes.": {
+      "comment": "Search empty state under No results for …",
+      "extractionState": "manual",
+      "generatesSymbol": false,
+      "localizations": {
+        "en": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Check the spelling or try fewer words. Search looks at description, category, payee, tag and notes."
+          }
+        }
+      }
+    },
+    "Clear Search": {
+      "comment": "Search empty state button: empties the field and shows every transaction.",
+      "extractionState": "manual",
+      "generatesSymbol": false,
+      "localizations": {
+        "en": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Clear Search"
+          }
+        }
+      }
+    },
+    "Couldn’t Load Transactions": {
+      "comment": "Search screens’ title when the store can’t be read. Its message is “Try again.”",
+      "extractionState": "manual",
+      "generatesSymbol": false,
+      "localizations": {
+        "en": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Couldn’t Load Transactions"
+          }
+        }
+      }
+    },
+    "From %@": {
+      "comment": "A search result transfer’s title on the receiving side. %@ is the account it came from.",
+      "extractionState": "manual",
+      "generatesSymbol": false,
+      "localizations": {
+        "en": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "From %@"
+          }
+        }
+      }
+    },
+    "Moved between your accounts": {
+      "comment": "Search totals when only transfers match: the amount moved.",
+      "extractionState": "manual",
+      "generatesSymbol": false,
+      "localizations": {
+        "en": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Moved between your accounts"
+          }
+        }
+      }
+    },
+    "Net": {
+      "comment": "Search totals: income minus expenses for one currency.",
+      "extractionState": "manual",
+      "generatesSymbol": false,
+      "localizations": {
+        "en": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Net"
+          }
+        }
+      }
+    },
+    "No Transactions": {
+      "comment": "Search screens’ title when the store has no transactions at all.",
+      "extractionState": "manual",
+      "generatesSymbol": false,
+      "localizations": {
+        "en": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "No Transactions"
+          }
+        }
+      }
+    },
+    "No Results for “%@”": {
+      "comment": "Search empty state title, a heading in title case (D320.4). %@ is what was typed.",
+      "extractionState": "manual",
+      "generatesSymbol": false,
+      "localizations": {
+        "en": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "No Results for “%@”"
+          }
+        }
+      }
+    },
+    "Opens the transaction to edit": {
+      "comment": "VoiceOver hint on a search result row.",
+      "extractionState": "manual",
+      "generatesSymbol": false,
+      "localizations": {
+        "en": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Opens the transaction to edit"
+          }
+        }
+      }
+    },
+    "Search": {
+      "comment": "iOS search screen title, opened with the magnifying glass on Accounts.",
+      "extractionState": "manual",
+      "generatesSymbol": false,
+      "localizations": {
+        "en": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Search"
+          }
+        }
+      }
+    },
+    "Search Transactions": {
+      "comment": "Accounts toolbar button that opens search (VoiceOver label).",
+      "extractionState": "manual",
+      "generatesSymbol": false,
+      "localizations": {
+        "en": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Search Transactions"
+          }
+        }
+      }
+    },
+    "Search transactions": {
+      "comment": "The search field’s placeholder on the search screens.",
+      "extractionState": "manual",
+      "generatesSymbol": false,
+      "localizations": {
+        "en": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Search transactions"
+          }
+        }
+      }
+    },
+    "search.row.expense": {
+      "comment": "A search result’s title when the expense has no payee or description.",
+      "extractionState": "manual",
+      "localizations": {
+        "en": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Expense"
+          }
+        }
+      }
+    },
+    "search.row.income": {
+      "comment": "A search result’s title when the income has no payee or description.",
+      "extractionState": "manual",
+      "localizations": {
+        "en": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Income"
+          }
+        }
+      }
+    },
+    "search.scope.expenses": {
+      "comment": "Search scope bar: show only expenses (refunds included).",
+      "extractionState": "manual",
+      "localizations": {
+        "en": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Expenses"
+          }
+        }
+      }
+    },
+    "search.scope.income": {
+      "comment": "Search scope bar: show only income.",
+      "extractionState": "manual",
+      "localizations": {
+        "en": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Income"
+          }
+        }
+      }
+    },
+    "search.total.expenses": {
+      "comment": "Search summary card: the label under one currency’s spending total (expenses less refunds).",
+      "extractionState": "manual",
+      "localizations": {
+        "en": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Expenses"
+          }
+        }
+      }
+    },
+    "search.total.income": {
+      "comment": "Search summary card: the label under one currency’s income total.",
+      "extractionState": "manual",
+      "localizations": {
+        "en": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Income"
           }
         }
       }
@@ -7603,7 +7933,7 @@
       }
     },
     "Try again.": {
-      "comment": "Message under “Couldn’t Load Payees” or “Couldn’t Load Categories” (alerts), and under “Couldn’t Load Report” (the spending report and its drill-down).",
+      "comment": "Message under “Couldn’t Load Payees” or “Couldn’t Load Categories” (alerts), under “Couldn’t Load Report” (the spending report and its drill-down), and under “Couldn’t Load Transactions” (search).",
       "extractionState": "manual",
       "generatesSymbol": false,
       "localizations": {
@@ -8918,7 +9248,7 @@
       }
     },
     "To %@": {
-      "comment": "Scheduled row name for a transfer with no description: %@ is the account money goes to.",
+      "comment": "A transfer’s name on the sending side: a Scheduled row with no description, or a search result’s title. %@ is the account money goes to.",
       "extractionState": "manual",
       "generatesSymbol": false,
       "localizations": {
@@ -8926,6 +9256,110 @@
           "stringUnit": {
             "state": "translated",
             "value": "To %@"
+          }
+        }
+      }
+    },
+    "Transactions you add will appear here.": {
+      "comment": "Search screens’ message under “No Transactions”, when the store has no transactions at all.",
+      "extractionState": "manual",
+      "generatesSymbol": false,
+      "localizations": {
+        "en": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Transactions you add will appear here."
+          }
+        }
+      }
+    },
+    "Transfers": {
+      "comment": "Search scope bar: only transfers between your accounts.",
+      "extractionState": "manual",
+      "generatesSymbol": false,
+      "localizations": {
+        "en": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Transfers"
+          }
+        }
+      }
+    },
+    "Upcoming matches are listed but not counted.": {
+      "comment": "macOS search footer when any result is dated after today.",
+      "extractionState": "manual",
+      "generatesSymbol": false,
+      "localizations": {
+        "en": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Upcoming matches are listed but not counted."
+          }
+        }
+      }
+    },
+    "Upcoming, %1$@, %2$@": {
+      "comment": "VoiceOver’s reading of a muted search day header (D120.1). %1$@ is the day, such as Sun, 25 Oct; %2$@ its net per currency.",
+      "extractionState": "manual",
+      "generatesSymbol": false,
+      "localizations": {
+        "en": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Upcoming, %1$@, %2$@"
+          }
+        }
+      }
+    },
+    "Use YYYY for year:": {
+      "comment": "Search hint when year: isn’t four digits; that part is ignored.",
+      "extractionState": "manual",
+      "generatesSymbol": false,
+      "localizations": {
+        "en": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Use YYYY for year:"
+          }
+        }
+      }
+    },
+    "Use YYYY-MM-DD": {
+      "comment": "Search hint when an after: or before: date isn’t a real day; that part is ignored.",
+      "extractionState": "manual",
+      "generatesSymbol": false,
+      "localizations": {
+        "en": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Use YYYY-MM-DD"
+          }
+        }
+      }
+    },
+    "Use expense, income or transfer for type:": {
+      "comment": "Search hint when type: has another value; that part is ignored.",
+      "extractionState": "manual",
+      "generatesSymbol": false,
+      "localizations": {
+        "en": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Use expense, income or transfer for type:"
+          }
+        }
+      }
+    },
+    "another account": {
+      "comment": "A transfer row’s title when the other account was deleted: To another account.",
+      "extractionState": "manual",
+      "generatesSymbol": false,
+      "localizations": {
+        "en": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "another account"
           }
         }
       }
