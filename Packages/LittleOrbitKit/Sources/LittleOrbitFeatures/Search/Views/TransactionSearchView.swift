@@ -54,14 +54,15 @@
                             exportButton(model.exportTitle)
                         }
                     }
-                    // ⌘F puts the cursor in the toolbar search field (S30); Esc clears it, as the field does.
-                    .background {
-                        Button(model.prompt) { isSearchFocused = true }
+                #endif
+                // ⌘F puts the cursor in the search field (S30): the macOS toolbar field, and on iPad with a keyboard
+                // the field above the list (#187). Esc clears it, as the field does.
+                .background {
+                    Button(model.prompt) { isSearchFocused = true }
                         .keyboardShortcut("f", modifiers: .command)
                         .opacity(0)
                         .accessibilityHidden(true)
-                    }
-                #endif
+                }
                 .navigationTitle(title)
                 .searchable(
                     text: $model.query,
