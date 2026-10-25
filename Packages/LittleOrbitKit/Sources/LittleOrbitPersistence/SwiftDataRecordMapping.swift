@@ -290,6 +290,73 @@
         }
     }
 
+    extension LittleOrbitSchemaV1.BudgetRecord: IdentifiedLedgerRecord {
+        var recordID: UUID { id }
+        func apply(_ budget: Budget) {
+            id = budget.id
+            name = budget.name
+            currencyCode = budget.currencyCode
+            startYear = budget.startDay.year
+            startMonth = budget.startDay.month
+            startDayOfMonth = budget.startDay.day
+            let recurrence = budget.recurrence.stored
+            recurrenceKind = recurrence.kind
+            recurrenceUnit = recurrence.unit
+            recurrenceCount = recurrence.count
+            carriesOverUnspent = budget.carriesOverUnspent
+            carriesOverOverspending = budget.carriesOverOverspending
+            createdAt = budget.createdAt
+            updatedAt = budget.updatedAt
+            deletedAt = budget.deletedAt
+        }
+
+        func makeBudget() -> Budget {
+            Budget(
+                id: id,
+                name: name,
+                currencyCode: currencyCode,
+                categoryIDs: Budget.normalizedCategoryIDs((categories ?? []).map(\.id)),
+                startDay: CalendarDay(year: startYear, month: startMonth, day: startDayOfMonth),
+                recurrence: BudgetRecurrence(
+                    BudgetRecurrence.Stored(kind: recurrenceKind, unit: recurrenceUnit, count: recurrenceCount)
+                ),
+                limits: (limits ?? []).map { $0.makeLimit() }.sorted { $0.startDay < $1.startDay },
+                carriesOverUnspent: carriesOverUnspent,
+                carriesOverOverspending: carriesOverOverspending,
+                createdAt: createdAt,
+                updatedAt: updatedAt,
+                deletedAt: deletedAt,
+            )
+        }
+    }
+
+    extension LittleOrbitSchemaV1.BudgetLimitRecord: IdentifiedLedgerRecord {
+        var recordID: UUID { id }
+        func apply(_ limit: BudgetLimit, currencyCode: String) throws {
+            id = limit.id
+            let amount = try stored(limit.amount, currencyCode: currencyCode)
+            amountMinor = amount.minorUnits
+            amountScale = amount.scale
+            startYear = limit.startDay.year
+            startMonth = limit.startDay.month
+            startDayOfMonth = limit.startDay.day
+            createdAt = limit.createdAt
+            updatedAt = limit.updatedAt
+            deletedAt = limit.deletedAt
+        }
+
+        func makeLimit() -> BudgetLimit {
+            BudgetLimit(
+                id: id,
+                startDay: CalendarDay(year: startYear, month: startMonth, day: startDayOfMonth),
+                amount: decimal(minor: amountMinor, scale: amountScale),
+                createdAt: createdAt,
+                updatedAt: updatedAt,
+                deletedAt: deletedAt,
+            )
+        }
+    }
+
     private func stored(_ value: Decimal, currencyCode: String) throws -> MinorUnitDecimal.Stored {
         let scale = CurrencyCode.minorUnits(for: currencyCode) ?? 0
         return try MinorUnitDecimal.store(value, scale: scale)

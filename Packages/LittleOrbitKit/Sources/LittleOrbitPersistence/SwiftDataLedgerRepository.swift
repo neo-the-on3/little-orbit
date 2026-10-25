@@ -8,7 +8,7 @@
         /// `ModelContext` does not keep the container alive. Dropping it crashes the next fetch.
         private let container: ModelContainer
         private let context: ModelContext
-        private let now: @MainActor () -> Date
+        let now: @MainActor () -> Date
         /// While `atomically` runs, reads and writes use this snapshot, and one save at the end stores it.
         private var batch: LedgerSnapshot?
         /// The store's pending-seed marker file (D293, `StoreLocation.pendingSeedMarkerURL`), or `nil` for a store
@@ -204,11 +204,11 @@
             return result
         }
 
-        private func mutate(_ body: (LedgerSnapshot) throws -> LedgerSnapshot) throws {
+        func mutate(_ body: (LedgerSnapshot) throws -> LedgerSnapshot) throws {
             try persist(try body(try load()))
         }
 
-        private func load() throws -> LedgerSnapshot {
+        func load() throws -> LedgerSnapshot {
             if let batch {
                 return batch
             }
@@ -246,10 +246,11 @@
                 tags: try fetch(LittleOrbitSchemaV1.TagRecord.self).map { $0.makeTag() },
                 splits: try fetch(LittleOrbitSchemaV1.TransactionSplitRecord.self).map { $0.makeSplit() },
                 attachments: attachments,
+                budgets: try fetch(LittleOrbitSchemaV1.BudgetRecord.self).map { $0.makeBudget() },
             )
         }
 
-        private func fetch<T: PersistentModel>(_ type: T.Type) throws -> [T] {
+        func fetch<T: PersistentModel>(_ type: T.Type) throws -> [T] {
             try context.fetch(FetchDescriptor<T>())
         }
 
@@ -325,6 +326,7 @@
                 record.byteSize = Int64(data.count)
             }
 
+            try applyBudgets(snapshot, categories: categoryRecords)
             clearRelationships(
                 transactions: transactionRecords,
                 categories: categoryRecords,
@@ -389,7 +391,7 @@
             }
         }
 
-        private func upsert<Record, Value: Identifiable>(
+        func upsert<Record, Value: Identifiable>(
             _ values: [Value],
             existing: [Record],
             create: () -> Record,
@@ -416,7 +418,7 @@
             return byID
         }
 
-        private func deleteMissing<Record: PersistentModel>(_ records: [Record], keeping ids: Set<UUID>) {
+        func deleteMissing<Record: PersistentModel>(_ records: [Record], keeping ids: Set<UUID>) {
             for record in records {
                 guard let identified = record as? any IdentifiedLedgerRecord else {
                     continue
@@ -466,7 +468,10 @@
         /// `persist` upserts and deletes every record, then saves once; a failed save rolls back, so the store
         /// is either fully replaced or unchanged (D63).
         /// A completed restore also marks the seeding done, so even an empty backup never leads to a seed (D293.2).
+        /// Budgets are checked first by the rule the in-memory store uses, so a link to a missing category is never
+        /// dropped here and kept there (`LedgerBook.validateStoredBudgets`, #174 B1); nothing changes when it throws.
         public func replaceLedger(with snapshot: LedgerSnapshot) throws {
+            try LedgerBook.validateStoredBudgets(in: snapshot)
             try persist(snapshot)
             markDefaultSeedDone()
         }
@@ -486,6 +491,7 @@
         /// value of its file, the only way into an external-storage attribute: they aren't copied into memory, and
         /// SwiftData writes them to its own file on save (B1).
         public func replaceLedger(with snapshot: LedgerSnapshot, attachments: any BackupAttachmentReading) throws {
+            try LedgerBook.validateStoredBudgets(in: snapshot)
             try write(snapshot, attachmentBytes: attachments)
             markDefaultSeedDone()
         }

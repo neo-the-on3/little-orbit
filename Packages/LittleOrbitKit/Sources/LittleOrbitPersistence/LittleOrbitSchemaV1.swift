@@ -19,6 +19,8 @@
                 TagRecord.self,
                 TransactionSplitRecord.self,
                 AttachmentRecord.self,
+                BudgetRecord.self,
+                BudgetLimitRecord.self,
             ]
         }
 
@@ -122,6 +124,10 @@
             @Relationship(deleteRule: .nullify, inverse: \TransactionSplitRecord.category)
             public var splits: [TransactionSplitRecord]? = []
 
+            /// The budgets that picked this category (#25).
+            @Relationship(deleteRule: .nullify, inverse: \BudgetRecord.categories)
+            public var budgets: [BudgetRecord]? = []
+
             public init() {}
         }
 
@@ -192,6 +198,53 @@
 
             public init() {}
         }
+
+        /// A budget (#25). Its start day is a calendar day, kept as year, month and day.
+        @Model
+        public final class BudgetRecord {
+            public var id: UUID = UUID()
+            public var name: String = ""
+            public var currencyCode: String = CurrencyCode.fallback
+            public var startYear: Int = 1970
+            public var startMonth: Int = 1
+            public var startDayOfMonth: Int = 1
+            /// weekly, fortnightly, monthly, yearly or custom (`BudgetRecurrence.stored`).
+            public var recurrenceKind: String = "monthly"
+            /// day, week, month or year, for a custom repeat only.
+            public var recurrenceUnit: String?
+            /// 1–99, for a custom repeat only.
+            public var recurrenceCount: Int?
+            public var carriesOverUnspent: Bool = false
+            public var carriesOverOverspending: Bool = false
+            public var createdAt: Date = Date(timeIntervalSinceReferenceDate: 0)
+            public var updatedAt: Date = Date(timeIntervalSinceReferenceDate: 0)
+            public var deletedAt: Date?
+
+            public var categories: [CategoryRecord]? = []
+
+            @Relationship(deleteRule: .cascade, inverse: \BudgetLimitRecord.budget)
+            public var limits: [BudgetLimitRecord]? = []
+
+            public init() {}
+        }
+
+        /// One entry in a budget's limit history: the amount applies from the period starting on its day.
+        @Model
+        public final class BudgetLimitRecord {
+            public var id: UUID = UUID()
+            public var amountMinor: Int64 = 0
+            public var amountScale: Int16 = 0
+            public var startYear: Int = 1970
+            public var startMonth: Int = 1
+            public var startDayOfMonth: Int = 1
+            public var createdAt: Date = Date(timeIntervalSinceReferenceDate: 0)
+            public var updatedAt: Date = Date(timeIntervalSinceReferenceDate: 0)
+            public var deletedAt: Date?
+
+            public var budget: BudgetRecord?
+
+            public init() {}
+        }
     }
 
     public enum LittleOrbitMigrationPlan: SchemaMigrationPlan {
@@ -220,6 +273,8 @@
                 LittleOrbitSchemaV1.TagRecord.self,
                 LittleOrbitSchemaV1.TransactionSplitRecord.self,
                 LittleOrbitSchemaV1.AttachmentRecord.self,
+                LittleOrbitSchemaV1.BudgetRecord.self,
+                LittleOrbitSchemaV1.BudgetLimitRecord.self,
                 migrationPlan: LittleOrbitMigrationPlan.self,
                 configurations: modelConfiguration,
             )
