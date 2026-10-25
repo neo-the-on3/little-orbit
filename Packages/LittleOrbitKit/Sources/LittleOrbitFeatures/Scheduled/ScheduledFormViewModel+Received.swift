@@ -17,6 +17,16 @@ extension ScheduledFormViewModel {
         receivedError = nil
     }
 
+    /// A save's Received error is about the old text, so any edit clears it: "1.5" for JPY, Save, then clearing the
+    /// field shows the plain hint, not the stale decimals error (Tech Architect NB 1 on #207). To's currency change
+    /// clears it too, in `transferAccountChanged(from:)`.
+    func receivedTextChanged(from old: String) {
+        guard old != receivedText else {
+            return
+        }
+        receivedError = nil
+    }
+
     /// Whether To is in another currency than From, so the form asks for the amount received.
     public var needsReceivedAmount: Bool {
         guard type == .transfer, let source = listing.account(accountID),

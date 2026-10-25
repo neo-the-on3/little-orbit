@@ -247,6 +247,8 @@
                 text: $model.receivedText,
                 prompt: Text(verbatim: model.receivedCurrencyCode ?? ""),
             )
+            // The plain hint is also the field's accessibility hint while it shows (Tech Architect NB 2 on #207).
+            .accessibilityHint(Text(verbatim: model.receivedHint ?? ""))
             #if os(iOS)
                 .keyboardType(.decimalPad)
             #endif
