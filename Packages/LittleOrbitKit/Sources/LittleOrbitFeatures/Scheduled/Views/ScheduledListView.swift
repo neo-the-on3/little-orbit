@@ -105,7 +105,12 @@
 
         /// The Mac shows a Table (D340.13); iOS keeps its List.
         @ViewBuilder private var content: some View {
-            #if os(macOS)
+            #if os(macOS) && DEBUG
+                // Testing hook: `-LittleOrbitScheduledColumns` sets the Table's saved columns first.
+                ScheduledColumnsLaunchGate {
+                    ScheduledTableView(model: model) { openedItem = $0 }
+                }
+            #elseif os(macOS)
                 ScheduledTableView(model: model) { openedItem = $0 }
             #else
                 list
