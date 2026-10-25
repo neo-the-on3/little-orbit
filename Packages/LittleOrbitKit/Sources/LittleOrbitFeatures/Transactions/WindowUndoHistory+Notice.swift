@@ -27,7 +27,7 @@ extension WindowUndoHistory {
             case .added: .restored
             case .removed: .deleted
             case .replaced, .removedAccount, .addedAccount, .createdPayees, .removedPayees, .savedScheduledItem,
-                .revertedScheduledItemSave:
+                .revertedScheduledItemSave, .settledOccurrence, .unsettledOccurrence:
                 .updated
             }
         return UndoNotice(

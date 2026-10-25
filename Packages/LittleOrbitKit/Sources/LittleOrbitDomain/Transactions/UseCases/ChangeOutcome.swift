@@ -101,10 +101,10 @@ public enum StaleReason: Equatable, Sendable {
     case changed([UUID])
     /// Some of these transactions were changed and others deleted (a bulk step, D189.2).
     case changedAndDeleted(changed: [UUID], deleted: [UUID])
-    /// The scheduled item a step saved was edited, or one of its occurrences recorded or skipped, since
-    /// (D351.1, D352.2).
+    /// The scheduled item a step saved, or a Pay or Skip step settled, was edited, or one of its occurrences
+    /// recorded, skipped or unsettled, since (D351.1, D352.2, D288.3).
     case scheduledItemChanged(UUID)
-    /// The scheduled item a step saved was deleted since (D351.1).
+    /// The scheduled item a step saved or settled was deleted since (D351.1, D288.3).
     case scheduledItemDeleted(UUID)
 }
 

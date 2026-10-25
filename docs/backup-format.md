@@ -154,7 +154,9 @@ Scheduled items (#26) likewise fill the reserved `scheduledItems` section of `sh
 schema is still V1 and changes in place (D294). Each item carries its settled occurrences (day, `posted` or
 `skipped`, and the transaction it recorded), so a restored ledger never records an occurrence again, and any
 `pending` ones: unpaid days of the schedule before a start or repeat edit, which stay overdue until paid or skipped
-(D336.1). A backup without scheduled items writes the section as before, its manifest doesn't list it, and its
+(D336.1). A `pending` record that also has the transaction ID is an automatic item's occurrence whose Pay was undone:
+it stays due for the user and catch-up never records it (D344). Records without it write no transaction ID, as before,
+so their backups and fingerprints don't change. A backup without scheduled items writes the section as before, its manifest doesn't list it, and its
 fingerprint doesn't change; older backups read with no scheduled items. The repeat is written as `{"kind": "never"}`
 or `{"kind": "every", "unit": "month", "count": 1}`, and days as `{"year", "month", "day"}`. A backup whose scheduled
 items break the stores' rule (`LedgerBook.validateStoredScheduledItems`: an end before the start, a repeat outside

@@ -19,7 +19,7 @@ extension WindowUndoHistory {
             return staleRecords(ids, step, deleted: false)
         case .changedAndDeleted(let changed, let deleted):
             return StaleText.changedOrDeleted(changed.count + deleted.count)
-        // A scheduled item step names its item as the step did (D351.1, D228).
+        // A scheduled item step, a form save or a Pay or Skip, names its item as the step did (D351.1, D288.3, D228).
         case .scheduledItemChanged:
             return StaleText.changed(step.subject ?? StaleText.theTransaction)
         case .scheduledItemDeleted:
@@ -66,6 +66,8 @@ extension WindowUndoHistory {
         case .removed(let items): return items.first { $0.transaction.id == id }?.transaction
         case .replaced(let versions): return versions.first { $0.id == id }
         case .removedAccount(let removed): return removed.transactions.first { $0.transaction.id == id }?.transaction
+        case .settledOccurrence(let settlement), .unsettledOccurrence(let settlement):
+            return settlement.transaction.flatMap { $0.id == id ? $0 : nil }
         case .added, .addedAccount, .createdPayees, .removedPayees, .savedScheduledItem, .revertedScheduledItemSave:
             return nil
         }

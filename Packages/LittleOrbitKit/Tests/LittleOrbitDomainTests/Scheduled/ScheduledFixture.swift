@@ -140,11 +140,25 @@ final class FakeScheduleRepository: ScheduleRepository {
         saves += 1
     }
 
-    func settleScheduledOccurrence(_ settlement: ScheduledSettlement) throws -> Transaction? {
+    func settleScheduledOccurrence(_ settlement: ScheduledSettlement) throws -> ScheduledSettlementChange? {
         let outcome = try LedgerBook.settlingScheduledOccurrence(settlement, in: snapshot, now: now)
         snapshot = outcome.snapshot
         saves += 1
-        return outcome.transaction
+        return outcome.change
+    }
+
+    func unsettleScheduledOccurrence(_ change: ScheduledSettlementChange) throws -> ScheduledSettlementRevert {
+        let outcome = try LedgerBook.unsettlingScheduledOccurrence(change, in: snapshot, now: now)
+        snapshot = outcome.snapshot
+        saves += 1
+        return outcome.result
+    }
+
+    func resettleScheduledOccurrence(_ change: ScheduledSettlementChange) throws -> ScheduledSettlementRevert {
+        let outcome = try LedgerBook.resettlingScheduledOccurrence(change, in: snapshot, now: now)
+        snapshot = outcome.snapshot
+        saves += 1
+        return outcome.result
     }
 
     func catchUpScheduledItems(today: CalendarDay, pruningOrphans: Bool) throws -> ScheduledCatchUp {

@@ -140,7 +140,7 @@ public struct TransactionUseCases {
 
     /// The default implementations over one repository. `categoryNames` names the built-in categories when
     /// they're seeded at launch (D8, D291.7). `schedule`, the same store's scheduled side, lets a window undo and
-    /// redo a save of the Scheduled form (D351.1).
+    /// redo a save of the Scheduled form (D351.1), and a manual Pay or Skip (D288.3).
     public init(
         repository: any LedgerRepository,
         categoryNames: any DefaultCategoryNaming,
@@ -231,7 +231,8 @@ public struct DefaultAccountHistoryUseCase: AccountHistoryUseCase {
 @MainActor
 public struct DefaultTransactionChangesUseCase: TransactionChangesUseCase {
     let repository: any LedgerRepository
-    /// Undoes and redoes a save of the Scheduled form (D351.1). Without it, such a step can't be reverted.
+    /// Undoes and redoes a save of the Scheduled form (D351.1), and a manual Pay or Skip (D288.3). Without it,
+    /// such a step can't be reverted.
     private let schedule: (any ScheduleRepository)?
 
     public init(repository: any LedgerRepository, schedule: (any ScheduleRepository)? = nil) {
@@ -252,6 +253,13 @@ public struct DefaultTransactionChangesUseCase: TransactionChangesUseCase {
             // A form save step carries what it left; its check is the scheduled rule's (D351.1).
             let snapshot = try requireSchedule().scheduleLedger()
             return LedgerBook.staleness(ofSave: save, undone: undone, in: snapshot).map(ChangeCheck.stale) ?? .current
+        }
+        if let (settlement, settled) = Self.settlement(in: change) {
+            // A Pay or Skip step carries what it left; its check is the scheduled rule's (D288.3).
+            var snapshot = try requireSchedule().scheduleLedger()
+            snapshot.transactions = try repository.transactions()
+            return LedgerBook.staleness(of: settlement, settled: settled, in: snapshot).map(ChangeCheck.stale)
+                ?? .current
         }
         return try ChangeChecker(repository: repository).check(change, expecting: outcome)
     }
@@ -274,6 +282,20 @@ public struct DefaultTransactionChangesUseCase: TransactionChangesUseCase {
                     undone ? .savedScheduledItem(left) : .revertedScheduledItemSave(left),
                     ChangeOutcome(),
                 )
+            case .stale(let reason):
+                return .stale(reason)
+            }
+        }
+        if let (settlement, settled) = Self.settlement(in: change) {
+            // One save in the scheduled store, which checks first and writes nothing for a stale step.
+            let schedule = try requireSchedule()
+            let result =
+                settled
+                ? try schedule.unsettleScheduledOccurrence(settlement)
+                : try schedule.resettleScheduledOccurrence(settlement)
+            switch result {
+            case .reverted(let left):
+                return .reverted(settled ? .unsettledOccurrence(left) : .settledOccurrence(left), ChangeOutcome())
             case .stale(let reason):
                 return .stale(reason)
             }
@@ -303,6 +325,12 @@ public struct DefaultTransactionChangesUseCase: TransactionChangesUseCase {
             // A form save step has no accounts: it's named for its item, shows no notice, and an account delete
             // doesn't replace it (D187.9). Its own check makes it stale if an account it needs is gone.
             case .savedScheduledItem, .revertedScheduledItemSave: []
+            // A Pay or Skip step deliberately has no accounts. It's named for its item and shows no notice
+            // (D288.3), and an account delete must not quietly replace it the way D187.9 replaces a window's steps
+            // for that account: the scheduled store's own check finds every account its Undo or Redo would write
+            // (the item's, a custom payment's and the schedule before or after it) and makes the step stale, so the
+            // user is told why (`LedgerBook.staleness(of:settled:in:)`).
+            case .settledOccurrence, .unsettledOccurrence: []
             }
         let ids = Set(versions.flatMap { [$0.accountID, $0.transferAccountID].compactMap(\.self) })
         let transfers = versions.compactMap { version -> TransferImpact? in
@@ -330,6 +358,15 @@ public struct DefaultTransactionChangesUseCase: TransactionChangesUseCase {
         switch change {
         case .savedScheduledItem(let save): (save, false)
         case .revertedScheduledItemSave(let save): (save, true)
+        default: nil
+        }
+    }
+
+    /// The Pay or Skip a step holds, and whether the step left the occurrence settled; `nil` for other changes.
+    private static func settlement(in change: TransactionChange) -> (ScheduledSettlementChange, Bool)? {
+        switch change {
+        case .settledOccurrence(let settlement): (settlement, true)
+        case .unsettledOccurrence(let settlement): (settlement, false)
         default: nil
         }
     }
@@ -419,7 +456,7 @@ public struct DefaultTransactionChangesUseCase: TransactionChangesUseCase {
             return try removeAll(ids: ids)
         case .replaced(let previous):
             return try revertEdits(previous, expecting: outcome)
-        case .savedScheduledItem, .revertedScheduledItemSave:
+        case .savedScheduledItem, .revertedScheduledItemSave, .settledOccurrence, .unsettledOccurrence:
             // Reverted by `revert` in the scheduled store, never inside this batch.
             throw LedgerValidationError.missingScheduledItem
         }

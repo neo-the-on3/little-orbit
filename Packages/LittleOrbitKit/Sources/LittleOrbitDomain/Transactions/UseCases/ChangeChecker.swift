@@ -47,8 +47,10 @@ struct ChangeChecker {
             outcome.accountIDs = Self.accounts(of: removed.transactions.map(\.transaction))
                 .subtracting([removed.account.id])
             outcome.keepUnlinkedRefunds(of: removed.transactions, from: current)
-        case .createdPayees, .removedPayees, .savedScheduledItem, .revertedScheduledItemSave:
-            // A Scheduled form save step carries what it left itself (`ScheduledItemSaveChange`).
+        case .createdPayees, .removedPayees, .savedScheduledItem, .revertedScheduledItemSave, .settledOccurrence,
+            .unsettledOccurrence:
+            // A Scheduled form save step carries what it left itself (`ScheduledItemSaveChange`), and a Pay or Skip
+            // step too (`ScheduledSettlementChange`).
             break
         case .addedAccount(let id):
             outcome.accountIDs = [id]
@@ -120,7 +122,7 @@ struct ChangeChecker {
                 current: current,
             )
         case .added, .replaced, .addedAccount, .createdPayees, .removedPayees, .savedScheduledItem,
-            .revertedScheduledItemSave:
+            .revertedScheduledItemSave, .settledOccurrence, .unsettledOccurrence:
             return []
         }
     }

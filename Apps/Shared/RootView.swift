@@ -172,7 +172,7 @@
             let transactionUseCases = TransactionUseCases(
                 repository: repository,
                 categoryNames: CatalogDefaultCategoryNames(),
-                // Undo and Redo of a Scheduled form save go through the schedule (D351.1).
+                // Undo and Redo of a Scheduled form save, and of Pay and Skip, go through the schedule (D351.1, D288.3).
                 schedule: repository,
             )
             do {

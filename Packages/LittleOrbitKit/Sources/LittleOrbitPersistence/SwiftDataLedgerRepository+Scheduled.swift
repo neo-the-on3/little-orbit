@@ -111,14 +111,37 @@
             try mutate { try LedgerBook.deletingScheduledItem(id: id, in: $0) }
         }
 
-        public func settleScheduledOccurrence(_ settlement: ScheduledSettlement) throws -> Transaction? {
+        public func settleScheduledOccurrence(_ settlement: ScheduledSettlement) throws -> ScheduledSettlementChange? {
             let current = try load()
             let outcome = try LedgerBook.settlingScheduledOccurrence(settlement, in: current, now: now())
             // An occurrence that was already settled changes nothing, so nothing is saved.
             if outcome.snapshot != current {
                 try persist(outcome.snapshot)
             }
-            return outcome.transaction
+            return outcome.change
+        }
+
+        public func unsettleScheduledOccurrence(_ change: ScheduledSettlementChange) throws
+            -> ScheduledSettlementRevert
+        {
+            let current = try load()
+            let outcome = try LedgerBook.unsettlingScheduledOccurrence(change, in: current, now: now())
+            // A stale step writes nothing (D187.5).
+            if outcome.snapshot != current {
+                try persist(outcome.snapshot)
+            }
+            return outcome.result
+        }
+
+        public func resettleScheduledOccurrence(_ change: ScheduledSettlementChange) throws
+            -> ScheduledSettlementRevert
+        {
+            let current = try load()
+            let outcome = try LedgerBook.resettlingScheduledOccurrence(change, in: current, now: now())
+            if outcome.snapshot != current {
+                try persist(outcome.snapshot)
+            }
+            return outcome.result
         }
 
         public func catchUpScheduledItems(today: CalendarDay, pruningOrphans: Bool) throws -> ScheduledCatchUp {

@@ -56,13 +56,27 @@ public enum UndoActionTitle {
             )
         case .addedAccount, .createdPayees, .removedPayees:
             FeatureText.string("New Account", comment: "Undo name: an account added.")
-        // The Scheduled screens record these with the item's name as the list shows it (D351.1); this is the same
-        // name without the payee lookup.
+        case .savedScheduledItem, .revertedScheduledItemSave, .settledOccurrence, .unsettledOccurrence:
+            scheduledBase(of: change.core)
+        }
+    }
+
+    /// The Scheduled screens record these with the item's name as the list shows it: a form save (D351.1), and a
+    /// Pay or Skip (D288.3). This is the same name without the payee lookup.
+    private static func scheduledBase(of change: TransactionChange) -> String {
+        switch change {
         case .savedScheduledItem(let save), .revertedScheduledItemSave(let save):
             ScheduledText.saveStepName(
                 save,
                 name: TransactionText.trimmed(save.after.details) ?? ScheduledText.scheduledItem,
             )
+        case .settledOccurrence(let settlement), .unsettledOccurrence(let settlement):
+            ScheduledText.settlementStepName(
+                settlement,
+                name: TransactionText.trimmed(settlement.item.details) ?? ScheduledText.scheduledItem,
+            )
+        default:
+            base(of: change)
         }
     }
 

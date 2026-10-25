@@ -34,9 +34,14 @@ public protocol ScheduleRepository: AnyObject {
     func revertScheduledItemSave(_ change: ScheduledItemSaveChange, undone: Bool) throws -> ScheduledItemSaveRevert
     /// See `LedgerBook.deletingScheduledItem(id:in:)`.
     func deleteScheduledItem(id: UUID) throws
-    /// See `LedgerBook.settlingScheduledOccurrence(_:in:now:)`. Returns the recorded transaction, or `nil` for a
-    /// skip or an occurrence that was already settled.
-    func settleScheduledOccurrence(_ settlement: ScheduledSettlement) throws -> Transaction?
+    /// See `LedgerBook.settlingScheduledOccurrence(_:in:now:)`. Returns what the Pay or Skip did, with a Pay's
+    /// recorded transaction, for its Undo step; `nil` for an occurrence that was already settled.
+    func settleScheduledOccurrence(_ settlement: ScheduledSettlement) throws -> ScheduledSettlementChange?
+    /// Undo of a Pay or Skip, in one save: see `LedgerBook.unsettlingScheduledOccurrence(_:in:now:)`. A stale step
+    /// writes nothing (D187.5, D288.3).
+    func unsettleScheduledOccurrence(_ change: ScheduledSettlementChange) throws -> ScheduledSettlementRevert
+    /// Redo of a Pay or Skip, in one save: see `LedgerBook.resettlingScheduledOccurrence(_:in:now:)`.
+    func resettleScheduledOccurrence(_ change: ScheduledSettlementChange) throws -> ScheduledSettlementRevert
     /// See `LedgerBook.catchingUpScheduledItems(in:today:now:pruningOrphans:)`. All of it is one save.
     func catchUpScheduledItems(today: CalendarDay, pruningOrphans: Bool) throws -> ScheduledCatchUp
 }

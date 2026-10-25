@@ -6,10 +6,10 @@
     /// due today, upcoming, completed; sidebar badge" on macOS, where it's `ScheduledTableView`). On iOS, after a
     /// catch-up recorded something while the app was closed, an info hint comes first. Overdue starts with its hint
     /// row, then lists each missed occurrence on its own row; then Due Today, Upcoming and a Completed row with its
-    /// count. Rows are standard navigation links
-    /// to the item; the context menu has Pay Now, Skip This Occurrence, Edit and Delete. It sits inside the caller's
-    /// NavigationStack. Whichever Scheduled screen is on top presents the form, confirmations and alerts. A watch Pay
-    /// or Skip the iPhone didn't apply shows as a card above everything else until OK (D374, D376).
+    /// count. Rows are standard navigation links to the item; the context menu has Pay Now, Pay with Custom Date or
+    /// Amount, Skip This Occurrence, Edit and Delete. It sits inside the caller's NavigationStack. Whichever
+    /// Scheduled screen is on top presents the form, confirmations and alerts. A watch Pay or Skip the iPhone didn't
+    /// apply shows as a card above everything else until OK (D374, D376).
     ///
     /// The Mac gives the list its own stack, and the list registers the item and Completed destinations. On iPhone
     /// and iPad it's pushed onto the Accounts stack, whose typed path only takes `AccountsRoute` and only honours
@@ -87,7 +87,8 @@
                 }
                 .scheduledSheets(model, on: .list)
                 .onAppear {
-                    // A form save is this window's Undo step (D351.1).
+                    // A form save, Pay and Skip, from the Mac Table or the iOS List, are this window's Undo steps
+                    // (D351.1, D288.3, D290).
                     model.recordStep = { [undoHistory] change, name, subject in
                         undoHistory.record(change, named: name, subject: subject)
                     }
@@ -250,18 +251,21 @@
         }
     }
 
-    /// Pay Now and Skip This Occurrence for a due occurrence, then Edit and Delete for its item. On the Mac the
-    /// items that ask first or open a sheet take an ellipsis, and Edit and Delete show ⌘E and ⌘⌫ (D334.10). Pay Now
-    /// has no shortcut until it opens #201's sheet (D360.2, D361).
+    /// Pay Now, Pay with Custom Date or Amount and Skip This Occurrence for a due occurrence, then Edit and Delete
+    /// for its item. On the Mac the items that ask first or open a sheet take an ellipsis; Pay with Custom Date or
+    /// Amount, Edit and Delete show ⌥⌘↩, ⌘E and ⌘⌫ (D334.10, #197 design answers). Pay Now has no shortcut (D360.2,
+    /// D361).
     struct ScheduledRowActions: View {
         let model: ScheduledListViewModel
         let row: ScheduledRow
 
         var body: some View {
             if row.canSettle {
-                // No ⌘↩ until #201's "Pay ‹item›" sheet is on this base: it would record straight away (D360.2).
-                // Whichever of #201 and #205 lands second wires ⌘↩ to open that sheet.
+                // No ⌘↩ on Pay Now: it would record straight away (D360.2). The Mac Table's ⌘↩ opening the
+                // "Pay ‹item›" sheet is #205's gate, still open on #201.
                 Button(model.payNowTitle, systemImage: "checkmark.circle") { model.payNow(row) }
+                Button(model.payCustomTitle, systemImage: "square.and.pencil") { model.openCustomPay(row) }
+                    .macShortcut(.return, modifiers: [.command, .option])
                 Button(model.skipMenuTitle, systemImage: "forward") { model.confirmSkip(row) }
                 Divider()
             }
@@ -277,9 +281,9 @@
     extension View {
         /// A ⌘ shortcut on the Mac menu item; iOS row menus show none.
         @ViewBuilder
-        fileprivate func macShortcut(_ key: KeyEquivalent) -> some View {
+        fileprivate func macShortcut(_ key: KeyEquivalent, modifiers: EventModifiers = .command) -> some View {
             #if os(macOS)
-                keyboardShortcut(key, modifiers: .command)
+                keyboardShortcut(key, modifiers: modifiers)
             #else
                 self
             #endif
@@ -322,7 +326,7 @@
     }
 
     extension View {
-        /// The form sheet, the Skip or Delete confirmation and the failure alert, attached by every Scheduled screen.
+        /// The form sheet, the custom pay sheet, the Skip or Delete confirmation and the failure alert, attached by every Scheduled screen.
         /// Only the one on top (`ScheduledListViewModel.presenter`) presents, so a pushed screen shows them and the
         /// list under it never shows them a second time.
         func scheduledSheets(_ model: ScheduledListViewModel, on screen: ScheduledScreen) -> some View {
@@ -338,6 +342,10 @@
 
         private var form: Binding<ScheduledFormViewModel?> {
             Binding(get: { presents ? model.form : nil }, set: { model.form = $0 })
+        }
+
+        private var payment: Binding<ScheduledPayViewModel?> {
+            Binding(get: { presents ? model.payment : nil }, set: { model.payment = $0 })
         }
 
         /// Skip and Delete on the Mac are alerts.
@@ -375,6 +383,11 @@
                         ScheduledFormView(model: form)
                     }
                     .openSheet(hasUnsavedEdits: { form.hasUnsavedEdits }, close: { model.form = nil })
+                }
+                .sheet(item: payment) { payment in
+                    NavigationStack {
+                        ScheduledPayView(model: payment)
+                    }
                 }
                 .alert(
                     model.confirmation?.title ?? "",

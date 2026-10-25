@@ -67,8 +67,17 @@ public protocol ManageScheduledUseCase {
     /// Pay now: records the occurrence on `occurrence`, dated today. `nil` when it was already settled.
     @discardableResult
     func payNow(itemID: UUID, occurrence: CalendarDay) throws -> Transaction?
-    /// Skip: settles the occurrence and records nothing.
-    func skip(itemID: UUID, occurrence: CalendarDay) throws
+    /// Pay, now or with a custom date or amount: records the occurrence on `occurrence`, dated `postedOn`, from the
+    /// item, or with `custom`'s amount, account and category. Unless `custom` also changes future occurrences, only this
+    /// payment changes; the anchor day never does (D24). Returns what it did, for its Undo step (D288.3); `nil` when
+    /// it was already settled.
+    @discardableResult
+    func pay(itemID: UUID, occurrence: CalendarDay, on postedOn: CalendarDay, custom: ScheduledCustomPayment?) throws
+        -> ScheduledSettlementChange?
+    /// Skip: settles the occurrence and records nothing. Returns what it did, for its Undo step (D288.3); `nil`
+    /// when it was already settled.
+    @discardableResult
+    func skip(itemID: UUID, occurrence: CalendarDay) throws -> ScheduledSettlementChange?
 }
 
 /// Records the automatic items' due occurrences, each once (#26). Called at launch, before the badge is read,
@@ -227,11 +236,21 @@ public struct DefaultScheduledUseCases: LoadScheduledUseCase, ManageScheduledUse
 
     @discardableResult
     public func payNow(itemID: UUID, occurrence: CalendarDay) throws -> Transaction? {
-        try repository.settleScheduledOccurrence(.pay(itemID: itemID, occurrence: occurrence, postedOn: today()))
+        try pay(itemID: itemID, occurrence: occurrence, on: today(), custom: nil)?.transaction
     }
 
-    public func skip(itemID: UUID, occurrence: CalendarDay) throws {
-        _ = try repository.settleScheduledOccurrence(.skip(itemID: itemID, occurrence: occurrence))
+    @discardableResult
+    public func pay(itemID: UUID, occurrence: CalendarDay, on postedOn: CalendarDay, custom: ScheduledCustomPayment?)
+        throws -> ScheduledSettlementChange?
+    {
+        try repository.settleScheduledOccurrence(
+            .pay(itemID: itemID, occurrence: occurrence, postedOn: postedOn, custom: custom)
+        )
+    }
+
+    @discardableResult
+    public func skip(itemID: UUID, occurrence: CalendarDay) throws -> ScheduledSettlementChange? {
+        try repository.settleScheduledOccurrence(.skip(itemID: itemID, occurrence: occurrence))
     }
 
     public func catchUp(atLaunch: Bool) throws -> ScheduledCatchUp {
