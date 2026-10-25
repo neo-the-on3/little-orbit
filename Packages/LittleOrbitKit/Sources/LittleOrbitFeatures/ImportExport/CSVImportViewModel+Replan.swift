@@ -6,7 +6,9 @@ extension CSVImportViewModel {
     /// The ticks after a re-plan (D327.1, D42): a row whose status didn't change keeps the user's tick or untick;
     /// a row whose status changed takes its new status's default. So a ticked row that's now Already imported is
     /// unticked and moves to Not Selected, and the user can tick it again.
-    static func reselect(_ planned: ImportPreview, previous: ImportPreview?, selection: Set<Int>) -> Set<Int> {
+    nonisolated static func reselect(_ planned: ImportPreview, previous: ImportPreview?, selection: Set<Int>) -> Set<
+        Int
+    > {
         guard let previous else {
             return planned.defaultSelection
         }
