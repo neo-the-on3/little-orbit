@@ -19,6 +19,15 @@ struct LittleOrbitMacApp: App {
         }
         .commands {
             RestoreFromBackupCommand(isPickingFile: $isPickingBackupFile)
+            MetadataCommand()
+        }
+
+        // The Metadata manager (#24 part 5): its own window, opened from the app menu after Settings…, for
+        // managing categories across both kinds.
+        Window(MetadataWindow.title, id: MetadataWindow.id) {
+            if case .success(let features) = features {
+                MetadataWindow(categories: features.categories, updates: features.transactions.updates)
+            }
         }
 
         // The standard Settings window, opened with Cmd-, from the app menu (D179.5). It's the shared home for

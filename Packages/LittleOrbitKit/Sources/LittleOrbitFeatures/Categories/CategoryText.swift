@@ -20,7 +20,11 @@ enum CategoryText {
     }
 
     static var kindPicker: String {
-        FeatureText.string("Kind", comment: "Categories screen: the Expense or Income picker, and the editor’s row.")
+        FeatureText.string(
+            "Kind",
+            comment:
+                "Categories screen: the Expense or Income picker, and the editor’s row; on the Mac, the Metadata table’s Kind column.",
+        )
     }
 
     /// "Expense · 25 transactions": the kind and what uses the category itself.
@@ -109,7 +113,10 @@ enum CategoryText {
     }
 
     static var addSubcategory: String {
-        FeatureText.string("Add Subcategory", comment: "Categories screen menu item: add a subcategory.")
+        FeatureText.string(
+            "Add Subcategory",
+            comment: "Categories screen menu item, and the Mac Metadata manager’s Add menu: add a subcategory.",
+        )
     }
 
     static var reorder: String {
@@ -144,7 +151,11 @@ enum CategoryText {
     }
 
     static var name: String {
-        FeatureText.string("Name", comment: "Category editor: the name field’s placeholder and VoiceOver label.")
+        FeatureText.string(
+            "Name",
+            comment:
+                "Category and payee editors: the name field’s placeholder and VoiceOver label; on the Mac, the Metadata table’s Name column and the row’s rename field.",
+        )
     }
 
     static var details: String {
@@ -197,8 +208,16 @@ enum CategoryText {
 
     static func deleteRow(isSubcategory: Bool) -> String {
         isSubcategory
-            ? FeatureText.string("Delete Subcategory…", comment: "Category editor: delete button.")
-            : FeatureText.string("Delete Category…", comment: "Category editor: delete button.")
+            ? FeatureText.string(
+                "Delete Subcategory…",
+                comment:
+                    "Category editor: delete button; on the Mac, the Metadata manager’s toolbar button and context menu item.",
+            )
+            : FeatureText.string(
+                "Delete Category…",
+                comment:
+                    "Category editor: delete button; on the Mac, the Metadata manager’s toolbar button and context menu item.",
+            )
     }
 
     /// A category change that failed and left everything as it was (D295.5). OK only.
