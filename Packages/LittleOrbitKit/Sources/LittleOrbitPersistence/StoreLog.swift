@@ -16,6 +16,8 @@ public enum StoreLog {
         case scheduledItemsNotRecorded = "Some scheduled items couldn't be recorded; they're tried again next time."
         case scheduledItemsCreatedAfterToday =
             "Some scheduled items were created on a later day than today; nothing is due for them until then."
+        case scheduledRemindersNotUpdated =
+            "Scheduled reminders couldn't be updated; the next change or activation tries again."
         case watchSnapshotFailed = "The Apple Watch snapshot couldn't be made; the next change tries again."
         case watchPublishFailed = "The Apple Watch snapshot couldn't be sent; the next change tries again."
         case watchRequestUnreadable = "A request from Apple Watch couldn't be read; nothing was changed."
