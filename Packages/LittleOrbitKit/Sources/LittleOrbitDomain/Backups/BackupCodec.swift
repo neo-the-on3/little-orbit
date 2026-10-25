@@ -134,6 +134,9 @@ public struct BackupCodec: Sendable {
             contents.reconciliationHistory = shared.reconciliationHistory
             // The stores' one budget rule: a budget either would refuse is damage, before anything is replaced (B1).
             try LedgerBook.validateStoredBudgets(in: contents.ledger)
+            // The stores' one scheduled-item rule: an item either would refuse is damage, before anything is
+            // replaced (#26).
+            try LedgerBook.validateStoredScheduledItems(in: contents.ledger)
             return contents
         } catch let error as BackupError {
             throw error
@@ -240,10 +243,6 @@ public struct BackupCodec: Sendable {
     /// The entry of a file with no bytes.
     var emptyEntry: BackupFileEntry {
         BackupFileEntry(sha256: hashing.sha256Hex(Data()), byteSize: 0)
-    }
-
-    static func attachmentPath(_ id: UUID) -> String {
-        "\(BackupFormat.attachmentsFolder)/\(id.uuidString)"
     }
 
     private func yearFiles(listed: [String: BackupFileEntry], in files: BackupSnapshotFiles) throws -> [YearFile] {
@@ -356,7 +355,7 @@ public struct BackupCodec: Sendable {
         var sharedSettings: BackupSharedSettings
         var importRules: [BackupReservedRecord]
         var budgets: [Budget]
-        var scheduledItems: [BackupReservedRecord]
+        var scheduledItems: [ScheduledItem]
         var reconciliationHistory: [BackupReservedRecord]
         /// Transactions with no account, and splits and attachments whose transaction isn't in the backup.
         var unfiled: YearFile
