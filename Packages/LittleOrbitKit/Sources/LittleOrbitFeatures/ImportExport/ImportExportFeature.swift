@@ -48,3 +48,18 @@ public final class ImportExportFeature {
         CSVExportViewModel(exporting: useCases.exporting)
     }
 }
+
+/// The platform whose words the import sheet shows where iOS and the Mac differ. The views pass `current`;
+/// tests pass each one explicitly, so both are checked on any host.
+public enum ImportExportPlatform: Sendable, Equatable {
+    case iOS
+    case mac
+
+    public static var current: Self {
+        #if os(macOS)
+            .mac
+        #else
+            .iOS
+        #endif
+    }
+}

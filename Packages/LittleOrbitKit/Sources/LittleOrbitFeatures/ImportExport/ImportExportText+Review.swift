@@ -92,7 +92,16 @@ extension ImportExportText {
     static var nothingSaved: String {
         FeatureText.string(
             "Nothing is saved until you tap Import.",
-            comment: "CSV import Review: the note under the Import button.",
+            comment: "iOS CSV import Review: the note under the Import button.",
+        )
+    }
+
+    /// D367: the Mac says click.
+    static var nothingSavedMac: String {
+        FeatureText.string(
+            "Nothing is saved until you click Import.",
+            comment:
+                "Mac CSV import Review: the note under the “Import N Transactions” button (D367).",
         )
     }
 

@@ -273,7 +273,7 @@
                     .keyboardShortcut(.defaultAction)
                     .disabled(!model.canImport)
             } footer: {
-                Text(ImportExportText.nothingSaved)
+                Text(model.reviewFooter(on: .current))
             }
         }
 

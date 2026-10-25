@@ -5362,8 +5362,21 @@
       },
       "generatesSymbol": false
     },
+    "Nothing is saved until you click Import.": {
+      "comment": "Mac CSV import Review: the note under the “Import N Transactions” button (D367).",
+      "extractionState": "manual",
+      "generatesSymbol": false,
+      "localizations": {
+        "en": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Nothing is saved until you click Import."
+          }
+        }
+      }
+    },
     "Nothing is saved until you tap Import.": {
-      "comment": "CSV import Review: the note under the Import button.",
+      "comment": "iOS CSV import Review: the note under the Import button.",
       "extractionState": "manual",
       "generatesSymbol": false,
       "localizations": {
