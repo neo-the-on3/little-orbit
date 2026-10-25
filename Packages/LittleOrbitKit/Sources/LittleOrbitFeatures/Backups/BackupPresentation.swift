@@ -293,6 +293,8 @@ public struct BackupPresentation: Sendable {
     }
 
     public func counts(_ accounts: Int, _ transactions: Int) -> String {
+        // "%1$@ · %2$@" is shared with the spending report's drill-down header (ReportText.drillDownCaption), so
+        // a change to this key or its translator comment must suit both screens.
         FeatureText.format(
             "%1$@ · %2$@",
             FeatureText.plural("%lld accounts", one: "%lld account", accounts),

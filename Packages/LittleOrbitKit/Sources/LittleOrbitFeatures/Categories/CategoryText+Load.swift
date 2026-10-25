@@ -13,7 +13,8 @@ extension CategoryText {
     static var tryAgain: String {
         FeatureText.string(
             "Try again.",
-            comment: "Alert message under “Couldn’t Load Payees” or “Couldn’t Load Categories”.",
+            comment:
+                "Message under “Couldn’t Load Payees” or “Couldn’t Load Categories” (alerts), and under “Couldn’t Load Report” (the spending report and its drill-down).",
         )
     }
 }
