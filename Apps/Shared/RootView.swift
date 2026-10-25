@@ -165,7 +165,11 @@ import SwiftUI
         @ViewBuilder
         private func content(_ features: AppFeatures) -> some View {
             #if os(macOS)
-                AccountsSplitView(feature: features.accounts, transactions: features.transactions)
+                AccountsSplitView(
+                    feature: features.accounts,
+                    transactions: features.transactions,
+                    budgets: features.budgets,
+                )
             #else
                 AccountsHomeView(
                     feature: features.accounts,
