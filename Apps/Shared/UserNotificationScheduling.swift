@@ -3,6 +3,11 @@
     import LittleOrbitDomain
     import UserNotifications
 
+    #if os(macOS)
+        import AppKit
+        import LittleOrbitFeatures
+    #endif
+
     /// The system's local notifications for scheduled items' reminders (#26, D340.7), the only `UserNotifications`
     /// piece: Domain and Features see `ScheduledNotificationScheduling`. Each request is a calendar trigger on the
     /// due day at the Reminder Time with no time zone, so it arrives at that wall-clock time wherever the device is
@@ -11,12 +16,24 @@
     @MainActor
     final class UserNotificationScheduling: NSObject, ScheduledNotificationScheduling {
         /// The item a reminder is about, by ID only, for opening it from the notification later.
-        static let itemIDKey = "scheduledItemID"
+        nonisolated static let itemIDKey = "scheduledItemID"
 
         private let center: UNUserNotificationCenter
         /// Called when a reminder arrives while the app is open, so the pending budget refills: the composition root
         /// reschedules. One that arrives while the app isn't running is refilled at the next launch or activation.
         var onReminderDelivered: (() -> Void)?
+        /// Opens the item a tapped reminder is about (S33), with the identifier of the scene the system sent the
+        /// tap to on iOS (`nil` on the Mac). Set once by the composition root; a tap that arrives before then waits
+        /// in `waitingTap`.
+        var onOpenItem: ((UUID, String?) -> Void)? {
+            didSet {
+                if let onOpenItem, let waitingTap {
+                    self.waitingTap = nil
+                    onOpenItem(waitingTap.itemID, waitingTap.scene)
+                }
+            }
+        }
+        private var waitingTap: (itemID: UUID, scene: String?)?
 
         override init() {
             center = UNUserNotificationCenter.current()
@@ -110,6 +127,41 @@
     }
 
     extension UserNotificationScheduling: UNUserNotificationCenterDelegate {
+        /// S33: tapping a reminder opens its item. The ID is the only thing read from the notification, with, on
+        /// iOS, the scene the system sent the response to (Tech Architect NB2). The Mac picks its main window in
+        /// `bringMainWindowForward(among:)`. Dismissing it, or another app's notification, does nothing.
+        nonisolated func userNotificationCenter(
+            _ center: UNUserNotificationCenter,
+            didReceive response: UNNotificationResponse,
+        ) async {
+            guard response.actionIdentifier == UNNotificationDefaultActionIdentifier,
+                response.notification.request.identifier.hasPrefix(ScheduledReminder.identifierPrefix),
+                let text = response.notification.request.content.userInfo[Self.itemIDKey] as? String,
+                let itemID = UUID(uuidString: text)
+            else {
+                return
+            }
+            #if os(iOS)
+                // Read on the main actor below, as UIScene is main-actor bound.
+                nonisolated(unsafe) let targetScene = response.targetScene
+            #endif
+            await MainActor.run {
+                #if os(iOS)
+                    openItem(itemID, scene: targetScene?.session.persistentIdentifier)
+                #else
+                    openItem(itemID, scene: nil)
+                #endif
+            }
+        }
+
+        private func openItem(_ itemID: UUID, scene: String?) {
+            if let onOpenItem {
+                onOpenItem(itemID, scene)
+            } else {
+                waitingTap = (itemID, scene)
+            }
+        }
+
         /// A reminder that arrives while the app is in front still shows as a banner, and refills the budget.
         nonisolated func userNotificationCenter(
             _ center: UNUserNotificationCenter,
@@ -123,4 +175,50 @@
             return [.banner, .list, .sound]
         }
     }
+
+    #if os(macOS)
+        extension UserNotificationScheduling {
+            /// The main window group's ID, for `openWindow(id:)`.
+            static let mainWindowID = "main"
+
+            /// Opens a new main window. A main window sets it from its `openWindow` action, so it still works once
+            /// every main window has closed.
+            static var openMainWindow: (() -> Void)?
+
+            /// Brings a main window to the front for a tapped reminder (UI Designer 6402418696, Tech Architect NB2),
+            /// unhiding the app first after Cmd-H: the key one, else the frontmost, else a minimised one, which comes
+            /// back. With none open it opens a new one and returns `nil`, so that window takes the tap once it's up.
+            /// `windows` are the main windows' numbers; Settings isn't one, so it stays where it is, behind.
+            static func bringMainWindowForward(among windows: [String]) -> String? {
+                let app = NSApplication.shared
+                // After Cmd-H every window is hidden, so none would count as key, frontmost or minimised and a
+                // second window would open (#219 item 1). Unhiding first brings the app's windows back as they were.
+                if app.isHidden {
+                    app.unhide(nil)
+                }
+                let ordered = app.orderedWindows
+                let mains = app.windows.filter { windows.contains(String($0.windowNumber)) }
+                let candidates = mains.map { window in
+                    ScheduledReminderRouting.MacWindow(
+                        id: String(window.windowNumber),
+                        isKey: window.isKeyWindow,
+                        isMiniaturized: window.isMiniaturized,
+                        order: window.isVisible && !window.isMiniaturized ? ordered.firstIndex(of: window) : nil,
+                    )
+                }
+                app.activate()
+                guard let chosen = ScheduledReminderRouting.macWindow(candidates),
+                    let window = mains.first(where: { String($0.windowNumber) == chosen.id })
+                else {
+                    openMainWindow?()
+                    return nil
+                }
+                if window.isMiniaturized {
+                    window.deminiaturize(nil)
+                }
+                window.makeKeyAndOrderFront(nil)
+                return chosen.id
+            }
+        }
+    #endif
 #endif
