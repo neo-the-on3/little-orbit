@@ -76,7 +76,8 @@ public struct BackupCodec: Sendable {
     /// The contents of a backup folder, checked in this order (D197.1): the manifest is there and its format version
     /// can be read (`damaged`) and isn't newer (`newerFormat`), the manifest has no `encryption` section and is a
     /// whole format-1 manifest (`damaged`, D182.3), every path stays inside the folder, and every listed file is there
-    /// with its size and checksum (`damaged`, D195.2). Files the manifest doesn't list are ignored.
+    /// with its size and checksum (`damaged`, D195.2). Files the manifest doesn't list are ignored. Budgets that break
+    /// `LedgerBook.validateStoredBudgets` are `damaged` too (#174 B1).
     public func decode(_ files: BackupSnapshotFiles) throws -> BackupContents {
         try decode(files, manifest: verifiedManifest(files), withBytes: true)
     }
@@ -131,6 +132,8 @@ public struct BackupCodec: Sendable {
             contents.budgets = shared.budgets
             contents.scheduledItems = shared.scheduledItems
             contents.reconciliationHistory = shared.reconciliationHistory
+            // The stores' one budget rule: a budget either would refuse is damage, before anything is replaced (B1).
+            try LedgerBook.validateStoredBudgets(in: contents.ledger)
             return contents
         } catch let error as BackupError {
             throw error
@@ -352,7 +355,7 @@ public struct BackupCodec: Sendable {
         var tags: [Tag]
         var sharedSettings: BackupSharedSettings
         var importRules: [BackupReservedRecord]
-        var budgets: [BackupReservedRecord]
+        var budgets: [Budget]
         var scheduledItems: [BackupReservedRecord]
         var reconciliationHistory: [BackupReservedRecord]
         /// Transactions with no account, and splits and attachments whose transaction isn't in the backup.

@@ -89,7 +89,9 @@ public struct BackupFileEntry: Equatable, Sendable, Codable {
 }
 
 /// The sections a backup holds (D62, D96). Sections for features that haven't shipped are reserved: format 1
-/// writes them empty, and the version that fills one bumps `BackupFormat.currentVersion` and migrates older files.
+/// writes them empty. Budgets (#25) fill theirs within format 1 while the schema is still V1 in development
+/// (D294): a backup without budgets reads as before. After the first release, filling a section bumps
+/// `BackupFormat.currentVersion` and migrates older files.
 public enum BackupSection: String, CaseIterable, Sendable, Codable {
     case accounts
     case transactions
@@ -98,9 +100,10 @@ public enum BackupSection: String, CaseIterable, Sendable, Codable {
     case tags
     case splits
     case attachments
+    /// Listed in the manifest only when the backup has budgets (#25).
+    case budgets
     // Reserved until their tickets ship. #40 doesn't wait for them.
     case importRules
-    case budgets
     case scheduledItems
     case reconciliationHistory
     case sharedSettings
@@ -201,7 +204,8 @@ public struct BackupContents: Equatable, Sendable, Codable {
     /// Attachments with their bytes (D19).
     public var attachments: [Attachment]
     public var importRules: [BackupReservedRecord]
-    public var budgets: [BackupReservedRecord]
+    /// Budgets with their limit history (#25). Empty in backups made before budgets.
+    public var budgets: [Budget]
     public var scheduledItems: [BackupReservedRecord]
     public var reconciliationHistory: [BackupReservedRecord]
     public var sharedSettings: BackupSharedSettings
@@ -217,7 +221,10 @@ public struct BackupContents: Equatable, Sendable, Codable {
         splits = ordered.splits
         attachments = ordered.attachments
         importRules = []
-        budgets = []
+        budgets = ordered.budgets
+        if !budgets.isEmpty && !self.manifest.sections.contains(.budgets) {
+            self.manifest.sections.append(.budgets)
+        }
         scheduledItems = []
         reconciliationHistory = []
         self.sharedSettings = sharedSettings
@@ -233,6 +240,7 @@ public struct BackupContents: Equatable, Sendable, Codable {
             tags: tags,
             splits: splits,
             attachments: attachments,
+            budgets: budgets,
         )
     }
 
@@ -246,6 +254,7 @@ public struct BackupContents: Equatable, Sendable, Codable {
             tags: ledger.tags.sorted { $0.id.uuidString < $1.id.uuidString },
             splits: ledger.splits.sorted { $0.id.uuidString < $1.id.uuidString },
             attachments: ledger.attachments.sorted { $0.id.uuidString < $1.id.uuidString },
+            budgets: ledger.budgets.sorted { $0.id.uuidString < $1.id.uuidString },
         )
     }
 }
