@@ -26,6 +26,12 @@ public final class PayeesFeature {
         self.updates = updates
     }
 
+    /// Moves on after every change to the shared store, from any window or a restore. An open screen reloads
+    /// on it, so it never shows a payee another window has removed or changed (D187.4).
+    public var revision: Int {
+        updates?.revision ?? 0
+    }
+
     public func makeScreen() -> PayeesViewModel {
         PayeesViewModel(useCases: useCases) { [weak updates] in updates?.changed() }
     }
