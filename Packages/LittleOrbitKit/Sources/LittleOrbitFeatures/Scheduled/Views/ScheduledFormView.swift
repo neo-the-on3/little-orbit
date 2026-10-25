@@ -256,8 +256,10 @@
                 Text(error).foregroundStyle(Color(ThemeColor.destructiveDefault))
             } else if let hint = model.receivedHint {
                 // A hint, not an error: Save waits for it (D347.2's pattern).
+                // Hidden from VoiceOver: the field already reads it as its accessibility hint, so it isn't read twice.
                 Text(verbatim: hint)
                     .foregroundStyle(.secondary)
+                    .accessibilityHidden(true)
             }
             if let rate = model.rateText {
                 Label {
