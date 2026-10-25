@@ -8,10 +8,11 @@
     #endif
 
     /// New and Edit Scheduled Item (#26 frame "New scheduled – form, 31st rule preview"): type, amount, payee (the #23
-    /// autocomplete with Create, #197), category and account; then Schedule (Starts, Repeat with its stepper row,
-    /// Ends and End Date), the Next Due Dates preview with its month-end footnote (D24), and Process automatically.
-    /// Standard Form controls only. With unsaved edits, Cancel (Esc on the Mac) or a swipe down on iOS asks
-    /// “Discard Changes?” first, and an Edit form's prompt names the item (D300.1, D388.1); with none it closes.
+    /// autocomplete with Create, #197), category and account, with Received and its rate for a transfer between
+    /// currencies (#197); then Schedule (Starts, Repeat with its stepper row, Ends and End Date), the Next Due Dates
+    /// preview with its month-end footnote (D24), and Process automatically. Standard Form controls only. With unsaved
+    /// edits, Cancel (Esc on the Mac) or a swipe down on iOS asks “Discard Changes?” first, and an Edit form's prompt
+    /// names the item (D300.1, D388.1); with none it closes.
     struct ScheduledFormView: View {
         @Bindable var model: ScheduledFormViewModel
         @Environment(\.dismiss) private var dismiss
@@ -55,6 +56,9 @@
                     if model.type == .transfer {
                         Picker(model.toLabel, selection: $model.transferAccountID) {
                             ForEach(model.toChoices) { Text(verbatim: $0.name).tag($0.id) }
+                        }
+                        if model.needsReceivedAmount {
+                            receivedRows
                         }
                     }
                     if let error = model.formError {
@@ -232,6 +236,32 @@
                     Text(verbatim: hint)
                         .foregroundStyle(.secondary)
                 }
+            }
+        }
+
+        /// #23 "Transfer/Cross-currency – sent and received, read-only rate": the amount that arrives in To's
+        /// currency, and the rate worked out from the two amounts.
+        @ViewBuilder private var receivedRows: some View {
+            TextField(
+                model.receivedLabel,
+                text: $model.receivedText,
+                prompt: Text(verbatim: model.receivedCurrencyCode ?? ""),
+            )
+            #if os(iOS)
+                .keyboardType(.decimalPad)
+            #endif
+            if let error = model.receivedError {
+                Text(error).foregroundStyle(Color(ThemeColor.destructiveDefault))
+            }
+            if let rate = model.rateText {
+                Label {
+                    Text(rate)
+                } icon: {
+                    Image(systemName: "arrow.left.arrow.right")
+                        .accessibilityHidden(true)
+                }
+                .font(.footnote)
+                .foregroundStyle(.secondary)
             }
         }
     }

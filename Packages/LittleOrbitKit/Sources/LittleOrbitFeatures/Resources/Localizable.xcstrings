@@ -9869,6 +9869,45 @@
         }
       }
     },
+    "Received": {
+      "comment": "Scheduled transfer form field, and item screen row: the amount that arrives, in To’s currency (D17, #197).",
+      "extractionState": "manual",
+      "generatesSymbol": false,
+      "localizations": {
+        "en": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Received"
+          }
+        }
+      }
+    },
+    "1 %1$@ = %2$@ · worked out from the two amounts": {
+      "comment": "Scheduled transfer form, read-only rate under Received (D17): %1$@ is To’s currency code, %2$@ what one unit of it cost in From’s currency, for example “1 USD = ₹83.33”.",
+      "extractionState": "manual",
+      "generatesSymbol": false,
+      "localizations": {
+        "en": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "1 %1$@ = %2$@ · worked out from the two amounts"
+          }
+        }
+      }
+    },
+    "Enter the amount received in %@.": {
+      "comment": "Scheduled transfer form error under Received: it’s empty or zero; %@ is To’s currency code.",
+      "extractionState": "manual",
+      "generatesSymbol": false,
+      "localizations": {
+        "en": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Enter the amount received in %@."
+          }
+        }
+      }
+    },
     "double-click to open": {
       "comment": "Mac Scheduled Table footer phrase, after the counts: how to open an item.",
       "extractionState": "manual",
