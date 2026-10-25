@@ -319,7 +319,7 @@
       }
     },
     "%1$@, under %2$@": {
-      "comment": "VoiceOver value of the category picker for a subcategory, so its parent is heard: \"Groceries, under Food\". %1$@ is the subcategory, %2$@ its parent category.",
+      "comment": "VoiceOver value of the category picker for a subcategory, so its parent is heard: \"Groceries, under Food\"; on the Mac, also what VoiceOver reads for a subcategory’s name in the Metadata manager’s Categories table. %1$@ is the subcategory, %2$@ its parent category.",
       "extractionState": "manual",
       "localizations": {
         "en": {
@@ -525,7 +525,7 @@
       }
     },
     "%lld selected": {
-      "comment": "Payees screen, select mode, bottom toolbar: %lld is how many payees are chosen.",
+      "comment": "Payees screen, select mode, bottom toolbar: %lld is how many payees are chosen; on the Mac, the Metadata manager’s status bar: how many categories are selected.",
       "extractionState": "manual",
       "generatesSymbol": false,
       "localizations": {
@@ -712,7 +712,7 @@
       }
     },
     "Add Subcategory": {
-      "comment": "Categories screen menu item: add a subcategory.",
+      "comment": "Categories screen menu item, and the Mac Metadata manager’s Add menu: add a subcategory.",
       "extractionState": "manual",
       "generatesSymbol": false,
       "localizations": {
@@ -2383,7 +2383,7 @@
       }
     },
     "Delete Category…": {
-      "comment": "Category editor: delete button.",
+      "comment": "Category editor: delete button; on the Mac, the Metadata manager’s toolbar button and context menu item.",
       "extractionState": "manual",
       "generatesSymbol": false,
       "localizations": {
@@ -2396,7 +2396,7 @@
       }
     },
     "Delete Subcategory…": {
-      "comment": "Category editor: delete button.",
+      "comment": "Category editor: delete button; on the Mac, the Metadata manager’s toolbar button and context menu item.",
       "extractionState": "manual",
       "generatesSymbol": false,
       "localizations": {
@@ -3454,7 +3454,7 @@
       }
     },
     "Kind": {
-      "comment": "Categories screen: the Expense or Income picker, and the editor’s row.",
+      "comment": "Categories screen: the Expense or Income picker, and the editor’s row; on the Mac, the Metadata table’s Kind column.",
       "extractionState": "manual",
       "generatesSymbol": false,
       "localizations": {
@@ -3784,7 +3784,7 @@
       }
     },
     "Merge…": {
-      "comment": "Payees screen, select mode: opens Merge Payees for the chosen payees.",
+      "comment": "Payees screen, select mode: opens Merge Payees for the chosen payees; on the Mac, the Metadata manager’s toolbar button and context menu item that open Merge Categories.",
       "extractionState": "manual",
       "generatesSymbol": false,
       "localizations": {
@@ -3956,7 +3956,7 @@
       }
     },
     "Name": {
-      "comment": "Category and payee editors: the name field’s placeholder and VoiceOver label.",
+      "comment": "Category and payee editors: the name field’s placeholder and VoiceOver label; on the Mac, the Metadata table’s Name column and the row’s rename field.",
       "extractionState": "manual",
       "generatesSymbol": false,
       "localizations": {
@@ -4934,7 +4934,7 @@
       }
     },
     "Unarchive puts a category back in pickers. Archived categories stay in reports.": {
-      "comment": "Categories screen footer under the Archived section.",
+      "comment": "Categories screen footer under the Archived section; on the Mac, the footer of the Metadata manager’s Archived group.",
       "extractionState": "manual",
       "generatesSymbol": false,
       "localizations": {
@@ -5304,6 +5304,317 @@
                       "value": "“%1$@” and “%2$@” both have subcategories with %arg of the same names, including “%4$@”. Rename or merge one of each pair first."
                     }
                   }
+                }
+              }
+            }
+          }
+        }
+      }
+    },
+    "Metadata": {
+      "comment": "Mac: the Metadata manager window’s title, and the app menu item that opens it.",
+      "extractionState": "manual",
+      "generatesSymbol": false,
+      "localizations": {
+        "en": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Metadata"
+          }
+        }
+      }
+    },
+    "Add": {
+      "comment": "Mac Metadata manager toolbar: the menu of things to add.",
+      "extractionState": "manual",
+      "generatesSymbol": false,
+      "localizations": {
+        "en": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Add"
+          }
+        }
+      }
+    },
+    "Add Expense Category": {
+      "comment": "Mac Metadata manager, Add menu: adds a top-level expense category.",
+      "extractionState": "manual",
+      "generatesSymbol": false,
+      "localizations": {
+        "en": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Add Expense Category"
+          }
+        }
+      }
+    },
+    "Add Income Category": {
+      "comment": "Mac Metadata manager, Add menu: adds a top-level income category.",
+      "extractionState": "manual",
+      "generatesSymbol": false,
+      "localizations": {
+        "en": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Add Income Category"
+          }
+        }
+      }
+    },
+    "Rename": {
+      "comment": "Mac Metadata manager, a row’s context menu: edit the name in the row (Return saves, Esc cancels).",
+      "extractionState": "manual",
+      "generatesSymbol": false,
+      "localizations": {
+        "en": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Rename"
+          }
+        }
+      }
+    },
+    "Edit Subcategory…": {
+      "comment": "Mac Metadata manager, a row’s context menu: opens the Edit Subcategory sheet.",
+      "extractionState": "manual",
+      "generatesSymbol": false,
+      "localizations": {
+        "en": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Edit Subcategory…"
+          }
+        }
+      }
+    },
+    "Edit Category…": {
+      "comment": "Mac Metadata manager, a row’s context menu: opens the Edit Category sheet.",
+      "extractionState": "manual",
+      "generatesSymbol": false,
+      "localizations": {
+        "en": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Edit Category…"
+          }
+        }
+      }
+    },
+    "Used": {
+      "comment": "Mac Metadata manager: the column with how many transactions use each category.",
+      "extractionState": "manual",
+      "generatesSymbol": false,
+      "localizations": {
+        "en": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Used"
+          }
+        }
+      }
+    },
+    "%1$@ · %2$lld expense, %3$lld income": {
+      "comment": "Mac Metadata manager status bar when expense and income categories are both selected: %1$@ is “2 selected”, %2$lld how many are expense categories and %3$lld how many are income categories.",
+      "extractionState": "manual",
+      "generatesSymbol": false,
+      "localizations": {
+        "en": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "%1$@ · %2$lld expense, %3$lld income"
+          }
+        }
+      }
+    },
+    "Return saves · Esc cancels · names must be unique within the same parent": {
+      "comment": "Mac Metadata manager status bar while a subcategory is being renamed in its row.",
+      "extractionState": "manual",
+      "generatesSymbol": false,
+      "localizations": {
+        "en": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Return saves · Esc cancels · names must be unique within the same parent"
+          }
+        }
+      }
+    },
+    "Return saves · Esc cancels · names must be unique among categories of the same kind": {
+      "comment": "Mac Metadata manager status bar while a top-level category is being renamed in its row; an expense and an income category may share a name.",
+      "extractionState": "manual",
+      "generatesSymbol": false,
+      "localizations": {
+        "en": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Return saves · Esc cancels · names must be unique among categories of the same kind"
+          }
+        }
+      }
+    },
+    "Merge is only available for categories of the same kind.": {
+      "comment": "Mac Metadata manager: the tooltip on the disabled Merge button when an expense and an income category are selected.",
+      "extractionState": "manual",
+      "generatesSymbol": false,
+      "localizations": {
+        "en": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Merge is only available for categories of the same kind."
+          }
+        }
+      }
+    },
+    "Select two categories of the same kind to merge.": {
+      "comment": "Mac Metadata manager: the tooltip on the disabled Merge button when fewer or more than two categories are selected.",
+      "extractionState": "manual",
+      "generatesSymbol": false,
+      "localizations": {
+        "en": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Select two categories of the same kind to merge."
+          }
+        }
+      }
+    },
+    "%1$@ and %2$@ are both expense categories. Choose the one to keep; the other’s transactions move to it and it is deleted.": {
+      "comment": "Mac Merge Categories sheet message: %1$@ and %2$@ are the two expense categories’ names, in the table’s order.",
+      "extractionState": "manual",
+      "generatesSymbol": false,
+      "localizations": {
+        "en": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "%1$@ and %2$@ are both expense categories. Choose the one to keep; the other’s transactions move to it and it is deleted."
+          }
+        }
+      }
+    },
+    "%1$@ and %2$@ are both income categories. Choose the one to keep; the other’s transactions move to it and it is deleted.": {
+      "comment": "Mac Merge Categories sheet message: %1$@ and %2$@ are the two income categories’ names, in the table’s order.",
+      "extractionState": "manual",
+      "generatesSymbol": false,
+      "localizations": {
+        "en": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "%1$@ and %2$@ are both income categories. Choose the one to keep; the other’s transactions move to it and it is deleted."
+          }
+        }
+      }
+    },
+    "Keep:": {
+      "comment": "Mac Merge Categories sheet: the pop-up button’s label, choosing the category that’s kept.",
+      "extractionState": "manual",
+      "generatesSymbol": false,
+      "localizations": {
+        "en": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Keep:"
+          }
+        }
+      }
+    },
+    "Name:": {
+      "comment": "Mac category editor sheet: the name field’s label.",
+      "extractionState": "manual",
+      "generatesSymbol": false,
+      "localizations": {
+        "en": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Name:"
+          }
+        }
+      }
+    },
+    "Kind:": {
+      "comment": "Mac category editor sheet: the label of the read-only kind.",
+      "extractionState": "manual",
+      "generatesSymbol": false,
+      "localizations": {
+        "en": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Kind:"
+          }
+        }
+      }
+    },
+    "Parent:": {
+      "comment": "Mac category editor sheet: the label of a subcategory’s read-only parent.",
+      "extractionState": "manual",
+      "generatesSymbol": false,
+      "localizations": {
+        "en": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Parent:"
+          }
+        }
+      }
+    },
+    "Icon:": {
+      "comment": "Mac category editor sheet: the label of the icon pop-up button.",
+      "extractionState": "manual",
+      "generatesSymbol": false,
+      "localizations": {
+        "en": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Icon:"
+          }
+        }
+      }
+    },
+    "Colour:": {
+      "comment": "Mac category editor sheet: the label of the colour pop-up button.",
+      "extractionState": "manual",
+      "generatesSymbol": false,
+      "localizations": {
+        "en": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Colour:"
+          }
+        }
+      }
+    },
+    "An icon saved by an earlier version that isn’t in this list shows first as “Current Icon”. Each name is the icon’s VoiceOver label.": {
+      "comment": "Mac category editor: the footnote under the icon popover’s grid.",
+      "extractionState": "manual",
+      "generatesSymbol": false,
+      "localizations": {
+        "en": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "An icon saved by an earlier version that isn’t in this list shows first as “Current Icon”. Each name is the icon’s VoiceOver label."
+          }
+        }
+      }
+    },
+    "Merge %lld Categories": {
+      "comment": "Mac Merge Categories sheet title: %lld is how many categories are merged (two).",
+      "extractionState": "manual",
+      "generatesSymbol": false,
+      "localizations": {
+        "en": {
+          "variations": {
+            "plural": {
+              "one": {
+                "stringUnit": {
+                  "state": "translated",
+                  "value": "Merge %lld Category"
+                }
+              },
+              "other": {
+                "stringUnit": {
+                  "state": "translated",
+                  "value": "Merge %lld Categories"
                 }
               }
             }
