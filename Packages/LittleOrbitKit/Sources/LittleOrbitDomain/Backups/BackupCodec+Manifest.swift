@@ -2,8 +2,11 @@ import Foundation
 
 extension LedgerSnapshot: Encodable {
     private enum CodingKeys: String, CodingKey {
-        case accounts, transactions, categories, payees, tags, splits, attachments
+        case accounts, transactions, categories, payees, tags, splits, attachments, budgets
     }
+
+    /// Budgets are written only when there are some, so a ledger without budgets keeps the fingerprint it had
+    /// before budgets existed.
 
     public func encode(to encoder: any Encoder) throws {
         var container = encoder.container(keyedBy: CodingKeys.self)
@@ -14,6 +17,9 @@ extension LedgerSnapshot: Encodable {
         try container.encode(tags, forKey: .tags)
         try container.encode(splits, forKey: .splits)
         try container.encode(attachments, forKey: .attachments)
+        if !budgets.isEmpty {
+            try container.encode(budgets, forKey: .budgets)
+        }
     }
 }
 
