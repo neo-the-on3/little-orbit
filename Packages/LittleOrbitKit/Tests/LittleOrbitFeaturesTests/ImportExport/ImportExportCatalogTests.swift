@@ -11,7 +11,9 @@ struct ImportExportCatalogTests {
         .deletingLastPathComponent()
         .appending(path: "Sources/LittleOrbitFeatures/ImportExport")
 
-    static let sourceFiles = ["ImportExportText", "ImportExportText+Review", "ImportExportText+Issues"]
+    static let sourceFiles = [
+        "ImportExportText", "ImportExportText+Review", "ImportExportText+Issues", "ImportExportText+DebitAndCredit",
+    ]
 
     /// The first string literal after each `FeatureText.string(`, `.plural(` and `.format(` call. An
     /// interpolated `\(text)` becomes `%@`, the placeholder its catalog key has (only text is interpolated here).

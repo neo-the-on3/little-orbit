@@ -107,9 +107,10 @@ struct ImportRowFormatter: Sendable {
 
     func review(_ preview: ImportPreview) -> ImportReviewState {
         let records = recordIndex()
+        let newCurrencies = newAccountCurrencies(preview)
         let entries = preview.rows.map { row in
             ImportReviewEntry(
-                row: reviewRow(row, records: records),
+                row: reviewRow(row, records: records, newCurrencies: newCurrencies),
                 hasWarnings: row.isSelectable && !row.row.warnings.isEmpty,
             )
         }
@@ -125,10 +126,39 @@ struct ImportRowFormatter: Sendable {
         return index
     }
 
-    private func reviewRow(_ row: ImportPreviewRow, records: [Int: Int]) -> ImportReviewRow {
+    /// Whether the file is a Debit & Credit export (#60): its own wording, reasons and new-account currencies.
+    private var isDebitAndCredit: Bool {
+        file.formatID == DebitAndCreditFormat.formatID
+    }
+
+    /// A row issue in the file format's wording.
+    static func issueText(_ issue: ImportRowIssue, debitAndCredit: Bool, dateOrder: ImportDateOrder) -> String {
+        debitAndCredit
+            ? ImportExportText.debitAndCreditIssue(issue) : ImportExportText.issue(issue, dateOrder: dateOrder)
+    }
+
+    private func issueText(_ issue: ImportRowIssue) -> String {
+        Self.issueText(issue, debitAndCredit: isDebitAndCredit, dateOrder: dateOrder)
+    }
+
+    /// The currency each new account gets (the file's, the one picked on the Match step, or the default), by
+    /// its match, looked up once per plan rather than once per row.
+    private func newAccountCurrencies(_ preview: ImportPreview) -> [ImportMatchKey: String?] {
+        Dictionary(preview.matches.map { ($0.key, $0.currencyCode) }, uniquingKeysWith: { first, _ in first })
+    }
+
+    private func reviewRow(
+        _ row: ImportPreviewRow,
+        records: [Int: Int],
+        newCurrencies: [ImportMatchKey: String?],
+    ) -> ImportReviewRow {
         let input = row.row
         let title = input.payee ?? input.details ?? input.category?.name ?? input.accountName ?? ""
-        var detail = [ImportExportText.row(input.rowNumber)]
+        // A transfer the planner paired names both rows (#60).
+        let rows =
+            input.mergedRowNumbers.first.map { ImportExportText.pairedRows(input.rowNumber, $0) }
+            ?? ImportExportText.row(input.rowNumber)
+        var detail = [rows]
         if let date = input.date {
             detail.append(date.formatted(dateStyle))
         }
@@ -136,20 +166,49 @@ struct ImportRowFormatter: Sendable {
         if let name = draftAccountName(row, account: account) {
             detail.append(name)
         }
-        let currency = account?.currencyCode ?? input.currencyCode ?? defaultCurrency
+        if let received = receivedText(row, newCurrencies) {
+            detail.append(received)
+        }
+        let currency =
+            account?.currencyCode ?? newAccountCurrency(row, newCurrencies) ?? input.currencyCode
+            ?? defaultCurrency
         let signed = input.kind == .expense ? -(input.amount ?? 0) : (input.amount ?? 0)
         let amount = input.amount.map { _ in money.string(signed, currencyCode: currency) } ?? ""
+        let message = message(for: row)
         return ImportReviewRow(
             id: row.id,
             title: title,
             detail: detail.joined(separator: " · "),
             amount: amount,
             tone: Self.tone(of: input.kind),
-            message: message(for: row),
+            message: message,
+            reasons: isDebitAndCredit && !row.issues.isEmpty ? row.issues.map(issueText) : message.map { [$0] } ?? [],
             messageStyle: Self.messageStyle(for: row),
             source: source(for: row, records: records),
             isSelectable: row.isSelectable,
         )
+    }
+
+    /// “received €5,000.00” on a Debit & Credit transfer between currencies, as a transfer row says it (D17,
+    /// #30 S90): the amount the merged incoming half gives (D330.1), in the receiving account's currency.
+    private func receivedText(_ row: ImportPreviewRow, _ currencies: [ImportMatchKey: String?]) -> String? {
+        guard isDebitAndCredit, let draft = row.draft, let received = draft.destinationAmount else { return nil }
+        let currency: String
+        switch draft.toAccount {
+        case .existing(let id)?:
+            currency = accountsByID[id]?.currencyCode ?? defaultCurrency
+        case .new(let key)?:
+            currency = (currencies[key] ?? nil) ?? defaultCurrency
+        case nil:
+            return nil
+        }
+        return ImportExportText.received(money.string(received, currencyCode: currency))
+    }
+
+    /// A new account's currency from the Match step, when the row's draft creates one.
+    private func newAccountCurrency(_ row: ImportPreviewRow, _ currencies: [ImportMatchKey: String?]) -> String? {
+        guard case .new(let key)? = row.draft?.account else { return nil }
+        return currencies[key] ?? nil
     }
 
     private func draftAccount(_ row: ImportPreviewRow) -> Account? {
@@ -177,7 +236,7 @@ struct ImportRowFormatter: Sendable {
     private func message(for row: ImportPreviewRow) -> String? {
         switch row.status {
         case .failed(let issues):
-            issues.first.map { ImportExportText.issue($0, dateOrder: dateOrder) }
+            issues.first.map(issueText)
         case .alreadyImported:
             ImportExportText.alreadyImported
         case .possibleDuplicate:
@@ -228,6 +287,9 @@ struct ImportRowFormatter: Sendable {
                     ?? match.name,
                 choice: match.choice,
                 options: list,
+                newAccountCurrency: newAccountCurrency(match),
+                // Both halves of a transfer count, so a re-plan doesn't change it (#60 plan step 3).
+                detail: isDebitAndCredit ? ImportExportText.rowCount(match.rowCount) : nil,
             )
             switch match.key.kind {
             case .account: sections.accounts.append(row)
@@ -236,6 +298,12 @@ struct ImportRowFormatter: Sendable {
             }
         }
         return sections
+    }
+
+    /// Only a Debit & Credit file asks for a new account's currency; #30's files name it in a column.
+    private func newAccountCurrency(_ match: ImportMatch) -> String? {
+        guard isDebitAndCredit, case .account = match.key.kind, match.choice == .new else { return nil }
+        return match.currencyCode ?? defaultCurrency
     }
 
     /// Every subcategory of a kind is offered whatever the file's parent, so they share one list.

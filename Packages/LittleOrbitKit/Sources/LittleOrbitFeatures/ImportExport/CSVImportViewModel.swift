@@ -45,11 +45,20 @@ public final class CSVImportViewModel {
     public internal(set) var choices = ImportChoices()
     public private(set) var preview: ImportPreview?
     public var selection: Set<Int> = [] {
-        didSet { if selection != oldValue { reviewState.partition(selection) } }
+        didSet {
+            if selection != oldValue {
+                reviewState.partition(selection)
+                refreshReviewTotals()
+            }
+        }
     }
     /// Review's and Match's rows, built with each plan (`ImportRowFormatter`).
     var reviewState = ImportReviewState()
     var matchSections = ImportMatchSections()
+    /// #60's Will Be Created counts and Totals by Account, built once per plan or tick change, not per redraw.
+    var reviewTotals = ImportReviewTotals()
+    /// How many times `reviewTotals` was built, for tests (Tech Architect 5648615659 NB1).
+    @ObservationIgnored var reviewTotalsBuilds = 0
     /// Counts plans, so only the latest one lands.
     @ObservationIgnored var planGeneration = 0
     /// Whether the latest plan is still running, so dropping it also clears `isWorking`.
@@ -361,6 +370,7 @@ public final class CSVImportViewModel {
         preview = nil
         reviewState = ImportReviewState()
         matchSections = ImportMatchSections()
+        reviewTotals = ImportReviewTotals()
     }
 
     /// Plans the preview off the main actor, with the Review and Match rows, behind “Reading…”. Only the latest
@@ -414,6 +424,9 @@ public final class CSVImportViewModel {
         preview = planned.preview
         reviewState = review
         matchSections = planned.matches
+        if selection == ticks {
+            refreshReviewTotals()
+        }
         selection = ticks
         if isDataChangePending {
             isDataChangePending = false
