@@ -20,18 +20,17 @@ extension LedgerBook {
         today: CalendarDay,
         now: Date,
     ) throws -> LedgerSnapshot {
-        guard let stored = snapshot.scheduledItems.first(where: { $0.id == item.id }) else {
+        guard let existing = snapshot.scheduledItems.first(where: { $0.id == item.id }) else {
             throw LedgerValidationError.missingScheduledItem
         }
-        // As the form showed it: an occurrence's own account that was deleted follows the item's (#202 B1).
-        let existing = withoutMissingEditAccounts(stored, in: snapshot)
-        var snapshot = snapshot
-        replace(&snapshot.scheduledItems, with: existing)
+        // As the form showed it: an occurrence's own value that's gone follows the item's (#202 B1, B2). The save
+        // changes the stored item, so the values it doesn't change stay stored for an Undo (Tech Architect NB 2).
+        let shown = withoutMissingEditReferences(existing, in: snapshot)
         let edited = normalize(item)
         let key = save.occurrence
         let changed = ScheduledOccurrenceEdit.changedFields(
-            shown: existing.resolved(for: key),
-            shownDay: existing.dueDay(of: key),
+            shown: shown.resolved(for: key),
+            shownDay: shown.dueDay(of: key),
             edited: edited,
             editedDay: save.dueDay,
         )
@@ -39,22 +38,36 @@ extension LedgerBook {
         // The form showed this occurrence's own values; the fields the user didn't change keep the item's own, so
         // they don't spread to the whole item (Tech Architect NB 4). After a type change the category and the To
         // account are the form's, since the item's own may not fit the new type.
-        //
-        // An item that stops repeating from the form on the occurrence it keeps (its start) is the exception: that
-        // occurrence is now the whole item, so the item takes the values the form showed, and the other open days
-        // kept from the old rule keep the item's old values (#202 Tester, S58).
         guard existing.repeatRule.repeats, edited.repeatRule.repeats, edited.type == existing.type else {
             let typeFixed: Set<ScheduledEditField> = edited.type == existing.type ? [] : [.category, .transferAccount]
-            let becomesOneOff = existing.repeatRule.repeats && !edited.repeatRule.repeats && key == edited.startDay
             var whole = edited
             for field in ScheduledEditField.allCases
-            where field != .day && !changed.contains(field) && !typeFixed.contains(field) && !becomesOneOff {
+            where field != .day && !changed.contains(field) && !typeFixed.contains(field) {
                 copy(field, from: existing, to: &whole)
             }
-            var result = try savingScheduledItem(whole, in: snapshot, today: today, now: now)
-            if becomesOneOff {
-                keepOldValues(of: existing, onOpenDaysOtherThan: key, in: &result, now: now)
+            guard existing.repeatRule.repeats, !edited.repeatRule.repeats else {
+                return try savingScheduledItem(whole, in: snapshot, today: today, now: now)
             }
+            // An item that stops repeating keeps one occurrence, its start, which is now the whole item: the item
+            // takes that occurrence's values, the form's when it was opened there (#202 Tester), else its own
+            // (Tech Architect NB 1), for the fields the user didn't change. The other open days kept from the old
+            // rule keep the item's old values (S58).
+            let start = edited.startDay
+            let folded: [ScheduledEditField]
+            if key == start {
+                folded = ScheduledEditField.allCases.filter { $0 != .day && !typeFixed.contains($0) }
+                for field in folded where !changed.contains(field) {
+                    copy(field, from: edited, to: &whole)
+                }
+            } else {
+                let own = shown.edit(for: start)?.fields ?? []
+                folded = own.filter { $0 != .day && !changed.contains($0) && !typeFixed.contains($0) }
+                for field in folded {
+                    copy(field, from: shown.resolved(for: start), to: &whole)
+                }
+            }
+            var result = try savingScheduledItem(whole, in: snapshot, today: today, now: now)
+            keepOldValues(of: existing, for: folded, onOpenDaysOtherThan: start, in: &result, now: now)
             return result
         }
         // The SERIES fields first, with the item's own values for every other field (D115).
@@ -70,7 +83,7 @@ extension LedgerBook {
         current.updatedAt = now
         try validate(current, in: result)
         if let target {
-            try validate(current.resolved(for: target), in: result)
+            try validate(withoutMissingEditReferences(current, in: result).resolved(for: target), in: result)
         }
         replace(&result.scheduledItems, with: current)
         return result
@@ -99,21 +112,22 @@ extension LedgerBook {
 
     // MARK: - Private
 
-    /// Gives every open occurrence but `key` the values `existing` had, for the fields that now differ, unless it
-    /// has its own (S58): they don't take the values the item took from the occurrence at `key`.
+    /// Gives every open occurrence but `key` the values `existing` had for `fields`, where they now differ, unless
+    /// it has its own (S58): they don't take the values the item took from the occurrence at `key`.
     private static func keepOldValues(
         of existing: ScheduledItem,
+        for fields: [ScheduledEditField],
         onOpenDaysOtherThan key: CalendarDay,
         in snapshot: inout LedgerSnapshot,
         now: Date,
     ) {
-        guard var item = snapshot.scheduledItems.first(where: { $0.id == existing.id }) else {
+        guard !fields.isEmpty, var item = snapshot.scheduledItems.first(where: { $0.id == existing.id }) else {
             return
         }
         let open = item.occurrences.filter { $0.deletedAt == nil && !$0.outcome.isSettled && $0.day != key }
         for record in open {
             var edit = record.edit ?? ScheduledOccurrenceEdit()
-            for field in ScheduledEditField.allCases where field != .day && !edit.has(field) {
+            for field in fields where field != .day && !edit.has(field) {
                 edit.set(field, from: existing, day: record.day)
             }
             // Fields that match the item's are dropped again, so only the changed ones are kept.
