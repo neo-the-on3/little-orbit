@@ -2,7 +2,7 @@
   "sourceLanguage": "en",
   "strings": {
     "%1$@ %2$@": {
-      "comment": "Two sentences in a row: %1$@ is the first, %2$@ the second (backup footnote and Keep footer, or newer-format note and its detail).",
+      "comment": "Two sentences in a row: %1$@ is the first, %2$@ the second (backup footnote and Keep footer, or newer-format note and its detail; the Scheduled catch-up hint's sentences; the Scheduled Skip message and its still-overdue sentence, D373).",
       "extractionState": "manual",
       "generatesSymbol": false,
       "localizations": {
@@ -6358,6 +6358,41 @@
         }
       }
     },
+    "Ended %1$@ · %2$lld overdue": {
+      "comment": "Scheduled item screen: an item with no date left on its schedule that still has unpaid overdue occurrences, as in “Ended 5 Oct · 2 overdue” (D373). %1$@ is its last due date, %2$lld how many occurrences are still overdue; each has its own row below. Translate the whole phrase for each plural form.",
+      "extractionState": "manual",
+      "generatesSymbol": false,
+      "localizations": {
+        "en": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "%#@count@"
+          },
+          "substitutions": {
+            "count": {
+              "argNum": 2,
+              "formatSpecifier": "lld",
+              "variations": {
+                "plural": {
+                  "one": {
+                    "stringUnit": {
+                      "state": "translated",
+                      "value": "Ended %1$@ · %2$lld overdue"
+                    }
+                  },
+                  "other": {
+                    "stringUnit": {
+                      "state": "translated",
+                      "value": "Ended %1$@ · %2$lld overdue"
+                    }
+                  }
+                }
+              }
+            }
+          }
+        }
+      }
+    },
     "Skip This Occurrence": {
       "comment": "Scheduled occurrence action: settles this one due date without recording a transaction. The item screen’s button, the iOS row menu and the iOS confirmation’s button (D334.8).",
       "extractionState": "manual",
@@ -6445,6 +6480,31 @@
           "stringUnit": {
             "state": "translated",
             "value": "Nothing is recorded for %@. There are no due dates after it."
+          }
+        }
+      }
+    },
+    "%lld more occurrences are still overdue.": {
+      "comment": "Scheduled Skip confirmation: a sentence after the message when other occurrences of the same item are still overdue (D373). %lld is how many, not counting the one being skipped. Translate the whole sentence for each plural form.",
+      "extractionState": "manual",
+      "generatesSymbol": false,
+      "localizations": {
+        "en": {
+          "variations": {
+            "plural": {
+              "one": {
+                "stringUnit": {
+                  "state": "translated",
+                  "value": "%lld more occurrence is still overdue."
+                }
+              },
+              "other": {
+                "stringUnit": {
+                  "state": "translated",
+                  "value": "%lld more occurrences are still overdue."
+                }
+              }
+            }
           }
         }
       }

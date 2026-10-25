@@ -25,7 +25,11 @@ struct ScheduledSkipNextTests {
         let rent = scene.item("Rent", day: 1, month: 9)
         try scene.add(rent)
         let message = try skipMessage(rent, on: CalendarDay(year: 2026, month: 9, day: 1), in: scene)
-        #expect(message == "Nothing is recorded for 1 Sep. The next due date stays on the schedule: 1 Nov 2026.")
+        #expect(
+            message
+                == "Nothing is recorded for 1 Sep. The next due date stays on the schedule: 1 Nov 2026. "
+                + "1 more occurrence is still overdue."
+        )
     }
 
     @Test("Skipping a date due today names the following occurrence")
@@ -44,6 +48,9 @@ struct ScheduledSkipNextTests {
         gym.endDay = CalendarDay(year: 2026, month: 10, day: 5)
         try scene.add(gym)
         let message = try skipMessage(gym, on: CalendarDay(year: 2026, month: 9, day: 5), in: scene)
-        #expect(message == "Nothing is recorded for 5 Sep. There are no due dates after it.")
+        #expect(
+            message
+                == "Nothing is recorded for 5 Sep. There are no due dates after it. 1 more occurrence is still overdue."
+        )
     }
 }
