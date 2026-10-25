@@ -152,6 +152,60 @@ public enum LedgerBook {
         return snapshot
     }
 
+    /// Saves a batch of new transactions in one pass (#30 import, S35). It gives the same result and the same
+    /// errors as calling `savingTransaction` for each in turn, without copying and scanning the whole ledger
+    /// once per transaction.
+    ///
+    /// The one-pass path applies when every transaction is new (its id isn't stored or repeated) and unlinked
+    /// (no `refundOfID`). Such a transaction has no splits and no linked refunds yet, so it's validated against
+    /// the accounts, categories, payees and tags alone. Any other batch is saved one by one.
+    public static func savingNewTransactions(
+        _ transactions: [Transaction],
+        in snapshot: LedgerSnapshot,
+        now: Date,
+    ) throws -> LedgerSnapshot {
+        var stored = Set(snapshot.transactions.map(\.id))
+        let isNewAndUnlinked = transactions.allSatisfy { stored.insert($0.id).inserted && $0.refundOfID == nil }
+        guard isNewAndUnlinked else {
+            return try transactions.reduce(snapshot) { try savingTransaction($1, in: $0, now: now) }
+        }
+        var reference = snapshot
+        reference.transactions = []
+        reference.splits = []
+        var result = snapshot
+        result.transactions.reserveCapacity(snapshot.transactions.count + transactions.count)
+        for transaction in transactions {
+            let transaction = normalize(transaction)
+            try validate(transaction, in: reference)
+            touchPayee(for: transaction, in: &result, now: now)
+            result.transactions.append(transaction)
+        }
+        return result
+    }
+
+    /// Deletes a batch of transactions in one pass, with their splits and attachments, and unlinks their
+    /// refunds: the same as `deletingTransaction` for each (D19). Throws `missingTransaction`, changing
+    /// nothing, if any isn't stored.
+    public static func deletingTransactions(
+        ids: [UUID],
+        in snapshot: LedgerSnapshot,
+        now: Date,
+    ) throws -> LedgerSnapshot {
+        let doomed = Set(ids)
+        let found = snapshot.transactions.reduce(into: 0) { count, transaction in
+            if doomed.contains(transaction.id) { count += 1 }
+        }
+        guard found == doomed.count else {
+            throw LedgerValidationError.missingTransaction
+        }
+        var snapshot = snapshot
+        snapshot.transactions.removeAll { doomed.contains($0.id) }
+        unlinkRefunds(of: doomed, in: &snapshot, now: now)
+        snapshot.splits.removeAll { $0.transactionID.map(doomed.contains) == true }
+        snapshot.attachments.removeAll { $0.transactionID.map(doomed.contains) == true }
+        return snapshot
+    }
+
     private static func touchPayee(
         for transaction: Transaction,
         in snapshot: inout LedgerSnapshot,
