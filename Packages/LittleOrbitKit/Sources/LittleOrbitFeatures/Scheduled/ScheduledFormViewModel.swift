@@ -113,6 +113,8 @@ public final class ScheduledFormViewModel: Identifiable {
     @ObservationIgnored private(set) var permissionCheck: Task<Void, Never>?
     /// The listing's payees and any the payee field created.
     @ObservationIgnored var payees: [Payee]
+    /// The fields as the form opened, for `hasUnsavedEdits`.
+    @ObservationIgnored private(set) var openedFields: [AnyHashable] = []
 
     init(
         useCases: ScheduledScreenUseCases,
@@ -157,6 +159,7 @@ public final class ScheduledFormViewModel: Identifiable {
         if notifiesWhenDue {
             checkNotificationPermission(asking: false)
         }
+        openedFields = fields
     }
 
     public var isNew: Bool { original == nil }

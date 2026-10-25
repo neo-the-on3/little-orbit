@@ -73,6 +73,29 @@ struct ScheduledFormUndoTests {
         #expect(try scene.repository.scheduleLedger().scheduledItems.first?.amount == 1200)
     }
 
+    @Test("D351.1, S33: an edit saved on an item a reminder opened, with the list never on screen, is Edit Rent")
+    func editFromReminderOpenedItem() throws {
+        let scene = try ScheduledScene()
+        let (list, window) = window(scene)
+        try saveNew(list)
+        let id = try #require(try scene.repository.scheduleLedger().scheduledItems.first?.id)
+        // The Mac stack starts on the item: only the item screen appears, and it sets the recorder itself.
+        let opened = scene.feature().makeList()
+        opened.recordStep = { [history = window.history] change, name, subject in
+            history.record(change, named: name, subject: subject)
+        }
+        opened.screenAppeared(.item(id))
+        opened.loadIfNeeded()
+        #expect(opened.visibleScreens == [.item(id)])
+        opened.openEditor(id)
+        let form = try #require(opened.form)
+        form.amountText = "1500"
+        #expect(form.save())
+        #expect(window.undoManager.undoActionName == "Edit Rent")
+        window.history.undo()
+        #expect(try scene.repository.scheduleLedger().scheduledItems.first?.amount == 1200)
+    }
+
     @Test("D352.2: after an occurrence is recorded, Undo can't undo the save and changes nothing")
     func staleAfterRecorded() throws {
         let scene = try ScheduledScene()

@@ -9,4 +9,12 @@ enum AccountsRoute: Hashable {
     /// its root's destinations take effect and the list's links push this case (Tester's #198 iOS FAIL). The Mac
     /// gives the list its own stack and never selects it.
     case scheduled(ScheduledRoute)
+
+    /// The Scheduled list or a screen over it, which share the stack's Scheduled model (`ScheduledListSlot`).
+    var isScheduled: Bool {
+        switch self {
+        case .home(.scheduled), .scheduled: true
+        default: false
+        }
+    }
 }

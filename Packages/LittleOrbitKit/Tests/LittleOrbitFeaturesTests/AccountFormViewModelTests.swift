@@ -21,6 +21,23 @@ struct AccountFormViewModelTests {
         )
     }
 
+    @Test("S33: the form is clean as it opens, new or edit, and dirty once a field changes")
+    func unsavedEdits() throws {
+        let account = Account(name: "HDFC Savings", type: .savings, currencyCode: "INR")
+        let repository = try FeatureFixture.repository([account])
+        let new = form(repository)
+        #expect(!new.hasUnsavedEdits)
+        new.name = "Cash"
+        #expect(new.hasUnsavedEdits)
+        let edit = form(repository, mode: .edit(account.id))
+        #expect(edit.name == "HDFC Savings")
+        #expect(!edit.hasUnsavedEdits)
+        edit.isHidden = true
+        #expect(edit.hasUnsavedEdits)
+        edit.isHidden = false
+        #expect(!edit.hasUnsavedEdits)
+    }
+
     @Test("First account: name, balance and currency, defaulting to the region's currency (S1, S25)")
     func firstAccount() throws {
         let repository = try FeatureFixture.repository([])

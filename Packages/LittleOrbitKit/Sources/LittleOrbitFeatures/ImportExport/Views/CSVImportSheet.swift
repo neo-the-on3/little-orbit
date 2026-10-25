@@ -37,6 +37,8 @@
             #endif
             // Nothing is saved before Import, but the user's column and match choices would be lost.
             .interactiveDismissDisabled(model.step != .summary)
+            // A tapped reminder closes the sheet first only when nothing would be lost (S33).
+            .openSheet(hasUnsavedEdits: { model.hasUnsavedEdits }, close: { dismiss() })
             .alert(
                 model.alert?.title ?? "",
                 isPresented: Binding(get: { model.alert != nil }, set: { if !$0 { model.alert = nil } }),

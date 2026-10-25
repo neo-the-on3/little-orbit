@@ -13,6 +13,10 @@
         @State private var transactionSheet: TransactionFormSheet?
         /// Show on the off-screen undo notice pushes an account (D164.3); nothing else navigates for undo.
         @State private var path: [AccountsRoute] = []
+        /// This scene's identifier, so it opens only the reminder taps the system sent to it (Tech Architect NB2).
+        @State private var windowID: String?
+        /// The sheets open in this window, which a tapped reminder asks before it navigates.
+        @Environment(OpenSheets.self) private var openSheets: OpenSheets?
         /// This window's undo history; a new window starts with an empty one, and closing it drops it (D187.8).
         @State private var undoSlot = WindowUndoSlot()
         @Environment(\.dynamicTypeSize) private var dynamicTypeSize
@@ -26,6 +30,12 @@
 
         private var undoHistory: WindowUndoHistory {
             undoSlot.history(from: transactions)
+        }
+
+        /// Whether a Scheduled screen is on the stack: the Scheduled model is made with the first, and goes after the
+        /// last (D338.6).
+        private var showsScheduled: Bool {
+            path.contains(where: \.isScheduled)
         }
 
         /// Both features come from the composition root, which built them once with the injected use cases.
@@ -43,6 +53,23 @@
             self.onShowSettings = onShowSettings
             _model = State(initialValue: feature.accounts)
             _deleteConfirmation = State(initialValue: AccountDeleteConfirmation(model: feature.accounts))
+        }
+
+        /// Takes a tapped reminder meant for this scene: untouched sheets close first and the stack goes to
+        /// Scheduled; a sheet with unsaved edits stays open, with Scheduled pushed underneath it (UI Designer
+        /// 6402418696, Tech Architect NB1). The item, read fresh, goes on the path as a row tap pushes it, so the
+        /// path is the whole stack (Tech Architect 5660914450 B1).
+        private func openReminder() {
+            guard let scheduled, let tap = scheduled.reminderTaps.take(for: windowID) else {
+                return
+            }
+            let sheets = openSheets?.prepareForReminder() ?? .afterClosing
+            path = ScheduledReminderRouting.path(
+                path,
+                scheduled: .home(.scheduled),
+                item: scheduled.itemOpened(by: tap).map { AccountsRoute.scheduled(.item($0)) },
+                sheets: sheets,
+            )
         }
 
         /// After an account delete: its page closes, back to the list, and the list shows the D164 toast with
@@ -80,6 +107,8 @@
                     if path.isEmpty {
                         undoHistory.setScreen(.list(visible: []))
                     }
+                    // The Scheduled model lasts while a Scheduled screen is on the stack (D338.6).
+                    scheduledSlot.stackChanged(showsScheduled: showsScheduled)
                 }
                 // The account delete toast, above the bottom safe area (D164.2, D170 U3).
                 .safeAreaInset(edge: .bottom) {
@@ -96,6 +125,11 @@
                 .animation(.default, value: undoHistory.toast)
             }
             .undoWindow(undoHistory) { path = [.account($0)] }
+            // A tapped reminder opens Scheduled, then its item (S33), in the scene the system sent it to. From a
+            // cold launch the tap waits until this window is up.
+            .reportsReminderWindow(to: scheduled?.reminderTaps, id: $windowID)
+            .onChange(of: scheduled?.reminderTaps.pending, initial: true) { openReminder() }
+            .onChange(of: windowID) { openReminder() }
             .sheet(item: $formSheet) { sheet in
                 AccountFormView(
                     model: sheet.model,
@@ -107,6 +141,7 @@
                     formSheet = nil
                     deleted(name, change)
                 }
+                .openSheet(hasUnsavedEdits: { sheet.model.hasUnsavedEdits }, close: { formSheet = nil })
             }
             .sheet(item: $transactionSheet) { sheet in
                 // #23: the entry sheet, opened from a row's swipe or context menu.
@@ -117,6 +152,7 @@
                         model.load()
                     },
                 )
+                .openSheet(hasUnsavedEdits: { sheet.model.hasUnsavedEdits }, close: { transactionSheet = nil })
             }
             // From a row's context menu or swipe; the edit sheet shows its own (bug 3).
             .accountDeleteAlert(deleteConfirmation, model: model, isActive: formSheet == nil, onDeleted: deleted)
@@ -326,7 +362,7 @@
                     // `.scheduled(_)` and the case below builds them (Tester's #198 iOS FAIL).
                     ScheduledListView(
                         feature: scheduled,
-                        host: .parentStack(slot: scheduledSlot, open: { path.append($0) }),
+                        host: .parentStack(slot: scheduledSlot, onStack: showsScheduled, open: { path.append($0) }),
                         linkValue: AccountsRoute.scheduled,
                     )
                 }
@@ -335,6 +371,7 @@
                     ScheduledStackDestination(
                         feature: scheduled,
                         slot: scheduledSlot,
+                        onStack: showsScheduled,
                         route: route,
                         linkValue: AccountsRoute.scheduled,
                     )

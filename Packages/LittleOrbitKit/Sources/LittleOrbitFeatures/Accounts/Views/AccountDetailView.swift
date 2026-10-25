@@ -63,10 +63,12 @@
                         model: sheet.model,
                         onSaved: record,
                     )
+                    .openSheet(hasUnsavedEdits: { sheet.model.hasUnsavedEdits }, close: { formSheet = nil })
                 }
                 .sheet(item: $scheduledItem) { route in
                     if let scheduled {
                         ScheduledItemSheet(feature: scheduled, itemID: route.itemID, occurrence: route.occurrence)
+                            .openSheet(hasUnsavedEdits: { false }, close: { scheduledItem = nil })
                     }
                 }
                 #if os(macOS)
@@ -75,6 +77,7 @@
                             model: sheet.model,
                             onApplied: record,
                         )
+                        .openSheet(hasUnsavedEdits: { sheet.model.hasUnsavedEdits }, close: { bulkEditSheet = nil })
                     }
                 #endif
                 .bulkDeleteConfirmation(history.deletePrompt) { prompt in

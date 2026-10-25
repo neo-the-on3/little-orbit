@@ -111,6 +111,8 @@
                 )
                 .sheet(item: presented(\.exportPrompt)) { prompt in
                     ExportBackupSheet(window: window, prompt: prompt)
+                        // An export in progress stays open for a tapped reminder (S33).
+                        .openSheet(hasUnsavedEdits: { true }, close: {})
                 }
                 .alert(
                     BackupPresentation.restoreTitle,
@@ -288,6 +290,12 @@
         }
 
         var body: some View {
+            progress
+                // A restore can't be closed, so a tapped reminder navigates underneath it (S33).
+                .openSheet(hasUnsavedEdits: { true }, close: {})
+        }
+
+        private var progress: some View {
             VStack(spacing: Spacing.space4) {
                 Image(systemName: "arrow.uturn.backward.circle")
                     .font(.largeTitle)

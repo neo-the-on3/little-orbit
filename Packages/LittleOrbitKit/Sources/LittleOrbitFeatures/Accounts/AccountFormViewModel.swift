@@ -64,6 +64,8 @@ public final class AccountFormViewModel {
     @ObservationIgnored private var isLoading = false
     /// Tells every window an account was added or edited (D187.4, D327.1).
     @ObservationIgnored private let changed: () -> Void
+    /// The fields as the form opened, for `hasUnsavedEdits`.
+    @ObservationIgnored private var openedFields: [AnyHashable] = []
 
     public init(
         loadAccountForm: any LoadAccountFormUseCase,
@@ -96,6 +98,19 @@ public final class AccountFormViewModel {
                 loadError = Self.message(forLoadError: error)
             }
         }
+        openedFields = fields
+    }
+
+    /// Whether closing the form would lose a change (S33: a tapped reminder closes it only when it's untouched).
+    public var hasUnsavedEdits: Bool {
+        fields != openedFields
+    }
+
+    private var fields: [AnyHashable] {
+        [
+            name, type, iconSymbol, currencyCode, amountText, flipsSign, creditLimitText, showAvailableCredit,
+            isHidden, excludeFromNetWealth,
+        ]
     }
 
     /// The same, taking the use cases from one `AccountUseCases` value.

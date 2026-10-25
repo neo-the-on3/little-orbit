@@ -49,6 +49,7 @@
                 NavigationStack {
                     PayeeEditorView(model: editor)
                 }
+                .openSheet(hasUnsavedEdits: { editor.hasUnsavedEdits }, close: { model.editor = nil })
             }
             .sheet(isPresented: $isMerging) {
                 NavigationStack {
@@ -56,6 +57,8 @@
                         withAnimation { editMode = .inactive }
                     }
                 }
+                // A merge in progress always stays open for a tapped reminder (S33).
+                .openSheet(hasUnsavedEdits: { true }, close: { isMerging = false })
             }
             .alert(
                 model.alert?.title ?? "",

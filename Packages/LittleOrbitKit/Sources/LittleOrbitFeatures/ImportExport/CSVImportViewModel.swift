@@ -198,6 +198,13 @@ public final class CSVImportViewModel {
         ImportLog.opened(rows: file.rowCount, columns: file.table.header.count)
     }
 
+    /// Whether a tapped reminder must leave the sheet open (S33): from a picked file until the import is done, the
+    /// same steps the sheet can't be swiped away on, and on the summary while Undo Import is still offered and
+    /// unused. Once Undo Import is used or has ended, the summary is clean again (D382.15, D381.4).
+    public var hasUnsavedEdits: Bool {
+        step == .summary ? canUndo : step != .pickFile
+    }
+
     /// The current step's name, under the sheet's title.
     public var stepTitle: String {
         switch step {

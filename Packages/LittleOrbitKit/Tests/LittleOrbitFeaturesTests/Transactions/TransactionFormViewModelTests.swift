@@ -411,6 +411,19 @@ struct TransactionFormViewModelTests {
         #expect(model.hasUnsavedInput)
     }
 
+    @Test("S33: a tapped reminder sees an untouched entry as clean and a changed one as dirty, new or edit")
+    func unsavedEditsForReminder() throws {
+        let fresh = model(try F.repository())
+        #expect(!fresh.hasUnsavedEdits)
+        fresh.press(.digit(5))
+        #expect(fresh.hasUnsavedEdits)
+        let original = F.expense(250, on: F.date(2026, 10, 19), category: DefaultCategoryID.food)
+        let edit = model(try F.repository([original]), mode: .edit(original.id))
+        #expect(!edit.hasUnsavedEdits)
+        edit.type = .income
+        #expect(edit.hasUnsavedEdits)
+    }
+
     @Test("New from the home screen uses the last used account")
     func lastUsedAccount() throws {
         let repository = try F.repository([F.expense(10, on: F.date(2026, 10, 19), account: F.walletID)])
