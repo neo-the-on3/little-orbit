@@ -9,17 +9,43 @@ public struct ScheduledScreenUseCases {
     public var catchUp: any CatchUpScheduledUseCase
     /// What catch-up recorded while the app was closed, for the list's hint. One per launch, shared by windows.
     public var notices: any ScheduledCatchUpNoticeUseCase
+    /// Whether reminders can arrive, and the system prompt the first time 'Notify when due' is turned on.
+    public var permission: any NotificationPermissionUseCase
+    /// Settings › Scheduled Items › Reminder Time, which the form's footnote names (D340.7).
+    public var reminderTime: any ScheduledReminderTimeUseCase
 
     public init(
         load: any LoadScheduledUseCase,
         manage: any ManageScheduledUseCase,
         catchUp: any CatchUpScheduledUseCase,
         notices: any ScheduledCatchUpNoticeUseCase = ScheduledCatchUpNotices(),
+        permission: any NotificationPermissionUseCase = FixedNotificationPermission(),
+        reminderTime: any ScheduledReminderTimeUseCase = FixedReminderTime(),
     ) {
         self.load = load
         self.manage = manage
         self.catchUp = catchUp
         self.notices = notices
+        self.permission = permission
+        self.reminderTime = reminderTime
+    }
+}
+
+/// A Reminder Time kept for one run only, 09:00 unless set: previews and tests.
+@MainActor
+public final class FixedReminderTime: ScheduledReminderTimeUseCase {
+    private var time: ReminderTime
+
+    public init(_ time: ReminderTime = .standard) {
+        self.time = time
+    }
+
+    public func reminderTime() -> ReminderTime {
+        time
+    }
+
+    public func setReminderTime(_ time: ReminderTime) {
+        self.time = time
     }
 }
 
@@ -29,6 +55,8 @@ public struct ScheduledScreenUseCases {
 public final class ScheduledFeature: PlannedItemsSource {
     public let useCases: ScheduledScreenUseCases
     private let updates: LedgerUpdates?
+    /// Keeps the pending reminders current (D340.7); `nil` where nothing posts notifications.
+    private let reminders: ScheduledReminders?
     private let locale: Locale
     /// Called when a catch-up couldn't run or left some items unrecorded; the App logs it with no user data.
     private let onCatchUpProblem: (ScheduledCatchUpProblem) -> Void
@@ -41,10 +69,13 @@ public final class ScheduledFeature: PlannedItemsSource {
     /// list; `nil` with no watch link (the Mac).
     public let watchNotices: WatchRequestNoticeViewModel?
 
-    /// `updates` tells every window to reload after a scheduled change, as a transaction change does.
+    /// `updates` tells every window to reload after a scheduled change, as a transaction change does. Every change
+    /// and restore it reports also reschedules `reminders`: a Pay, Skip, edit or delete, an account delete, and
+    /// their Undo and Redo (D340.7).
     public init(
         useCases: ScheduledScreenUseCases,
         updates: LedgerUpdates? = nil,
+        reminders: ScheduledReminders? = nil,
         locale: Locale = .current,
         watchNotices: WatchRequestNoticeViewModel? = nil,
         onCatchUpProblem: @escaping (ScheduledCatchUpProblem) -> Void = { _ in },
@@ -52,11 +83,15 @@ public final class ScheduledFeature: PlannedItemsSource {
         self.useCases = useCases
         self.watchNotices = watchNotices
         self.updates = updates
+        self.reminders = reminders
         self.locale = locale
         self.onCatchUpProblem = onCatchUpProblem
         // A restore replaces the ledger, so a pending catch-up hint could name days it no longer has (Tech
         // Architect NB 1).
         ledgerReplacedHandler = updates?.onLedgerReplaced { [notices = useCases.notices] in notices.clear() }
+        if let reminders {
+            updates?.onChanged { reminders.refresh() }
+        }
     }
 
     /// Records every due occurrence of the automatic items, each once, dated on its own due day. The App calls it
@@ -64,6 +99,8 @@ public final class ScheduledFeature: PlannedItemsSource {
     /// undo history (D187.2). Running it twice, from two windows or after a clock change records nothing more.
     @discardableResult
     public func catchUp(atLaunch: Bool) -> ScheduledCatchUp? {
+        // At launch and on every activation, so a day or time zone change while away is picked up (S23).
+        defer { reminders?.refresh() }
         let result: ScheduledCatchUp
         do {
             result = try useCases.catchUp.catchUp(atLaunch: atLaunch)
@@ -84,6 +121,13 @@ public final class ScheduledFeature: PlannedItemsSource {
             updates?.changed()
         }
         return result
+    }
+
+    /// Settings › Scheduled Items › Reminder Time. A change reschedules every reminder at the new time (S10).
+    public func makeReminderSettings() -> ScheduledReminderSettingsViewModel {
+        ScheduledReminderSettingsViewModel(useCase: useCases.reminderTime) { [weak reminders] in
+            reminders?.refresh()
+        }
     }
 
     public func plannedItemCounts() -> PlannedItemCounts {

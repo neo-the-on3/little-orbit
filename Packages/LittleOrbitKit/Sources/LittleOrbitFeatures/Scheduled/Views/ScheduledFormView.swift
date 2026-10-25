@@ -3,12 +3,18 @@
     import LittleOrbitTheme
     import SwiftUI
 
+    #if os(iOS)
+        import UIKit
+    #endif
+
     /// New and Edit Scheduled Item (#26 frame "New scheduled – form, 31st rule preview"): type, amount, payee,
     /// category and account; then Schedule (Starts, Repeat with its stepper row, Ends and End Date), the Next Due
     /// Dates preview with its month-end footnote (D24), and Process automatically. Standard Form controls only.
     struct ScheduledFormView: View {
         @Bindable var model: ScheduledFormViewModel
         @Environment(\.dismiss) private var dismiss
+        @Environment(\.openURL) private var openURL
+        @Environment(\.scenePhase) private var scenePhase
 
         var body: some View {
             Form {
@@ -84,13 +90,32 @@
                     }
                 }
                 Section {
+                    // Each switch is named by its visible title: in the Mac Form the title is separate text, so
+                    // the switch had no description (Tester2's #204 Mac pass at 38050b0).
                     Toggle(model.automaticLabel, isOn: $model.processesAutomatically)
+                        .accessibilityLabel(Text(model.automaticLabel))
+                    Toggle(model.notifyLabel, isOn: $model.notifiesWhenDue)
+                        .accessibilityLabel(Text(model.notifyLabel))
                     TextField(model.noteLabel, text: $model.note, axis: .vertical)
                 } footer: {
-                    Text(model.automaticFootnote)
+                    Text(model.footnote)
+                }
+                // Open Settings and the sentence saying why sit together in their own section (D341.3).
+                if model.showsOpenSettings, let url = ScheduledFormView.notificationSettingsURL {
+                    Section {
+                        Button(model.openSettingsTitle) { openURL(url) }
+                    } footer: {
+                        Text(model.notificationsOffFootnote)
+                    }
                 }
             }
             .formStyle(.grouped)
+            .onChange(of: scenePhase) { _, phase in
+                // Back from Settings, where notifications may have been turned on.
+                if phase == .active {
+                    model.refreshNotificationPermission()
+                }
+            }
             .navigationTitle(model.title)
             #if os(iOS)
                 .navigationBarTitleDisplayMode(.inline)
@@ -123,6 +148,15 @@
                     dismiss()
                 }
             }
+        }
+
+        /// The app's notification settings: its page in iOS Settings, or Notifications in System Settings.
+        @MainActor static var notificationSettingsURL: URL? {
+            #if os(iOS)
+                URL(string: UIApplication.openNotificationSettingsURLString)
+            #else
+                URL(string: "x-apple.systempreferences:com.apple.Notifications-Settings.extension")
+            #endif
         }
     }
 #endif

@@ -97,6 +97,7 @@ public final class LedgerUpdates {
     public private(set) var revision = 0
     @ObservationIgnored private var histories: [WeakHistory] = []
     @ObservationIgnored private var replacedHandlers: [(id: UUID, run: @MainActor () -> Void)] = []
+    @ObservationIgnored private var changedHandlers: [@MainActor () -> Void] = []
 
     private struct WeakHistory {
         weak var history: WindowUndoHistory?
@@ -106,6 +107,19 @@ public final class LedgerUpdates {
 
     func changed() {
         revision += 1
+        runChangedHandlers()
+    }
+
+    /// Runs `handler` after every change and every restore, for state kept outside the ledger that follows it, such
+    /// as the Scheduled reminders (#26, D340.7). Registered once per launch.
+    func onChanged(_ handler: @escaping @MainActor () -> Void) {
+        changedHandlers.append(handler)
+    }
+
+    private func runChangedHandlers() {
+        for handler in changedHandlers {
+            handler()
+        }
     }
 
     /// One `onLedgerReplaced` handler, for removing it again.
@@ -146,5 +160,6 @@ public final class LedgerUpdates {
             handler.run()
         }
         revision += 1
+        runChangedHandlers()
     }
 }

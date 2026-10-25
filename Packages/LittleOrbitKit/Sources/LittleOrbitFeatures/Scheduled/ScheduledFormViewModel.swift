@@ -72,6 +72,16 @@ public final class ScheduledFormViewModel: Identifiable {
     public var hasEnd: Bool
     public var endDay: CalendarDay
     public var processesAutomatically: Bool
+    /// 'Notify when due'. Turning it on the first time shows the system's permission prompt (D341.3).
+    public var notifiesWhenDue: Bool {
+        didSet {
+            if notifiesWhenDue && !oldValue {
+                checkNotificationPermission(asking: true)
+            }
+        }
+    }
+    /// Notifications are denied: with 'Notify when due' on, the footer says so and an Open Settings row follows.
+    public private(set) var notificationsDenied = false
     /// The amount field's error, after a save attempt.
     public private(set) var amountError: String?
     /// An account, transfer or date error, after a save attempt.
@@ -87,20 +97,26 @@ public final class ScheduledFormViewModel: Identifiable {
     @ObservationIgnored private let original: ScheduledItem?
     @ObservationIgnored private let locale: Locale
     @ObservationIgnored private let timeZoneID: String
+    /// The Mac says System Settings where iOS says Settings (D359).
+    @ObservationIgnored private let platform: ScheduledPlatform
     @ObservationIgnored private let today: CalendarDay
     @ObservationIgnored private let saved: () -> Void
+    /// The latest permission check, for tests to wait on.
+    @ObservationIgnored private(set) var permissionCheck: Task<Void, Never>?
 
     init(
         useCases: ScheduledScreenUseCases,
         listing: ScheduledListing,
         editing item: ScheduledItem?,
         locale: Locale,
+        platform: ScheduledPlatform = .current,
         saved: @escaping () -> Void,
     ) {
         self.useCases = useCases
         self.listing = listing
         original = item
         self.locale = locale
+        self.platform = platform
         self.saved = saved
         today = useCases.load.today()
         timeZoneID = item?.timeZoneID ?? useCases.load.currentTimeZoneID()
@@ -125,6 +141,10 @@ public final class ScheduledFormViewModel: Identifiable {
         hasEnd = item?.endDay != nil
         endDay = item?.endDay ?? item?.startDay ?? today
         processesAutomatically = item?.processesAutomatically ?? false
+        notifiesWhenDue = item?.notifiesWhenDue ?? false
+        if notifiesWhenDue {
+            checkNotificationPermission(asking: false)
+        }
     }
 
     public var isNew: Bool { original == nil }
@@ -152,6 +172,51 @@ public final class ScheduledFormViewModel: Identifiable {
     public var previewHeader: String { ScheduledText.nextDueDates }
     public var automaticLabel: String { ScheduledText.processAutomatically }
     public var automaticFootnote: String { ScheduledText.automaticFootnote }
+    /// "Notify when due" on iOS; the Mac's names the Reminder Time, "Notify when due (09:00)" (D360.3).
+    public var notifyLabel: String {
+        guard platform == .macOS else {
+            return ScheduledText.notifyWhenDue
+        }
+        return ScheduledText.notifyWhenDue(
+            at: ReminderTimeText.string(useCases.reminderTime.reminderTime(), locale: locale)
+        )
+    }
+    public var openSettingsTitle: String { ScheduledText.openSettings(platform) }
+
+    /// The footer under Process automatically and Notify when due: how automatic items are recorded, then when
+    /// reminders arrive, at the current Reminder Time (D340.7). The Mac's toggle already names the time, so its
+    /// footer leaves that sentence out (D360.3).
+    public var footnote: String {
+        guard platform == .iOS else {
+            return automaticFootnote
+        }
+        let time = ReminderTimeText.string(useCases.reminderTime.reminderTime(), locale: locale)
+        return ScheduledText.sentences(automaticFootnote, ScheduledText.remindersArrive(at: time))
+    }
+
+    /// 'Notify when due' is on and notifications are denied (D341.3). The toggle stays on, and Open Settings has
+    /// its own section with `notificationsOffFootnote` under it.
+    public var showsOpenSettings: Bool { notifiesWhenDue && notificationsDenied }
+
+    /// That notifications are off, under Open Settings (D341.3; the Mac's names System Settings, D359).
+    public var notificationsOffFootnote: String { ScheduledText.notificationsOff(platform) }
+
+    /// Reads the permission again, for when the app comes back from Settings.
+    public func refreshNotificationPermission() {
+        checkNotificationPermission(asking: false)
+    }
+
+    /// The system prompt shows only while the user hasn't been asked; after that it reads the answer.
+    private func checkNotificationPermission(asking: Bool) {
+        let permission = useCases.permission
+        permissionCheck = Task { @MainActor [weak self] in
+            var answer = await permission.permission()
+            if asking, answer == .notDetermined {
+                answer = await permission.requestPermission()
+            }
+            self?.notificationsDenied = answer == .denied
+        }
+    }
 
     public var typeLabel: String { ScheduledText.typeLabel }
     public func typeName(_ type: TransactionType) -> String { ScheduledText.typeName(type) }
@@ -325,6 +390,7 @@ public final class ScheduledFormViewModel: Identifiable {
         item.repeatRule = frequency.unit.map { .every(interval, $0) } ?? .never
         item.endDay = hasEnd && frequency != .never ? endDay : nil
         item.processesAutomatically = processesAutomatically
+        item.notifiesWhenDue = notifiesWhenDue
         return item
     }
 

@@ -3,8 +3,8 @@
     import LittleOrbitTheme
     import SwiftUI
 
-    /// A minimal standard Settings screen, opened from the Accounts toolbar. No other ticket owns Settings yet, so
-    /// it holds only Advanced > Backups (#40); later settings join this list.
+    /// A minimal standard Settings screen, opened from the Accounts toolbar. It holds Categories and Payees (#24),
+    /// Scheduled Items › Reminder Time (#26) and Advanced > Backups (#40); later settings join this list.
     ///
     /// It's the root of this window's Settings, so it makes the window's own Backups state: on iPad, a prompt in
     /// one window never shows in another (Tech Architect).
@@ -14,22 +14,25 @@
         private let categories: CategoriesFeature?
         private let payees: PayeesFeature?
         private let importExport: ImportExportFeature?
+        private let scheduled: ScheduledFeature?
         private let onCategoryRemoval: () -> Void
 
         /// `categories` and `payees` add the Categories and Payees rows (#24), and `importExport` the Import & Export
         /// row (#30). `onCategoryRemoval` clears this window's Undo and Redo history after a category merge or
-        /// delete, or a payee merge (D287.4).
+        /// delete, or a payee merge (D287.4). `scheduled` adds Scheduled Items › Reminder Time (D341.4).
         public init(
             backups: BackupsViewModel,
             categories: CategoriesFeature? = nil,
             payees: PayeesFeature? = nil,
             importExport: ImportExportFeature? = nil,
+            scheduled: ScheduledFeature? = nil,
             onCategoryRemoval: @escaping () -> Void = {},
         ) {
             _window = State(initialValue: BackupsWindow(model: backups))
             self.categories = categories
             self.payees = payees
             self.importExport = importExport
+            self.scheduled = scheduled
             self.onCategoryRemoval = onCategoryRemoval
         }
 
@@ -62,6 +65,9 @@
                                 Label(ImportExportText.sectionTitle, systemImage: "arrow.up.arrow.down.square")
                             }
                         }
+                    }
+                    if let scheduled {
+                        ScheduledReminderSettingsSection(feature: scheduled)
                     }
                     Section {
                         NavigationLink {

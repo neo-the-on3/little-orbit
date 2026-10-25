@@ -448,7 +448,13 @@ public final class ScheduledListViewModel {
     }
 
     private func makeForm(_ item: ScheduledItem?) -> ScheduledFormViewModel {
-        ScheduledFormViewModel(useCases: useCases, listing: listing, editing: item, locale: locale) { [weak self] in
+        ScheduledFormViewModel(
+            useCases: useCases,
+            listing: listing,
+            editing: item,
+            locale: locale,
+            platform: platform,
+        ) { [weak self] in
             self?.load()
             self?.changed()
         }
