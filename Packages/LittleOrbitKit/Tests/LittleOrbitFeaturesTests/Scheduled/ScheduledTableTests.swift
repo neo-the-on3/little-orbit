@@ -205,4 +205,57 @@ struct ScheduledTableTests {
         #expect(iOS.tableSections.isEmpty)
         #expect(iOS.upcomingRows.first?.detail.hasPrefix("Monthly") == true, "iOS keeps the short names")
     }
+
+    @Test("D360.2: ⌘E and Delete act only on the selected row, Delete asks first, and there's no Pay command")
+    func shortcuts() throws {
+        let scene = try ScheduledScene()
+        let rent = scene.item("Rent", day: 1, month: 11)
+        try scene.add(rent)
+        let list = macList(scene)
+        let id = try #require(list.tableSections.first?.rows.first?.id)
+        #expect(!list.tableCommand(.edit, selection: nil))
+        #expect(!list.tableCommand(.delete, selection: nil))
+        #expect(!list.tableCommand(.delete, selection: "gone"))
+        #expect(list.form == nil && list.confirmation == nil)
+        #expect(list.tableCommand(.delete, selection: id))
+        #expect(list.confirmation != nil, "Always the delete confirmation (D334.9)")
+        #expect(try scene.repository.scheduleLedger().scheduledItems.count == 1, "Nothing is deleted yet")
+        list.confirmation = nil
+        #expect(list.tableCommand(.edit, selection: id))
+        #expect(list.form?.title == "Edit Scheduled Item")
+        #expect(scene.recorded.isEmpty, "No shortcut records anything")
+        #expect(list.newItemTitle == "New Scheduled Item")
+    }
+
+    @Test("Tech Architect, #198: the Mac hint is shown once drawn, and again when a catch-up replaces it on screen")
+    func catchUpHintReplaced() throws {
+        let scene = try ScheduledScene()
+        try scene.add(scene.item("Rent", day: 1, automatic: true))
+        let feature = scene.feature()
+        feature.catchUp(atLaunch: true)
+        let list = scene.list(feature, platform: .macOS)
+        list.screenAppeared(.list)
+        list.load()
+        let first = try #require(list.catchUpHint)
+        #expect(scene.notices.notice()?.shown == false, "Loaded but not drawn")
+        // The hint's `.task(id: hint)` runs.
+        list.catchUpHintAppeared()
+        #expect(scene.notices.notice()?.shown == true)
+        // A new day while the list is on screen: another catch-up replaces the text in place.
+        try scene.add(scene.item("Water", day: 3, automatic: true, month: 11))
+        scene.now = ScheduledScene.date(CalendarDay(year: 2026, month: 11, day: 5))
+        feature.catchUp(atLaunch: false)
+        list.load()
+        let second = try #require(list.catchUpHint)
+        #expect(second != first)
+        #expect(scene.notices.notice()?.shown == false, "The new part isn't drawn yet")
+        // The task is keyed on the text, so it runs again and the merged hint counts as shown.
+        list.catchUpHintAppeared()
+        #expect(scene.notices.notice()?.shown == true)
+        list.dismissCatchUpHint()
+        let next = scene.list(feature, platform: .macOS)
+        next.screenAppeared(.list)
+        next.load()
+        #expect(next.catchUpHint == nil, "The next visit doesn't show it again")
+    }
 }

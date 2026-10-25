@@ -35,7 +35,34 @@ public struct ScheduledTableSection: Identifiable, Equatable, Sendable {
     public let rows: [ScheduledTableRow]
 }
 
+/// A Mac Table keyboard command on the selected row (D360.2). There's no Pay command: ⌘↩ would record straight
+/// away until #201's "Pay ‹item›" sheet is on this base (D360, D341.1). It comes back opening that sheet, wired by
+/// whichever of #201 and #205 lands second.
+public enum ScheduledTableCommand: Sendable {
+    /// ⌘E: the selected row's editor.
+    case edit
+    /// ⌘⌫, the Delete key or Edit ▸ Delete: always the delete confirmation first (D334.9).
+    case delete
+}
+
 extension ScheduledListViewModel {
+    /// Runs `command` on the selected row only; with nothing selected, or a row that's gone, it does nothing and
+    /// returns `false` (D360.2).
+    @discardableResult
+    public func tableCommand(_ command: ScheduledTableCommand, selection id: String?) -> Bool {
+        guard let id, let row = tableRow(id: id)?.row else {
+            return false
+        }
+        switch command {
+        case .edit: openEditor(row.itemID)
+        case .delete: confirmDelete(row.itemID)
+        }
+        return true
+    }
+
+    /// The toolbar +'s help and spoken label, telling it apart from the window's other + (Tester, #205).
+    public var newItemTitle: String { ScheduledText.newTitle }
+
     /// Builds the Table's sections and its ID lookup once per listing, on the Mac only (Tech Architect NB 1). In
     /// board order: each overdue occurrence on its own row, oldest first (D340.6, D340.13), then due today, then
     /// each upcoming item on its next due day, then the completed items.
