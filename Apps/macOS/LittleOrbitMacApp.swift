@@ -19,6 +19,7 @@ struct LittleOrbitMacApp: App {
         }
         .commands {
             RestoreFromBackupCommand(isPickingFile: $isPickingBackupFile)
+            ImportExportCommands()
         }
 
         // The standard Settings window, opened with Cmd-, from the app menu (D179.5). It's the shared home for

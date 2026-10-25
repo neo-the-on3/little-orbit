@@ -13,19 +13,23 @@
         @Environment(\.dismiss) private var dismiss
         private let categories: CategoriesFeature?
         private let payees: PayeesFeature?
+        private let importExport: ImportExportFeature?
         private let onCategoryRemoval: () -> Void
 
-        /// `categories` and `payees` add the Categories and Payees rows (#24). `onCategoryRemoval` clears this
-        /// window's Undo and Redo history after a category merge or delete, or a payee merge (D287.4).
+        /// `categories` and `payees` add the Categories and Payees rows (#24), and `importExport` the Import & Export
+        /// row (#30). `onCategoryRemoval` clears this window's Undo and Redo history after a category merge or
+        /// delete, or a payee merge (D287.4).
         public init(
             backups: BackupsViewModel,
             categories: CategoriesFeature? = nil,
             payees: PayeesFeature? = nil,
+            importExport: ImportExportFeature? = nil,
             onCategoryRemoval: @escaping () -> Void = {},
         ) {
             _window = State(initialValue: BackupsWindow(model: backups))
             self.categories = categories
             self.payees = payees
+            self.importExport = importExport
             self.onCategoryRemoval = onCategoryRemoval
         }
 
@@ -47,6 +51,15 @@
                                 } label: {
                                     Label(PayeeText.title, systemImage: "storefront")
                                 }
+                            }
+                        }
+                    }
+                    if let importExport {
+                        Section {
+                            NavigationLink {
+                                ImportExportSettingsView(feature: importExport)
+                            } label: {
+                                Label(ImportExportText.sectionTitle, systemImage: "arrow.up.arrow.down.square")
                             }
                         }
                     }
