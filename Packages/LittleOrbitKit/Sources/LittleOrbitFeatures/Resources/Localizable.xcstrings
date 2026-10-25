@@ -5310,6 +5310,1296 @@
           }
         }
       }
+    },
+    "Scheduled": {
+      "comment": "Scheduled screen title and its home row: repeating and future transactions.",
+      "extractionState": "manual",
+      "generatesSymbol": false,
+      "localizations": {
+        "en": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Scheduled"
+          }
+        }
+      }
+    },
+    "Overdue": {
+      "comment": "Scheduled screen section header: occurrences past their due date, not yet paid or skipped.",
+      "extractionState": "manual",
+      "generatesSymbol": false,
+      "localizations": {
+        "en": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Overdue"
+          }
+        }
+      }
+    },
+    "Due Today": {
+      "comment": "Scheduled screen section header: occurrences due today.",
+      "extractionState": "manual",
+      "generatesSymbol": false,
+      "localizations": {
+        "en": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Due Today"
+          }
+        }
+      }
+    },
+    "Upcoming": {
+      "comment": "Scheduled screen section header: each active item on its next due date.",
+      "extractionState": "manual",
+      "generatesSymbol": false,
+      "localizations": {
+        "en": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Upcoming"
+          }
+        }
+      }
+    },
+    "Completed": {
+      "comment": "Scheduled screen: the row and screen listing items with no due dates left.",
+      "extractionState": "manual",
+      "generatesSymbol": false,
+      "localizations": {
+        "en": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Completed"
+          }
+        }
+      }
+    },
+    "Nothing Scheduled": {
+      "comment": "Scheduled screen with no items: the title.",
+      "extractionState": "manual",
+      "generatesSymbol": false,
+      "localizations": {
+        "en": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Nothing Scheduled"
+          }
+        }
+      }
+    },
+    "Add Scheduled Item": {
+      "comment": "Scheduled screen toolbar button and menu item: opens the new scheduled item form.",
+      "extractionState": "manual",
+      "generatesSymbol": false,
+      "localizations": {
+        "en": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Add Scheduled Item"
+          }
+        }
+      }
+    },
+    "No Completed Items": {
+      "comment": "Completed screen with nothing in it: the title.",
+      "extractionState": "manual",
+      "generatesSymbol": false,
+      "localizations": {
+        "en": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "No Completed Items"
+          }
+        }
+      }
+    },
+    "Scheduled Item": {
+      "comment": "Name of a scheduled item with no description, payee, category or account.",
+      "extractionState": "manual",
+      "generatesSymbol": false,
+      "localizations": {
+        "en": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Scheduled Item"
+          }
+        }
+      }
+    },
+    "Auto": {
+      "comment": "Scheduled row detail: the item is recorded automatically on its due date.",
+      "extractionState": "manual",
+      "generatesSymbol": false,
+      "localizations": {
+        "en": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Auto"
+          }
+        }
+      }
+    },
+    "Due today": {
+      "comment": "Scheduled row, right side: this occurrence is due today.",
+      "extractionState": "manual",
+      "generatesSymbol": false,
+      "localizations": {
+        "en": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Due today"
+          }
+        }
+      }
+    },
+    "Once": {
+      "comment": "Scheduled row detail and repeat choice: the item doesn't repeat.",
+      "extractionState": "manual",
+      "generatesSymbol": false,
+      "localizations": {
+        "en": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Once"
+          }
+        }
+      }
+    },
+    "Daily": {
+      "comment": "Repeat rule: every day.",
+      "extractionState": "manual",
+      "generatesSymbol": false,
+      "localizations": {
+        "en": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Daily"
+          }
+        }
+      }
+    },
+    "Weekly": {
+      "comment": "Repeat rule: every week.",
+      "extractionState": "manual",
+      "generatesSymbol": false,
+      "localizations": {
+        "en": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Weekly"
+          }
+        }
+      }
+    },
+    "Monthly": {
+      "comment": "Repeat rule: every month.",
+      "extractionState": "manual",
+      "generatesSymbol": false,
+      "localizations": {
+        "en": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Monthly"
+          }
+        }
+      }
+    },
+    "Yearly": {
+      "comment": "Repeat rule: every year.",
+      "extractionState": "manual",
+      "generatesSymbol": false,
+      "localizations": {
+        "en": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Yearly"
+          }
+        }
+      }
+    },
+    "last day": {
+      "comment": "Next due dates list, right side: this date is the month’s last day, standing in for a later anchor day.",
+      "extractionState": "manual",
+      "generatesSymbol": false,
+      "localizations": {
+        "en": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "last day"
+          }
+        }
+      }
+    },
+    "Pay Now": {
+      "comment": "Scheduled occurrence action: records it now, dated today.",
+      "extractionState": "manual",
+      "generatesSymbol": false,
+      "localizations": {
+        "en": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Pay Now"
+          }
+        }
+      }
+    },
+    "Skip": {
+      "comment": "Scheduled occurrence action: settles it without recording a transaction.",
+      "extractionState": "manual",
+      "generatesSymbol": false,
+      "localizations": {
+        "en": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Skip"
+          }
+        }
+      }
+    },
+    "Edit": {
+      "comment": "Scheduled item action: opens its form.",
+      "extractionState": "manual",
+      "generatesSymbol": false,
+      "localizations": {
+        "en": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Edit"
+          }
+        }
+      }
+    },
+    "Transactions it already recorded are kept. This can’t be undone.": {
+      "comment": "Delete scheduled item confirmation message.",
+      "extractionState": "manual",
+      "generatesSymbol": false,
+      "localizations": {
+        "en": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Transactions it already recorded are kept. This can’t be undone."
+          }
+        }
+      }
+    },
+    "Your scheduled items weren’t changed. Try again.": {
+      "comment": "Alert message under “Couldn’t Save Changes”: a scheduled item change failed and nothing was saved.",
+      "extractionState": "manual",
+      "generatesSymbol": false,
+      "localizations": {
+        "en": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Your scheduled items weren’t changed. Try again."
+          }
+        }
+      }
+    },
+    "Couldn’t Load Scheduled Items": {
+      "comment": "Alert title: the scheduled list couldn’t be read. Its only button is OK.",
+      "extractionState": "manual",
+      "generatesSymbol": false,
+      "localizations": {
+        "en": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Couldn’t Load Scheduled Items"
+          }
+        }
+      }
+    },
+    "Add": {
+      "comment": "Scheduled form confirm button for a new item.",
+      "extractionState": "manual",
+      "generatesSymbol": false,
+      "localizations": {
+        "en": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Add"
+          }
+        }
+      }
+    },
+    "Transfer": {
+      "comment": "Transaction type: between two of your accounts.",
+      "extractionState": "manual",
+      "generatesSymbol": false,
+      "localizations": {
+        "en": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Transfer"
+          }
+        }
+      }
+    },
+    "Amount": {
+      "comment": "Scheduled form section header and field label.",
+      "extractionState": "manual",
+      "generatesSymbol": false,
+      "localizations": {
+        "en": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Amount"
+          }
+        }
+      }
+    },
+    "Description": {
+      "comment": "Scheduled form field: what the item is, such as Rent.",
+      "extractionState": "manual",
+      "generatesSymbol": false,
+      "localizations": {
+        "en": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Description"
+          }
+        }
+      }
+    },
+    "Payee": {
+      "comment": "Scheduled form picker: who is paid or pays.",
+      "extractionState": "manual",
+      "generatesSymbol": false,
+      "localizations": {
+        "en": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Payee"
+          }
+        }
+      }
+    },
+    "Account": {
+      "comment": "Scheduled form picker: the account it’s recorded in.",
+      "extractionState": "manual",
+      "generatesSymbol": false,
+      "localizations": {
+        "en": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Account"
+          }
+        }
+      }
+    },
+    "From": {
+      "comment": "Scheduled transfer form picker: the account money leaves.",
+      "extractionState": "manual",
+      "generatesSymbol": false,
+      "localizations": {
+        "en": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "From"
+          }
+        }
+      }
+    },
+    "To": {
+      "comment": "Scheduled transfer form picker: the account money goes to.",
+      "extractionState": "manual",
+      "generatesSymbol": false,
+      "localizations": {
+        "en": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "To"
+          }
+        }
+      }
+    },
+    "None": {
+      "comment": "Picker choice: no payee or no category.",
+      "extractionState": "manual",
+      "generatesSymbol": false,
+      "localizations": {
+        "en": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "None"
+          }
+        }
+      }
+    },
+    "Note": {
+      "comment": "Scheduled form field: an optional note copied to each recorded transaction.",
+      "extractionState": "manual",
+      "generatesSymbol": false,
+      "localizations": {
+        "en": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Note"
+          }
+        }
+      }
+    },
+    "Schedule": {
+      "comment": "Scheduled form section header: start date, repeat and end date.",
+      "extractionState": "manual",
+      "generatesSymbol": false,
+      "localizations": {
+        "en": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Schedule"
+          }
+        }
+      }
+    },
+    "Starts": {
+      "comment": "Scheduled form date picker: the first due date.",
+      "extractionState": "manual",
+      "generatesSymbol": false,
+      "localizations": {
+        "en": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Starts"
+          }
+        }
+      }
+    },
+    "Repeat": {
+      "comment": "Scheduled form picker: how often the item repeats.",
+      "extractionState": "manual",
+      "generatesSymbol": false,
+      "localizations": {
+        "en": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Repeat"
+          }
+        }
+      }
+    },
+    "Never": {
+      "comment": "Scheduled form Repeat choice (the item happens once), and Ends choice and value (no end date).",
+      "extractionState": "manual",
+      "generatesSymbol": false,
+      "localizations": {
+        "en": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Never"
+          }
+        }
+      }
+    },
+    "End Date": {
+      "comment": "Scheduled form date picker: the last possible due date, included.",
+      "extractionState": "manual",
+      "generatesSymbol": false,
+      "localizations": {
+        "en": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "End Date"
+          }
+        }
+      }
+    },
+    "Next Due Dates": {
+      "comment": "Scheduled form section header: a preview of the next five due dates.",
+      "extractionState": "manual",
+      "generatesSymbol": false,
+      "localizations": {
+        "en": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Next Due Dates"
+          }
+        }
+      }
+    },
+    "Process automatically": {
+      "comment": "Scheduled form toggle: record the transaction on its due date without asking.",
+      "extractionState": "manual",
+      "generatesSymbol": false,
+      "localizations": {
+        "en": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Process automatically"
+          }
+        }
+      }
+    },
+    "Automatic items are recorded on the due date, or when you next open the app.": {
+      "comment": "Scheduled form footer under Process automatically.",
+      "extractionState": "manual",
+      "generatesSymbol": false,
+      "localizations": {
+        "en": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Automatic items are recorded on the due date, or when you next open the app."
+          }
+        }
+      }
+    },
+    "Automatic items are recorded on the due date, or the next time little-orbit opens, once each.": {
+      "comment": "Mac Scheduled list footer, under the items, when some are recorded automatically (D339).",
+      "extractionState": "manual",
+      "generatesSymbol": false,
+      "localizations": {
+        "en": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Automatic items are recorded on the due date, or the next time little-orbit opens, once each."
+          }
+        }
+      }
+    },
+    "Enter an amount above zero.": {
+      "comment": "Scheduled form error under the amount: it’s empty or zero.",
+      "extractionState": "manual",
+      "generatesSymbol": false,
+      "localizations": {
+        "en": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Enter an amount above zero."
+          }
+        }
+      }
+    },
+    "Pick an account.": {
+      "comment": "Scheduled form error: no account is chosen.",
+      "extractionState": "manual",
+      "generatesSymbol": false,
+      "localizations": {
+        "en": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Pick an account."
+          }
+        }
+      }
+    },
+    "Pick two different accounts.": {
+      "comment": "Scheduled transfer form error: From and To are the same or missing.",
+      "extractionState": "manual",
+      "generatesSymbol": false,
+      "localizations": {
+        "en": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Pick two different accounts."
+          }
+        }
+      }
+    },
+    "Every %lld days": {
+      "comment": "Repeat rule: %lld is the number of days between due dates, 2 or more.",
+      "extractionState": "manual",
+      "localizations": {
+        "en": {
+          "variations": {
+            "plural": {
+              "one": {
+                "stringUnit": {
+                  "state": "translated",
+                  "value": "Every %lld day"
+                }
+              },
+              "other": {
+                "stringUnit": {
+                  "state": "translated",
+                  "value": "Every %lld days"
+                }
+              }
+            }
+          }
+        }
+      }
+    },
+    "Every %lld weeks": {
+      "comment": "Repeat rule: %lld is the number of weeks between due dates, 2 or more.",
+      "extractionState": "manual",
+      "localizations": {
+        "en": {
+          "variations": {
+            "plural": {
+              "one": {
+                "stringUnit": {
+                  "state": "translated",
+                  "value": "Every %lld week"
+                }
+              },
+              "other": {
+                "stringUnit": {
+                  "state": "translated",
+                  "value": "Every %lld weeks"
+                }
+              }
+            }
+          }
+        }
+      }
+    },
+    "Every %lld months": {
+      "comment": "Repeat rule: %lld is the number of months between due dates, 2 or more.",
+      "extractionState": "manual",
+      "localizations": {
+        "en": {
+          "variations": {
+            "plural": {
+              "one": {
+                "stringUnit": {
+                  "state": "translated",
+                  "value": "Every %lld month"
+                }
+              },
+              "other": {
+                "stringUnit": {
+                  "state": "translated",
+                  "value": "Every %lld months"
+                }
+              }
+            }
+          }
+        }
+      }
+    },
+    "Every %lld years": {
+      "comment": "Repeat rule: %lld is the number of years between due dates, 2 or more.",
+      "extractionState": "manual",
+      "localizations": {
+        "en": {
+          "variations": {
+            "plural": {
+              "one": {
+                "stringUnit": {
+                  "state": "translated",
+                  "value": "Every %lld year"
+                }
+              },
+              "other": {
+                "stringUnit": {
+                  "state": "translated",
+                  "value": "Every %lld years"
+                }
+              }
+            }
+          }
+        }
+      }
+    },
+    "To %@": {
+      "comment": "Scheduled row name for a transfer with no description: %@ is the account money goes to.",
+      "extractionState": "manual",
+      "generatesSymbol": false,
+      "localizations": {
+        "en": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "To %@"
+          }
+        }
+      }
+    },
+    "from %@": {
+      "comment": "Scheduled row detail for a transfer, after its repeat: %@ is the account money leaves.",
+      "extractionState": "manual",
+      "generatesSymbol": false,
+      "localizations": {
+        "en": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "from %@"
+          }
+        }
+      }
+    },
+    "Overdue · %@": {
+      "comment": "Scheduled row, right side: %@ is the occurrence’s due date, such as 15 Oct.",
+      "extractionState": "manual",
+      "generatesSymbol": false,
+      "localizations": {
+        "en": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Overdue · %@"
+          }
+        }
+      }
+    },
+    "Next: %@": {
+      "comment": "Scheduled item screen: %@ is the next due date, such as 1 Nov.",
+      "extractionState": "manual",
+      "generatesSymbol": false,
+      "localizations": {
+        "en": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Next: %@"
+          }
+        }
+      }
+    },
+    "%@, last day": {
+      "comment": "Scheduled row detail: %@ is the repeat, such as Monthly; this date is the month’s last day.",
+      "extractionState": "manual",
+      "generatesSymbol": false,
+      "localizations": {
+        "en": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "%@, last day"
+          }
+        }
+      }
+    },
+    "Months without the %1$@ use their last day; the %1$@ is kept after that, also after a skip.": {
+      "comment": "Scheduled form footnote under Next Due Dates: %1$@ is the anchor day as an ordinal, such as 31st (D24).",
+      "extractionState": "manual",
+      "generatesSymbol": false,
+      "localizations": {
+        "en": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Months without the %1$@ use their last day; the %1$@ is kept after that, also after a skip."
+          }
+        }
+      }
+    },
+    "%lld overdue payments need you. Tap one to pay or skip it.": {
+      "comment": "Scheduled list, iOS: the hint at the top of Overdue. %lld is how many overdue occurrences need paying or skipping; the rows open the item, where Pay Now and Skip are (D334.1).",
+      "extractionState": "manual",
+      "generatesSymbol": false,
+      "localizations": {
+        "en": {
+          "variations": {
+            "plural": {
+              "one": {
+                "stringUnit": {
+                  "state": "translated",
+                  "value": "%lld overdue payment needs you. Tap it to pay or skip it."
+                }
+              },
+              "other": {
+                "stringUnit": {
+                  "state": "translated",
+                  "value": "%lld overdue payments need you. Tap one to pay or skip it."
+                }
+              }
+            }
+          }
+        }
+      }
+    },
+    "%lld overdue payments need you.": {
+      "comment": "Scheduled list, Mac: the hint at the top of Overdue. %lld is how many overdue occurrences need paying or skipping (D334.1).",
+      "extractionState": "manual",
+      "generatesSymbol": false,
+      "localizations": {
+        "en": {
+          "variations": {
+            "plural": {
+              "one": {
+                "stringUnit": {
+                  "state": "translated",
+                  "value": "%lld overdue payment needs you."
+                }
+              },
+              "other": {
+                "stringUnit": {
+                  "state": "translated",
+                  "value": "%lld overdue payments need you."
+                }
+              }
+            }
+          }
+        }
+      }
+    },
+    "%1$lld missed automatic %2$@ transactions were recorded: %3$@.": {
+      "comment": "Scheduled list info hint after a catch-up, one item (D338.1): %1$lld is how many missed occurrences of one automatic item were recorded, %2$@ the item’s name, %3$@ their dates as a list (“1 Aug, 1 Sep and 1 Oct”).",
+      "extractionState": "manual",
+      "generatesSymbol": false,
+      "localizations": {
+        "en": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "%#@count@"
+          },
+          "substitutions": {
+            "count": {
+              "argNum": 1,
+              "formatSpecifier": "lld",
+              "variations": {
+                "plural": {
+                  "one": {
+                    "stringUnit": {
+                      "state": "translated",
+                      "value": "%1$lld missed automatic %2$@ transaction was recorded: %3$@."
+                    }
+                  },
+                  "other": {
+                    "stringUnit": {
+                      "state": "translated",
+                      "value": "%1$lld missed automatic %2$@ transactions were recorded: %3$@."
+                    }
+                  }
+                }
+              }
+            }
+          }
+        }
+      }
+    },
+    "%1$lld missed automatic %2$@ transactions were recorded, from %3$@ to %4$@.": {
+      "comment": "Scheduled list info hint after a catch-up, one item with more than 5 dates (D338.1): %1$lld is how many were recorded, %2$@ the item’s name, %3$@ the first date and %4$@ the last.",
+      "extractionState": "manual",
+      "generatesSymbol": false,
+      "localizations": {
+        "en": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "%#@count@"
+          },
+          "substitutions": {
+            "count": {
+              "argNum": 1,
+              "formatSpecifier": "lld",
+              "variations": {
+                "plural": {
+                  "one": {
+                    "stringUnit": {
+                      "state": "translated",
+                      "value": "%1$lld missed automatic %2$@ transaction was recorded, from %3$@ to %4$@."
+                    }
+                  },
+                  "other": {
+                    "stringUnit": {
+                      "state": "translated",
+                      "value": "%1$lld missed automatic %2$@ transactions were recorded, from %3$@ to %4$@."
+                    }
+                  }
+                }
+              }
+            }
+          }
+        }
+      }
+    },
+    "%1$lld missed automatic transactions were recorded: %2$@.": {
+      "comment": "Scheduled list info hint after a catch-up, two items (D338.1): %1$lld is how many were recorded in all, %2$@ each item’s part as a list (“3 for Rent and 2 for Salary”).",
+      "extractionState": "manual",
+      "generatesSymbol": false,
+      "localizations": {
+        "en": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "%#@count@"
+          },
+          "substitutions": {
+            "count": {
+              "argNum": 1,
+              "formatSpecifier": "lld",
+              "variations": {
+                "plural": {
+                  "one": {
+                    "stringUnit": {
+                      "state": "translated",
+                      "value": "%1$lld missed automatic transaction was recorded: %2$@."
+                    }
+                  },
+                  "other": {
+                    "stringUnit": {
+                      "state": "translated",
+                      "value": "%1$lld missed automatic transactions were recorded: %2$@."
+                    }
+                  }
+                }
+              }
+            }
+          }
+        }
+      }
+    },
+    "%1$lld missed automatic transactions were recorded for %2$lld items.": {
+      "comment": "Scheduled list info hint after a catch-up, three or more items (D338.1): %1$lld is how many were recorded in all, %2$lld how many items recorded them.",
+      "extractionState": "manual",
+      "generatesSymbol": false,
+      "localizations": {
+        "en": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "%#@transactions@ for %#@items@."
+          },
+          "substitutions": {
+            "transactions": {
+              "argNum": 1,
+              "formatSpecifier": "lld",
+              "variations": {
+                "plural": {
+                  "one": {
+                    "stringUnit": {
+                      "state": "translated",
+                      "value": "%arg missed automatic transaction was recorded"
+                    }
+                  },
+                  "other": {
+                    "stringUnit": {
+                      "state": "translated",
+                      "value": "%arg missed automatic transactions were recorded"
+                    }
+                  }
+                }
+              }
+            },
+            "items": {
+              "argNum": 2,
+              "formatSpecifier": "lld",
+              "variations": {
+                "plural": {
+                  "one": {
+                    "stringUnit": {
+                      "state": "translated",
+                      "value": "%arg item"
+                    }
+                  },
+                  "other": {
+                    "stringUnit": {
+                      "state": "translated",
+                      "value": "%arg items"
+                    }
+                  }
+                }
+              }
+            }
+          }
+        }
+      }
+    },
+    "Manual items aren’t recorded for you: each missed one is listed under Overdue.": {
+      "comment": "Catch-up hint, last sentence, when manual items are overdue: catch-up records automatic items only (D338.5).",
+      "extractionState": "manual",
+      "generatesSymbol": false,
+      "localizations": {
+        "en": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Manual items aren’t recorded for you: each missed one is listed under Overdue."
+          }
+        }
+      }
+    },
+    "%1$lld for %2$@": {
+      "comment": "Part of the two-items catch-up hint (D338.1): %1$lld occurrences recorded for the item named %2$@, as in “3 for Rent”.",
+      "extractionState": "manual",
+      "generatesSymbol": false,
+      "localizations": {
+        "en": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "%1$lld for %2$@"
+          }
+        }
+      }
+    },
+    "Each is recorded only once.": {
+      "comment": "Catch-up hint sentence after two or more recorded occurrences (D338).",
+      "extractionState": "manual",
+      "generatesSymbol": false,
+      "localizations": {
+        "en": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Each is recorded only once."
+          }
+        }
+      }
+    },
+    "It’s recorded only once.": {
+      "comment": "Catch-up hint sentence after exactly one recorded occurrence (D338).",
+      "extractionState": "manual",
+      "generatesSymbol": false,
+      "localizations": {
+        "en": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "It’s recorded only once."
+          }
+        }
+      }
+    },
+    "Add rent, salary or subscriptions once. They can be recorded for you.": {
+      "comment": "Scheduled screen with no items: the explanation under the title (D334.7).",
+      "extractionState": "manual",
+      "generatesSymbol": false,
+      "localizations": {
+        "en": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Add rent, salary or subscriptions once. They can be recorded for you."
+          }
+        }
+      }
+    },
+    "Ended %@": {
+      "comment": "Scheduled item screen: a completed item’s last due date, as in “Ended 5 Oct” (D334.13).",
+      "extractionState": "manual",
+      "generatesSymbol": false,
+      "localizations": {
+        "en": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Ended %@"
+          }
+        }
+      }
+    },
+    "Skip This Occurrence": {
+      "comment": "Scheduled occurrence action: settles this one due date without recording a transaction. The item screen’s button, the iOS row menu and the iOS confirmation’s button (D334.8).",
+      "extractionState": "manual",
+      "generatesSymbol": false,
+      "localizations": {
+        "en": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Skip This Occurrence"
+          }
+        }
+      }
+    },
+    "Skip This Occurrence…": {
+      "comment": "Mac row menu item: asks before skipping this one due date (D334.10).",
+      "extractionState": "manual",
+      "generatesSymbol": false,
+      "localizations": {
+        "en": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Skip This Occurrence…"
+          }
+        }
+      }
+    },
+    "Edit…": {
+      "comment": "Mac row menu item: opens the scheduled item’s form (D334.10).",
+      "extractionState": "manual",
+      "generatesSymbol": false,
+      "localizations": {
+        "en": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Edit…"
+          }
+        }
+      }
+    },
+    "Delete Scheduled Item…": {
+      "comment": "Mac row menu item: asks before deleting the scheduled item (D334.10).",
+      "extractionState": "manual",
+      "generatesSymbol": false,
+      "localizations": {
+        "en": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Delete Scheduled Item…"
+          }
+        }
+      }
+    },
+    "Skip %1$@ %2$@?": {
+      "comment": "Skip confirmation title on iOS and the Mac (D339): %1$@ is the occurrence’s short date (“15 Oct”), %2$@ the item’s name.",
+      "extractionState": "manual",
+      "generatesSymbol": false,
+      "localizations": {
+        "en": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Skip %1$@ %2$@?"
+          }
+        }
+      }
+    },
+    "Nothing is recorded for %1$@. The next due date stays on the schedule: %2$@.": {
+      "comment": "Skip confirmation message: %1$@ is the skipped occurrence’s date, %2$@ the next due date with its year (D334.8).",
+      "extractionState": "manual",
+      "generatesSymbol": false,
+      "localizations": {
+        "en": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Nothing is recorded for %1$@. The next due date stays on the schedule: %2$@."
+          }
+        }
+      }
+    },
+    "Nothing is recorded for %@. There are no due dates after it.": {
+      "comment": "Skip confirmation message when no due date follows: %@ is the skipped occurrence’s date (D334.8).",
+      "extractionState": "manual",
+      "generatesSymbol": false,
+      "localizations": {
+        "en": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Nothing is recorded for %@. There are no due dates after it."
+          }
+        }
+      }
+    },
+    "New Scheduled Item": {
+      "comment": "Scheduled form title: a new item (D334.6).",
+      "extractionState": "manual",
+      "generatesSymbol": false,
+      "localizations": {
+        "en": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "New Scheduled Item"
+          }
+        }
+      }
+    },
+    "Edit Scheduled Item": {
+      "comment": "Scheduled form title: changing an item (D334.6).",
+      "extractionState": "manual",
+      "generatesSymbol": false,
+      "localizations": {
+        "en": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Edit Scheduled Item"
+          }
+        }
+      }
+    },
+    "Ends": {
+      "comment": "Scheduled form picker and item screen row: whether the item has an end date (D334.5).",
+      "extractionState": "manual",
+      "generatesSymbol": false,
+      "localizations": {
+        "en": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Ends"
+          }
+        }
+      }
+    },
+    "On Date": {
+      "comment": "Scheduled form Ends choice: the item ends on a date (D334.5).",
+      "extractionState": "manual",
+      "generatesSymbol": false,
+      "localizations": {
+        "en": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "On Date"
+          }
+        }
+      }
+    },
+    "On %@": {
+      "comment": "Scheduled item screen, Ends value: %@ is the end date with its year, as in “On 5 Oct 2027” (D334.5).",
+      "extractionState": "manual",
+      "generatesSymbol": false,
+      "localizations": {
+        "en": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "On %@"
+          }
+        }
+      }
+    },
+    "Enter an amount like %@.": {
+      "comment": "Scheduled form error under the amount: it isn’t an amount. %@ is a sample in the device’s format, as on the account form (D334.12).",
+      "extractionState": "manual",
+      "generatesSymbol": false,
+      "localizations": {
+        "en": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Enter an amount like %@."
+          }
+        }
+      }
+    },
+    "%@ amounts have no decimal places.": {
+      "comment": "Scheduled form error under the amount: %@ is a currency code with no decimal places, such as JPY (D334.12).",
+      "extractionState": "manual",
+      "generatesSymbol": false,
+      "localizations": {
+        "en": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "%@ amounts have no decimal places."
+          }
+        }
+      }
+    },
+    "%1$@ amounts can have up to %2$lld decimal places.": {
+      "comment": "Scheduled form error under the amount: %1$@ is the currency code, %2$lld how many decimal places it has (D334.12).",
+      "extractionState": "manual",
+      "generatesSymbol": false,
+      "localizations": {
+        "en": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "%#@count@"
+          },
+          "substitutions": {
+            "count": {
+              "argNum": 2,
+              "formatSpecifier": "lld",
+              "variations": {
+                "plural": {
+                  "one": {
+                    "stringUnit": {
+                      "state": "translated",
+                      "value": "%1$@ amounts can have up to %2$lld decimal place."
+                    }
+                  },
+                  "other": {
+                    "stringUnit": {
+                      "state": "translated",
+                      "value": "%1$@ amounts can have up to %2$lld decimal places."
+                    }
+                  }
+                }
+              }
+            }
+          }
+        }
+      }
+    },
+    "Pick an end date on or after the start date.": {
+      "comment": "Scheduled form error: the end date is earlier than the start date (D334.12).",
+      "extractionState": "manual",
+      "generatesSymbol": false,
+      "localizations": {
+        "en": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Pick an end date on or after the start date."
+          }
+        }
+      }
+    },
+    "Type": {
+      "comment": "Scheduled form: the label VoiceOver reads for the Expense / Income / Transfer control.",
+      "extractionState": "manual",
+      "generatesSymbol": false,
+      "localizations": {
+        "en": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Type"
+          }
+        }
+      }
     }
   },
   "version": "1.0"

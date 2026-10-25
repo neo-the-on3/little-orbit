@@ -19,6 +19,8 @@
         private let feature: AccountsFeature
         private let transactions: TransactionsFeature
         private let onShowSettings: ((WindowUndoHistory) -> Void)?
+        /// The Scheduled screens (#26); without them the row shows its placeholder.
+        private let scheduled: ScheduledFeature?
 
         private var undoHistory: WindowUndoHistory {
             undoSlot.history(from: transactions)
@@ -30,10 +32,12 @@
         public init(
             feature: AccountsFeature,
             transactions: TransactionsFeature,
+            scheduled: ScheduledFeature? = nil,
             onShowSettings: ((WindowUndoHistory) -> Void)? = nil,
         ) {
             self.feature = feature
             self.transactions = transactions
+            self.scheduled = scheduled
             self.onShowSettings = onShowSettings
             _model = State(initialValue: feature.accounts)
             _deleteConfirmation = State(initialValue: AccountDeleteConfirmation(model: feature.accounts))
@@ -314,6 +318,10 @@
                     systemImage: "list.bullet",
                     message: "The transaction list arrives with its own issue.",
                 )
+            case .home(.scheduled) where scheduled != nil:
+                if let scheduled {
+                    ScheduledListView(feature: scheduled)
+                }
             case .home(let destination):
                 UpcomingFeatureView(
                     title: destination.title,
