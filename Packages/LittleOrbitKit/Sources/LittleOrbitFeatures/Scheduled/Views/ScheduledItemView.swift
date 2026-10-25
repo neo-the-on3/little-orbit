@@ -37,14 +37,18 @@
                     if !detail.due.isEmpty {
                         Section {
                             ForEach(detail.due) { row in
-                                LabeledContent(row.dateText) {
-                                    HStack {
-                                        Button(model.skipTitle) { model.confirmSkip(row) }
-                                        Button(model.payNowTitle) { model.payNow(row) }
-                                            .buttonStyle(.borderedProminent)
-                                    }
-                                    .buttonStyle(.bordered)
+                                // The status is the row's own text; each button is named by its title alone, not
+                                // by the row's label (Tester's #198 Mac pass).
+                                HStack {
+                                    Text(verbatim: row.dateText)
+                                    Spacer()
+                                    Button(model.skipTitle) { model.confirmSkip(row) }
+                                        .accessibilityLabel(Text(model.skipTitle))
+                                    Button(model.payNowTitle) { model.payNow(row) }
+                                        .accessibilityLabel(Text(model.payNowTitle))
+                                        .buttonStyle(.borderedProminent)
                                 }
+                                .buttonStyle(.bordered)
                             }
                         }
                     }
