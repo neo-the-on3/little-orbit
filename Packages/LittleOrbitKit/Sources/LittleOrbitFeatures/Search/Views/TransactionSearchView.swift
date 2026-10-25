@@ -5,9 +5,9 @@
     import UniformTypeIdentifiers
 
     /// Search (#28 frames “Results/“cafe”” and “No results”): the system search field and scope bar, the summary
-    /// card, then results grouped by day, newest first. A tap opens the transaction to edit. An empty query lists
-    /// every transaction. Export CSV saves the results (#187). The view only lays out what
-    /// `TransactionSearchViewModel` worked out.
+    /// card, then results grouped by day, newest first; on macOS a sortable table (#187). A tap, or a double-click
+    /// in the table, opens the transaction to edit. An empty query lists every transaction. Export CSV saves the
+    /// results. The view only lays out what `TransactionSearchViewModel` worked out.
     struct TransactionSearchView: View {
         let title: String
         let transactions: TransactionsFeature
@@ -140,34 +140,46 @@
 
         // MARK: - Results
 
-        /// A grouped list: hints, the summary card (with Export CSV on iOS), then results by day.
-        private var results: some View {
-            List {
-                if !model.hints.isEmpty {
-                    Section { hintRows }
+        /// iOS: a grouped list with the summary card and Export CSV first. macOS: the summary above a sortable
+        /// table, with day headers only for a date sort (#187, S63).
+        @ViewBuilder private var results: some View {
+            #if os(macOS)
+                VStack(alignment: .leading, spacing: 0) {
+                    if !model.hints.isEmpty || model.summary != nil {
+                        VStack(alignment: .leading, spacing: Spacing.space2) {
+                            hintRows
+                            if let summary = model.summary {
+                                SearchSummaryView(summary: summary, note: nil)
+                            }
+                        }
+                        .padding(.horizontal, Spacing.space3)
+                        .padding(.vertical, Spacing.space2)
+                    }
+                    SearchResultsTable(model: model, onOpen: open)
                 }
-                if let summary = model.summary {
-                    Section {
-                        #if os(macOS)
-                            // macOS shows the footer instead of the iOS note (S91).
-                            SearchSummaryView(summary: summary, note: nil)
-                        #else
+            #else
+                List {
+                    if !model.hints.isEmpty {
+                        Section { hintRows }
+                    }
+                    if let summary = model.summary {
+                        Section {
                             SearchSummaryView(summary: summary, note: model.upcomingNote)
                             // A row of its own, so VoiceOver reaches it apart from the summary it follows.
                             if model.canExport {
                                 exportButton(model.exportRowTitle)
                             }
-                        #endif
+                        }
+                    }
+                    ForEach(model.sections) { section in
+                        Section {
+                            ForEach(section.rows) { resultRow($0) }
+                        } header: {
+                            SearchDayHeader(section: section)
+                        }
                     }
                 }
-                ForEach(model.sections) { section in
-                    Section {
-                        ForEach(section.rows) { resultRow($0) }
-                    } header: {
-                        SearchDayHeader(section: section)
-                    }
-                }
-            }
+            #endif
         }
 
         /// “Export CSV…” in the macOS toolbar, “Export CSV” as the iOS row (D325.1).

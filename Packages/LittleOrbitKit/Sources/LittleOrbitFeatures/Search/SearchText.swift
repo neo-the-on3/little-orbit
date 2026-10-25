@@ -282,4 +282,55 @@ enum SearchText {
             comment: "CSV export: making or saving the file failed.",
         )
     }
+
+    // MARK: macOS results table (#187)
+
+    static var dateColumn: String {
+        FeatureText.string(
+            key: "search.column.date",
+            defaultValue: "Date",
+            comment: "macOS search results table: the date column’s title. Click to sort by date.",
+        )
+    }
+
+    static var descriptionColumn: String {
+        FeatureText.string(
+            key: "search.column.description",
+            defaultValue: "Description",
+            comment:
+                "macOS search results table: the description column’s title. It shows the row’s title: a refund’s title, To or From an account for a transfer, else the description.",
+        )
+    }
+
+    static var payeeColumn: String {
+        FeatureText.string(
+            key: "search.column.payee",
+            defaultValue: "Payee",
+            comment: "macOS search results table: the payee column’s title. Blank when a transaction has no payee.",
+        )
+    }
+
+    static var categoryColumn: String {
+        FeatureText.string(
+            key: "search.column.category",
+            defaultValue: "Category",
+            comment: "macOS search results table: the category column’s title.",
+        )
+    }
+
+    static var accountColumn: String {
+        FeatureText.string(
+            key: "search.column.account",
+            defaultValue: "Account",
+            comment: "macOS search results table: the account column’s title.",
+        )
+    }
+
+    static var amountColumn: String {
+        FeatureText.string(
+            key: "search.column.amount",
+            defaultValue: "Amount",
+            comment: "macOS search results table: the amount column’s title.",
+        )
+    }
 }

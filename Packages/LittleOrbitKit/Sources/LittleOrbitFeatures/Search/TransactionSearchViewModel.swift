@@ -29,6 +29,18 @@ public final class TransactionSearchViewModel {
     /// The query as it was searched, for the empty state.
     public private(set) var searchedText = ""
 
+    // MARK: macOS table (#187: sortable columns, day headers only for a date sort, S63)
+
+    /// The table's sort, newest first by default. A date sort groups rows under day headers; any other column
+    /// lists them flat (#28 AC, S63). Changing it re-sorts the kept results without searching again.
+    public var sortOrder: [KeyPathComparator<SearchTableRow>] = [KeyPathComparator(\.date, order: .reverse)] {
+        didSet { arrangeTable() }
+    }
+    /// Day sections in the sort's direction, when sorted by date; empty otherwise.
+    public private(set) var tableSections: [SearchTableSection] = []
+    /// Every row in the sort's order, when sorted by another column; empty for a date sort.
+    public private(set) var tableRows: [SearchTableRow] = []
+
     // MARK: Export CSV (#187, #28 AC 4)
 
     /// The file made for the system exporter, while it's open.
@@ -39,8 +51,10 @@ public final class TransactionSearchViewModel {
 
     @ObservationIgnored private let search: any SearchTransactionsUseCase
     @ObservationIgnored private let exporting: (any ExportSearchResultsUseCase)?
-    /// The results on screen, for Export CSV.
+    /// The results on screen, for Export CSV and re-sorting the table.
     @ObservationIgnored private var result: (search: TransactionSearchResult, today: CalendarDay)?
+    /// The table's rows by transaction, newest first, from the results on screen.
+    @ObservationIgnored private var tableSource: [CalendarDay: [SearchTableRow]] = [:]
     @ObservationIgnored private let accountID: UUID?
     @ObservationIgnored private let updates: LedgerUpdates?
     @ObservationIgnored private let formatter: MoneyFormatter
@@ -51,11 +65,18 @@ public final class TransactionSearchViewModel {
     /// The store as last read, with the lookups its rows use, and the change signal's value at that read.
     @ObservationIgnored private var store: (snapshot: TransactionSearchSnapshot, lookup: SearchLookup)?
     @ObservationIgnored private var storeRevision: Int?
-    /// Rows already built from this read for this day, by transaction. A row depends only on its transaction,
-    /// the read and today, so a keystroke reuses them and formats only rows it hasn't shown yet.
-    @ObservationIgnored private var rowCache: (today: CalendarDay, rows: [UUID: TransactionRowModel])?
+    /// Rows already built from this read for this day, by transaction, with their macOS table cells. A row depends
+    /// only on its transaction, the read and today, so a keystroke reuses them and formats only rows it hasn't
+    /// shown yet.
+    @ObservationIgnored private var rowCache: (today: CalendarDay, rows: [UUID: CachedRow])?
     /// What the screen shows now, so the same query on the same data isn't searched again.
     @ObservationIgnored private var shown: Shown?
+
+    /// One result's list row and its table cells, built and kept together.
+    struct CachedRow {
+        var row: TransactionRowModel
+        var columns: SearchTableColumns
+    }
 
     private struct Shown: Equatable {
         var typed: String
@@ -99,6 +120,15 @@ public final class TransactionSearchViewModel {
     public var exportTitle: String { SearchText.exportCSV }
     public var exportRowTitle: String { SearchText.exportCSVRow }
     public var okayTitle: String { CategoryText.okay }
+    /// The table's column titles (macOS).
+    public var dateColumnTitle: String { SearchText.dateColumn }
+    public var descriptionColumnTitle: String { SearchText.descriptionColumn }
+    public var payeeColumnTitle: String { SearchText.payeeColumn }
+    public var categoryColumnTitle: String { SearchText.categoryColumn }
+    public var accountColumnTitle: String { SearchText.accountColumn }
+    public var amountColumnTitle: String { SearchText.amountColumn }
+    /// Whether the table shows day headers: only for a date sort, in either direction (S63).
+    public var showsDayHeaders: Bool { sortOrder.first.map { $0.keyPath == \SearchTableRow.date } ?? true }
 
     /// Export CSV is offered when it's wired in and something matched (D321: no results shows nothing else).
     public var canExport: Bool { exporting != nil && summary != nil }
@@ -147,10 +177,10 @@ public final class TransactionSearchViewModel {
     /// accounts, categories and payees it names, and today. When any account, category or payee changed, every
     /// row is built again; otherwise only rows whose transaction changed, or is new, are.
     static func carriedRows(
-        _ cache: (today: CalendarDay, rows: [UUID: TransactionRowModel]),
+        _ cache: (today: CalendarDay, rows: [UUID: CachedRow]),
         from old: TransactionSearchSnapshot?,
         to new: TransactionSearchSnapshot,
-    ) -> (today: CalendarDay, rows: [UUID: TransactionRowModel])? {
+    ) -> (today: CalendarDay, rows: [UUID: CachedRow])? {
         guard let old,
             old.ledger.accounts == new.ledger.accounts,
             old.ledger.categories == new.ledger.categories,
@@ -159,7 +189,7 @@ public final class TransactionSearchViewModel {
             return nil
         }
         let before = Dictionary(old.ledger.transactions.map { ($0.id, $0) }, uniquingKeysWith: { first, _ in first })
-        var rows: [UUID: TransactionRowModel] = [:]
+        var rows: [UUID: CachedRow] = [:]
         rows.reserveCapacity(cache.rows.count)
         for transaction in new.ledger.transactions {
             if let row = cache.rows[transaction.id], before[transaction.id] == transaction {
@@ -193,12 +223,31 @@ public final class TransactionSearchViewModel {
         isExporterPresented = false
     }
 
+    /// Lays the results out for the table's sort: day sections for a date sort, else one flat sorted list.
+    private func arrangeTable() {
+        let ascending = sortOrder.first?.order == .forward
+        if showsDayHeaders {
+            let days = ascending ? sections.reversed() : sections
+            tableSections = days.map { section in
+                let rows = tableSource[section.id] ?? []
+                return SearchTableSection(header: section, rows: ascending ? rows.reversed() : rows)
+            }
+            tableRows = []
+        } else {
+            tableSections = []
+            tableRows = sections.flatMap { tableSource[$0.id] ?? [] }.sorted(using: sortOrder)
+        }
+    }
+
     private func showFailure() {
         store = nil
         storeRevision = nil
         rowCache = nil
         shown = nil
         result = nil
+        tableSource = [:]
+        tableSections = []
+        tableRows = []
         failure = SearchFailure(title: SearchText.loadFailedTitle, message: SearchText.loadFailedMessage)
         summary = nil
         sections = []
@@ -229,16 +278,33 @@ public final class TransactionSearchViewModel {
         var rows = rowCache?.today == today ? rowCache?.rows ?? [:] : [:]
         sections = result.days.map { day in
             formatting.section(day) { match in
-                if let row = rows[match.id] {
-                    return row
+                if let cached = rows[match.id] {
+                    return cached.row
                 }
-                let row = formatting.row(match)
-                rows[match.id] = row
-                return row
+                let cached = CachedRow(row: formatting.row(match), columns: formatting.columns(match))
+                rows[match.id] = cached
+                return cached.row
             }
         }
         rowCache = (today, rows)
         self.result = (result, today)
+        tableSource = Dictionary(
+            uniqueKeysWithValues: zip(result.days, sections)
+                .map { day, section in
+                    (
+                        day.day,
+                        zip(day.matches, section.rows)
+                            .map { match, row in
+                                SearchTableRow(
+                                    match: match,
+                                    row: row,
+                                    columns: rows[match.id]?.columns ?? formatting.columns(match),
+                                )
+                            },
+                    )
+                }
+        )
+        arrangeTable()
         let filtered = !parsed.isEmpty || scope != .all
         isNoResults = result.count == 0 && filtered
         isEmptyLedger = result.count == 0 && !filtered
@@ -268,4 +334,45 @@ public struct SearchFailure: Equatable, Sendable {
         self.title = title
         self.message = message
     }
+}
+
+/// One row of the macOS results table, with the values its columns sort by (#187, S63).
+public struct SearchTableRow: Identifiable, Equatable, Sendable {
+    public var row: TransactionRowModel
+    /// When it happened, for the Date column's sort.
+    public var date: Date
+    /// The signed effect on its listed account, for the Amount column's sort. Currencies aren't converted.
+    public var amount: Decimal
+    /// Dated after today: the Date cell is muted, as in the account table.
+    public var isUpcoming: Bool
+
+    /// The Description cell: the row's title, a refund's title, “To/From another account”, else the description
+    /// (D325.4, D326.2), else “Expense” or “Income” (D328). The Description sort uses this text, fallback included.
+    public var descriptionText: String
+    /// The Description cell shows the “Expense” or “Income” fallback, in the secondary text style (D328).
+    public var isDescriptionFallback: Bool
+    /// The Payee cell: only the payee, blank when there's none (D326.2).
+    public var payee: String
+
+    public var id: UUID { row.id }
+    public var category: String { row.categoryText }
+    public var account: String { row.accountText }
+
+    init(match: TransactionSearchMatch, row: TransactionRowModel, columns: SearchTableColumns) {
+        self.row = row
+        descriptionText = columns.description
+        isDescriptionFallback = columns.isDescriptionFallback
+        payee = columns.payee
+        date = match.transaction.date
+        amount = match.effect
+        isUpcoming = match.isUpcoming
+    }
+}
+
+/// A day of the date-sorted table: its header, then its rows in the sort's direction.
+public struct SearchTableSection: Identifiable, Equatable, Sendable {
+    public var header: SearchDaySection
+    public var rows: [SearchTableRow]
+
+    public var id: CalendarDay { header.id }
 }

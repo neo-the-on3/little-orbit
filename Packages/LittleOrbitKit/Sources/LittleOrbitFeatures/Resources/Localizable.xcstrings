@@ -2006,6 +2006,78 @@
         }
       }
     },
+    "search.column.account": {
+      "comment": "macOS search results table: the account column’s title.",
+      "extractionState": "manual",
+      "localizations": {
+        "en": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Account"
+          }
+        }
+      }
+    },
+    "search.column.amount": {
+      "comment": "macOS search results table: the amount column’s title.",
+      "extractionState": "manual",
+      "localizations": {
+        "en": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Amount"
+          }
+        }
+      }
+    },
+    "search.column.category": {
+      "comment": "macOS search results table: the category column’s title.",
+      "extractionState": "manual",
+      "localizations": {
+        "en": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Category"
+          }
+        }
+      }
+    },
+    "search.column.date": {
+      "comment": "macOS search results table: the date column’s title. Click to sort by date.",
+      "extractionState": "manual",
+      "localizations": {
+        "en": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Date"
+          }
+        }
+      }
+    },
+    "search.column.description": {
+      "comment": "macOS search results table: the description column’s title. It shows the row’s title: a refund’s title, To or From an account for a transfer, else the description.",
+      "extractionState": "manual",
+      "localizations": {
+        "en": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Description"
+          }
+        }
+      }
+    },
+    "search.column.payee": {
+      "comment": "macOS search results table: the payee column’s title. Blank when a transaction has no payee.",
+      "extractionState": "manual",
+      "localizations": {
+        "en": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Payee"
+          }
+        }
+      }
+    },
     "search.row.expense": {
       "comment": "A search result’s title when the expense has no payee or description.",
       "extractionState": "manual",
@@ -6761,7 +6833,7 @@
       }
     },
     "Refund": {
-      "comment": "Refund row title when the refund has no payee and no description (D233.1), as in the spending report’s drill-down.",
+      "comment": "Refund row title when the refund has no payee and no description (D233.1), as in the spending report’s drill-down and the Description column of the Mac search table.",
       "extractionState": "manual",
       "generatesSymbol": false,
       "localizations": {
