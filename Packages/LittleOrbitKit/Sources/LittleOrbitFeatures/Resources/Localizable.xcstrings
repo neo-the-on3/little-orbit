@@ -6191,7 +6191,7 @@
       }
     },
     "received %@": {
-      "comment": "Debit & Credit import Review: in a transfer row’s details, the amount the receiving account gets when the two accounts have different currencies (D17, D330.1), as in “received €5,000.00”. %@ is that amount with its currency symbol. Lowercase, because it follows a middle dot.",
+      "comment": "Debit & Credit import Review: in a transfer row’s details, the amount the receiving account gets when the two accounts have different currencies (D17, D330.1), as in “received €5,000.00”. %@ is that amount with its currency symbol. Also the Transaction and Scheduled list row subtitle, after the account, on the sending side of a transfer between currencies, as in “received $12.00” (D364). Lowercase, because it follows a middle dot.",
       "extractionState": "manual",
       "localizations": {
         "en": {

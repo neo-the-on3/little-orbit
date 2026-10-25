@@ -9,7 +9,7 @@ public struct ScheduledRow: Identifiable, Equatable, Sendable {
     /// The occurrence the row's Pay Now and Skip act on; `nil` for an upcoming or completed item.
     public let occurrence: CalendarDay?
     public let title: String
-    /// "Monthly · Everyday Savings", "Monthly, last day · Auto".
+    /// "Monthly · Everyday Savings", "Monthly, last day · Auto", "Monthly · From Savings · received $120.00".
     public let detail: String
     public let amount: String
     public let tone: AmountTone
@@ -103,7 +103,22 @@ struct ScheduledPresenter {
         if let account = listing.account(item.accountID) {
             parts.append(item.type == .transfer ? ScheduledText.fromAccount(account.name) : account.name)
         }
+        if let received = receivedText(of: item) {
+            parts.append(received)
+        }
         return parts.dropFirst().reduce(parts[0]) { ScheduledText.pair($0, $1) }
+    }
+
+    /// "received $120.00" in To's currency, for a transfer between currencies (D364, as #23's rows); the row's
+    /// amount stays the amount sent.
+    func receivedText(of item: ScheduledItem) -> String? {
+        guard item.type == .transfer, let received = item.destinationAmount,
+            let source = listing.account(item.accountID), let target = listing.account(item.transferAccountID),
+            source.currencyCode != target.currencyCode
+        else {
+            return nil
+        }
+        return TransferText.received(money.string(received, currencyCode: target.currencyCode))
     }
 
     func amountText(of item: ScheduledItem) -> (String, AmountTone) {

@@ -32,6 +32,35 @@ struct ScheduledCrossCurrencyFormTests {
         return (list, form)
     }
 
+    @Test("D364: on iOS a transfer between currencies adds “received ‹amount›” to the row's subtitle")
+    func receivedInRowSubtitle() throws {
+        let scene = try scene()
+        let (list, form) = try newTransfer(scene, platform: .iOS)
+        form.transferAccountID = Self.wallet.id
+        form.receivedText = "12"
+        #expect(form.save())
+        // A same-currency transfer beside it shows no received text.
+        list.openNew()
+        let same = try #require(list.form)
+        same.type = .transfer
+        same.details = "Top up the fund"
+        same.amountText = "500"
+        same.transferAccountID = scene.fund.id
+        #expect(same.save())
+        list.load()
+        let rows = list.dueTodayRows
+        let crossRow = try #require(rows.first { $0.title == "Fund USD Wallet" })
+        let parts = crossRow.detail.components(separatedBy: " · ")
+        let received = try #require(parts.last)
+        #expect(received.hasPrefix("received "))
+        #expect(received.contains("12.00"))
+        #expect(received.contains("$"), "In To's currency")
+        #expect(crossRow.amount.contains("1,000"), "The row's amount stays the amount sent")
+        #expect(!crossRow.amount.contains("12.00"))
+        let sameRow = try #require(rows.first { $0.title == "Top up the fund" })
+        #expect(!sameRow.detail.contains("received"))
+    }
+
     @Test(
         "S4: To in another currency asks for Received, shows the rate, and keeps both amounts",
         arguments: [

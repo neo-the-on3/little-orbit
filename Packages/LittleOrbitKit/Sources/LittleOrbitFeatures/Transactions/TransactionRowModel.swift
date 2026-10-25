@@ -165,6 +165,6 @@ struct TransactionRowContext {
         else {
             return nil
         }
-        return "received " + formatter.string(received, currencyCode: destination.currencyCode)
+        return TransferText.received(formatter.string(received, currencyCode: destination.currencyCode))
     }
 }
