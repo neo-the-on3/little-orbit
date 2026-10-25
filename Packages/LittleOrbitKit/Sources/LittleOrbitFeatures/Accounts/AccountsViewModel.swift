@@ -39,6 +39,8 @@ public final class AccountsViewModel {
     @ObservationIgnored private let plannedItems: any PlannedItemsSource
     @ObservationIgnored private let formatter: MoneyFormatter
     @ObservationIgnored private var accounts: [Account] = []
+    /// Tells every window an account changed, as a transaction change does (D187.4, D327.1).
+    @ObservationIgnored private let changed: () -> Void
 
     public init(
         listAccounts: any ListAccountsUseCase,
@@ -48,7 +50,9 @@ public final class AccountsViewModel {
         reorderAccounts: any ReorderAccountsUseCase,
         plannedItems: any PlannedItemsSource = NoPlannedItems(),
         locale: Locale = .current,
+        changed: @escaping () -> Void = {},
     ) {
+        self.changed = changed
         self.listAccounts = listAccounts
         self.computeNetWealth = computeNetWealth
         self.saveAccount = saveAccount
@@ -63,6 +67,7 @@ public final class AccountsViewModel {
         useCases: AccountUseCases,
         plannedItems: any PlannedItemsSource = NoPlannedItems(),
         locale: Locale = .current,
+        changed: @escaping () -> Void = {},
     ) {
         self.init(
             listAccounts: useCases.listAccounts,
@@ -72,6 +77,7 @@ public final class AccountsViewModel {
             reorderAccounts: useCases.reorderAccounts,
             plannedItems: plannedItems,
             locale: locale,
+            changed: changed,
         )
     }
 
@@ -182,13 +188,19 @@ public final class AccountsViewModel {
         setHidden(true, accountID: prompt.accountID)
     }
 
+    /// Runs one change, reloads, and after a saved change moves the shared store-change signal.
     private func perform(_ work: () throws -> Void) {
+        var saved = false
         do {
             try work()
+            saved = true
         } catch {
             errorMessage = Self.message(for: error)
         }
         load()
+        if saved {
+            changed()
+        }
     }
 
     static func message(for error: any Error) -> String {

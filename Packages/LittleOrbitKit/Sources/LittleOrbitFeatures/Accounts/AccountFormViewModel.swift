@@ -62,6 +62,8 @@ public final class AccountFormViewModel {
     @ObservationIgnored private var currencyLocked = false
     /// True while `load(_:)` fills the form, so that doesn't count as the user editing the name.
     @ObservationIgnored private var isLoading = false
+    /// Tells every window an account was added or edited (D187.4, D327.1).
+    @ObservationIgnored private let changed: () -> Void
 
     public init(
         loadAccountForm: any LoadAccountFormUseCase,
@@ -70,7 +72,9 @@ public final class AccountFormViewModel {
         defaultCurrency: String = CurrencyCode.deviceDefault,
         locale: Locale = .current,
         scheduledAccountIDs: Set<UUID> = [],
+        changed: @escaping () -> Void = {},
     ) {
+        self.changed = changed
         self.loadAccountForm = loadAccountForm
         self.saveAccount = saveAccount
         self.mode = mode
@@ -101,6 +105,7 @@ public final class AccountFormViewModel {
         defaultCurrency: String = CurrencyCode.deviceDefault,
         locale: Locale = .current,
         scheduledAccountIDs: Set<UUID> = [],
+        changed: @escaping () -> Void = {},
     ) {
         self.init(
             loadAccountForm: useCases.loadAccountForm,
@@ -109,6 +114,7 @@ public final class AccountFormViewModel {
             defaultCurrency: defaultCurrency,
             locale: locale,
             scheduledAccountIDs: scheduledAccountIDs,
+            changed: changed,
         )
     }
 
@@ -250,6 +256,7 @@ public final class AccountFormViewModel {
         do {
             let account = try saveAccount.save(draft, editing: editingID)
             saveError = nil
+            changed()
             return account
         } catch AccountUseCaseError.accountNotFound {
             loadError = Self.missingAccountMessage
