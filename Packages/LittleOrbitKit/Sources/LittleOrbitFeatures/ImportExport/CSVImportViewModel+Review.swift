@@ -121,12 +121,16 @@ extension CSVImportViewModel {
         }
     }
 
-    /// The column and raw value the row's first issue is about, when that issue came from reading the file.
+    /// The column and raw value the row's first issue is about, when it's about one cell (D323.3, D349.1). An
+    /// unclosed quote names only its column, as its value runs to the end of the file (D349.2).
     private func source(for row: ImportPreviewRow) -> String? {
         guard case .failed(let issues) = row.status, let file, let column = row.row.issueColumn,
             issues.first == row.row.issues.first, file.table.header.indices.contains(column)
         else {
             return nil
+        }
+        if issues.first == .unclosedQuote {
+            return file.table.header[column]
         }
         let records = file.table.records
         let guess = row.row.rowNumber - 2

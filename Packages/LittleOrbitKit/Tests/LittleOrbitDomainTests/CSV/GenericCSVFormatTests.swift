@@ -99,6 +99,8 @@ struct GenericCSVFormatTests {
         let rows = try F.rows("Date,Amount,Payee\n2026-10-20\n2026-10-21,-5,\"Corner\n")
         #expect(rows[0].issues.contains(.missingColumns))
         #expect(rows[1].issues.contains(.unclosedQuote))
+        // D349.2: the column where the quote opens.
+        #expect(rows[1].issueColumn == 2)
     }
 
     @Test("D323.3: a row's first issue keeps its column, so Review can show the raw value")

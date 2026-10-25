@@ -159,10 +159,12 @@ struct CSVImportViewModelTests {
                 "Row 9: A quoted value isn’t closed",
             ]
         )
-        // D323.3: under a reading issue, the column and the raw value in curly quotes.
+        // D323.3, D349: under every single-cell reason, the column and the raw value in curly quotes; under an
+        // unclosed quote, the column alone.
         #expect(
             model.failedRows.map(\.source) == [
-                "Date: “2026-13-40”", "Amount: “12abc”", nil, nil, nil, "Type: “Gift”", nil,
+                "Date: “2026-13-40”", "Amount: “12abc”", "To Account: “Everyday Savings”", "Amount: “-4.505”",
+                "Currency: “USD”", "Type: “Gift”", "Payee",
             ]
         )
         #expect(model.failedRows.allSatisfy { $0.messageStyle == .error })

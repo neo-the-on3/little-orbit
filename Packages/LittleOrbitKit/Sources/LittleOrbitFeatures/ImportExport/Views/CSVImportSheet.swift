@@ -305,9 +305,12 @@
                                 .foregroundStyle(messageColor)
                         }
                         if let source = row.source {
-                            Text(source)
+                            // D349.1: a long value is cut at the end by the system, not by the text.
+                            Text(verbatim: source)
                                 .font(.caption)
                                 .foregroundStyle(.secondary)
+                                .lineLimit(1)
+                                .truncationMode(.tail)
                         }
                     }
                     Spacer()

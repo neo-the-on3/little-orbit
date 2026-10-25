@@ -129,6 +129,8 @@ public enum ImportPlanner {
     ) -> (ImportRow, ImportDraft?) {
         var row = input
         var issues = row.issues
+        // The cells behind the reasons found here, in the order they're added (D349.1).
+        var found: [(issue: ImportRowIssue, column: Int?)] = []
         let account: ImportRef? =
             if let name = row.accountName {
                 matcher.account(named: name, currency: row.currencyCode)
@@ -151,16 +153,18 @@ public enum ImportPlanner {
         if let account {
             let currency = matcher.currency(of: account)
             if let fileCurrency = row.currencyCode, fileCurrency != currency {
-                issues.append(.currencyMismatch(accountCurrency: currency))
+                found.append((.currencyMismatch(accountCurrency: currency), row.columns.currency))
             }
             if let amount = row.amount, !fits(amount, currency) {
-                issues.append(.tooManyDecimalPlaces(currencyCode: currency))
+                found.append((.tooManyDecimalPlaces(currencyCode: currency), row.columns.amount))
             }
             if let toAccount {
-                destination = checkTransfer(row, from: account, to: toAccount, matcher: matcher, issues: &issues)
+                destination = checkTransfer(row, from: account, to: toAccount, matcher: matcher, found: &found)
             }
         }
+        issues += found.map(\.issue)
         row.issues = issues
+        row.issueColumn = issueColumn(of: input, found: found, issues: issues)
         guard issues.isEmpty, let kind = row.kind, let date = row.date, let amount = row.amount, let account else {
             if row.issues.isEmpty {
                 row.issues = [.missingAmount]
@@ -190,29 +194,45 @@ public enum ImportPlanner {
         from account: ImportRef,
         to toAccount: ImportRef,
         matcher: ImportMatcher,
-        issues: inout [ImportRowIssue],
+        found: inout [(issue: ImportRowIssue, column: Int?)],
     ) -> Decimal? {
         if account == toAccount {
-            issues.append(.sameTransferAccount)
+            found.append((.sameTransferAccount, row.columns.toAccount))
             return nil
         }
         let source = matcher.currency(of: account)
         let destination = matcher.currency(of: toAccount)
         if source == destination {
             if let received = row.destinationAmount, received != row.amount {
-                issues.append(.destinationAmountMismatch)
+                found.append((.destinationAmountMismatch, nil))
             }
             return nil
         }
         guard let received = row.destinationAmount else {
-            issues.append(.destinationAmountRequired)
+            found.append((.destinationAmountRequired, nil))
             return nil
         }
         if !fits(received, destination) {
-            issues.append(.tooManyDecimalPlaces(currencyCode: destination))
+            found.append((.tooManyDecimalPlaces(currencyCode: destination), row.columns.destinationAmount))
             return nil
         }
         return received
+    }
+
+    /// The column of the row's first reason: from reading when reading found one, otherwise the cell behind
+    /// the first reason matching found (D349.1). `nil` when the first reason is about the whole row.
+    private static func issueColumn(
+        of input: ImportRow,
+        found: [(issue: ImportRowIssue, column: Int?)],
+        issues: [ImportRowIssue],
+    ) -> Int? {
+        if let first = input.issues.first {
+            return issues.first == first ? input.issueColumn : nil
+        }
+        guard let first = found.first, issues.first == first.issue else {
+            return nil
+        }
+        return first.column
     }
 
     /// Extra decimals are fine when they're zeros: `1500.00` in JPY is 1500 (D39.1).
