@@ -7894,7 +7894,7 @@
       }
     },
     "Add Scheduled Item": {
-      "comment": "Scheduled screen toolbar button and menu item: opens the new scheduled item form.",
+      "comment": "Scheduled screen toolbar button and menu item: opens the new scheduled item form. Also the Scheduled toolbar +’s title, help and spoken name; on the Mac, the window’s only + while Scheduled is selected.",
       "extractionState": "manual",
       "generatesSymbol": false,
       "localizations": {
@@ -8954,7 +8954,7 @@
       }
     },
     "New Scheduled Item": {
-      "comment": "Scheduled form title: a new item (D334.6). Also the help and spoken label of the Scheduled toolbar’s + button.",
+      "comment": "Scheduled form title: a new item (D334.6).",
       "extractionState": "manual",
       "generatesSymbol": false,
       "localizations": {

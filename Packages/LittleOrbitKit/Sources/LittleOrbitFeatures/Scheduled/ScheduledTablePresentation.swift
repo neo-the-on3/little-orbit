@@ -60,9 +60,6 @@ extension ScheduledListViewModel {
         return true
     }
 
-    /// The toolbar +'s help and spoken label, telling it apart from the window's other + (Tester, #205).
-    public var newItemTitle: String { ScheduledText.newTitle }
-
     /// Builds the Table's sections and its ID lookup once per listing, on the Mac only (Tech Architect NB 1). In
     /// board order: each overdue occurrence on its own row, oldest first (D340.6, D340.13), then due today, then
     /// each upcoming item on its next due day, then the completed items.

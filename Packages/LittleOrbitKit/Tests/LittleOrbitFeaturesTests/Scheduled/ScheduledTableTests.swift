@@ -224,7 +224,7 @@ struct ScheduledTableTests {
         #expect(list.tableCommand(.edit, selection: id))
         #expect(list.form?.title == "Edit Scheduled Item")
         #expect(scene.recorded.isEmpty, "No shortcut records anything")
-        #expect(list.newItemTitle == "New Scheduled Item")
+        #expect(list.addTitle == "Add Scheduled Item", "The toolbar +'s title, help and spoken name (D334.6)")
     }
 
     @Test("Tech Architect, #198: the Mac hint is shown once drawn, and again when a catch-up replaces it on screen")

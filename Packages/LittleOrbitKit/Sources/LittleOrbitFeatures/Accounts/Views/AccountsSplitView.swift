@@ -59,13 +59,19 @@
                 detail
             }
             .toolbar {
-                ToolbarItem(placement: .primaryAction) {
-                    Button {
-                        formSheet = AccountFormSheet(model: feature.makeForm(model.isFirstRun ? .firstAccount : .new))
-                    } label: {
-                        Label("Add Account", systemImage: "plus")
+                // With Scheduled selected, its own + is the window's only one (#26 Mac frame, UI Designer on
+                // #205). Every other selection keeps Add Account.
+                if !showsScheduled {
+                    ToolbarItem(placement: .primaryAction) {
+                        Button {
+                            formSheet = AccountFormSheet(
+                                model: feature.makeForm(model.isFirstRun ? .firstAccount : .new)
+                            )
+                        } label: {
+                            Label("Add Account", systemImage: "plus")
+                        }
+                        .help("Add Account")
                     }
-                    .help("Add Account")
                 }
             }
             .sheet(item: $formSheet) { sheet in
@@ -254,6 +260,11 @@
         }
 
         // MARK: - Detail
+
+        /// Whether the detail column shows the Scheduled list, which brings its own + (Add Scheduled Item).
+        private var showsScheduled: Bool {
+            selection == .home(.scheduled) && scheduled != nil
+        }
 
         @ViewBuilder private var detail: some View {
             switch selection {
