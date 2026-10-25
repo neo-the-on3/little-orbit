@@ -146,12 +146,17 @@ public enum ScheduleCalendar {
             && (1...9999).contains(day.year)
     }
 
-    /// The occurrence fell on the month's last day because the anchor day doesn't exist in that month (D24).
+    /// The occurrence fell on the month's last day because the anchor day doesn't exist in that month (D24). A day
+    /// kept from before a Starts edit (D336.1) that is merely earlier than the new anchor isn't shortened.
     public static func isShortened(_ day: CalendarDay, of item: ScheduledItem) -> Bool {
         guard case .every(_, let unit) = item.repeatRule, unit == .month || unit == .year else {
             return false
         }
-        return day.day < item.startDay.day
+        if unit == .year && day.month != item.startDay.month {
+            return false
+        }
+        let monthLength = daysIn(year: day.year, month: day.month)
+        return day.day == monthLength && item.startDay.day > monthLength
     }
 
     public static func daysIn(year: Int, month: Int) -> Int {
