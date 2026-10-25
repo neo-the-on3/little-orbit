@@ -91,9 +91,11 @@ public final class TransactionSearchViewModel {
         if store == nil || revision != storeRevision {
             do {
                 let snapshot = try search.read()
+                // A save changes a row or two, so the rows of unchanged transactions carry over (Tech Architect
+                // #188 NB1): a store change in an unfiltered list of 10,000 formats only what changed.
+                rowCache = rowCache.flatMap { Self.carriedRows($0, from: store?.snapshot, to: snapshot) }
                 store = (snapshot, SearchLookup(snapshot.ledger))
                 storeRevision = revision
-                rowCache = nil
             } catch {
                 showFailure()
                 return
@@ -114,6 +116,32 @@ public final class TransactionSearchViewModel {
         failure = nil
         show(result, lookup: store.lookup, today: today, typed: typed, parsed: parsed)
         shown = next
+    }
+
+    /// The cached rows still right after the store was read again: a row depends only on its transaction, the
+    /// accounts, categories and payees it names, and today. When any account, category or payee changed, every
+    /// row is built again; otherwise only rows whose transaction changed, or is new, are.
+    static func carriedRows(
+        _ cache: (today: CalendarDay, rows: [UUID: TransactionRowModel]),
+        from old: TransactionSearchSnapshot?,
+        to new: TransactionSearchSnapshot,
+    ) -> (today: CalendarDay, rows: [UUID: TransactionRowModel])? {
+        guard let old,
+            old.ledger.accounts == new.ledger.accounts,
+            old.ledger.categories == new.ledger.categories,
+            old.ledger.payees == new.ledger.payees
+        else {
+            return nil
+        }
+        let before = Dictionary(old.ledger.transactions.map { ($0.id, $0) }, uniquingKeysWith: { first, _ in first })
+        var rows: [UUID: TransactionRowModel] = [:]
+        rows.reserveCapacity(cache.rows.count)
+        for transaction in new.ledger.transactions {
+            if let row = cache.rows[transaction.id], before[transaction.id] == transaction {
+                rows[transaction.id] = row
+            }
+        }
+        return (cache.today, rows)
     }
 
     /// Clear Search: empties the field and shows every transaction again.
