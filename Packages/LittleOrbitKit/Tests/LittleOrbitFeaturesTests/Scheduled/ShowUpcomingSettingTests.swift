@@ -94,6 +94,14 @@ private final class UnreadableSchedule: ScheduleRepository {
     func revertScheduledItemSave(_: ScheduledItemSaveChange, undone _: Bool) throws -> ScheduledItemSaveRevert {
         throw Failure()
     }
+    func saveScheduledOccurrence(
+        _: ScheduledItem,
+        editing _: ScheduledOccurrenceSave,
+        today _: CalendarDay,
+        now _: Date,
+    ) throws {
+        throw Failure()
+    }
     func deleteScheduledItem(id _: UUID) throws { throw Failure() }
     func settleScheduledOccurrence(_: ScheduledSettlement) throws -> ScheduledSettlementChange? { throw Failure() }
     func unsettleScheduledOccurrence(_: ScheduledSettlementChange) throws -> ScheduledSettlementRevert {

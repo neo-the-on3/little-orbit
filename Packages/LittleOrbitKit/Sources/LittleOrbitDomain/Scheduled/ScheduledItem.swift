@@ -57,7 +57,8 @@ extension ScheduleRepeat: Codable {
 }
 
 /// What happened to one occurrence: it was recorded as a transaction, or skipped, or it's still to be paid or
-/// skipped after an edit changed the item's start or repeat (`pending`, D336.1).
+/// skipped after an edit changed the item's start or repeat (`pending`, D336.1), or it's still to come with its own
+/// values (`edited`, D45).
 public enum ScheduledOutcome: String, Sendable, Codable {
     case posted
     case skipped
@@ -66,10 +67,13 @@ public enum ScheduledOutcome: String, Sendable, Codable {
     /// automatic item's occurrence whose Pay was undone: due until the user pays or skips it, and never recorded by
     /// catch-up (D344, `ScheduledOccurrence.waitsForUser`).
     case pending
+    /// An occurrence on the item's rule that's still to be paid or skipped, with its own values from "This occurrence
+    /// only" (D45). It's due only while its day is on the rule, so a later SERIES change applies to it (D114).
+    case edited
 
     /// Posted or skipped: nothing is due for this occurrence any more.
     public var isSettled: Bool {
-        self != .pending
+        self == .posted || self == .skipped
     }
 }
 
@@ -91,6 +95,8 @@ public struct ScheduledOccurrence: Identifiable, Hashable, Sendable, Codable {
     /// only valid on a posted occurrence, so creating or restoring one keeps it unset otherwise, and reads `false` as
     /// unset.
     public var recordedAutomatically: Bool?
+    /// The occurrence's own values ("This occurrence only", D45), kept after it's paid or skipped.
+    public var edit: ScheduledOccurrenceEdit?
     public var createdAt: Date
     public var updatedAt: Date
     public var deletedAt: Date?
@@ -101,6 +107,7 @@ public struct ScheduledOccurrence: Identifiable, Hashable, Sendable, Codable {
         outcome: ScheduledOutcome,
         transactionID: UUID? = nil,
         recordedAutomatically: Bool? = nil,
+        edit: ScheduledOccurrenceEdit? = nil,
         createdAt: Date,
         updatedAt: Date? = nil,
         deletedAt: Date? = nil,
@@ -110,13 +117,14 @@ public struct ScheduledOccurrence: Identifiable, Hashable, Sendable, Codable {
         self.outcome = outcome
         self.transactionID = transactionID
         self.recordedAutomatically = Self.normalised(recordedAutomatically, outcome: outcome)
+        self.edit = edit
         self.createdAt = createdAt
         self.updatedAt = updatedAt ?? createdAt
         self.deletedAt = deletedAt
     }
 
     private enum CodingKeys: String, CodingKey {
-        case id, day, outcome, transactionID, recordedAutomatically, createdAt, updatedAt, deletedAt
+        case id, day, outcome, transactionID, recordedAutomatically, edit, createdAt, updatedAt, deletedAt
     }
 
     /// Reads a backup's occurrence, with `recordedAutomatically` normalised as `init` does.
@@ -128,6 +136,7 @@ public struct ScheduledOccurrence: Identifiable, Hashable, Sendable, Codable {
             outcome: try container.decode(ScheduledOutcome.self, forKey: .outcome),
             transactionID: try container.decodeIfPresent(UUID.self, forKey: .transactionID),
             recordedAutomatically: try container.decodeIfPresent(Bool.self, forKey: .recordedAutomatically),
+            edit: try container.decodeIfPresent(ScheduledOccurrenceEdit.self, forKey: .edit),
             createdAt: try container.decode(Date.self, forKey: .createdAt),
             updatedAt: try container.decode(Date.self, forKey: .updatedAt),
             deletedAt: try container.decodeIfPresent(Date.self, forKey: .deletedAt),

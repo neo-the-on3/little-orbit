@@ -143,7 +143,7 @@ public enum ScheduledReminderPlanner {
             return true
         }
         switch record.outcome {
-        case .pending:
+        case .pending, .edited:
             return true
         case .skipped:
             return false

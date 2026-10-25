@@ -68,6 +68,40 @@ struct ScheduledBackupTests {
         #expect(board.overdue.map(\.day) == [Fix.day(2026, 8, 1), Fix.day(2026, 9, 1), Fix.day(2026, 10, 1)])
     }
 
+    @Test("An occurrence's own values round-trip, and a restored ledger still records it once (D45)")
+    func occurrenceEditRoundTrip() throws {
+        let rent = Fix.rent(automatic: false)
+        var ledger = try LedgerBook.savingScheduledItem(
+            rent,
+            in: Fix.ledger,
+            today: Fix.day(2026, 7, 1),
+            now: Fix.created,
+        )
+        var edited = rent
+        edited.amount = 26_000
+        edited.note = nil
+        ledger = try LedgerBook.savingScheduledOccurrence(
+            edited,
+            editing: ScheduledOccurrenceSave(
+                occurrence: Fix.day(2026, 12, 1),
+                dueDay: Fix.day(2026, 12, 3),
+                scope: .thisOccurrence,
+            ),
+            in: ledger,
+            today: Fix.day(2026, 11, 20),
+            now: Fix.created,
+        )
+        let record = try #require(ledger.scheduledItems.first?.occurrence(on: Fix.day(2026, 12, 1)))
+        #expect(record.outcome == .edited)
+        #expect(record.edit?.fields == [.day, .amount])
+        let codec = BackupCodec(hashing: FakeBackupHashing())
+        let decoded = try codec.decode(try codec.encode(BackupContents(manifest: manifest(ledger), ledger: ledger)))
+        #expect(decoded.ledger.scheduledItems == ledger.scheduledItems)
+        let board = ScheduledBoard.make(decoded.ledger, today: Fix.day(2026, 12, 3))
+        #expect(board.dueToday.map(\.key) == [Fix.day(2026, 12, 1)])
+        #expect(board.dueToday.map(\.occurrenceItem.amount) == [26_000])
+    }
+
     @Test("A ledger without scheduled items encodes as before: no section and no scheduled key")
     func unchangedWithout() throws {
         let codec = BackupCodec(hashing: FakeBackupHashing())
