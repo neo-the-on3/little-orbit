@@ -20,7 +20,7 @@ extension ScheduledFormViewModel {
         TransactionCalendar.storedTimeZone(useCases.load.currentTimeZoneID())
     }
 
-    private func date(of day: CalendarDay) -> Date {
+    func date(of day: CalendarDay) -> Date {
         var calendar = Calendar(identifier: .gregorian)
         calendar.timeZone = pickerZone
         return calendar.date(from: DateComponents(year: day.year, month: day.month, day: day.day, hour: 12))
@@ -29,7 +29,7 @@ extension ScheduledFormViewModel {
             )
     }
 
-    private func day(of date: Date) -> CalendarDay {
+    func day(of date: Date) -> CalendarDay {
         TransactionCalendar.ownDay(of: date, timeZoneID: pickerZone.identifier)
     }
 

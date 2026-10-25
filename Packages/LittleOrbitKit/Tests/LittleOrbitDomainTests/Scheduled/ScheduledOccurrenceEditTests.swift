@@ -39,7 +39,7 @@ struct ScheduledOccurrenceEditTests {
         item.occurrences = current.occurrences
         change(&item)
         let save = ScheduledOccurrenceSave(occurrence: key, dueDay: dueDay ?? current.dueDay(of: key), scope: scope)
-        try repository.useCases().save(item, editing: save)
+        _ = try repository.useCases().update(item, editing: save, payee: nil)
     }
 
     func next(_ id: UUID, _ repository: FakeScheduleRepository, count: Int = 3) throws -> [ScheduledSlot] {

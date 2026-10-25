@@ -75,7 +75,7 @@
                         }
                     }
                     Section {
-                        Button(model.editTitle) { model.openEditor(itemID) }
+                        Button(model.editTitle) { model.openEditor(itemID, occurrence: detail.editOccurrence) }
                         Button(model.deleteTitle, role: .destructive) { model.confirmDelete(itemID) }
                     }
                 }

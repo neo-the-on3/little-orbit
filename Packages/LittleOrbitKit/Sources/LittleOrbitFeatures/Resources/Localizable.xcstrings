@@ -11195,6 +11195,71 @@
           }
         }
       }
+    },
+    "Due Date": {
+      "comment": "Scheduled item form, opened on one occurrence of a repeating item: the day that occurrence is due.",
+      "extractionState": "manual",
+      "generatesSymbol": false,
+      "localizations": {
+        "en": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Due Date"
+          }
+        }
+      }
+    },
+    "Save Changes to %@?": {
+      "comment": "Title of the question Save asks for a repeating scheduled item (iOS dialog, Mac alert; D45): %@ is the item’s name (“Gym · FitOrbit”).",
+      "extractionState": "manual",
+      "generatesSymbol": false,
+      "localizations": {
+        "en": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Save Changes to %@?"
+          }
+        }
+      }
+    },
+    "Change only the %1$@ occurrence, or %1$@ and every later one?": {
+      "comment": "Message of the question Save asks for a repeating scheduled item: %1$@ is the edited occurrence’s short date (“18 Oct”), used twice.",
+      "extractionState": "manual",
+      "generatesSymbol": false,
+      "localizations": {
+        "en": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Change only the %1$@ occurrence, or %1$@ and every later one?"
+          }
+        }
+      }
+    },
+    "This occurrence only": {
+      "comment": "Button in the question Save asks for a repeating scheduled item: change only the edited occurrence (D45, D59). The Mac’s default button (D106).",
+      "extractionState": "manual",
+      "generatesSymbol": false,
+      "localizations": {
+        "en": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "This occurrence only"
+          }
+        }
+      }
+    },
+    "All future occurrences": {
+      "comment": "Button in the question Save asks for a repeating scheduled item: change the edited occurrence and every later one (D45, D59).",
+      "extractionState": "manual",
+      "generatesSymbol": false,
+      "localizations": {
+        "en": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "All future occurrences"
+          }
+        }
+      }
     }
   },
   "version": "1.0"

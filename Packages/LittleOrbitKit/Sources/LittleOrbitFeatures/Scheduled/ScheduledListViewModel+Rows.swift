@@ -15,15 +15,15 @@ extension ScheduledListViewModel {
     public var isEmpty: Bool { listing.board.isEmpty }
 
     public var overdueRows: [ScheduledRow] {
-        listing.board.overdue.map { rows.row($0.item, day: $0.day, kind: .overdue) }
+        listing.board.overdue.map { rows.row($0, kind: .overdue) }
     }
 
     public var dueTodayRows: [ScheduledRow] {
-        listing.board.dueToday.map { rows.row($0.item, day: $0.day, kind: .dueToday) }
+        listing.board.dueToday.map { rows.row($0, kind: .dueToday) }
     }
 
     public var upcomingRows: [ScheduledRow] {
-        listing.board.upcoming.map { rows.row($0.item, day: $0.day, kind: .upcoming) }
+        listing.board.upcoming.map { rows.row($0, kind: .upcoming) }
     }
 
     public var completedRows: [ScheduledRow] {

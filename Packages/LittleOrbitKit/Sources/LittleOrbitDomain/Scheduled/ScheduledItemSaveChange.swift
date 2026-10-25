@@ -61,6 +61,40 @@ extension LedgerBook {
         today: CalendarDay,
         now: Date,
     ) throws -> (snapshot: LedgerSnapshot, change: ScheduledItemSaveChange) {
+        try formSaving(item, payee: pending, in: snapshot, now: now) { item, snapshot in
+            try savingScheduledItem(item, in: snapshot, today: today, now: now)
+        }
+    }
+
+    /// The form opened on one occurrence (D45), as `updatingScheduledItem(_:payee:in:today:now:)`: the pending payee
+    /// is stored in the same save, and the save is one Undo step (D351.1) that puts the whole item back, its
+    /// occurrences' own values included. An item that's no longer stored throws `missingScheduledItem` (#258).
+    public static func updatingScheduledOccurrence(
+        _ item: ScheduledItem,
+        editing save: ScheduledOccurrenceSave,
+        payee pending: ScheduledPendingPayee?,
+        in snapshot: LedgerSnapshot,
+        today: CalendarDay,
+        now: Date,
+    ) throws -> (snapshot: LedgerSnapshot, change: ScheduledItemSaveChange) {
+        guard snapshot.scheduledItems.contains(where: { $0.id == item.id }) else {
+            throw LedgerValidationError.missingScheduledItem
+        }
+        return try formSaving(item, payee: pending, in: snapshot, now: now) { item, snapshot in
+            try savingScheduledOccurrence(item, editing: save, in: snapshot, today: today, now: now)
+        }
+    }
+
+    /// One form save: the pending payee is created or unarchived, the item uses it, and `body` saves the item.
+    /// Returns what Undo needs. A pending archived payee that's gone throws `unknownPayee`; one that's no longer
+    /// archived is used.
+    private static func formSaving(
+        _ item: ScheduledItem,
+        payee pending: ScheduledPendingPayee?,
+        in snapshot: LedgerSnapshot,
+        now: Date,
+        _ body: (ScheduledItem, LedgerSnapshot) throws -> LedgerSnapshot,
+    ) throws -> (snapshot: LedgerSnapshot, change: ScheduledItemSaveChange) {
         var snapshot = snapshot
         var item = item
         var created: Payee?
@@ -94,7 +128,7 @@ extension LedgerBook {
             break
         }
         let before = snapshot.scheduledItems.first { $0.id == item.id }
-        snapshot = try savingScheduledItem(item, in: snapshot, today: today, now: now)
+        snapshot = try body(item, snapshot)
         guard let after = snapshot.scheduledItems.first(where: { $0.id == item.id }) else {
             throw LedgerValidationError.missingScheduledItem
         }

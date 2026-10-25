@@ -269,7 +269,7 @@
                 Button(model.skipMenuTitle, systemImage: "forward") { model.confirmSkip(row) }
                 Divider()
             }
-            Button(model.editMenuTitle, systemImage: "pencil") { model.openEditor(row.itemID) }
+            Button(model.editMenuTitle, systemImage: "pencil") { model.openEditor(row) }
                 .macShortcut("e")
             Button(model.deleteMenuTitle, systemImage: "trash", role: .destructive) {
                 model.confirmDelete(row.itemID)

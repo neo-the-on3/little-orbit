@@ -48,8 +48,10 @@ public struct ScheduledPreviewRow: Identifiable, Equatable, Sendable {
 }
 
 /// The New and Edit Scheduled form (#26 design: type, amount, payee, category, account, then Schedule, the next due
-/// dates and Process automatically). Editing changes the whole series going forward and never the transactions it
-/// already recorded (D114); the stored settled occurrences are kept, whatever this form loaded.
+/// dates and Process automatically). Editing never changes the transactions already recorded (D114); the stored
+/// occurrence records are kept, whatever this form loaded. Opened on one occurrence of a repeating item, it shows that
+/// occurrence's values and its Due Date, and Save asks "This occurrence only" or "All future occurrences" when a field
+/// other than the SERIES ones changed (D45, D114, D115; see `ScheduledFormViewModel+Occurrence.swift`).
 @MainActor
 @Observable
 public final class ScheduledFormViewModel: Identifiable {
@@ -96,6 +98,12 @@ public final class ScheduledFormViewModel: Identifiable {
     }
     /// Notifications are denied: with 'Notify when due' on, the footer says so and an Open Settings row follows.
     public private(set) var notificationsDenied = false
+    /// The day the occurrence the form was opened on is due; shown only then (`showsDueDate`).
+    public var dueDay: CalendarDay
+    /// The question Save asks before saving a change to fields other than the SERIES ones (D45, D115).
+    public var scopeQuestion: ScheduledScopeQuestion?
+    /// Set once the form has saved, so the sheet closes after the question too.
+    public private(set) var isFinished = false
     /// The amount field's error, after a save attempt.
     public private(set) var amountError: String?
     /// The Received field's error, after a save attempt.
@@ -112,11 +120,13 @@ public final class ScheduledFormViewModel: Identifiable {
 
     @ObservationIgnored let useCases: ScheduledScreenUseCases
     @ObservationIgnored let listing: ScheduledListing
-    @ObservationIgnored private let original: ScheduledItem?
+    @ObservationIgnored let original: ScheduledItem?
+    /// The occurrence the form was opened on, by its key, for a repeating item (D45).
+    @ObservationIgnored let occurrence: CalendarDay?
     @ObservationIgnored let locale: Locale
     @ObservationIgnored private let timeZoneID: String
     /// The Mac says System Settings where iOS says Settings (D359).
-    @ObservationIgnored private let platform: ScheduledPlatform
+    @ObservationIgnored let platform: ScheduledPlatform
     @ObservationIgnored let today: CalendarDay
     /// After a save, with what the window's Undo step needs (D351.1).
     @ObservationIgnored private let saved: (ScheduledItemSaveChange) -> Void
@@ -130,14 +140,19 @@ public final class ScheduledFormViewModel: Identifiable {
     init(
         useCases: ScheduledScreenUseCases,
         listing: ScheduledListing,
-        editing item: ScheduledItem?,
+        editing editedItem: ScheduledItem?,
+        occurrence: CalendarDay? = nil,
         locale: Locale,
         platform: ScheduledPlatform = .current,
         saved: @escaping (ScheduledItemSaveChange) -> Void,
     ) {
         self.useCases = useCases
         self.listing = listing
-        original = item
+        original = editedItem
+        let key = editedItem?.repeatRule.repeats == true ? occurrence : nil
+        self.occurrence = key
+        // Opened on an occurrence, the fields show its own values (D45).
+        let item = key.flatMap { editedItem?.resolved(for: $0) } ?? editedItem
         self.locale = locale
         self.platform = platform
         self.saved = saved
@@ -168,6 +183,7 @@ public final class ScheduledFormViewModel: Identifiable {
         endDay = item?.endDay ?? item?.startDay ?? today
         processesAutomatically = item?.processesAutomatically ?? false
         notifiesWhenDue = item?.notifiesWhenDue ?? false
+        dueDay = key.flatMap { editedItem?.dueDay(of: $0) } ?? today
         if notifiesWhenDue {
             checkNotificationPermission(asking: false)
         }
@@ -358,9 +374,32 @@ public final class ScheduledFormViewModel: Identifiable {
         return item
     }
 
-    /// Checks the form and saves it; `false` keeps the sheet open with the errors shown.
+    /// Checks the form and saves it; `false` keeps the sheet open with the errors shown, or with the question Save
+    /// asks first (`scopeQuestion`), which `save(scope:)` answers.
     @discardableResult
     public func save() -> Bool {
+        guard let item = checkedDraft() else {
+            return false
+        }
+        if let question = question(for: item) {
+            scopeQuestion = question
+            return false
+        }
+        return store(item, scope: .allFuture)
+    }
+
+    /// The answer to the question Save asked (D45): saves with that choice.
+    @discardableResult
+    public func save(scope: ScheduledEditScope) -> Bool {
+        scopeQuestion = nil
+        guard let item = checkedDraft() else {
+            return false
+        }
+        return store(item, scope: scope)
+    }
+
+    /// The form's item, or `nil` with the errors shown.
+    private func checkedDraft() -> ScheduledItem? {
         amountError = nil
         receivedError = nil
         formError = nil
@@ -369,49 +408,58 @@ public final class ScheduledFormViewModel: Identifiable {
         // Save is disabled until the payee field is resolved and a required Received is filled in; this covers
         // Return on the Mac too (D347.2).
         guard canSave else {
-            return false
+            return nil
         }
         let amount: Decimal
         do {
             amount = try AmountInput.parse(amountText, currencyCode: currencyCode, locale: locale)
         } catch {
             amountError = message(error)
-            return false
+            return nil
         }
         guard amount > 0 else {
             amountError = ScheduledText.enterAmount
-            return false
+            return nil
         }
         guard accountID != nil else {
             formError = ScheduledText.pickAccount
-            return false
+            return nil
         }
         if type == .transfer, transferAccountID == nil || transferAccountID == accountID {
             formError = ScheduledText.pickTwoAccounts
-            return false
+            return nil
         }
         var received: Decimal?
         if type == .transfer, needsReceivedAmount {
             guard let parsed = parseReceived() else {
-                return false
+                return nil
             }
             received = parsed
         }
         let item = draft(amount: amount, received: received)
         if let end = item.endDay, end < item.startDay {
             formError = ScheduledText.endBeforeStart
-            return false
+            return nil
         }
-        return store(item)
+        return item
     }
 
     /// Saves the checked item through the use cases; `false` keeps the sheet open with the error or alert shown.
-    private func store(_ item: ScheduledItem) -> Bool {
+    private func store(_ item: ScheduledItem, scope: ScheduledEditScope) -> Bool {
         let change: ScheduledItemSaveChange
         do {
             // An edit never saves an item that was deleted while the form was open, nor its pending payee (#258).
             let payee = type == .transfer ? nil : pendingPayee
-            change = try isNew ? useCases.manage.save(item, payee: payee) : useCases.manage.update(item, payee: payee)
+            if let occurrence {
+                change = try useCases.manage.update(
+                    item,
+                    editing: ScheduledOccurrenceSave(occurrence: occurrence, dueDay: dueDay, scope: scope),
+                    payee: payee,
+                )
+            } else {
+                change =
+                    try isNew ? useCases.manage.save(item, payee: payee) : useCases.manage.update(item, payee: payee)
+            }
         } catch LedgerValidationError.scheduleEndsBeforeStart {
             formError = ScheduledText.endBeforeStart
             return false
@@ -429,6 +477,7 @@ public final class ScheduledFormViewModel: Identifiable {
             alert = saveFailedAlert(error)
             return false
         }
+        isFinished = true
         saved(change)
         return true
     }
@@ -443,21 +492,6 @@ public final class ScheduledFormViewModel: Identifiable {
             if alertClosesForm {
                 closeRequested = true
             }
-        }
-    }
-
-    /// The edited item's short name, as the Delete confirmation names it.
-    var itemName: String {
-        original.map { ScheduledPresenter(listing: listing, locale: locale).shortName(of: $0) } ?? ""
-    }
-
-    /// The account form's messages (D334.12).
-    private func message(_ error: AmountInputError) -> String {
-        switch error {
-        case .tooManyDecimals(let allowed):
-            ScheduledText.tooManyDecimals(allowed, currencyCode: currencyCode)
-        case .negative, .outOfRange, .notANumber:
-            ScheduledText.enterAmountLike(MoneyFormatter(locale: locale).exampleAmount(currencyCode: currencyCode))
         }
     }
 }

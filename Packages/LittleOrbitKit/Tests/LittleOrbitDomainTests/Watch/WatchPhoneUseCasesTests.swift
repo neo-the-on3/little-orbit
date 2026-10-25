@@ -253,13 +253,14 @@ final class FlakyScheduleRepository: ScheduleRepository {
         try base.revertScheduledItemSave(change, undone: undone)
     }
 
-    func saveScheduledOccurrence(
+    func updateScheduledOccurrence(
         _ item: ScheduledItem,
         editing save: ScheduledOccurrenceSave,
+        payee: ScheduledPendingPayee?,
         today: CalendarDay,
         now: Date,
-    ) throws {
-        try base.saveScheduledOccurrence(item, editing: save, today: today, now: now)
+    ) throws -> ScheduledItemSaveChange {
+        try base.updateScheduledOccurrence(item, editing: save, payee: payee, today: today, now: now)
     }
 
     func deleteScheduledItem(id: UUID) throws { try base.deleteScheduledItem(id: id) }

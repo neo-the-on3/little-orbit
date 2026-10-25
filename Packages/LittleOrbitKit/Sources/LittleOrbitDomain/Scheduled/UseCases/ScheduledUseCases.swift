@@ -56,9 +56,6 @@ public protocol LoadScheduledUseCase {
 public protocol ManageScheduledUseCase {
     /// Saves `item`. A new item carries the zone it was made in, `currentTimeZoneID()`, and keeps it.
     func save(_ item: ScheduledItem) throws
-    /// Saves the form opened on one occurrence of `item`: the SERIES fields apply to the series, and the other
-    /// changed fields to that occurrence or to it and every later one, as `save.scope` says (D45, D114, D115).
-    func save(_ item: ScheduledItem, editing save: ScheduledOccurrenceSave) throws
     func delete(id: UUID) throws
     /// The form's Save of a new item: `item` with the payee its field left pending, created or unarchived in the
     /// same save (D350.1, D351.2). Returns what the window's Undo step needs (D351.1).
@@ -67,6 +64,11 @@ public protocol ManageScheduledUseCase {
     /// the form was open), it throws `LedgerValidationError.missingScheduledItem` and saves nothing, the pending
     /// payee included; an edit never adds the item back (#258).
     func update(_ item: ScheduledItem, payee: ScheduledPendingPayee?) throws -> ScheduledItemSaveChange
+    /// The form opened on one occurrence of `item`, as `update(_:payee:)`: the SERIES fields apply to the series,
+    /// and the other changed fields to that occurrence or to it and every later one, as `save.scope` says (D45,
+    /// D114, D115). Returns what the window's Undo step needs (D351.1).
+    func update(_ item: ScheduledItem, editing save: ScheduledOccurrenceSave, payee: ScheduledPendingPayee?) throws
+        -> ScheduledItemSaveChange
     /// Pay now: records the occurrence on `occurrence`, dated today. `nil` when it was already settled.
     @discardableResult
     func payNow(itemID: UUID, occurrence: CalendarDay) throws -> Transaction?
@@ -225,10 +227,6 @@ public struct DefaultScheduledUseCases: LoadScheduledUseCase, ManageScheduledUse
         try repository.saveScheduledItem(item, today: today(), now: now())
     }
 
-    public func save(_ item: ScheduledItem, editing save: ScheduledOccurrenceSave) throws {
-        try repository.saveScheduledOccurrence(item, editing: save, today: today(), now: now())
-    }
-
     public func delete(id: UUID) throws {
         try repository.deleteScheduledItem(id: id)
     }
@@ -239,6 +237,12 @@ public struct DefaultScheduledUseCases: LoadScheduledUseCase, ManageScheduledUse
 
     public func update(_ item: ScheduledItem, payee: ScheduledPendingPayee?) throws -> ScheduledItemSaveChange {
         try repository.updateScheduledItem(item, payee: payee, today: today(), now: now())
+    }
+
+    public func update(_ item: ScheduledItem, editing save: ScheduledOccurrenceSave, payee: ScheduledPendingPayee?)
+        throws -> ScheduledItemSaveChange
+    {
+        try repository.updateScheduledOccurrence(item, editing: save, payee: payee, today: today(), now: now())
     }
 
     @discardableResult

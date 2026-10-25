@@ -6,8 +6,11 @@ import LittleOrbitDomain
 public struct ScheduledRow: Identifiable, Equatable, Sendable {
     public let id: String
     public let itemID: UUID
-    /// The occurrence the row's Pay Now and Skip act on; `nil` for an upcoming or completed item.
+    /// The occurrence the row's Pay Now and Skip act on, by its key; `nil` for an upcoming or completed item.
     public let occurrence: CalendarDay?
+    /// The occurrence Edit opens the form on, by its key: the row's own, overdue, due today or upcoming (D45). `nil`
+    /// on a completed row, which edits the item as a whole.
+    public let editOccurrence: CalendarDay?
     public let title: String
     /// "Monthly · Everyday Savings", "Monthly, last day · Auto", "Monthly · From Savings · received $120.00".
     public let detail: String
@@ -27,6 +30,7 @@ public struct ScheduledRow: Identifiable, Equatable, Sendable {
             id: id,
             itemID: itemID,
             occurrence: day,
+            editOccurrence: editOccurrence,
             title: title,
             detail: detail,
             amount: amount,
@@ -179,7 +183,12 @@ struct ScheduledPresenter {
         case overdue, dueToday, upcoming, completed
     }
 
-    func row(_ item: ScheduledItem, day: CalendarDay?, kind: Kind) -> ScheduledRow {
+    /// The row for `due`: the item as that occurrence records it, on the day it's due, keyed to its own day (D45).
+    func row(_ due: ScheduledDue, kind: Kind) -> ScheduledRow {
+        row(due.occurrenceItem, day: due.day, key: due.key, kind: kind)
+    }
+
+    func row(_ item: ScheduledItem, day: CalendarDay?, key: CalendarDay? = nil, kind: Kind) -> ScheduledRow {
         let (amount, tone) = amountText(of: item)
         let date: String =
             switch kind {
@@ -190,11 +199,13 @@ struct ScheduledPresenter {
             }
         let title = name(of: item)
         let spoken = [title, date, amount].filter { !$0.isEmpty }
-        let idDay = day.map { "\($0.year)-\($0.month)-\($0.day)" } ?? "item"
+        let key = key ?? day
+        let idDay = key.map { "\($0.year)-\($0.month)-\($0.day)" } ?? "item"
         return ScheduledRow(
             id: "\(item.id.uuidString)|\(idDay)",
             itemID: item.id,
-            occurrence: kind == .overdue || kind == .dueToday ? day : nil,
+            occurrence: kind == .overdue || kind == .dueToday ? key : nil,
+            editOccurrence: kind == .completed ? nil : key,
             title: title,
             detail: detail(of: item, on: day),
             amount: amount,

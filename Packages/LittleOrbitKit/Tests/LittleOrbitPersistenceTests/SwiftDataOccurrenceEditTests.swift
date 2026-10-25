@@ -33,13 +33,14 @@
                     )
                     item.amount = decimal("135.5")
                     item.details = nil
-                    try repository.saveScheduledOccurrence(
+                    _ = try repository.updateScheduledOccurrence(
                         item,
                         editing: ScheduledOccurrenceSave(
                             occurrence: key,
                             dueDay: CalendarDay(year: 2027, month: 2, day: 26),
                             scope: .thisOccurrence,
                         ),
+                        payee: nil,
                         today: today,
                         now: Date(timeIntervalSince1970: 1_798_741_800),
                     )
