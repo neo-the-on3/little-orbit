@@ -7,7 +7,11 @@ enum PayeeText {
     // MARK: List
 
     static var title: String {
-        FeatureText.string("Payees", comment: "Settings row and screen title: the payee manager.")
+        FeatureText.string(
+            "Payees",
+            comment:
+                "Settings row and screen title: the payee manager; on the Mac, the Metadata window’s Payees segment.",
+        )
     }
 
     static var searchPrompt: String {
@@ -44,13 +48,17 @@ enum PayeeText {
     }
 
     static var emptyTitle: String {
-        FeatureText.string("No Payees", comment: "Payees screen with no payees: the title.")
+        FeatureText.string(
+            "No Payees",
+            comment: "Payees screen with no payees: the title; also the Mac Metadata manager’s empty Payees table.",
+        )
     }
 
     static var emptyMessage: String {
         FeatureText.string(
             "Payees you enter on transactions appear here.",
-            comment: "Payees screen with no payees: the explanation.",
+            comment:
+                "Payees screen with no payees: the explanation; also the Mac Metadata manager’s empty Payees table.",
         )
     }
 
@@ -67,7 +75,7 @@ enum PayeeText {
         FeatureText.string(
             "Merge…",
             comment:
-                "Payees screen, select mode: opens Merge Payees for the chosen payees; on the Mac, the Metadata manager’s toolbar button and context menu item that open Merge Categories.",
+                "Payees screen, select mode: opens Merge Payees for the chosen payees; on the Mac, the Metadata manager’s toolbar button and context menu item that open Merge Categories or Merge Payees.",
         )
     }
 

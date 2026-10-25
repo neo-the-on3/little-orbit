@@ -7,7 +7,11 @@ enum CategoryText {
     // MARK: List
 
     static var title: String {
-        FeatureText.string("Categories", comment: "Settings row and screen title: the category manager.")
+        FeatureText.string(
+            "Categories",
+            comment:
+                "Settings row and screen title: the category manager; on the Mac, the Metadata window’s Categories segment.",
+        )
     }
 
     static func kindName(_ kind: CategoryKind) -> String {
