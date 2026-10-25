@@ -103,9 +103,11 @@ public struct ImportRow: Equatable, Sendable, Identifiable {
     public var warnings: [ImportRowWarning]
     /// Rows this one stands for besides itself, such as the other half of a transfer a format paired (#60).
     public var mergedRowNumbers: [Int]
-    /// The column the first of `issues` is about, so Review can show its header and raw value (D323.3), or
-    /// `nil` when that issue is about the whole row.
+    /// The column the first of `issues` is about, so Review can show its header and raw value (D323.3, D349),
+    /// or `nil` when that issue is about the whole row.
     public var issueColumn: Int?
+    /// The columns the checked values came from, so a reason found after reading can name its cell (D349.1).
+    public var columns: ImportRowColumns
 
     public var id: Int {
         rowNumber
@@ -128,6 +130,7 @@ public struct ImportRow: Equatable, Sendable, Identifiable {
         warnings: [ImportRowWarning] = [],
         mergedRowNumbers: [Int] = [],
         issueColumn: Int? = nil,
+        columns: ImportRowColumns = ImportRowColumns(),
     ) {
         self.rowNumber = rowNumber
         self.kind = kind
@@ -145,6 +148,24 @@ public struct ImportRow: Equatable, Sendable, Identifiable {
         self.warnings = warnings
         self.mergedRowNumbers = mergedRowNumbers
         self.issueColumn = issueColumn
+        self.columns = columns
+    }
+}
+
+/// Where a row's checked values are in the file: the column each was read from, or `nil` when the format
+/// didn't read it from one cell. Matching names these cells under its reasons (D349.1).
+public struct ImportRowColumns: Equatable, Sendable {
+    /// The column the amount came from: Amount, or the Expense Amount or Income Amount that was filled in.
+    public var amount: Int?
+    public var destinationAmount: Int?
+    public var toAccount: Int?
+    public var currency: Int?
+
+    public init(amount: Int? = nil, destinationAmount: Int? = nil, toAccount: Int? = nil, currency: Int? = nil) {
+        self.amount = amount
+        self.destinationAmount = destinationAmount
+        self.toAccount = toAccount
+        self.currency = currency
     }
 }
 

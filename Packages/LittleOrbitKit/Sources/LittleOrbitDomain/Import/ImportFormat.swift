@@ -116,6 +116,13 @@ public struct GenericCSVFormat: ImportFormat {
         }
         row.issues = reader.orderedIssues
         row.issueColumn = reader.firstIssueColumn
+        if record.isUnterminated && row.issues.first == .unclosedQuote {
+            // D349.2: the quote opens in the record's last field, which ran to the end of the file.
+            row.issueColumn = record.fields.count - 1
+        }
+        row.columns.destinationAmount = row.destinationAmount == nil ? nil : reader.column(.destinationAmount)
+        row.columns.toAccount = row.toAccountName == nil ? nil : reader.column(.toAccount)
+        row.columns.currency = row.currencyCode == nil ? nil : reader.column(.currency)
         return row
     }
 
@@ -180,6 +187,7 @@ public struct GenericCSVFormat: ImportFormat {
             return
         }
         row.amount = signed.magnitude
+        row.columns.amount = amountColumn >= 0 ? amountColumn : nil
         row.kind = typed ?? (signed < 0 ? .expense : .income)
         if let text = reader.value(.destinationAmount) {
             if let value = ImportAmountParser.parse(text, decimalSeparator: separator), value != 0 {
@@ -215,7 +223,7 @@ public struct GenericCSVFormat: ImportFormat {
         let received = incomeValue.map(\.magnitude).flatMap { $0 == 0 ? nil : $0 }
         switch (paid, received) {
         case (let paid?, nil):
-            return (-paid, column)
+            return (-paid, expenseColumn)
         case (nil, let received?):
             return (received, incomeColumn)
         case (.some, .some):

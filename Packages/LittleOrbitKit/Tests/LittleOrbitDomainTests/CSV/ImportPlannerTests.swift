@@ -63,6 +63,35 @@ struct ImportPlannerTests {
         #expect(preview.failedCount == 4)
     }
 
+    @Test("D349.1: a reason found after reading names the cell it's about")
+    func checkColumns() throws {
+        let preview = try F.preview(
+            header + """
+                2026-10-20,Expense,Everyday Savings,,-450,,EUR,,,,
+                2026-10-20,Expense,Everyday Savings,,-4.505,,INR,,,,
+                2026-10-20,Transfer,Everyday Savings,Everyday Savings,100,,INR,,,,
+                2026-10-20,Transfer,Everyday Savings,Travel Euros,1000,10.505,INR,,,,
+                2026-10-20,Transfer,Everyday Savings,Travel Euros,1000,,INR,,,,
+                bad,Expense,Everyday Savings,,-4.505,,USD,,,,
+                """
+        )
+        #expect(preview.rows.map(\.row.issueColumn) == [6, 4, 3, 5, nil, 0])
+        #expect(preview.rows[3].status == .failed([.tooManyDecimalPlaces(currencyCode: "EUR")]))
+    }
+
+    @Test("D349.1: with Expense and Income columns, decimals name the column that was filled in")
+    func twoColumnDecimals() throws {
+        let preview = try F.preview(
+            """
+            Date,Withdrawal,Deposit,Account
+            2026-10-20,4.505,,Everyday Savings
+            2026-10-21,,1.255,Everyday Savings
+            """
+        )
+        #expect(preview.rows.map(\.issues) == Array(repeating: [.tooManyDecimalPlaces(currencyCode: "INR")], count: 2))
+        #expect(preview.rows.map(\.row.issueColumn) == [1, 2])
+    }
+
     @Test("D42: the exact same transaction is Already imported; a near one is a Possible duplicate; neither is ticked")
     func duplicates() throws {
         let existing = Transaction(
