@@ -107,6 +107,17 @@
             return change
         }
 
+        public func saveScheduledOccurrence(
+            _ item: ScheduledItem,
+            editing save: ScheduledOccurrenceSave,
+            today: CalendarDay,
+            now: Date,
+        ) throws {
+            try mutate {
+                try LedgerBook.savingScheduledOccurrence(item, editing: save, in: $0, today: today, now: now)
+            }
+        }
+
         public func deleteScheduledItem(id: UUID) throws {
             try mutate { try LedgerBook.deletingScheduledItem(id: id, in: $0) }
         }

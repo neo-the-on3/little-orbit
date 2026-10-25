@@ -25,12 +25,49 @@ extension LedgerBook {
     }
 
     /// The live items whose accounts all still exist. An item on a deleted account waits, out of every list,
-    /// until the account comes back with Undo or the next launch removes it (D288.1).
+    /// until the account comes back with Undo or the next launch removes it (D288.1). An occurrence whose own
+    /// account or To account was deleted follows the item's again, here and so in every list, Pay and catch-up
+    /// (#202 B1). Its stored value is kept, so Undo of the delete gives the occurrence its own account back.
     public static func activeScheduledItems(in snapshot: LedgerSnapshot) -> [ScheduledItem] {
         snapshot.scheduledItemsVisible()
             .filter { item in
                 !item.accountIDs.isEmpty && item.accountIDs.allSatisfy { activeAccount($0, in: snapshot) != nil }
             }
+            .map { withoutMissingEditAccounts($0, in: snapshot) }
+    }
+
+    /// The ledger with every occurrence's own account or To account that it doesn't have taken off, so those
+    /// occurrences follow the item's (#202 B1). A restore applies it: a backup made after deleting an account one
+    /// occurrence used still restores, rather than being refused as damaged.
+    public static func withoutMissingEditAccounts(in snapshot: LedgerSnapshot) -> LedgerSnapshot {
+        var snapshot = snapshot
+        snapshot.scheduledItems = snapshot.scheduledItems.map { withoutMissingEditAccounts($0, in: snapshot) }
+        return snapshot
+    }
+
+    static func withoutMissingEditAccounts(_ item: ScheduledItem, in snapshot: LedgerSnapshot) -> ScheduledItem {
+        var item = item
+        let missing: (UUID?) -> Bool = { id in id.map { activeAccount($0, in: snapshot) == nil } ?? false }
+        for index in item.occurrences.indices {
+            guard var edit = item.occurrences[index].edit else {
+                continue
+            }
+            if edit.has(.account), missing(edit.accountID) {
+                edit.remove(.account)
+            }
+            if edit.has(.transferAccount), missing(edit.transferAccountID) {
+                edit.remove(.transferAccount)
+            }
+            guard edit != item.occurrences[index].edit else {
+                continue
+            }
+            // An `edited` record left with no values of its own is an open occurrence like any other.
+            if edit.isEmpty, item.occurrences[index].outcome == .edited {
+                item.occurrences[index].outcome = .pending
+            }
+            item.occurrences[index].edit = edit.isEmpty ? nil : edit
+        }
+        return item
     }
 
     /// Adds or changes an item. An edit keeps the stored occurrence records, never the caller's, so a form opened
@@ -39,6 +76,8 @@ extension LedgerBook {
     /// past days due under the new rule. The old rule's unpaid days before `today` stay due on their own days, as
     /// `pending` records, whether or not anything was settled before (D59, D336.1). Recorded transactions never
     /// change. A new item's creation date is `now`; no occurrence before that day is ever due (D336.2, D337.1).
+    /// A one-off item's occurrence keeps no values of its own but its due day, so the one-off form's values are the
+    /// ones it records (#202 Tester, `foldingOneOffEdit`).
     public static func savingScheduledItem(
         _ item: ScheduledItem,
         in snapshot: LedgerSnapshot,
@@ -58,6 +97,7 @@ extension LedgerBook {
                 let afterLast = existing.settledDays.max().flatMap { ScheduleCalendar.adding(days: 1, to: $0) }
                 item.resumesOn = [afterLast, today, existing.resumesOn].compactMap { $0 }.max()
             }
+            foldingOneOffEdit(of: &item, now: now)
             try validate(item, in: snapshot)
             touchPayees(from: existing.payeeID, to: item.payeeID, in: &snapshot, now: now)
             replace(&snapshot.scheduledItems, with: item)
@@ -150,13 +190,16 @@ extension LedgerBook {
                 )
                 return ScheduledSettlementOutcome(snapshot: snapshot)
             }
-            var template = item
+            // An occurrence with its own values ("This occurrence only", D45) records those, unless a custom payment
+            // sets them for this one Pay.
+            var template = item.resolved(for: day)
             if let custom {
-                template = applying(custom, to: item)
+                template = applying(custom, to: template)
                 if custom.changesFutureOccurrences {
                     // The schedule's amount, account and category change from now on, never its dates (D114).
-                    snapshot = try savingScheduledItem(template, in: snapshot, today: postedOn, now: now)
-                    scheduleChange = (item, snapshot.scheduledItems.first { $0.id == item.id } ?? template)
+                    let schedule = applying(custom, to: item)
+                    snapshot = try savingScheduledItem(schedule, in: snapshot, today: postedOn, now: now)
+                    scheduleChange = (item, snapshot.scheduledItems.first { $0.id == item.id } ?? schedule)
                 }
             }
             // A received amount is only posted in the currency it was entered in (#207 B1).
@@ -231,16 +274,17 @@ extension LedgerBook {
         result.createdAfterTodayItemIDs = activeScheduledItems(in: snapshot).filter { $0.creationDay > today }.map(\.id)
         for item in activeScheduledItems(in: snapshot) where item.processesAutomatically {
             // An occurrence whose Pay was undone waits for the user: it's never recorded for them again (D344).
-            let due = ScheduleCalendar.dueDays(of: item, through: today)
-                .filter { item.occurrence(on: $0)?.waitsForUser != true }
+            let due = ScheduleCalendar.dueOccurrences(of: item, through: today)
+                .filter { item.occurrence(on: $0.key)?.waitsForUser != true }
             guard !due.isEmpty else {
                 continue
             }
             var working = snapshot
             var posted: [Transaction] = []
             do {
-                for day in due {
-                    let settlement = ScheduledSettlement.pay(itemID: item.id, occurrence: day, postedOn: day)
+                for slot in due {
+                    // Dated on the day it's due, which "This occurrence only" may have moved (D45); keyed to its own.
+                    let settlement = ScheduledSettlement.pay(itemID: item.id, occurrence: slot.key, postedOn: slot.day)
                     let outcome = try settlingScheduledOccurrence(
                         settlement,
                         in: working,
@@ -261,40 +305,9 @@ extension LedgerBook {
         return (snapshot, result)
     }
 
-    /// The transaction one occurrence records: the item's fields, dated at noon on `postedOn` in the item's zone,
-    /// with the stable ID for the item and occurrence (`ScheduledKey`).
-    public static func scheduledTransaction(
-        for item: ScheduledItem,
-        occurrence day: CalendarDay,
-        postedOn: CalendarDay,
-        now: Date,
-    ) throws -> Transaction {
-        guard let date = TransactionCalendar.noon(on: postedOn, timeZoneID: item.timeZoneID),
-            let occurrenceDate = TransactionCalendar.noon(on: day, timeZoneID: item.timeZoneID)
-        else {
-            throw LedgerValidationError.invalidTimeZone
-        }
-        return Transaction(
-            id: ScheduledKey.transactionID(item: item.id, day: day),
-            type: item.type,
-            amount: item.amount,
-            date: date,
-            timeZoneID: item.timeZoneID,
-            accountID: item.accountID,
-            categoryID: item.type == .transfer ? nil : item.categoryID,
-            payeeID: item.type == .transfer ? nil : item.payeeID,
-            details: item.details,
-            note: item.note,
-            transferAccountID: item.type == .transfer ? item.transferAccountID : nil,
-            destinationAmount: item.type == .transfer ? item.destinationAmount : nil,
-            scheduledTemplateID: item.id,
-            scheduledOccurrenceDate: occurrenceDate,
-            createdAt: now,
-        )
-    }
-
     /// The rule both stores apply before a restore replaces anything: a backup whose scheduled items break it is
-    /// damaged. Accounts, categories and payees are checked when an occurrence posts, not here.
+    /// damaged. Accounts, categories and payees are checked when an occurrence posts, not here, so an occurrence's
+    /// own account that the ledger no longer has never makes a backup unusable (#202 B1).
     public static func validateStoredScheduledItems(in snapshot: LedgerSnapshot) throws {
         var itemIDs = Set<UUID>()
         var occurrenceIDs = Set<UUID>()
@@ -308,20 +321,36 @@ extension LedgerBook {
             }
             var days = Set<CalendarDay>()
             for occurrence in item.occurrences {
-                guard ScheduleCalendar.isValid(occurrence.day) else {
+                guard ScheduleCalendar.isValid(occurrence.day),
+                    occurrence.edit?.day.map(ScheduleCalendar.isValid) ?? true
+                else {
                     throw LedgerValidationError.invalidScheduleDay
                 }
                 guard days.insert(occurrence.day).inserted, occurrenceIDs.insert(occurrence.id).inserted else {
                     throw LedgerValidationError.duplicateScheduledOccurrence
                 }
+                try validateStoredEdit(of: occurrence)
             }
+        }
+    }
+
+    /// An occurrence's own values must be ones a save could make (Tech Architect NB 5): an `edited` record has
+    /// them, and an amount of its own is above zero. An account of its own isn't checked: deleting that account
+    /// leaves it behind, and the occurrence then follows the item's (#202 B1).
+    private static func validateStoredEdit(of occurrence: ScheduledOccurrence) throws {
+        if occurrence.outcome == .edited, occurrence.edit == nil {
+            throw LedgerValidationError.invalidAmount
+        }
+        if let amount = occurrence.edit?.amount, amount <= 0 {
+            throw LedgerValidationError.invalidAmount
         }
     }
 
     // MARK: - Private
 
     /// Adds a `pending` record for each of `existing`'s unpaid days before `today` that has no record yet, so an
-    /// edit to the start or the repeat keeps them overdue on their old days (D336.1).
+    /// edit to the start or the repeat keeps them overdue on their old days (D336.1). An `edited` one before `today`
+    /// becomes `pending` with its own values, so it isn't lost when its day leaves the rule.
     private static func keepUnpaidDays(
         of existing: ScheduledItem,
         before today: CalendarDay,
@@ -331,10 +360,18 @@ extension LedgerBook {
         guard let yesterday = ScheduleCalendar.adding(days: -1, to: today) else {
             return
         }
-        let unpaid = ScheduleCalendar.dueDays(of: existing, through: yesterday)
+        // By the day each is due as well as its own day: one moved earlier, overdue now, stays overdue (NB 2, D336.1).
+        let edited = existing.occurrences.filter {
+            $0.deletedAt == nil && $0.outcome == .edited && ($0.day < today || existing.dueDay(of: $0.day) < today)
+        }
+        let unpaid = ScheduleCalendar.openKeys(of: existing, through: yesterday)
             .filter { existing.occurrence(on: $0) == nil }
-        guard !unpaid.isEmpty else {
+        guard !unpaid.isEmpty || !edited.isEmpty else {
             return
+        }
+        for index in item.occurrences.indices where edited.contains(where: { $0.id == item.occurrences[index].id }) {
+            item.occurrences[index].outcome = .pending
+            item.occurrences[index].updatedAt = now
         }
         item.occurrences += unpaid.map { day in
             ScheduledOccurrence(
@@ -368,7 +405,7 @@ extension LedgerBook {
         return item
     }
 
-    private static func validate(_ item: ScheduledItem, in snapshot: LedgerSnapshot) throws {
+    static func validate(_ item: ScheduledItem, in snapshot: LedgerSnapshot) throws {
         try validateRule(of: item)
         // Before the transaction rules, so a received amount read in the wrong currency says so (#207 B1).
         try validateReceivedCurrency(of: item, in: snapshot)
@@ -431,16 +468,19 @@ extension LedgerBook {
         guard let index = snapshot.scheduledItems.firstIndex(where: { $0.id == itemID }) else {
             return
         }
+        let open = snapshot.scheduledItems[index].occurrences.first { $0.day == day && !$0.outcome.isSettled }
         let settled = ScheduledOccurrence(
             id: ScheduledKey.occurrenceID(item: itemID, day: day),
             day: day,
             outcome: outcome,
             transactionID: transactionID,
             recordedAutomatically: automatically ? true : nil,
+            edit: open?.edit,
             createdAt: now,
         )
-        // A pending day kept from before an edit (D336.1) is settled in place, under the same key.
-        snapshot.scheduledItems[index].occurrences.removeAll { $0.day == day && $0.outcome == .pending }
+        // A pending day kept from before an edit (D336.1), or an occurrence with its own values (D45), is settled in
+        // place, under the same key, keeping those values.
+        snapshot.scheduledItems[index].occurrences.removeAll { $0.day == day && !$0.outcome.isSettled }
         snapshot.scheduledItems[index].occurrences.append(settled)
         snapshot.scheduledItems[index].occurrences.sort { $0.day < $1.day }
         snapshot.scheduledItems[index].updatedAt = now

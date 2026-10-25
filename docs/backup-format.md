@@ -156,12 +156,17 @@ schema is still V1 and changes in place (D294). Each item carries its settled oc
 `pending` ones: unpaid days of the schedule before a start or repeat edit, which stay overdue until paid or skipped
 (D336.1). A `pending` record that also has the transaction ID is an automatic item's occurrence whose Pay was undone:
 it stays due for the user and catch-up never records it (D344). Records without it write no transaction ID, as before,
-so their backups and fingerprints don't change. A backup without scheduled items writes the section as before, its manifest doesn't list it, and its
-fingerprint doesn't change; older backups read with no scheduled items. The repeat is written as `{"kind": "never"}`
-or `{"kind": "every", "unit": "month", "count": 1}`, and days as `{"year", "month", "day"}`. A backup whose scheduled
-items break the stores' rule (`LedgerBook.validateStoredScheduledItems`: an end before the start, a repeat outside
-1–99, a day that doesn't exist, a repeated item ID, or one occurrence settled twice) is damaged, and nothing is
-replaced.
+so their backups and fingerprints don't change. An occurrence edited with "This occurrence only" (#197, D45) carries
+an `edit` object: `fields` (the names of the fields it sets, in a fixed order), and its values (`day`, `amount`,
+`accountID`, `transferAccountID`, `categoryID`, `payeeID`, `details`, `note`); an open one has the outcome `edited`.
+An `accountID` or `transferAccountID` the backup has no account for (its account was deleted after the edit) is
+dropped on restore, and that occurrence follows the item's account; it never makes the backup damaged (#202 B1).
+Items without such edits write exactly what they wrote before. A backup without scheduled items writes the section as
+before, its manifest doesn't list it, and its fingerprint doesn't change; older backups read with no scheduled items.
+The repeat is written as `{"kind": "never"}` or `{"kind": "every", "unit": "month", "count": 1}`, and days as
+`{"year", "month", "day"}`. A backup whose scheduled items break the stores' rule
+(`LedgerBook.validateStoredScheduledItems`: an end before the start, a repeat outside 1–99, a day that doesn't exist,
+a repeated item ID, or one occurrence settled twice) is damaged, and nothing is replaced.
 
 After the first release, the format that fills a reserved section, or changes the layout, raises
 `BackupFormat.currentVersion` and migrates older backups on restore.

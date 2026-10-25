@@ -111,9 +111,38 @@ public enum ScheduleCalendar {
         return found
     }
 
-    /// The days still to pay or skip through `last`: the rule's occurrences that aren't settled, and the pending
-    /// days kept from before an edit (D336.1), oldest first.
+    /// The keys of the occurrences due through `last`, by the day each is due (see `dueOccurrences`).
     public static func dueDays(of item: ScheduledItem, through last: CalendarDay) -> [CalendarDay] {
+        dueOccurrences(of: item, through: last).map(\.key)
+    }
+
+    /// The occurrences still to pay or skip that are due through `last`, by due day then key: the rule's
+    /// occurrences that aren't settled, the pending days kept from before an edit (D336.1), and occurrences "This
+    /// occurrence only" moved, which are due on their new day (D45).
+    public static func dueOccurrences(of item: ScheduledItem, through last: CalendarDay) -> [ScheduledSlot] {
+        let keys = Set(openKeys(of: item, through: last) + editedKeys(of: item))
+        return keys.map { ScheduledSlot(key: $0, day: item.dueDay(of: $0)) }
+            .filter { $0.day <= last }
+            .sorted { $0.day == $1.day ? $0.key < $1.key : $0.day < $1.day }
+    }
+
+    /// The first occurrence still to pay or skip that's due after `today`, by due day: the next upcoming one. The
+    /// rule's next occurrence passes over moved ones, which count on the day they moved to, so a move to a later day
+    /// never hides the occurrence after it (Tech Architect B1).
+    public static func nextOccurrence(of item: ScheduledItem, after today: CalendarDay) -> ScheduledSlot? {
+        let settled = item.settledDays
+        let ruled = firstOccurrence(of: item, onOrAfter: today) { key in
+            !settled.contains(key) && item.edit(for: key)?.has(.day) != true && key > today
+        }
+        let moved = (item.pendingDays + editedKeys(of: item)).filter { item.dueDay(of: $0) > today }
+        return Set([ruled].compactMap { $0 } + moved)
+            .map { ScheduledSlot(key: $0, day: item.dueDay(of: $0)) }
+            .min { $0.day == $1.day ? $0.key < $1.key : $0.day < $1.day }
+    }
+
+    /// The keys still to pay or skip through `last`, by key: the rule's occurrences that aren't settled, and the
+    /// pending days kept from before an edit (D336.1), oldest first.
+    static func openKeys(of item: ScheduledItem, through last: CalendarDay) -> [CalendarDay] {
         let settled = item.settledDays
         let ruled = occurrences(of: item, through: last).filter { !settled.contains($0) }
         let pending = item.pendingDays.filter { $0 <= last }
@@ -121,6 +150,34 @@ public enum ScheduleCalendar {
             return ruled
         }
         return Array(Set(ruled + pending)).sorted()
+    }
+
+    /// Unsettled occurrences with their own values whose key is still an occurrence, and pending days that were
+    /// moved: either may be due on a day other than its key.
+    static func editedKeys(of item: ScheduledItem) -> [CalendarDay] {
+        item.occurrences
+            .filter { record in
+                guard record.deletedAt == nil, record.edit?.has(.day) == true else {
+                    return false
+                }
+                return record.outcome == .pending || (record.outcome == .edited && isOccurrence(record.day, of: item))
+            }
+            .map(\.day)
+    }
+
+    /// Which occurrence of the rule from `start` falls on `day` (0 is `start`), or `nil` when none does.
+    public static func index(of day: CalendarDay, from start: CalendarDay, repeating rule: ScheduleRepeat) -> Int? {
+        var index = 0
+        while index < walkLimit, let candidate = occurrence(index, from: start, repeating: rule) {
+            if candidate == day {
+                return index
+            }
+            if candidate > day {
+                return nil
+            }
+            index += 1
+        }
+        return nil
     }
 
     /// Whether `day` is one of the item's occurrences: on its rule, or pending from before an edit.

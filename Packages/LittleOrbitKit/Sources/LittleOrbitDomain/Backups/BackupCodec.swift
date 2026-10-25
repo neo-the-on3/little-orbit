@@ -132,6 +132,7 @@ public struct BackupCodec: Sendable {
             contents.budgets = shared.budgets
             contents.scheduledItems = shared.scheduledItems
             contents.reconciliationHistory = shared.reconciliationHistory
+            contents.scheduledItems = LedgerBook.withoutMissingEditAccounts(in: contents.ledger).scheduledItems
             // The stores' one budget rule: a budget either would refuse is damage, before anything is replaced (B1).
             try LedgerBook.validateStoredBudgets(in: contents.ledger)
             // The stores' one scheduled-item rule: an item either would refuse is damage, before anything is

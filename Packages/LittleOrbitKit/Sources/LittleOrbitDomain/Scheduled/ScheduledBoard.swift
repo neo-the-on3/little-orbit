@@ -1,17 +1,26 @@
 import Foundation
 
-/// One occurrence of a scheduled item that's due or coming up, with the day it falls due.
+/// One occurrence of a scheduled item that's due or coming up, with the day it falls due and its key: the item's own
+/// day it belongs to, which Pay, Skip and an occurrence edit act on. They differ only for an occurrence "This
+/// occurrence only" moved (D45).
 public struct ScheduledDue: Hashable, Sendable, Identifiable {
     public var item: ScheduledItem
     public var day: CalendarDay
+    public var key: CalendarDay
 
-    public init(item: ScheduledItem, day: CalendarDay) {
+    public init(item: ScheduledItem, day: CalendarDay, key: CalendarDay? = nil) {
         self.item = item
         self.day = day
+        self.key = key ?? day
     }
 
     public var id: String {
-        "\(item.id.uuidString)|\(day.year)-\(day.month)-\(day.day)"
+        "\(item.id.uuidString)|\(key.year)-\(key.month)-\(key.day)"
+    }
+
+    /// The item as this occurrence records it, with its own values (D45).
+    public var occurrenceItem: ScheduledItem {
+        item.resolved(for: key)
     }
 
     /// An automatic item's occurrence whose Pay was undone: the user pays or skips it (D344).
@@ -77,32 +86,29 @@ public struct ScheduledBoard: Equatable, Sendable {
     public static func make(_ snapshot: LedgerSnapshot, today: CalendarDay) -> ScheduledBoard {
         var board = ScheduledBoard(today: today)
         for item in LedgerBook.activeScheduledItems(in: snapshot) {
-            let settled = item.settledDays
-            let due = ScheduleCalendar.dueDays(of: item, through: today)
-            for day in due {
-                if day < today {
-                    board.overdue.append(ScheduledDue(item: item, day: day))
+            let due = ScheduleCalendar.dueOccurrences(of: item, through: today)
+            for slot in due {
+                let entry = ScheduledDue(item: item, day: slot.day, key: slot.key)
+                if slot.day < today {
+                    board.overdue.append(entry)
                 } else {
-                    board.dueToday.append(ScheduledDue(item: item, day: day))
+                    board.dueToday.append(entry)
                 }
             }
             guard due.isEmpty else {
                 continue
             }
-            if let tomorrow = ScheduleCalendar.adding(days: 1, to: today),
-                let next = ScheduleCalendar.firstOccurrence(
-                    of: item,
-                    onOrAfter: tomorrow,
-                    where: { !settled.contains($0) },
-                )
-            {
-                board.upcoming.append(ScheduledDue(item: item, day: next))
+            if let next = ScheduleCalendar.nextOccurrence(of: item, after: today) {
+                board.upcoming.append(ScheduledDue(item: item, day: next.day, key: next.key))
             } else {
                 board.completed.append(item)
             }
         }
         let byDay: (ScheduledDue, ScheduledDue) -> Bool = { lhs, rhs in
-            lhs.day == rhs.day ? lhs.item.id.uuidString < rhs.item.id.uuidString : lhs.day < rhs.day
+            guard lhs.day == rhs.day else {
+                return lhs.day < rhs.day
+            }
+            return lhs.item.id == rhs.item.id ? lhs.key < rhs.key : lhs.item.id.uuidString < rhs.item.id.uuidString
         }
         board.overdue.sort(by: byDay)
         board.dueToday.sort(by: byDay)
@@ -144,17 +150,15 @@ public struct ScheduledCatchUp: Equatable, Sendable {
         var order: [UUID] = []
         var days: [UUID: [CalendarDay]] = [:]
         for transaction in posted {
-            guard let itemID = transaction.scheduledTemplateID, let occurrence = transaction.scheduledOccurrenceDate
-            else {
+            guard let itemID = transaction.scheduledTemplateID else {
                 continue
             }
             if days[itemID] == nil {
                 order.append(itemID)
             }
-            days[itemID, default: []]
-                .append(
-                    TransactionCalendar.ownDay(of: occurrence, timeZoneID: transaction.timeZoneID)
-                )
+            // The day on the recorded transaction: an occurrence "This occurrence only" moved is listed on the day
+            // it moved to, not its original day (D346.4).
+            days[itemID, default: []].append(TransactionTiming.day(of: transaction))
         }
         return order.map { ScheduledCatchUpGroup(itemID: $0, days: (days[$0] ?? []).sorted()) }
     }

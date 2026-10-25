@@ -56,6 +56,9 @@ public protocol LoadScheduledUseCase {
 public protocol ManageScheduledUseCase {
     /// Saves `item`. A new item carries the zone it was made in, `currentTimeZoneID()`, and keeps it.
     func save(_ item: ScheduledItem) throws
+    /// Saves the form opened on one occurrence of `item`: the SERIES fields apply to the series, and the other
+    /// changed fields to that occurrence or to it and every later one, as `save.scope` says (D45, D114, D115).
+    func save(_ item: ScheduledItem, editing save: ScheduledOccurrenceSave) throws
     func delete(id: UUID) throws
     /// The form's Save of a new item: `item` with the payee its field left pending, created or unarchived in the
     /// same save (D350.1, D351.2). Returns what the window's Undo step needs (D351.1).
@@ -220,6 +223,10 @@ public struct DefaultScheduledUseCases: LoadScheduledUseCase, ManageScheduledUse
 
     public func save(_ item: ScheduledItem) throws {
         try repository.saveScheduledItem(item, today: today(), now: now())
+    }
+
+    public func save(_ item: ScheduledItem, editing save: ScheduledOccurrenceSave) throws {
+        try repository.saveScheduledOccurrence(item, editing: save, today: today(), now: now())
     }
 
     public func delete(id: UUID) throws {
