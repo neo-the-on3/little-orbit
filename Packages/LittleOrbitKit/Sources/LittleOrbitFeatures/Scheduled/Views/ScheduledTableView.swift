@@ -4,12 +4,12 @@
     import SwiftUI
 
     /// The Mac Scheduled list as a Table (#26 frame "Scheduled – overdue, due today, upcoming, completed; sidebar
-    /// badge", D340.13, D355): Due 96, Name 180, Repeat 150, Account 120, Amount 120 (trailing) and Status filling the
-    /// rest, in sections Overdue, Due Today, Upcoming and Completed with no counts (D334.2), each ordered by due
-    /// date. Return or a double-click opens the item. With a row selected, ⌘E edits it, and ⌘⌫, the Delete key or
-    /// Edit ▸ Delete asks to delete it. ⌘↩ waits for #201's Pay sheet (D360.2); the menu's Pay Now and Skip This
-    /// Occurrence… have no shortcut. The catch-up and overdue hints sit above it, and the counts and the automatic
-    /// line below it. Columns aren't sortable.
+    /// badge", D340.13, D355): Due, Name, Repeat, Account, Amount (trailing) and Status filling the rest, in sections
+    /// Overdue, Due Today, Upcoming and Completed with no counts (D334.2), each ordered by due date. Return or a
+    /// double-click opens the item. With a row selected, ⌘E edits it, and ⌘⌫, the Delete key or Edit ▸ Delete asks
+    /// to delete it. ⌘↩ waits for #201's Pay sheet (D360.2); the menu's Pay Now and Skip This Occurrence… have no
+    /// shortcut. The catch-up and overdue hints sit above it, and the counts and the automatic line below it.
+    /// Columns aren't sortable.
     struct ScheduledTableView: View {
         let model: ScheduledListViewModel
         /// Opens an item's screen in the caller's stack.
@@ -46,7 +46,7 @@
                 TableColumn(model.dueColumn) { row in
                     Text(verbatim: row.due)
                 }
-                .width(min: 80, ideal: 96)
+                .width(min: 88, ideal: 96)
                 TableColumn(model.nameColumn) { row in
                     Label {
                         Text(verbatim: row.name)
@@ -54,19 +54,20 @@
                         Image(systemName: row.row.symbolName)
                             .accessibilityHidden(true)
                     }
+                    .help(row.name)
                 }
-                // Name and Repeat give up width first, so Account and Status aren't clipped in a 900-point
-                // window (Tester, #205).
-                .width(min: 100, ideal: 180)
+                // Name gives up width first, down to 80 with its full name as help, so the other columns keep
+                // the D355 strings whole in a 900-point window (UI Designer on #205).
+                .width(min: 80, ideal: 180)
                 TableColumn(model.repeatColumn) { row in
                     Text(verbatim: row.repeatText)
                         .help(row.repeatText)
                 }
-                .width(min: 110, ideal: 170)
+                .width(min: 132, ideal: 170)
                 TableColumn(model.accountColumn) { row in
                     Text(verbatim: row.account)
                 }
-                .width(min: 120, ideal: 120)
+                .width(min: 112, ideal: 120)
                 TableColumn(model.amountColumn) { row in
                     Text(verbatim: row.amount)
                         .foregroundStyle(row.tone.color)
@@ -78,6 +79,7 @@
                     Text(verbatim: row.status)
                         .foregroundStyle(.secondary)
                 }
+                .width(min: 140)
             } rows: {
                 ForEach(model.tableSections) { section in
                     Section(section.title) {

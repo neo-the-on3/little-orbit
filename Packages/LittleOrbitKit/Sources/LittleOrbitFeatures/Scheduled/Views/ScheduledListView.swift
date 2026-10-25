@@ -76,10 +76,10 @@
                 .toolbar {
                     // No shortcut: ⌘N stays New Transaction.
                     ToolbarItem(placement: .primaryAction) {
-                        // Told apart from the window's other + by its help and spoken label (Tester, #205).
+                        // "Add Scheduled Item" as its title, help and spoken name (D334.6). On the Mac it's the
+                        // window's only + while Scheduled is selected.
                         Button(model.addTitle, systemImage: "plus") { model.openNew() }
-                            .help(model.newItemTitle)
-                            .accessibilityLabel(model.newItemTitle)
+                            .help(model.addTitle)
                     }
                 }
                 .navigationDestination(item: $openedItem) { id in
