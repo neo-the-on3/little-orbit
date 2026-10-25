@@ -89,10 +89,19 @@ extension ImportExportText {
         )
     }
 
+    /// iOS Review: the toolbar's Import, with the count in the summary above (UI Designer, 26 Oct).
+    static var importAction: String {
+        FeatureText.string(
+            "Import",
+            comment:
+                "iOS CSV import Review: the top-trailing toolbar button that saves the ticked rows. The count is in the summary on the page.",
+        )
+    }
+
     static var nothingSaved: String {
         FeatureText.string(
             "Nothing is saved until you tap Import.",
-            comment: "iOS CSV import Review: the note under the Import button.",
+            comment: "iOS CSV import Review: the note under the counts. Import is the toolbar button.",
         )
     }
 
@@ -101,7 +110,7 @@ extension ImportExportText {
         FeatureText.string(
             "Nothing is saved until you click Import.",
             comment:
-                "Mac CSV import Review: the note under the “Import N Transactions” button (D367).",
+                "Mac CSV import Review: the note under the counts. Import is the sheet’s default button, “Import N Transactions” (D367).",
         )
     }
 

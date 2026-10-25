@@ -4025,6 +4025,19 @@
         }
       }
     },
+    "Import": {
+      "comment": "iOS CSV import Review: the top-trailing toolbar button that saves the ticked rows. The count is in the summary on the page.",
+      "extractionState": "manual",
+      "generatesSymbol": false,
+      "localizations": {
+        "en": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Import"
+          }
+        }
+      }
+    },
     "Import %lld Transactions": {
       "comment": "CSV import Review: the button that saves the selected rows.",
       "extractionState": "manual",
@@ -5363,7 +5376,7 @@
       "generatesSymbol": false
     },
     "Nothing is saved until you click Import.": {
-      "comment": "Mac CSV import Review: the note under the “Import N Transactions” button (D367).",
+      "comment": "Mac CSV import Review: the note under the counts. Import is the sheet’s default button, “Import N Transactions” (D367).",
       "extractionState": "manual",
       "generatesSymbol": false,
       "localizations": {
@@ -5376,7 +5389,7 @@
       }
     },
     "Nothing is saved until you tap Import.": {
-      "comment": "iOS CSV import Review: the note under the Import button.",
+      "comment": "iOS CSV import Review: the note under the counts. Import is the toolbar button.",
       "extractionState": "manual",
       "generatesSymbol": false,
       "localizations": {

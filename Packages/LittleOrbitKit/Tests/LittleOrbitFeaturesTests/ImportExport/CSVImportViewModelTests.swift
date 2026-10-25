@@ -46,7 +46,7 @@ struct CSVImportViewModelTests {
         #expect(try repository.transactions().filter { $0.type == .income }.count == 2)
     }
 
-    @Test("D367: Review's note says tap on iOS and click on the Mac")
+    @Test("Review's Import and its note: “Import” and tap on iOS, “Import N Transactions” and click on the Mac (D367)")
     func reviewWordingPerPlatform() async throws {
         let repository = try F.repository()
         let model = F.model(repository, changes: F.Changes())
@@ -56,6 +56,8 @@ struct CSVImportViewModelTests {
         await model.next()
         #expect(model.step == .review)
         #expect(model.canImport)
+        #expect(model.importActionTitle(on: .iOS) == "Import")
+        #expect(model.importActionTitle(on: .mac) == "Import 5 Transactions")
         #expect(model.reviewFooter(on: .iOS) == "Nothing is saved until you tap Import.")
         #expect(model.reviewFooter(on: .mac) == "Nothing is saved until you click Import.")
     }

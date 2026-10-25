@@ -95,10 +95,14 @@
                             .disabled(model.isWorking)
                     }
                 }
-                // Review saves with its own “Import N Transactions” button at the end of the page, so there's one
-                // Import button, not a second one here (Tester's #190 Mac pass).
-                if model.step != .review {
-                    ToolbarItem(placement: .confirmationAction) {
+                // Review's one Import is here, so it's reachable however long the page is and Return imports on
+                // the Mac: “Import” on iOS, “Import N Transactions” as the Mac sheet's default (UI Designer, 26 Oct).
+                ToolbarItem(placement: .confirmationAction) {
+                    if model.step == .review {
+                        Button(model.importActionTitle(on: .current)) { Task { await model.commit() } }
+                            .keyboardShortcut(.defaultAction)
+                            .disabled(!model.canImport)
+                    } else {
                         Button(ImportExportText.next) { Task { await model.next() } }
                             .disabled(!model.canGoNext || model.isWorking)
                     }
@@ -254,6 +258,8 @@
                 LabeledContent(ImportExportText.shortened, value: model.shortenedCount.formatted())
                 LabeledContent(ImportExportText.alreadyImported, value: model.alreadyImportedCount.formatted())
                 LabeledContent(ImportExportText.possibleDuplicates, value: model.possibleDuplicateCount.formatted())
+            } footer: {
+                Text(model.reviewFooter(on: .current))
             }
             rows(ImportExportText.toImportSection, model.selectedRows, selected: true)
             if !model.unselectedRows.isEmpty {
@@ -268,13 +274,6 @@
                 }
             }
             rows(ImportExportText.cantImportSection, model.failedRows, selected: false)
-            Section {
-                Button(model.importTitle) { Task { await model.commit() } }
-                    .keyboardShortcut(.defaultAction)
-                    .disabled(!model.canImport)
-            } footer: {
-                Text(model.reviewFooter(on: .current))
-            }
         }
 
         @ViewBuilder
