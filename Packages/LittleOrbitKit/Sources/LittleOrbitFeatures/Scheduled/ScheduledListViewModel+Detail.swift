@@ -29,6 +29,10 @@ extension ScheduledListViewModel {
         if item.type == .transfer {
             facts.append(fact(ScheduledText.fromLabel, listing.account(item.accountID)?.name))
             facts.append(fact(ScheduledText.toLabel, listing.account(item.transferAccountID)?.name))
+            if let received = item.destinationAmount, let target = listing.account(item.transferAccountID) {
+                let text = MoneyFormatter(locale: locale).string(received, currencyCode: target.currencyCode)
+                facts.append(fact(ScheduledText.received, text))
+            }
         } else {
             facts.append(fact(ScheduledText.account, listing.account(item.accountID)?.name))
             facts.append(fact(ScheduledText.category, listing.category(item.categoryID)?.name))

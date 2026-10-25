@@ -64,6 +64,8 @@ public final class ScheduledFormViewModel: Identifiable {
         didSet { accountChanged() }
     }
     public var transferAccountID: UUID?
+    /// A transfer to an account in another currency: the amount that arrives, in To's currency (D17, #197 item 9).
+    public var receivedText: String
     public var categoryID: UUID?
     /// The payee field's text. Typing an existing payee's name picks it; any other text picks none until its
     /// "Create “‹name›”" row is chosen (#197, #23).
@@ -91,6 +93,8 @@ public final class ScheduledFormViewModel: Identifiable {
     public private(set) var notificationsDenied = false
     /// The amount field's error, after a save attempt.
     public private(set) var amountError: String?
+    /// The Received field's error, after a save attempt.
+    public internal(set) var receivedError: String?
     /// An account, transfer or date error, after a save attempt.
     public private(set) var formError: String?
     public var alert: CategoryAlert?
@@ -102,7 +106,7 @@ public final class ScheduledFormViewModel: Identifiable {
     public var discard = DiscardConfirmation()
 
     @ObservationIgnored let useCases: ScheduledScreenUseCases
-    @ObservationIgnored private let listing: ScheduledListing
+    @ObservationIgnored let listing: ScheduledListing
     @ObservationIgnored private let original: ScheduledItem?
     @ObservationIgnored let locale: Locale
     @ObservationIgnored private let timeZoneID: String
@@ -143,6 +147,7 @@ public final class ScheduledFormViewModel: Identifiable {
         note = item?.note ?? ""
         accountID = item?.accountID ?? accounts.first?.id
         transferAccountID = item?.transferAccountID
+        receivedText = Self.receivedText(of: item, listing: listing, locale: locale)
         categoryID = item?.categoryID
         payees = listing.payees
         payeeID = item?.payeeID
@@ -252,18 +257,24 @@ public final class ScheduledFormViewModel: Identifiable {
 
     // MARK: Choices
 
+    /// The accounts; a transfer's From and To name their currency, "Everyday Savings · INR", as on #23's transfer.
     public var accountChoices: [ScheduledChoice] {
-        listing.accounts.sorted { $0.sortOrder < $1.sortOrder }.map { ScheduledChoice(id: $0.id, name: $0.name) }
+        listing.accounts.sorted { $0.sortOrder < $1.sortOrder }.map(choice)
     }
 
-    /// Accounts in the From account's currency other than it: a scheduled transfer between currencies isn't built
-    /// yet.
+    /// Every account other than From, in any currency: one in another currency asks for the amount received too.
     public var toChoices: [ScheduledChoice] {
-        let currency = listing.account(accountID)?.currencyCode
-        return listing.accounts
-            .filter { $0.id != accountID && $0.currencyCode == currency }
+        listing.accounts
+            .filter { $0.id != accountID }
             .sorted { $0.sortOrder < $1.sortOrder }
-            .map { ScheduledChoice(id: $0.id, name: $0.name) }
+            .map(choice)
+    }
+
+    private func choice(_ account: Account) -> ScheduledChoice {
+        ScheduledChoice(
+            id: account.id,
+            name: type == .transfer ? ScheduledText.pair(account.name, account.currencyCode) : account.name,
+        )
     }
 
     public var categoryChoices: [ScheduledChoice] {
@@ -287,11 +298,11 @@ public final class ScheduledFormViewModel: Identifiable {
 
     // MARK: Saving
 
-    private var currencyCode: String {
+    var currencyCode: String {
         listing.account(accountID)?.currencyCode ?? CurrencyCode.deviceDefault
     }
 
-    /// A transfer's To account stays one of the From account's currency.
+    /// A transfer's To account stays a different account from From.
     private func accountChanged() {
         if type == .transfer, !toChoices.contains(where: { $0.id == transferAccountID }) {
             transferAccountID = toChoices.first?.id
@@ -315,7 +326,7 @@ public final class ScheduledFormViewModel: Identifiable {
         }
     }
 
-    func draft(amount: Decimal) -> ScheduledItem {
+    func draft(amount: Decimal, received: Decimal? = nil) -> ScheduledItem {
         var item =
             original
             // The store sets a new item's creation date when it's saved.
@@ -324,6 +335,8 @@ public final class ScheduledFormViewModel: Identifiable {
         item.amount = amount
         item.accountID = accountID
         item.transferAccountID = type == .transfer ? transferAccountID : nil
+        // Dropped when To is back in From's currency (#197 item 9).
+        item.destinationAmount = type == .transfer && needsReceivedAmount ? received : nil
         item.categoryID = type == .transfer ? nil : categoryID
         item.payeeID = type == .transfer ? nil : payeeID
         let trimmed = details.trimmingCharacters(in: .whitespacesAndNewlines)
@@ -342,6 +355,7 @@ public final class ScheduledFormViewModel: Identifiable {
     @discardableResult
     public func save() -> Bool {
         amountError = nil
+        receivedError = nil
         formError = nil
         // Only this save's deleted-item alert closes the form: the item may be back (an Undo elsewhere) (#258).
         alertClosesForm = false
@@ -368,7 +382,14 @@ public final class ScheduledFormViewModel: Identifiable {
             formError = ScheduledText.pickTwoAccounts
             return false
         }
-        let item = draft(amount: amount)
+        var received: Decimal?
+        if type == .transfer, needsReceivedAmount {
+            guard let parsed = parseReceived() else {
+                return false
+            }
+            received = parsed
+        }
+        let item = draft(amount: amount, received: received)
         if let end = item.endDay, end < item.startDay {
             formError = ScheduledText.endBeforeStart
             return false
