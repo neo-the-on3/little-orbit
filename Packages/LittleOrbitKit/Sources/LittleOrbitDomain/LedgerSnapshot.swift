@@ -11,6 +11,8 @@ public struct LedgerSnapshot: Equatable, Sendable {
     public var attachments: [Attachment]
     /// Budgets (#25), each with its limit history.
     public var budgets: [Budget]
+    /// Scheduled items (#26), each with its settled occurrences.
+    public var scheduledItems: [ScheduledItem]
 
     public init(
         accounts: [Account] = [],
@@ -21,6 +23,7 @@ public struct LedgerSnapshot: Equatable, Sendable {
         splits: [TransactionSplit] = [],
         attachments: [Attachment] = [],
         budgets: [Budget] = [],
+        scheduledItems: [ScheduledItem] = [],
     ) {
         self.accounts = accounts
         self.transactions = transactions
@@ -30,6 +33,7 @@ public struct LedgerSnapshot: Equatable, Sendable {
         self.splits = splits
         self.attachments = attachments
         self.budgets = budgets
+        self.scheduledItems = scheduledItems
     }
 
     public func accountsVisible() -> [Account] {
@@ -44,9 +48,10 @@ public struct LedgerSnapshot: Equatable, Sendable {
         categories.filter { $0.deletedAt == nil }
     }
 
-    /// The live transactions that use this payee (see `LedgerRepository.payeeReferenceCount`).
+    /// The live transactions and scheduled items that use this payee (see `LedgerRepository.payeeReferenceCount`).
     public func payeeReferenceCount(_ payeeID: UUID) -> Int {
         transactions.filter { $0.payeeID == payeeID && $0.deletedAt == nil }.count
+            + scheduledItems.filter { $0.payeeID == payeeID && $0.deletedAt == nil }.count
     }
 
     public func payeesVisible() -> [Payee] {
@@ -71,5 +76,9 @@ public struct LedgerSnapshot: Equatable, Sendable {
 
     public func budgetsVisible() -> [Budget] {
         budgets.filter { $0.deletedAt == nil }
+    }
+
+    public func scheduledItemsVisible() -> [ScheduledItem] {
+        scheduledItems.filter { $0.deletedAt == nil }
     }
 }

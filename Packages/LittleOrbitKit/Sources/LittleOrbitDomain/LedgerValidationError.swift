@@ -92,6 +92,20 @@ public enum LedgerValidationError: Error, Equatable, Sendable {
     case duplicateBudgetCategory
     /// A budget has two limits from the same day. Only an edited backup has them (#174 delta review NB1).
     case duplicateBudgetLimitDay
+    /// The scheduled item isn't in the ledger, or its account was deleted (#26).
+    case missingScheduledItem
+    /// The day isn't one of the scheduled item's occurrences (#26).
+    case notAnOccurrence
+    /// A scheduled item's end date is before its start date (#26 QA).
+    case scheduleEndsBeforeStart
+    /// A repeat isn't every 1–99 days, weeks, months or years (#26).
+    case scheduleRepeatOutOfRange
+    /// A scheduled item's day isn't a real calendar day. Only an edited backup has one (#26).
+    case invalidScheduleDay
+    /// Two scheduled items share an ID. Only an edited backup has them (#26).
+    case duplicateScheduledItemID
+    /// An occurrence is settled twice, or two share an ID. Only an edited backup has them (#26).
+    case duplicateScheduledOccurrence
 }
 
 /// Why a category merge was refused: subcategories of the category being merged have the same names as
