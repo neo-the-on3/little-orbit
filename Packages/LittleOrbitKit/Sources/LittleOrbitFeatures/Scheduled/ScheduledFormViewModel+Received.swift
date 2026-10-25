@@ -5,6 +5,18 @@ import LittleOrbitDomain
 /// another currency, a Received amount appears with the read-only rate worked out from the two amounts, and the
 /// item keeps both (D17, S4). Each occurrence then records both.
 extension ScheduledFormViewModel {
+    /// A typed Received means To's currency, so a To in another currency clears it: "12" can't turn from $12 into
+    /// ¥12 (Tech Architect NB 2 on #207). A To in the same currency as the old one keeps it.
+    func transferAccountChanged(from old: UUID?) {
+        guard old != transferAccountID,
+            listing.account(old)?.currencyCode != listing.account(transferAccountID)?.currencyCode
+        else {
+            return
+        }
+        receivedText = ""
+        receivedError = nil
+    }
+
     /// Whether To is in another currency than From, so the form asks for the amount received.
     public var needsReceivedAmount: Bool {
         guard type == .transfer, let source = listing.account(accountID),
