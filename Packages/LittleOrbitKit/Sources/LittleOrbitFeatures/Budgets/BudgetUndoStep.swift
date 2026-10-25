@@ -14,6 +14,8 @@ struct BudgetUndoStep: RecordUndoChange {
         case new
         case edit
         case changeLimit
+        /// Delete Budget, from the budget detail (#25 part 4).
+        case delete
     }
 
     let name: String

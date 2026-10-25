@@ -22,6 +22,15 @@ public protocol BudgetPeriodsUseCase {
 }
 
 @MainActor
+public protocol BudgetDetailUseCase {
+    /// The budget's detail for the period at `index`, or its current period when `index` is `nil`: the figures,
+    /// the transactions that count, and what the screen needs to name them (#25 part 4). An index after the
+    /// current period shows the current one, and one before the first shows the first. Throws `missingBudget`
+    /// when the budget is gone.
+    func detail(of budgetID: UUID, period index: Int?, today: CalendarDay) throws -> BudgetDetail
+}
+
+@MainActor
 public protocol SaveBudgetUseCase {
     /// Adds a budget, or saves the edits to one. A new budget's limit applies from its first period. A changed
     /// limit on an existing budget applies from the period containing `today` on, and earlier periods keep
@@ -51,6 +60,10 @@ public protocol BudgetChangesUseCase {
     /// Changes the limit like `ChangeBudgetLimitUseCase.changeLimit(of:to:today:)` and returns the change,
     /// `.replaced` with the version before it (Change Budget Limit, the detail's action sheet).
     func limitChange(of budgetID: UUID, to amount: Decimal, today: CalendarDay) throws -> BudgetChange
+    /// Deletes the budget like `DeleteBudgetUseCase.delete(_:)` and returns the change, `.removed` with the
+    /// budget as it was, so Undo puts it back with the same ID, categories and limit history (Delete Budget,
+    /// D307.8). Throws `missingBudget` when it's already gone.
+    func deletedChange(of budgetID: UUID) throws -> BudgetChange
     /// What `change` left in the ledger, read right after it was made or reverted, for the stale check.
     func outcome(of change: BudgetChange) throws -> BudgetChangeOutcome
     /// Reverts `change` if the ledger still holds `outcome`, by value; otherwise writes nothing and says why
@@ -59,8 +72,8 @@ public protocol BudgetChangesUseCase {
 }
 
 /// Every budget use case, which `DefaultBudgetUseCases` implements in one type.
-public typealias BudgetUseCase = ListBudgetsUseCase & BudgetPeriodsUseCase & SaveBudgetUseCase
-    & ChangeBudgetLimitUseCase & DeleteBudgetUseCase & BudgetChangesUseCase
+public typealias BudgetUseCase = ListBudgetsUseCase & BudgetPeriodsUseCase & BudgetDetailUseCase
+    & SaveBudgetUseCase & ChangeBudgetLimitUseCase & DeleteBudgetUseCase & BudgetChangesUseCase
 
 @MainActor
 public final class DefaultBudgetUseCases: BudgetUseCase {
@@ -97,6 +110,11 @@ public final class DefaultBudgetUseCases: BudgetUseCase {
     public func figures(of budgetID: UUID, period index: Int) throws -> BudgetPeriodFigures {
         let ledger = try repository.budgetLedger()
         return BudgetProgress.figures(of: try budget(budgetID, in: ledger), period: index, in: ledger)
+    }
+
+    public func detail(of budgetID: UUID, period index: Int?, today: CalendarDay) throws -> BudgetDetail {
+        let ledger = try repository.budgetLedger()
+        return BudgetDetail(of: try budget(budgetID, in: ledger), period: index, today: today, in: ledger)
     }
 
     @discardableResult
@@ -163,6 +181,12 @@ public final class DefaultBudgetUseCases: BudgetUseCase {
         let previous = try budget(budgetID, in: repository.budgetLedger())
         try changeLimit(of: budgetID, to: amount, today: today)
         return .replaced(previous)
+    }
+
+    public func deletedChange(of budgetID: UUID) throws -> BudgetChange {
+        let previous = try budget(budgetID, in: repository.budgetLedger())
+        try delete(budgetID)
+        return .removed(previous)
     }
 
     public func outcome(of change: BudgetChange) throws -> BudgetChangeOutcome {

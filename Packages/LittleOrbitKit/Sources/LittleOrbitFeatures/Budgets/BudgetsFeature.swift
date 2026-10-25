@@ -6,10 +6,13 @@ public struct BudgetScreenUseCases {
     public let list: any ListBudgetsUseCase
     /// The New Budget and Edit Budget form's use cases. Without them the screen offers no way to make a budget.
     public let form: BudgetFormUseCases?
+    /// The budget detail's use cases. Without them a row opens nothing.
+    public let detail: BudgetDetailUseCases?
 
-    public init(list: any ListBudgetsUseCase, form: BudgetFormUseCases? = nil) {
+    public init(list: any ListBudgetsUseCase, form: BudgetFormUseCases? = nil, detail: BudgetDetailUseCases? = nil) {
         self.list = list
         self.form = form
+        self.detail = detail
     }
 }
 
@@ -73,6 +76,25 @@ public final class BudgetsFeature {
         )
     }
 
+    /// The budget detail for one budget (#25 part 4), or `nil` without its use cases. Its limit changes and delete
+    /// are recorded in `history`, the window's Undo history.
+    public func makeDetail(
+        _ budgetID: UUID,
+        history: @escaping @MainActor () -> WindowUndoHistory? = { nil },
+    ) -> BudgetDetailViewModel? {
+        guard let detail = useCases.detail else {
+            return nil
+        }
+        return BudgetDetailViewModel(
+            budgetID: budgetID,
+            useCases: detail,
+            today: today,
+            locale: locale,
+            updates: updates,
+            history: history,
+        )
+    }
+
     /// The budget counts for the home screen's Budgets row and its overspent badge (#25 AC 5).
     public var plannedItems: any PlannedItemsSource {
         BudgetPlannedItems(list: useCases.list, today: today)
@@ -120,5 +142,17 @@ public struct BudgetFormUseCases {
         self.budgets = budgets
         self.changes = changes
         self.categories = categories
+    }
+}
+
+/// The use cases the budget detail needs (#25 part 4): the period figures and transactions, and limit changes and
+/// deletes that can be undone.
+public struct BudgetDetailUseCases {
+    public let detail: any BudgetDetailUseCase
+    public let changes: any BudgetChangesUseCase
+
+    public init(detail: any BudgetDetailUseCase, changes: any BudgetChangesUseCase) {
+        self.detail = detail
+        self.changes = changes
     }
 }

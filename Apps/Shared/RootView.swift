@@ -95,6 +95,7 @@ import SwiftUI
                 useCases: BudgetScreenUseCases(
                     list: budgetUseCases,
                     form: BudgetFormUseCases(budgets: budgetUseCases, changes: budgetUseCases, categories: editing),
+                    detail: BudgetDetailUseCases(detail: budgetUseCases, changes: budgetUseCases),
                 ),
                 updates: transactions.updates,
             )

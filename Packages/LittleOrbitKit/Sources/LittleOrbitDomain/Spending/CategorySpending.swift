@@ -48,13 +48,15 @@ public enum CategorySpending {
         let linesByTransaction = Dictionary(grouping: snapshot.splitsVisible(), by: \.transactionID)
         for counted in counted(in: snapshot, from: start, through: end) {
             let transaction = counted.transaction
-            func add(_ amount: Decimal, to categoryID: UUID?) {
+            func add(_ amount: Decimal, to categoryID: UUID?, isSplitLine: Bool = false) {
                 entries.append(
                     SpendingEntry(
                         day: counted.day,
                         categoryID: categoryID,
                         currencyCode: counted.currencyCode,
                         amount: amount,
+                        transactionID: transaction.id,
+                        isSplitLine: isSplitLine,
                     )
                 )
             }
@@ -65,7 +67,7 @@ public enum CategorySpending {
                     add(transaction.amount, to: transaction.categoryID)
                 } else {
                     for line in lines {
-                        add(line.amount, to: line.categoryID)
+                        add(line.amount, to: line.categoryID, isSplitLine: true)
                     }
                 }
             case .income where transaction.isRefund:
@@ -149,12 +151,25 @@ public struct SpendingEntry: Equatable, Sendable {
     public var currencyCode: String
     /// Positive for an expense or split line, negative for a refund.
     public var amount: Decimal
+    /// The transaction the amount comes from, so a screen can list it (the budget detail, #25).
+    public var transactionID: UUID?
+    /// The amount is one line of a split expense (D237, S73).
+    public var isSplitLine: Bool
 
-    public init(day: CalendarDay, categoryID: UUID?, currencyCode: String, amount: Decimal) {
+    public init(
+        day: CalendarDay,
+        categoryID: UUID?,
+        currencyCode: String,
+        amount: Decimal,
+        transactionID: UUID? = nil,
+        isSplitLine: Bool = false,
+    ) {
         self.day = day
         self.categoryID = categoryID
         self.currencyCode = currencyCode
         self.amount = amount
+        self.transactionID = transactionID
+        self.isSplitLine = isSplitLine
     }
 }
 
