@@ -144,7 +144,8 @@ extension LedgerBook {
     }
 
     /// Points every transaction, split line and payee default that uses one of `sourceIDs` at `targetID`, or at
-    /// no category when it's `nil`.
+    /// no category when it's `nil`. A budget that picked one of them picks `targetID` instead, or drops it, so a
+    /// budget never points at a removed category (D217.7, D295.1).
     static func reassignReferences(
         from sourceIDs: Set<UUID>,
         to targetID: UUID?,
@@ -171,6 +172,18 @@ extension LedgerBook {
             }
             snapshot.splits[index].categoryID = targetID
             snapshot.splits[index].updatedAt = now
+        }
+        for index in snapshot.budgets.indices {
+            let picked = snapshot.budgets[index].categoryIDs
+            guard picked.contains(where: sourceIDs.contains) else {
+                continue
+            }
+            var replaced = picked.filter { !sourceIDs.contains($0) }
+            if let targetID {
+                replaced.append(targetID)
+            }
+            snapshot.budgets[index].categoryIDs = Budget.normalizedCategoryIDs(replaced)
+            snapshot.budgets[index].updatedAt = now
         }
     }
 
