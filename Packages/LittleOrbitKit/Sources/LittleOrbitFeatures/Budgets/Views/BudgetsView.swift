@@ -5,9 +5,9 @@
 
     /// The iOS Budgets list (#25 design: Budgets list and Budgets empty frames), pushed from the home screen's
     /// Budgets row. Each row shows the status, a bar, spent of what's available and the days left, and opens
-    /// the budget. It reloads after every ledger change (#25 AC 6). The + button and the empty state's “Create
-    /// Budget” open New Budget; both are hidden, never disabled, when there's no expense category to pick (UI
-    /// Designer's #175 ruling 1).
+    /// the budget detail; its context menu has Edit Budget only. It reloads after every ledger change (#25 AC 6).
+    /// The + button and the empty state's “Create Budget” open New Budget; both are hidden, never disabled, when
+    /// there's no expense category to pick (UI Designer's #175 ruling 1).
     public struct BudgetsView: View {
         @State private var model: BudgetsViewModel
         /// The New Budget or Edit Budget sheet on show.
@@ -27,24 +27,13 @@
                 if !model.rows.isEmpty {
                     Section {
                         ForEach(model.rows) { row in
-                            NavigationLink {
-                                // The budget detail is #25 part 4. A budget with no categories opens there too,
-                                // to D307's "No Categories" empty state (D308 amendment 2).
-                                UpcomingFeatureView(
-                                    title: row.name,
-                                    systemImage: HomeDestination.budgets.symbolName,
-                                    message: "The budget detail arrives with its own part of #25.",
-                                )
-                            } label: {
-                                BudgetRowView(row: row)
-                            }
-                            .contextMenu {
-                                // Until the budget detail and its Edit Budget button arrive (#25 part 4), this
-                                // is the way to edit a budget.
-                                if feature.useCases.form != nil {
-                                    Button(BudgetText.editBudget, systemImage: "pencil") { open(.edit(row.id)) }
+                            link(to: row)
+                                .contextMenu {
+                                    // Kept with the detail's Edit Budget (UI Designer on #176).
+                                    if feature.useCases.form != nil {
+                                        Button(BudgetText.editBudget, systemImage: "pencil") { open(.edit(row.id)) }
+                                    }
                                 }
-                            }
                         }
                     } footer: {
                         Text(BudgetsViewModel.footnote)
@@ -78,6 +67,22 @@
             }
             .onAppear { reload() }
             .onChange(of: feature.revision) { reload() }
+        }
+
+        /// The row, opening the budget detail (#25 part 4). A budget with no categories opens there too, to D307's
+        /// “No Categories” empty state (D308 amendment 2). Without the detail's use cases the row doesn't open.
+        @ViewBuilder
+        private func link(to row: BudgetRow) -> some View {
+            let history = undoHistory
+            if let detail = feature.makeDetail(row.id, history: { history }) {
+                NavigationLink {
+                    BudgetDetailView(feature: feature, model: detail)
+                } label: {
+                    BudgetRowView(row: row)
+                }
+            } else {
+                BudgetRowView(row: row)
+            }
         }
 
         private func reload() {
