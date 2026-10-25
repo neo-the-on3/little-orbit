@@ -35,6 +35,8 @@ struct LittleOrbitMacApp: App {
             RootView(features: features)
         }
         .commands {
+            // Edit > Undo and Redo with the step's name, "Undo Pay Phone Plan".
+            UndoRedoCommands()
             // Off while a Bulk Edit, or its Undo or Redo, runs in any window (D399).
             RestoreFromBackupCommand(
                 isPickingFile: $isPickingBackupFile,

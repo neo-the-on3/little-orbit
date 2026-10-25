@@ -10889,6 +10889,58 @@
           }
         }
       }
+    },
+    "Undo": {
+      "comment": "Mac Edit menu: Undo when there's nothing named to undo.",
+      "extractionState": "manual",
+      "generatesSymbol": false,
+      "localizations": {
+        "en": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Undo"
+          }
+        }
+      }
+    },
+    "Undo %@": {
+      "comment": "Mac Edit menu: Undo with the step's name.",
+      "extractionState": "manual",
+      "generatesSymbol": false,
+      "localizations": {
+        "en": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Undo %@"
+          }
+        }
+      }
+    },
+    "Redo": {
+      "comment": "Mac Edit menu: Redo when there's nothing named to redo.",
+      "extractionState": "manual",
+      "generatesSymbol": false,
+      "localizations": {
+        "en": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Redo"
+          }
+        }
+      }
+    },
+    "Redo %@": {
+      "comment": "Mac Edit menu: Redo with the step's name.",
+      "extractionState": "manual",
+      "generatesSymbol": false,
+      "localizations": {
+        "en": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Redo %@"
+          }
+        }
+      }
     }
   },
   "version": "1.0"

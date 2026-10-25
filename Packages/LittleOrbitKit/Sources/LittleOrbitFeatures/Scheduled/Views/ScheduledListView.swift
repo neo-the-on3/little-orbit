@@ -394,11 +394,14 @@
                     isPresented: showsAlertConfirmation,
                     presenting: model.confirmation,
                 ) { confirmation in
+                    // Tester's Mac accessibility pass at 59017dc: the title was only the description.
                     Button(
                         confirmation.confirmTitle,
                         role: confirmation.isDestructive ? .destructive : nil,
                     ) { model.confirm() }
+                    .accessibilityLabel(Text(confirmation.confirmTitle))
                     Button(model.cancelTitle, role: .cancel) { model.confirmation = nil }
+                        .accessibilityLabel(Text(model.cancelTitle))
                 } message: { confirmation in
                     Text(confirmation.message)
                 }
@@ -410,11 +413,14 @@
                 ) { confirmation in
                     // Skip records nothing and deletes nothing, so its button keeps the default role; Delete's is
                     // destructive.
+                    // Tester's Mac accessibility pass at 59017dc: the title was only the description.
                     Button(
                         confirmation.confirmTitle,
                         role: confirmation.isDestructive ? .destructive : nil,
                     ) { model.confirm() }
+                    .accessibilityLabel(Text(confirmation.confirmTitle))
                     Button(model.cancelTitle, role: .cancel) { model.confirmation = nil }
+                        .accessibilityLabel(Text(model.cancelTitle))
                 } message: { confirmation in
                     Text(confirmation.message)
                 }
@@ -423,7 +429,9 @@
                     isPresented: showsAlert,
                     presenting: model.alert,
                 ) { _ in
+                    // Tester's Mac accessibility pass at 59017dc: the title was only the description.
                     Button(model.okayTitle) { model.alert = nil }
+                        .accessibilityLabel(Text(model.okayTitle))
                 } message: { alert in
                     Text(alert.message)
                 }

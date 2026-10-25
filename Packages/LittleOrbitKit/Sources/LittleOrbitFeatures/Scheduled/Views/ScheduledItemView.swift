@@ -63,7 +63,9 @@
                                         .buttonStyle(.borderedProminent)
                                 }
                                 .buttonStyle(.bordered)
+                                // Unnamed without this in Tester's Mac accessibility pass at 59017dc.
                                 Button(model.payCustomTitle) { model.openCustomPay(row) }
+                                    .accessibilityLabel(Text(model.payCustomTitle))
                             }
                         }
                     }
