@@ -248,4 +248,38 @@ enum SearchText {
             comment: "A transfer row’s title when the other account was deleted: To another account.",
         )
     }
+
+    // MARK: Export CSV (#187)
+
+    /// The macOS toolbar button, which opens the save panel (D325.1).
+    static var exportCSV: String {
+        FeatureText.string(
+            "Export CSV…",
+            comment:
+                "macOS search: toolbar button that saves the matching transactions as a CSV file in the save panel (D325.1).",
+        )
+    }
+
+    /// The iOS row under the summary card: its own entry with no ellipsis, as iOS rows have none (D325.1).
+    static var exportCSVRow: String {
+        FeatureText.string(
+            "Export CSV",
+            comment:
+                "iOS search: the row under the summary card that saves the matching transactions as a CSV file. No ellipsis on iOS (D325.1).",
+        )
+    }
+
+    static var exportFailedTitle: String {
+        FeatureText.string(
+            "Couldn’t Export",
+            comment: "CSV export: alert title when the file couldn’t be made or saved.",
+        )
+    }
+
+    static var exportFailedMessage: String {
+        FeatureText.string(
+            "The CSV file couldn’t be created. Try again.",
+            comment: "CSV export: making or saving the file failed.",
+        )
+    }
 }

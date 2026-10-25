@@ -4692,7 +4692,7 @@
       }
     },
     "Export CSV": {
-      "comment": "CSV export sheet: the title.",
+      "comment": "CSV export sheet: the title. Also the iOS search row under the summary card that saves the matching transactions as a CSV file, with no ellipsis on iOS (D325.1).",
       "extractionState": "manual",
       "generatesSymbol": false,
       "localizations": {
@@ -4700,6 +4700,19 @@
           "stringUnit": {
             "state": "translated",
             "value": "Export CSV"
+          }
+        }
+      }
+    },
+    "Export CSV…": {
+      "comment": "macOS search: toolbar button that saves the matching transactions as a CSV file in the save panel (D325.1).",
+      "extractionState": "manual",
+      "generatesSymbol": false,
+      "localizations": {
+        "en": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Export CSV…"
           }
         }
       }

@@ -29,7 +29,18 @@ public final class TransactionSearchViewModel {
     /// The query as it was searched, for the empty state.
     public private(set) var searchedText = ""
 
+    // MARK: Export CSV (#187, #28 AC 4)
+
+    /// The file made for the system exporter, while it's open.
+    public private(set) var exportFile: TransactionExport?
+    public var isExporterPresented = false
+    /// The export couldn't be saved: the alert's title and message.
+    public var exportFailure: SearchFailure?
+
     @ObservationIgnored private let search: any SearchTransactionsUseCase
+    @ObservationIgnored private let exporting: (any ExportSearchResultsUseCase)?
+    /// The results on screen, for Export CSV.
+    @ObservationIgnored private var result: (search: TransactionSearchResult, today: CalendarDay)?
     @ObservationIgnored private let accountID: UUID?
     @ObservationIgnored private let updates: LedgerUpdates?
     @ObservationIgnored private let formatter: MoneyFormatter
@@ -54,9 +65,10 @@ public final class TransactionSearchViewModel {
     }
 
     /// `accountID` limits the search to one account, with each transfer from its side (D25). `updates` is the
-    /// app's shared change signal; without it the store is read once.
+    /// app's shared change signal; without it the store is read once. Without `exporting` there's no Export CSV.
     public init(
         search: any SearchTransactionsUseCase,
+        exporting: (any ExportSearchResultsUseCase)? = nil,
         accountID: UUID? = nil,
         updates: LedgerUpdates? = nil,
         locale: Locale = .current,
@@ -65,6 +77,7 @@ public final class TransactionSearchViewModel {
         defaultCurrency: String = CurrencyCode.deviceDefault,
     ) {
         self.search = search
+        self.exporting = exporting
         self.accountID = accountID
         self.updates = updates
         self.formatter = MoneyFormatter(locale: locale)
@@ -82,6 +95,18 @@ public final class TransactionSearchViewModel {
     public var emptyMessage: String { SearchText.noTransactionsMessage }
     public var upcomingFooter: String? { hasUpcoming ? SearchText.upcomingFooter : nil }
     public var openHint: String { SearchText.openHint }
+    /// “Export CSV…” in the macOS toolbar; “Export CSV”, with no ellipsis, as the iOS row (D325.1).
+    public var exportTitle: String { SearchText.exportCSV }
+    public var exportRowTitle: String { SearchText.exportCSVRow }
+    public var okayTitle: String { CategoryText.okay }
+
+    /// Export CSV is offered when it's wired in and something matched (D321: no results shows nothing else).
+    public var canExport: Bool { exporting != nil && summary != nil }
+
+    /// The save panel's file name, without `.csv`, which the exporter adds.
+    public var exportFileName: String? {
+        exportFile.map { String($0.fileName.dropLast(4)) }
+    }
 
     /// Shows the current query and scope. The store is read only the first time and after the change signal
     /// moves on; otherwise the kept copy is searched in memory, and nothing runs when nothing changed. Call it
@@ -150,11 +175,30 @@ public final class TransactionSearchViewModel {
         load()
     }
 
+    /// Export CSV: writes the results on screen, Upcoming ones included, and opens the system exporter.
+    public func export() {
+        guard canExport, let exporting, let store, let result else {
+            return
+        }
+        exportFile = exporting.export(result.search, from: store.snapshot, today: result.today)
+        isExporterPresented = true
+    }
+
+    /// The exporter closed: saved, cancelled, or the file couldn't be written.
+    public func exportFinished(failed: Bool) {
+        if failed {
+            exportFailure = SearchFailure(title: SearchText.exportFailedTitle, message: SearchText.exportFailedMessage)
+        }
+        exportFile = nil
+        isExporterPresented = false
+    }
+
     private func showFailure() {
         store = nil
         storeRevision = nil
         rowCache = nil
         shown = nil
+        result = nil
         failure = SearchFailure(title: SearchText.loadFailedTitle, message: SearchText.loadFailedMessage)
         summary = nil
         sections = []
@@ -194,6 +238,7 @@ public final class TransactionSearchViewModel {
             }
         }
         rowCache = (today, rows)
+        self.result = (result, today)
         let filtered = !parsed.isEmpty || scope != .all
         isNoResults = result.count == 0 && filtered
         isEmptyLedger = result.count == 0 && !filtered

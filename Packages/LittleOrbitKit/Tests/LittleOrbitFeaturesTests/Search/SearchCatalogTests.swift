@@ -55,4 +55,11 @@ struct SearchCatalogTests {
             #expect(values.allSatisfy { $0.contains("%lld") }, "\(key) fills its count")
         }
     }
+
+    @Test("D325.1: the iOS row has its own Export CSV entry with no ellipsis, apart from the macOS button")
+    func exportLabels() throws {
+        let entries = try StringCatalogTests.entries()
+        #expect(entries["Export CSV"] == ["Export CSV"])
+        #expect(entries["Export CSV…"] == ["Export CSV…"])
+    }
 }
