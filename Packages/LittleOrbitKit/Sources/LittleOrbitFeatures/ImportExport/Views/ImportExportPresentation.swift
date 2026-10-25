@@ -43,6 +43,15 @@
                 .sheet(item: $session) { session in
                     CSVImportSheet(model: session.model, feature: feature)
                 }
+                #if DEBUG
+                    // Testing hook: `-LittleOrbitImportCSV <path>` opens that file here, in the first window,
+                    // through the same path as a file picked in the panel.
+                    .task {
+                        if let url = ImportLaunchFile.take() {
+                            await open(url)
+                        }
+                    }
+                #endif
                 .alert(
                     openAlert?.title ?? "",
                     isPresented: Binding(get: { openAlert != nil }, set: { if !$0 { openAlert = nil } }),
