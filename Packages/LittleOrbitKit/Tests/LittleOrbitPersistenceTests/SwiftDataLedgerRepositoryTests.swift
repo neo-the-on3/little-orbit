@@ -25,6 +25,120 @@
             }
         }
 
+        func testScheduledItemsStoreAndPostOnce() throws {
+            try onMain {
+                try assertScheduledStorage {
+                    try LittleOrbitStore.makeRepository(configuration: .inMemory)
+                }
+            }
+        }
+
+        func testAFailedCatchUpPostingWritesNothing() throws {
+            try onMain {
+                try assertFailedCatchUpPostingWritesNothing {
+                    try LittleOrbitStore.makeRepository(configuration: .inMemory)
+                }
+            }
+        }
+
+        /// Tech Architect NB 2: the hidden item's amounts kept their scale when its account's currency was gone.
+        func testAccountDeleteKeepsAThreeDecimalScheduledItem() throws {
+            try onMain {
+                try assertAccountDeleteKeepsAThreeDecimalItem {
+                    try LittleOrbitStore.makeRepository(configuration: .inMemory)
+                }
+            }
+        }
+
+        /// The item's fields and its occurrence records, posted and skipped, are read back from the store file
+        /// after a reopen, so the next catch-up finds them and records nothing again. The automatic item has to be
+        /// `processesAutomatically` for catch-up to record anything (#26).
+        func testScheduledItemsSurviveReopeningTheStore() throws {
+            try onMain {
+                let directory = FileManager.default.temporaryDirectory
+                    .appendingPathComponent("little-orbit-\(UUID().uuidString)", isDirectory: true)
+                try FileManager.default.createDirectory(at: directory, withIntermediateDirectories: true)
+                let configuration = StoreConfiguration(fileURL: directory.appendingPathComponent("ledger.store"))
+                let account = Account(name: "Everyday Savings", currencyCode: "INR", openingBalance: decimal("500"))
+                let item = ScheduledItem(
+                    amount: decimal("120"),
+                    accountID: account.id,
+                    details: "Plant watering",
+                    startDay: CalendarDay(year: 2027, month: 1, day: 31),
+                    repeatRule: .every(2, .week),
+                    processesAutomatically: true,
+                    timeZoneID: "Asia/Kolkata",
+                    createdAt: Date(timeIntervalSince1970: 1_780_000_000),
+                )
+                let gym = ScheduledItem(
+                    amount: decimal("1200"),
+                    accountID: account.id,
+                    details: "Gym",
+                    startDay: CalendarDay(year: 2027, month: 1, day: 20),
+                    notifiesWhenDue: true,
+                    timeZoneID: "Asia/Kolkata",
+                    createdAt: Date(timeIntervalSince1970: 1_780_000_000),
+                )
+                let created = Date(timeIntervalSince1970: 1_798_741_800)
+                let today = CalendarDay(year: 2027, month: 2, day: 14)
+                var posted: [Transaction] = []
+                do {
+                    let repository = try LittleOrbitStore.makeRepository(configuration: configuration)
+                    try repository.saveAccount(account)
+                    try repository.saveScheduledItem(
+                        item,
+                        today: CalendarDay(year: 2027, month: 1, day: 1),
+                        now: created,
+                    )
+                    try repository.saveScheduledItem(
+                        gym,
+                        today: CalendarDay(year: 2027, month: 1, day: 1),
+                        now: created,
+                    )
+                    // 31 Jan and 14 Feb are recorded; the manual Gym item is left for the user.
+                    posted = try repository.catchUpScheduledItems(today: today, pruningOrphans: true).posted
+                    XCTAssertEqual(posted.count, 2)
+                    _ = try repository.settleScheduledOccurrence(
+                        .skip(itemID: gym.id, occurrence: CalendarDay(year: 2027, month: 1, day: 20))
+                    )
+                }
+                let reopened = try LittleOrbitStore.makeRepository(configuration: configuration)
+                let items = try reopened.scheduleLedger().scheduledItems
+                let stored = try XCTUnwrap(items.first { $0.id == item.id })
+                XCTAssertEqual(stored.amount, decimal("120"))
+                XCTAssertEqual(stored.accountID, account.id)
+                XCTAssertEqual(stored.details, "Plant watering")
+                XCTAssertEqual(stored.startDay, item.startDay)
+                XCTAssertEqual(stored.repeatRule, .every(2, .week))
+                XCTAssertTrue(stored.processesAutomatically)
+                XCTAssertFalse(stored.notifiesWhenDue)
+                XCTAssertEqual(stored.timeZoneID, "Asia/Kolkata")
+                XCTAssertEqual(stored.createdAt, created)
+                XCTAssertEqual(
+                    stored.occurrences.map(\.day),
+                    [CalendarDay(year: 2027, month: 1, day: 31), CalendarDay(year: 2027, month: 2, day: 14)],
+                )
+                XCTAssertEqual(stored.occurrences.map(\.outcome), [.posted, .posted])
+                XCTAssertEqual(Set(stored.occurrences.compactMap(\.transactionID)), Set(posted.map(\.id)))
+                XCTAssertEqual(
+                    Set(try reopened.transactions().filter { $0.scheduledTemplateID == item.id }.map(\.id)),
+                    Set(posted.map(\.id)),
+                )
+
+                let storedGym = try XCTUnwrap(items.first { $0.id == gym.id })
+                XCTAssertFalse(storedGym.processesAutomatically)
+                XCTAssertTrue(storedGym.notifiesWhenDue)
+                XCTAssertEqual(storedGym.repeatRule, .monthly)
+                XCTAssertEqual(storedGym.occurrences.map(\.day), [CalendarDay(year: 2027, month: 1, day: 20)])
+                XCTAssertEqual(storedGym.occurrences.map(\.outcome), [.skipped])
+                XCTAssertNil(storedGym.occurrences.first?.transactionID)
+
+                let again = try reopened.catchUpScheduledItems(today: today, pruningOrphans: true)
+                XCTAssertTrue(again.posted.isEmpty)
+                XCTAssertEqual(try reopened.transactions().count { $0.scheduledTemplateID == item.id }, 2)
+            }
+        }
+
         func testUpdatedAtBumpsOnEdit() throws {
             try onMain {
                 let clock = TestClock(Date(timeIntervalSince1970: 1_000))
@@ -91,6 +205,8 @@
                     "AttachmentRecord",
                     "BudgetRecord",
                     "BudgetLimitRecord",
+                    "ScheduledItemRecord",
+                    "ScheduledOccurrenceRecord",
                 ]
                 for name in expected {
                     XCTAssertNotNil(entity(named: name, in: schema), name)

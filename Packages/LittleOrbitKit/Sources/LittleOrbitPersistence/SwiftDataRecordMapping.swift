@@ -357,9 +357,110 @@
         }
     }
 
+    extension LittleOrbitSchemaV1.ScheduledItemRecord: IdentifiedLedgerRecord {
+        var recordID: UUID { id }
+        /// `sourceCurrency` or `destinationCurrency` is `nil` when that account isn't in the ledger (just deleted,
+        /// D288.1): the amount is then stored with the decimal places it has, so it's kept exactly.
+        func apply(_ item: ScheduledItem, sourceCurrency: String?, destinationCurrency: String?) throws {
+            id = item.id
+            transactionType = item.type.rawValue
+            let amount = try storedKeepingScale(item.amount, currencyCode: sourceCurrency)
+            amountMinor = amount.minorUnits
+            amountScale = amount.scale
+            if let destination = item.destinationAmount {
+                let storedDestination = try storedKeepingScale(destination, currencyCode: destinationCurrency)
+                destinationAmountMinor = storedDestination.minorUnits
+                destinationAmountScale = storedDestination.scale
+            } else {
+                destinationAmountMinor = nil
+                destinationAmountScale = nil
+            }
+            accountID = item.accountID
+            transferAccountID = item.transferAccountID
+            categoryID = item.categoryID
+            payeeID = item.payeeID
+            details = item.details
+            note = item.note
+            startYear = item.startDay.year
+            startMonth = item.startDay.month
+            startDayOfMonth = item.startDay.day
+            switch item.repeatRule {
+            case .never:
+                repeatKind = "never"
+                repeatUnit = nil
+                repeatCount = nil
+            case .every(let count, let unit):
+                repeatKind = "every"
+                repeatUnit = unit.rawValue
+                repeatCount = count
+            }
+            endYear = item.endDay?.year
+            endMonth = item.endDay?.month
+            endDayOfMonth = item.endDay?.day
+            resumesYear = item.resumesOn?.year
+            resumesMonth = item.resumesOn?.month
+            resumesDayOfMonth = item.resumesOn?.day
+            processesAutomatically = item.processesAutomatically
+            notifiesWhenDue = item.notifiesWhenDue
+            timeZoneID = item.timeZoneID
+            createdAt = item.createdAt
+            updatedAt = item.updatedAt
+            deletedAt = item.deletedAt
+        }
+
+        func makeScheduledItem() -> ScheduledItem {
+            let rule: ScheduleRepeat
+            if repeatKind == "every", let unit = repeatUnit.flatMap(ScheduleUnit.init(rawValue:)) {
+                rule = .every(repeatCount ?? 1, unit)
+            } else {
+                rule = .never
+            }
+            return ScheduledItem(
+                id: id,
+                type: TransactionType(storedRawValue: transactionType),
+                amount: decimal(minor: amountMinor, scale: amountScale),
+                destinationAmount: optionalDecimal(minor: destinationAmountMinor, scale: destinationAmountScale),
+                accountID: accountID,
+                transferAccountID: transferAccountID,
+                categoryID: categoryID,
+                payeeID: payeeID,
+                details: details,
+                note: note,
+                startDay: CalendarDay(year: startYear, month: startMonth, day: startDayOfMonth),
+                repeatRule: rule,
+                endDay: day(endYear, endMonth, endDayOfMonth),
+                resumesOn: day(resumesYear, resumesMonth, resumesDayOfMonth),
+                processesAutomatically: processesAutomatically,
+                notifiesWhenDue: notifiesWhenDue,
+                timeZoneID: timeZoneID,
+                occurrences: (occurrences ?? []).map { $0.makeOccurrence() }.sorted { $0.day < $1.day },
+                createdAt: createdAt,
+                updatedAt: updatedAt,
+                deletedAt: deletedAt,
+            )
+        }
+
+        private func day(_ year: Int?, _ month: Int?, _ dayOfMonth: Int?) -> CalendarDay? {
+            guard let year, let month, let dayOfMonth else {
+                return nil
+            }
+            return CalendarDay(year: year, month: month, day: dayOfMonth)
+        }
+    }
+
     private func stored(_ value: Decimal, currencyCode: String) throws -> MinorUnitDecimal.Stored {
         let scale = CurrencyCode.minorUnits(for: currencyCode) ?? 0
         return try MinorUnitDecimal.store(value, scale: scale)
+    }
+
+    /// As `stored(_:currencyCode:)`, or, with no currency, at the value's own decimal places (at least the
+    /// fallback currency's), so nothing is rounded.
+    private func storedKeepingScale(_ value: Decimal, currencyCode: String?) throws -> MinorUnitDecimal.Stored {
+        if let currencyCode {
+            return try stored(value, currencyCode: currencyCode)
+        }
+        let fallback = CurrencyCode.minorUnits(for: CurrencyCode.fallback) ?? 0
+        return try MinorUnitDecimal.store(value, scale: max(fallback, MinorUnitDecimal.fractionalDigits(in: value)))
     }
 
     private func decimal(minor: Int64, scale: Int16) -> Decimal {

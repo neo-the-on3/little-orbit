@@ -155,10 +155,12 @@ extension InMemoryLedgerRepository: LedgerBackupSource {
     }
 
     /// A completed restore marks the seeding done, so even an empty backup never leads to a seed (D293.2).
-    /// Budgets are checked first by the rule the SwiftData store uses, so the two never keep different data
-    /// (`LedgerBook.validateStoredBudgets`, #174 B1); nothing changes when it throws.
+    /// Budgets and scheduled items are checked first by the rules the SwiftData store uses, so the two never keep
+    /// different data (`LedgerBook.validateStoredBudgets`, #174 B1; `LedgerBook.validateStoredScheduledItems`, #26);
+    /// nothing changes when either throws.
     public func replaceLedger(with snapshot: LedgerSnapshot) throws {
         try LedgerBook.validateStoredBudgets(in: snapshot)
+        try LedgerBook.validateStoredScheduledItems(in: snapshot)
         self.snapshot = snapshot
         markDefaultSeedDone()
     }
@@ -194,5 +196,38 @@ extension InMemoryLedgerRepository: BudgetRepository {
 
     public func budgetLedger() throws -> LedgerSnapshot {
         snapshot
+    }
+}
+
+/// Scheduled items (#26), through the same `LedgerBook` rules as the SwiftData store. Each call replaces the
+/// snapshot once, so an occurrence's transaction and its settled record go in together.
+extension InMemoryLedgerRepository: ScheduleRepository {
+    public func scheduleLedger() throws -> LedgerSnapshot {
+        snapshot
+    }
+
+    public func saveScheduledItem(_ item: ScheduledItem, today: CalendarDay, now: Date) throws {
+        snapshot = try LedgerBook.savingScheduledItem(item, in: snapshot, today: today, now: now)
+    }
+
+    public func deleteScheduledItem(id: UUID) throws {
+        snapshot = try LedgerBook.deletingScheduledItem(id: id, in: snapshot)
+    }
+
+    public func settleScheduledOccurrence(_ settlement: ScheduledSettlement) throws -> Transaction? {
+        let outcome = try LedgerBook.settlingScheduledOccurrence(settlement, in: snapshot, now: now())
+        snapshot = outcome.snapshot
+        return outcome.transaction
+    }
+
+    public func catchUpScheduledItems(today: CalendarDay, pruningOrphans: Bool) throws -> ScheduledCatchUp {
+        let outcome = LedgerBook.catchingUpScheduledItems(
+            in: snapshot,
+            today: today,
+            now: now(),
+            pruningOrphans: pruningOrphans,
+        )
+        snapshot = outcome.snapshot
+        return outcome.result
     }
 }

@@ -21,6 +21,8 @@
                 AttachmentRecord.self,
                 BudgetRecord.self,
                 BudgetLimitRecord.self,
+                ScheduledItemRecord.self,
+                ScheduledOccurrenceRecord.self,
             ]
         }
 
@@ -245,6 +247,69 @@
 
             public init() {}
         }
+
+        /// A scheduled item (#26). Days are kept as year, month and day. Its account, category and payee are IDs,
+        /// not relationships, so deleting one never touches it here: `LedgerBook` updates or hides it (D288.1).
+        @Model
+        public final class ScheduledItemRecord {
+            public var id: UUID = UUID()
+            public var transactionType: String = TransactionType.expense.rawValue
+            public var amountMinor: Int64 = 0
+            public var amountScale: Int16 = 0
+            public var destinationAmountMinor: Int64?
+            public var destinationAmountScale: Int16?
+            public var accountID: UUID?
+            public var transferAccountID: UUID?
+            public var categoryID: UUID?
+            public var payeeID: UUID?
+            public var details: String?
+            public var note: String?
+            public var startYear: Int = 1970
+            public var startMonth: Int = 1
+            public var startDayOfMonth: Int = 1
+            /// never or every (`ScheduleRepeat`).
+            public var repeatKind: String = "never"
+            /// day, week, month or year, for a repeating item only.
+            public var repeatUnit: String?
+            /// 1–99, for a repeating item only.
+            public var repeatCount: Int?
+            public var endYear: Int?
+            public var endMonth: Int?
+            public var endDayOfMonth: Int?
+            public var resumesYear: Int?
+            public var resumesMonth: Int?
+            public var resumesDayOfMonth: Int?
+            public var processesAutomatically: Bool = false
+            public var notifiesWhenDue: Bool = false
+            public var timeZoneID: String = "UTC"
+            public var createdAt: Date = Date(timeIntervalSinceReferenceDate: 0)
+            public var updatedAt: Date = Date(timeIntervalSinceReferenceDate: 0)
+            public var deletedAt: Date?
+
+            @Relationship(deleteRule: .cascade, inverse: \ScheduledOccurrenceRecord.item)
+            public var occurrences: [ScheduledOccurrenceRecord]? = []
+
+            public init() {}
+        }
+
+        /// One settled occurrence of a scheduled item, keyed by the item and its due day (#26).
+        @Model
+        public final class ScheduledOccurrenceRecord {
+            public var id: UUID = UUID()
+            public var year: Int = 1970
+            public var month: Int = 1
+            public var dayOfMonth: Int = 1
+            /// posted or skipped (`ScheduledOutcome`).
+            public var outcome: String = ScheduledOutcome.posted.rawValue
+            public var transactionID: UUID?
+            public var createdAt: Date = Date(timeIntervalSinceReferenceDate: 0)
+            public var updatedAt: Date = Date(timeIntervalSinceReferenceDate: 0)
+            public var deletedAt: Date?
+
+            public var item: ScheduledItemRecord?
+
+            public init() {}
+        }
     }
 
     public enum LittleOrbitMigrationPlan: SchemaMigrationPlan {
@@ -275,6 +340,8 @@
                 LittleOrbitSchemaV1.AttachmentRecord.self,
                 LittleOrbitSchemaV1.BudgetRecord.self,
                 LittleOrbitSchemaV1.BudgetLimitRecord.self,
+                LittleOrbitSchemaV1.ScheduledItemRecord.self,
+                LittleOrbitSchemaV1.ScheduledOccurrenceRecord.self,
                 migrationPlan: LittleOrbitMigrationPlan.self,
                 configurations: modelConfiguration,
             )
