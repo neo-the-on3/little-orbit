@@ -2,8 +2,8 @@ import Foundation
 
 /// Counts for the iOS home section and the macOS sidebar rows.
 ///
-/// Budgets (#25) and Scheduled (#26) aren't built yet. Until they are, `NoPlannedItems` reports none, so the rows
-/// show "No budgets yet" and "Nothing scheduled" with no badge (D104).
+/// The App counts budgets with `BudgetsFeature.plannedItems` (#25). Scheduled (#26) isn't built yet, so it reports
+/// none, and the row shows "Nothing scheduled" with no badge (D104). `NoPlannedItems` reports none of either.
 public struct PlannedItemCounts: Equatable, Sendable {
     public var budgetCount: Int
     /// Overspent budgets. Exactly at the limit doesn't count (#25).
@@ -30,7 +30,7 @@ public protocol PlannedItemsSource: AnyObject {
     func plannedItemCounts() -> PlannedItemCounts
 }
 
-/// Used until #25 and #26 provide real counts.
+/// No budgets and nothing scheduled: for previews and tests, and the default before the App injects real counts.
 @MainActor
 public final class NoPlannedItems: PlannedItemsSource {
     public init() {}
