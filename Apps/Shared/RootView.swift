@@ -156,10 +156,14 @@ import SwiftUI
                 ),
                 updates: transactions.updates,
             )
-            // CSV import and export (#30). An import or Undo Import reloads every window, like a transaction change.
+            // CSV import and export (#30), with the Debit & Credit preset (#60). An import or Undo Import reloads
+            // every window, like a transaction change.
             importExport = ImportExportFeature(
                 useCases: ImportExportUseCases(
-                    importing: ImportUseCases(repository: repository),
+                    importing: ImportUseCases(
+                        repository: repository,
+                        formats: ImportFormats(specific: [DebitAndCreditFormat()]),
+                    ),
                     exporting: DefaultExportTransactionsUseCase(repository: repository),
                 ),
                 updates: transactions.updates,
