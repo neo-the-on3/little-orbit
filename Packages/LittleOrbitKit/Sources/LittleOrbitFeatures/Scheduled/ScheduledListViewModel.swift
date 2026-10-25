@@ -11,7 +11,9 @@ import Observation
 public final class ScheduledListViewModel {
     public private(set) var listing = ScheduledListing(
         board: ScheduledBoard(today: CalendarDay(year: 1970, month: 1, day: 1))
-    )
+    ) {
+        didSet { rebuildTable() }
+    }
     public var alert: CategoryAlert?
     public var confirmation: ScheduledConfirmation?
     public var form: ScheduledFormViewModel?
@@ -39,6 +41,13 @@ public final class ScheduledListViewModel {
 
     @ObservationIgnored private let useCases: ScheduledScreenUseCases
     @ObservationIgnored let locale: Locale
+    /// The Mac Table's sections, built once per listing (Tech Architect NB 1), and its rows by ID.
+    public internal(set) var tableSections: [ScheduledTableSection] = []
+    @ObservationIgnored var tableRowsByID: [String: ScheduledTableRow] = [:]
+    /// The time a notified item's Status names (D355.2): Settings › Reminder Time, 09:00 until that's built (#204).
+    @ObservationIgnored public var reminderTime = DateComponents(hour: 9, minute: 0) {
+        didSet { rebuildTable() }
+    }
     @ObservationIgnored private let changed: () -> Void
 
     public init(

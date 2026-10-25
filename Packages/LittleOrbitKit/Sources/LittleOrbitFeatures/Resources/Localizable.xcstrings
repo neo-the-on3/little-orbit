@@ -7829,7 +7829,7 @@
       }
     },
     "Overdue": {
-      "comment": "Scheduled screen section header: occurrences past their due date, not yet paid or skipped.",
+      "comment": "Scheduled screen section header: occurrences past their due date, not yet paid or skipped. Also a Mac Scheduled Table section header.",
       "extractionState": "manual",
       "generatesSymbol": false,
       "localizations": {
@@ -7842,7 +7842,7 @@
       }
     },
     "Due Today": {
-      "comment": "Scheduled screen section header: occurrences due today.",
+      "comment": "Scheduled screen section header: occurrences due today. Also a Mac Scheduled Table section header (D355.5).",
       "extractionState": "manual",
       "generatesSymbol": false,
       "localizations": {
@@ -7855,7 +7855,7 @@
       }
     },
     "Upcoming": {
-      "comment": "Scheduled screen section header: each active item on its next due date.",
+      "comment": "Scheduled screen section header: each active item on its next due date. Also a Mac Scheduled Table section header.",
       "extractionState": "manual",
       "generatesSymbol": false,
       "localizations": {
@@ -7868,7 +7868,7 @@
       }
     },
     "Completed": {
-      "comment": "Scheduled screen: the row and screen listing items with no due dates left.",
+      "comment": "Scheduled screen: the row and screen listing items with no due dates left. Also a Mac Scheduled Table section header, with no count.",
       "extractionState": "manual",
       "generatesSymbol": false,
       "localizations": {
@@ -7946,7 +7946,7 @@
       }
     },
     "Due today": {
-      "comment": "Scheduled row, right side: this occurrence is due today.",
+      "comment": "Scheduled row, right side: this occurrence is due today. Also the Mac Scheduled Table’s Status cell for a manual item due today.",
       "extractionState": "manual",
       "generatesSymbol": false,
       "localizations": {
@@ -7959,7 +7959,7 @@
       }
     },
     "Once": {
-      "comment": "Scheduled row detail and repeat choice: the item doesn't repeat.",
+      "comment": "Scheduled row detail and repeat choice: the item doesn't repeat. Also the Mac Scheduled Table’s Repeat column.",
       "extractionState": "manual",
       "generatesSymbol": false,
       "localizations": {
@@ -7972,7 +7972,7 @@
       }
     },
     "Daily": {
-      "comment": "Repeat rule: every day.",
+      "comment": "Repeat rule: every day. Also the Mac Scheduled Table’s Repeat column (D356.2).",
       "extractionState": "manual",
       "generatesSymbol": false,
       "localizations": {
@@ -8141,7 +8141,7 @@
       }
     },
     "Amount": {
-      "comment": "Scheduled form section header and field label. CSV import column field: the amount, negative for expenses.",
+      "comment": "Scheduled form section header and field label. CSV import column field: the amount, negative for expenses. Also a Mac Scheduled Table column title.",
       "extractionState": "manual",
       "generatesSymbol": false,
       "localizations": {
@@ -8180,7 +8180,7 @@
       }
     },
     "Account": {
-      "comment": "Scheduled form picker: the account it’s recorded in. CSV import: the step that picks the account for a file without an Account column, and the column field for the account.",
+      "comment": "Scheduled form picker: the account it’s recorded in. CSV import: the step that picks the account for a file without an Account column, and the column field for the account. Also a Mac Scheduled Table column title.",
       "extractionState": "manual",
       "generatesSymbol": false,
       "localizations": {
@@ -8271,7 +8271,7 @@
       }
     },
     "Repeat": {
-      "comment": "Scheduled form picker: how often the item repeats.",
+      "comment": "Scheduled form picker: how often the item repeats. Also a Mac Scheduled Table column title.",
       "extractionState": "manual",
       "generatesSymbol": false,
       "localizations": {
@@ -8401,7 +8401,7 @@
       }
     },
     "Every %lld days": {
-      "comment": "Repeat rule: %lld is the number of days between due dates, 2 or more.",
+      "comment": "Repeat rule: %lld is the number of days between due dates, 2 or more. Also the Mac Scheduled Table’s Repeat column (D356.2).",
       "extractionState": "manual",
       "localizations": {
         "en": {
@@ -8850,7 +8850,7 @@
       }
     },
     "Ended %@": {
-      "comment": "Scheduled item screen: a completed item’s last due date, as in “Ended 5 Oct” (D334.13).",
+      "comment": "Scheduled item screen: a completed item’s last due date, as in “Ended 5 Oct” (D334.13). Also the Mac Scheduled Table’s Status cell for a completed item (D355.4).",
       "extractionState": "manual",
       "generatesSymbol": false,
       "localizations": {
@@ -9639,32 +9639,6 @@
         }
       }
     },
-    "%@ overdue": {
-      "comment": "Mac Scheduled Table footer phrase: %@ is how many overdue occurrences need paying or skipping, already formatted (D340.13).",
-      "extractionState": "manual",
-      "generatesSymbol": false,
-      "localizations": {
-        "en": {
-          "stringUnit": {
-            "state": "translated",
-            "value": "%@ overdue"
-          }
-        }
-      }
-    },
-    "%@ scheduled": {
-      "comment": "Mac Scheduled Table footer, first phrase: %@ is how many scheduled items there are, already formatted.",
-      "extractionState": "manual",
-      "generatesSymbol": false,
-      "localizations": {
-        "en": {
-          "stringUnit": {
-            "state": "translated",
-            "value": "%@ scheduled"
-          }
-        }
-      }
-    },
     "double-click to open": {
       "comment": "Mac Scheduled Table footer phrase, after the counts: how to open an item.",
       "extractionState": "manual",
@@ -9751,6 +9725,303 @@
           "stringUnit": {
             "state": "translated",
             "value": "Status"
+          }
+        }
+      }
+    },
+    "%lld scheduled": {
+      "comment": "Mac Scheduled Table footer, first phrase: %lld is how many scheduled items there are.",
+      "extractionState": "manual",
+      "generatesSymbol": false,
+      "localizations": {
+        "en": {
+          "variations": {
+            "plural": {
+              "one": {
+                "stringUnit": {
+                  "state": "translated",
+                  "value": "%lld scheduled"
+                }
+              },
+              "other": {
+                "stringUnit": {
+                  "state": "translated",
+                  "value": "%lld scheduled"
+                }
+              }
+            }
+          }
+        }
+      }
+    },
+    "%lld overdue": {
+      "comment": "Mac Scheduled Table footer: %lld is how many occurrences are overdue.",
+      "extractionState": "manual",
+      "generatesSymbol": false,
+      "localizations": {
+        "en": {
+          "variations": {
+            "plural": {
+              "one": {
+                "stringUnit": {
+                  "state": "translated",
+                  "value": "%lld overdue"
+                }
+              },
+              "other": {
+                "stringUnit": {
+                  "state": "translated",
+                  "value": "%lld overdue"
+                }
+              }
+            }
+          }
+        }
+      }
+    },
+    "Due today · Automatic": {
+      "comment": "Mac Scheduled Table Status: due today, and recorded automatically (with or without a reminder) (D356.1).",
+      "extractionState": "manual",
+      "generatesSymbol": false,
+      "localizations": {
+        "en": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Due today · Automatic"
+          }
+        }
+      }
+    },
+    "Due today · %@": {
+      "comment": "Mac Scheduled Table Status: a manual item due today that sends a reminder; %@ is the Reminder Time in the device’s format (D355.2).",
+      "extractionState": "manual",
+      "generatesSymbol": false,
+      "localizations": {
+        "en": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Due today · %@"
+          }
+        }
+      }
+    },
+    "scheduled.table.status.automatic": {
+      "comment": "Mac Scheduled Table Status, upcoming rows: the item is recorded automatically on its due date (D355.2). The iOS row detail says “Auto”.",
+      "extractionState": "manual",
+      "generatesSymbol": false,
+      "localizations": {
+        "en": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Automatic"
+          }
+        }
+      }
+    },
+    "Automatic + notify": {
+      "comment": "Mac Scheduled Table Status, upcoming rows: recorded automatically, with a reminder on the day (D355.2).",
+      "extractionState": "manual",
+      "generatesSymbol": false,
+      "localizations": {
+        "en": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Automatic + notify"
+          }
+        }
+      }
+    },
+    "Notify %@": {
+      "comment": "Mac Scheduled Table Status, upcoming rows: a manual item that sends a reminder; %@ is the Reminder Time in the device’s format (D355.2).",
+      "extractionState": "manual",
+      "generatesSymbol": false,
+      "localizations": {
+        "en": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Notify %@"
+          }
+        }
+      }
+    },
+    "Weekly on %@": {
+      "comment": "Mac Scheduled Table Repeat column: every week; %@ is the weekday, for example “Saturday” (D356.2).",
+      "extractionState": "manual",
+      "generatesSymbol": false,
+      "localizations": {
+        "en": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Weekly on %@"
+          }
+        }
+      }
+    },
+    "Every %1$lld weeks on %2$@": {
+      "comment": "Mac Scheduled Table Repeat column: %1$lld is the number of weeks between due dates, 2 or more; %2$@ is the weekday (D356.2).",
+      "extractionState": "manual",
+      "generatesSymbol": false,
+      "localizations": {
+        "en": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "%#@count@"
+          },
+          "substitutions": {
+            "count": {
+              "argNum": 1,
+              "formatSpecifier": "lld",
+              "variations": {
+                "plural": {
+                  "one": {
+                    "stringUnit": {
+                      "state": "translated",
+                      "value": "Every %1$lld week on %2$@"
+                    }
+                  },
+                  "other": {
+                    "stringUnit": {
+                      "state": "translated",
+                      "value": "Every %1$lld weeks on %2$@"
+                    }
+                  }
+                }
+              }
+            }
+          }
+        }
+      }
+    },
+    "Monthly on the %@": {
+      "comment": "Mac Scheduled Table Repeat column: every month; %@ is the day of the month as an ordinal, for example “15th” (D356.2).",
+      "extractionState": "manual",
+      "generatesSymbol": false,
+      "localizations": {
+        "en": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Monthly on the %@"
+          }
+        }
+      }
+    },
+    "Monthly on the last day": {
+      "comment": "Mac Scheduled Table Repeat column: every month, on the month’s last day (D357).",
+      "extractionState": "manual",
+      "generatesSymbol": false,
+      "localizations": {
+        "en": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Monthly on the last day"
+          }
+        }
+      }
+    },
+    "Every %1$lld months on the %2$@": {
+      "comment": "Mac Scheduled Table Repeat column: %1$lld is the number of months between due dates, 2 or more; %2$@ is the day of the month as an ordinal (D356.2).",
+      "extractionState": "manual",
+      "generatesSymbol": false,
+      "localizations": {
+        "en": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "%#@count@"
+          },
+          "substitutions": {
+            "count": {
+              "argNum": 1,
+              "formatSpecifier": "lld",
+              "variations": {
+                "plural": {
+                  "one": {
+                    "stringUnit": {
+                      "state": "translated",
+                      "value": "Every %1$lld month on the %2$@"
+                    }
+                  },
+                  "other": {
+                    "stringUnit": {
+                      "state": "translated",
+                      "value": "Every %1$lld months on the %2$@"
+                    }
+                  }
+                }
+              }
+            }
+          }
+        }
+      }
+    },
+    "Every %lld months on the last day": {
+      "comment": "Mac Scheduled Table Repeat column: %lld is the number of months between due dates, 2 or more, on the month’s last day (D357).",
+      "extractionState": "manual",
+      "generatesSymbol": false,
+      "localizations": {
+        "en": {
+          "variations": {
+            "plural": {
+              "one": {
+                "stringUnit": {
+                  "state": "translated",
+                  "value": "Every %lld month on the last day"
+                }
+              },
+              "other": {
+                "stringUnit": {
+                  "state": "translated",
+                  "value": "Every %lld months on the last day"
+                }
+              }
+            }
+          }
+        }
+      }
+    },
+    "Yearly on %@": {
+      "comment": "Mac Scheduled Table Repeat column: every year; %@ is the day and month, for example “15 March” (D356.2).",
+      "extractionState": "manual",
+      "generatesSymbol": false,
+      "localizations": {
+        "en": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Yearly on %@"
+          }
+        }
+      }
+    },
+    "Every %1$lld years on %2$@": {
+      "comment": "Mac Scheduled Table Repeat column: %1$lld is the number of years between due dates, 2 or more; %2$@ is the day and month (D356.2).",
+      "extractionState": "manual",
+      "generatesSymbol": false,
+      "localizations": {
+        "en": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "%#@count@"
+          },
+          "substitutions": {
+            "count": {
+              "argNum": 1,
+              "formatSpecifier": "lld",
+              "variations": {
+                "plural": {
+                  "one": {
+                    "stringUnit": {
+                      "state": "translated",
+                      "value": "Every %1$lld year on %2$@"
+                    }
+                  },
+                  "other": {
+                    "stringUnit": {
+                      "state": "translated",
+                      "value": "Every %1$lld years on %2$@"
+                    }
+                  }
+                }
+              }
+            }
           }
         }
       }

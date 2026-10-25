@@ -4,21 +4,24 @@ import Testing
 
 @testable import LittleOrbitFeatures
 
-/// The Mac Scheduled Table's sections, rows and footer (#26, D340.6, D340.13). Made-up data; today is 20 Oct 2026.
+/// The Mac Scheduled Table's sections, rows and footer (#26, D340.6, D340.13, D355, D356). Made-up data; today is
+/// 20 Oct 2026. Every list here is the Mac's, passed explicitly.
 @MainActor
-@Suite("Mac Scheduled Table (#26, D340.13)")
+@Suite("Mac Scheduled Table (#26, D340.13, D355)")
 struct ScheduledTableTests {
+    private static let locale = Locale(identifier: "en_IN")
+
     private func macList(_ scene: ScheduledScene) -> ScheduledListViewModel {
-        let list = ScheduledListViewModel(
-            useCases: scene.useCases,
-            locale: Locale(identifier: "en_IN"),
-            platform: .macOS,
-        )
+        let list = ScheduledListViewModel(useCases: scene.useCases, locale: Self.locale, platform: .macOS)
         list.load()
         return list
     }
 
-    @Test("S76: sections Overdue, Due Today and Upcoming, one row per overdue occurrence, ordered by date")
+    private func status(_ list: ScheduledListViewModel) -> [String: String] {
+        Dictionary(uniqueKeysWithValues: list.tableSections.flatMap(\.rows).map { ($0.name, $0.status) })
+    }
+
+    @Test("S76: sections Overdue, Due Today and Upcoming with no counts, one row per overdue occurrence")
     func sections() throws {
         let scene = try ScheduledScene()
         try scene.add(
@@ -36,71 +39,160 @@ struct ScheduledTableTests {
         #expect(overdue.map(\.due).prefix(2) == ["15 Aug", "18 Aug"])
         #expect(sections[1].rows.map(\.name) == ["Phone Plan"])
         #expect(sections[2].rows.map(\.due) == ["1 Nov"])
-        // Each overdue row acts on its own occurrence.
+        // Each overdue row acts on its own occurrence, and the lookup finds it.
         #expect(Set(overdue.map(\.id)).count == 8)
-        #expect(overdue.allSatisfy { $0.row.canSettle })
+        #expect(overdue.allSatisfy { $0.row.canSettle && list.tableRow(id: $0.id) == $0 })
     }
 
-    @Test("D340.13: Status reads “Overdue · 1 day” or “Overdue · 5 days”, then Due today and Upcoming")
-    func status() throws {
+    @Test("D355.2: overdue reads its days, automatic or not, as whole-phrase plurals")
+    func overdueStatus() throws {
         let scene = try ScheduledScene()
         try scene.add(
             scene.item("Electricity", day: 15, month: 10),
             scene.item("Gym", day: 19, month: 10),
-            scene.item("Phone Plan", day: 20, month: 10),
-            scene.item("Rent", day: 1, automatic: true, month: 11),
+            scene.item("Rent", day: 17, automatic: true, month: 10),
         )
-        let list = macList(scene)
-        let rows = list.tableSections.flatMap(\.rows)
-        let status = Dictionary(uniqueKeysWithValues: rows.map { ($0.name, $0.status) })
+        let status = status(macList(scene))
         #expect(status["Electricity"] == "Overdue · 5 days")
         #expect(status["Gym"] == "Overdue · 1 day")
-        #expect(status["Phone Plan"] == "Due today")
-        #expect(status["Rent"] == "Upcoming · Auto")
+        // An automatic item is overdue only after Undo Pay (D344.1); it reads like a manual one.
+        #expect(status["Rent"] == "Overdue · 3 days")
     }
 
-    @Test("Columns: repeat, account and a signed amount")
-    func columns() throws {
+    @Test("D355.2, D356.1: due today names Automatic, or the Reminder Time for a manual item that notifies")
+    func dueTodayStatus() throws {
         let scene = try ScheduledScene()
-        try scene.add(scene.item("Rent", day: 1, month: 11))
-        let row = try #require(macList(scene).tableSections.first?.rows.first)
-        #expect(row.repeatText == "Monthly")
-        #expect(row.account == "Everyday Savings")
-        #expect(row.amount.contains("1,200"))
-        #expect(row.tone == .negative)
+        var notified = scene.item("Phone Plan", day: 20, month: 10)
+        notified.notifiesWhenDue = true
+        var both = scene.item("Rent", day: 20, automatic: true, month: 10)
+        both.notifiesWhenDue = true
+        try scene.add(
+            scene.item("Water", day: 20, month: 10),
+            scene.item("Salary", day: 20, automatic: true, month: 10),
+            notified,
+            both,
+        )
+        let list = macList(scene)
+        let status = status(list)
+        #expect(status["Water"] == "Due today")
+        #expect(status["Salary"] == "Due today · Automatic")
+        #expect(status["Rent"] == "Due today · Automatic")
+        #expect(status["Phone Plan"] == "Due today · \(list.reminderTimeText)")
+        #expect(list.reminderTimeText.contains("9:00"))
+        list.reminderTime = DateComponents(hour: 7, minute: 45)
+        #expect(self.status(list)["Phone Plan"] == "Due today · \(list.reminderTimeText)")
+        #expect(list.reminderTimeText.contains("7:45"))
     }
 
-    @Test("D334.2: only Completed shows a count, and its rows open the item")
+    @Test("D355.1, D355.2: upcoming is blank for a plain manual item, else its mode")
+    func upcomingStatus() throws {
+        let scene = try ScheduledScene()
+        var notified = scene.item("Phone Plan", day: 5, month: 11)
+        notified.notifiesWhenDue = true
+        var both = scene.item("Rent", day: 1, automatic: true, month: 11)
+        both.notifiesWhenDue = true
+        try scene.add(
+            scene.item("Water", day: 3, month: 11),
+            scene.item("Salary", day: 2, automatic: true, month: 11),
+            notified,
+            both,
+        )
+        let list = macList(scene)
+        let status = status(list)
+        #expect(status["Water"] == "")
+        #expect(status["Salary"] == "Automatic")
+        #expect(status["Rent"] == "Automatic + notify")
+        #expect(status["Phone Plan"] == "Notify \(list.reminderTimeText)")
+    }
+
+    @Test("D355.3: Due shows the year only outside this year, with the long Repeat form")
+    func dueYear() throws {
+        let scene = try ScheduledScene()
+        var insurance = scene.item("Home Insurance", day: 15, month: 1)
+        insurance.startDay = CalendarDay(year: 2027, month: 1, day: 15)
+        insurance.repeatRule = .yearly
+        try scene.add(insurance, scene.item("Rent", day: 15, month: 11))
+        let rows = macList(scene).tableSections.flatMap(\.rows)
+        let byName = Dictionary(uniqueKeysWithValues: rows.map { ($0.name, $0) })
+        #expect(byName["Home Insurance"]?.due == "15 Jan 2027")
+        #expect(byName["Home Insurance"]?.repeatText == "Yearly on 15 January")
+        #expect(byName["Rent"]?.due == "15 Nov")
+        #expect(byName["Rent"]?.repeatText == "Monthly on the 15th")
+        #expect(byName["Rent"]?.account == "Everyday Savings")
+        #expect(byName["Rent"]?.amount.contains("1,200") == true)
+        #expect(byName["Rent"]?.tone == .negative)
+    }
+
+    @Test("D355.3, D355.4: a completed row shows its last due date, keeps its rule and reads Ended")
     func completed() throws {
         let scene = try ScheduledScene()
-        var once = scene.item("Deposit", day: 15, month: 10)
-        once.repeatRule = .never
-        try scene.add(once)
+        var gym = scene.item("Gym", day: 5, month: 8)
+        gym.endDay = CalendarDay(year: 2026, month: 10, day: 5)
+        var deposit = scene.item("Deposit", day: 15, month: 10)
+        deposit.repeatRule = .never
+        try scene.add(gym, deposit)
         let list = macList(scene)
-        list.payNow(try #require(list.tableSections.first?.rows.first?.row))
+        for row in list.tableSections.flatMap(\.rows) {
+            list.payNow(row.row)
+        }
         let sections = list.tableSections
-        #expect(sections.map(\.title) == ["Completed · 1"])
-        let row = try #require(sections.first?.rows.first)
-        #expect(row.due.isEmpty)
-        #expect(row.status == "Completed")
-        #expect(!row.row.canSettle)
-        #expect(list.tableRow(id: row.id)?.row.itemID == once.id)
+        #expect(sections.map(\.title) == ["Completed"], "No count in the header (D334.2)")
+        let byName = Dictionary(uniqueKeysWithValues: sections[0].rows.map { ($0.name, $0) })
+        #expect(byName["Gym"]?.due == "5 Oct")
+        #expect(byName["Gym"]?.repeatText == "Monthly on the 5th")
+        #expect(byName["Gym"]?.status == "Ended 5 Oct")
+        #expect(byName["Deposit"]?.due == "15 Oct")
+        #expect(byName["Deposit"]?.repeatText == "Once")
+        #expect(byName["Deposit"]?.status == "Ended 15 Oct")
+        #expect(byName["Deposit"]?.row.canSettle == false)
+        let id = try #require(byName["Deposit"]?.id)
+        #expect(list.tableRow(id: id)?.row.itemID == deposit.id)
     }
 
-    @Test("D340.13: the footer counts items and overdue occurrences, then how to open and act")
+    @Test("D356.2, D357: each long Repeat form, at an interval of 1 and of N")
+    func longRepeat() throws {
+        let scene = try ScheduledScene()
+        func text(_ rule: ScheduleRepeat, _ year: Int, _ month: Int, _ day: Int) -> String {
+            var item = scene.item("Item", day: day, month: month)
+            item.startDay = CalendarDay(year: year, month: month, day: day)
+            item.repeatRule = rule
+            return ScheduledRepeatText.long(item, locale: Self.locale)
+        }
+        #expect(text(.never, 2026, 10, 24) == "Once")
+        #expect(text(.daily, 2026, 10, 24) == "Daily")
+        #expect(text(.every(3, .day), 2026, 10, 24) == "Every 3 days")
+        // 24 Oct 2026 is a Saturday.
+        #expect(text(.weekly, 2026, 10, 24) == "Weekly on Saturday")
+        #expect(text(.every(2, .week), 2026, 10, 24) == "Every 2 weeks on Saturday")
+        #expect(text(.monthly, 2026, 10, 15) == "Monthly on the 15th")
+        #expect(text(.monthly, 2026, 10, 1) == "Monthly on the 1st")
+        #expect(text(.monthly, 2026, 10, 30) == "Monthly on the 30th")
+        #expect(text(.every(2, .month), 2026, 10, 22) == "Every 2 months on the 22nd")
+        #expect(text(.monthly, 2026, 10, 31) == "Monthly on the last day")
+        #expect(text(.every(3, .month), 2026, 10, 31) == "Every 3 months on the last day")
+        #expect(text(.yearly, 2026, 3, 15) == "Yearly on 15 March")
+        #expect(text(.every(2, .year), 2028, 2, 29) == "Every 2 years on 29 February")
+    }
+
+    @Test("D340.13, NB 3: the footer's counts are plurals that show their number")
     func footer() throws {
         let scene = try ScheduledScene()
         try scene.add(scene.item("Electricity", day: 15), scene.item("Rent", day: 1, month: 11))
         let list = macList(scene)
         #expect(list.tableFooter == "2 scheduled · 3 overdue · double-click to open · right-click for actions")
+        let one = try ScheduledScene()
+        try one.add(one.item("Rent", day: 1, month: 11))
+        #expect(macList(one).tableFooter == "1 scheduled · double-click to open · right-click for actions")
         let empty = macList(try ScheduledScene())
         #expect(empty.tableFooter == nil)
         #expect(empty.tableSections.isEmpty)
     }
 
-    @Test("Column titles")
+    @Test("Column titles, and iOS builds no table")
     func columnTitles() throws {
-        let list = macList(try ScheduledScene())
+        let scene = try ScheduledScene()
+        try scene.add(scene.item("Rent", day: 1, month: 11))
+        let list = macList(scene)
         #expect(
             [
                 list.dueColumn, list.nameColumn, list.repeatColumn, list.accountColumn, list.amountColumn,
@@ -108,5 +200,9 @@ struct ScheduledTableTests {
             ]
                 == ["Due", "Name", "Repeat", "Account", "Amount", "Status"]
         )
+        let iOS = ScheduledListViewModel(useCases: scene.useCases, locale: Self.locale, platform: .iOS)
+        iOS.load()
+        #expect(iOS.tableSections.isEmpty)
+        #expect(iOS.upcomingRows.first?.detail.hasPrefix("Monthly") == true, "iOS keeps the short names")
     }
 }
