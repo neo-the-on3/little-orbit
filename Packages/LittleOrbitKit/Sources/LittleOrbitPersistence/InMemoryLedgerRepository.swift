@@ -174,6 +174,10 @@ extension InMemoryLedgerRepository: BudgetRepository {
         snapshot = try LedgerBook.savingBudget(budget, in: snapshot, now: now())
     }
 
+    public func restoreBudget(_ budget: Budget) throws {
+        snapshot = try LedgerBook.restoringBudget(budget, in: snapshot, now: now())
+    }
+
     public func changeBudgetLimit(
         of budgetID: UUID,
         to amount: Decimal,

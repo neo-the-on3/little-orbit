@@ -7,6 +7,8 @@ public protocol BudgetRepository: AnyObject {
     func budgets() throws -> [Budget]
     /// See `LedgerBook.savingBudget(_:in:now:)`.
     func saveBudget(_ budget: Budget) throws
+    /// See `LedgerBook.restoringBudget(_:in:now:)`: Undo and Redo put a stored version back (D310.2).
+    func restoreBudget(_ budget: Budget) throws
     /// See `LedgerBook.changingBudgetLimit(of:to:fromPeriodStartingOn:in:now:)`.
     func changeBudgetLimit(of budgetID: UUID, to amount: Decimal, fromPeriodStartingOn periodStart: CalendarDay) throws
     /// See `LedgerBook.deletingBudget(id:in:)`.

@@ -42,9 +42,25 @@ public protocol DeleteBudgetUseCase {
     func delete(_ budgetID: UUID) throws
 }
 
+/// Budget saves as revertible changes, for the window's Undo and Redo (D307.8).
+@MainActor
+public protocol BudgetChangesUseCase {
+    /// Saves like `SaveBudgetUseCase.save(_:today:)` and returns the change: `.added` for a new budget, or
+    /// `.replaced` with the version before the edit.
+    func savedChange(_ draft: BudgetDraft, today: CalendarDay) throws -> BudgetChange
+    /// Changes the limit like `ChangeBudgetLimitUseCase.changeLimit(of:to:today:)` and returns the change,
+    /// `.replaced` with the version before it (Change Budget Limit, the detail's action sheet).
+    func limitChange(of budgetID: UUID, to amount: Decimal, today: CalendarDay) throws -> BudgetChange
+    /// What `change` left in the ledger, read right after it was made or reverted, for the stale check.
+    func outcome(of change: BudgetChange) throws -> BudgetChangeOutcome
+    /// Reverts `change` if the ledger still holds `outcome`, by value; otherwise writes nothing and says why
+    /// (D187.5, D307.8). The check runs first, so a stale step never writes.
+    func revert(_ change: BudgetChange, expecting outcome: BudgetChangeOutcome) throws -> BudgetRevertResult
+}
+
 /// Every budget use case, which `DefaultBudgetUseCases` implements in one type.
 public typealias BudgetUseCase = ListBudgetsUseCase & BudgetPeriodsUseCase & SaveBudgetUseCase
-    & ChangeBudgetLimitUseCase & DeleteBudgetUseCase
+    & ChangeBudgetLimitUseCase & DeleteBudgetUseCase & BudgetChangesUseCase
 
 @MainActor
 public final class DefaultBudgetUseCases: BudgetUseCase {
@@ -85,6 +101,13 @@ public final class DefaultBudgetUseCases: BudgetUseCase {
 
     @discardableResult
     public func save(_ draft: BudgetDraft, today: CalendarDay) throws -> Budget {
+        let id = try write(draft, today: today)
+        return try budget(id, in: repository.budgetLedger())
+    }
+
+    /// Saves the draft and returns the budget's ID, without reading it back.
+    @discardableResult
+    private func write(_ draft: BudgetDraft, today: CalendarDay) throws -> UUID {
         let ledger = try repository.budgetLedger()
         let limit = draft.limit ?? 0
         var budget: Budget
@@ -110,7 +133,7 @@ public final class DefaultBudgetUseCases: BudgetUseCase {
                 ]
         }
         try repository.saveBudget(budget)
-        return try self.budget(budget.id, in: repository.budgetLedger())
+        return budget.id
     }
 
     public func changeLimit(of budgetID: UUID, to amount: Decimal, today: CalendarDay) throws {
@@ -121,6 +144,105 @@ public final class DefaultBudgetUseCases: BudgetUseCase {
 
     public func delete(_ budgetID: UUID) throws {
         try repository.deleteBudget(id: budgetID)
+    }
+
+    // MARK: Changes for Undo (D307.8)
+
+    /// Nothing is read back after the write, so a read that fails then can't make a saved budget look unsaved;
+    /// the step's `outcome(of:)` read finds that instead (#176 review NB3).
+    public func savedChange(_ draft: BudgetDraft, today: CalendarDay) throws -> BudgetChange {
+        if let id = draft.id {
+            let previous = try budget(id, in: repository.budgetLedger())
+            try write(draft, today: today)
+            return .replaced(previous)
+        }
+        return .added(try write(draft, today: today))
+    }
+
+    public func limitChange(of budgetID: UUID, to amount: Decimal, today: CalendarDay) throws -> BudgetChange {
+        let previous = try budget(budgetID, in: repository.budgetLedger())
+        try changeLimit(of: budgetID, to: amount, today: today)
+        return .replaced(previous)
+    }
+
+    public func outcome(of change: BudgetChange) throws -> BudgetChangeOutcome {
+        BudgetChangeOutcome(budget: try current(change.budgetID))
+    }
+
+    public func revert(_ change: BudgetChange, expecting outcome: BudgetChangeOutcome) throws -> BudgetRevertResult {
+        if let reason = try staleReason(change, expecting: outcome) {
+            return .stale(reason)
+        }
+        let inverse: BudgetChange
+        switch change {
+        case .added(let id):
+            let removed = try budget(id, in: repository.budgetLedger())
+            try repository.deleteBudget(id: id)
+            inverse = .removed(removed)
+        case .replaced(let previous):
+            let replaced = try budget(previous.id, in: repository.budgetLedger())
+            try repository.restoreBudget(previous)
+            inverse = .replaced(replaced)
+        case .removed(let budget):
+            try repository.restoreBudget(budget)
+            inverse = .added(budget.id)
+        }
+        return .reverted(inverse, try self.outcome(of: inverse))
+    }
+
+    /// The budget as stored now, or `nil` when there's none with that ID.
+    private func current(_ id: UUID) throws -> Budget? {
+        try repository.budgetLedger().budgetsVisible().first { $0.id == id }
+    }
+
+    /// A deleted budget, a category the revert would put back that's gone, a budget that no longer holds what the
+    /// step left, or a name another budget has taken since, in that order: a category delete also changes the
+    /// budget, and naming the category says more (D307.8). A version with no categories isn't stale; it's put
+    /// back exactly (D310.2).
+    ///
+    /// Two refusals the ledger could still repeat every time aren't checked here, because neither can happen today,
+    /// so they'd reach the revert as a failure that keeps the step:
+    /// - `categoryKindMismatch`: a category's kind can't change in the editor, and replacing the ledger clears the
+    ///   history;
+    /// - `missingBudget` for a soft-deleted record: budget deletes are hard.
+    ///
+    /// Whoever adds category kind changes or sync should make those stale here too.
+    private func staleReason(_ change: BudgetChange, expecting outcome: BudgetChangeOutcome) throws
+        -> BudgetStaleReason?
+    {
+        let ledger = try repository.budgetLedger()
+        let now = ledger.budgetsVisible().first { $0.id == change.budgetID }
+        let restoring: Budget?
+        switch change {
+        case .added:
+            guard let now else {
+                return .budgetDeleted
+            }
+            return outcome.budget.map(now.hasSameSettings) == true ? nil : .budgetChanged
+        case .replaced(let previous):
+            guard now != nil else {
+                return .budgetDeleted
+            }
+            restoring = previous
+        case .removed(let budget):
+            guard now == nil else {
+                return .budgetChanged
+            }
+            restoring = budget
+        }
+        let live = Set(ledger.categories.filter { $0.deletedAt == nil }.map(\.id))
+        if let gone = restoring?.categoryIDs.first(where: { !live.contains($0) }) {
+            return .categoryDeleted(gone)
+        }
+        if case .replaced = change, let now, outcome.budget.map(now.hasSameSettings) != true {
+            return .budgetChanged
+        }
+        // The ledger refuses a clash every time, so it's checked before anything is written (D310.1).
+        guard let restoring else {
+            return nil
+        }
+        return LedgerBook.budgetNameClash(restoring.name, excluding: restoring.id, in: ledger)
+            .map { .nameTaken($0.name) }
     }
 
     private func budget(_ id: UUID, in ledger: LedgerSnapshot) throws -> Budget {
