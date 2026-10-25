@@ -14,6 +14,11 @@
             try mutate { try LedgerBook.savingBudget(budget, in: $0, now: now) }
         }
 
+        public func restoreBudget(_ budget: Budget) throws {
+            let now = self.now()
+            try mutate { try LedgerBook.restoringBudget(budget, in: $0, now: now) }
+        }
+
         public func changeBudgetLimit(
             of budgetID: UUID,
             to amount: Decimal,

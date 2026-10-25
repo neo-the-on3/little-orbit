@@ -5,9 +5,16 @@
 
     /// The iOS Budgets list (#25 design: Budgets list and Budgets empty frames), pushed from the home screen's
     /// Budgets row. Each row shows the status, a bar, spent of what's available and the days left, and opens
-    /// the budget. It reloads after every ledger change (#25 AC 6).
+    /// the budget. It reloads after every ledger change (#25 AC 6). The + button and the empty state's “Create
+    /// Budget” open New Budget; both are hidden, never disabled, when there's no expense category to pick (UI
+    /// Designer's #175 ruling 1).
     public struct BudgetsView: View {
         @State private var model: BudgetsViewModel
+        /// The New Budget or Edit Budget sheet on show.
+        @State private var form: BudgetFormViewModel?
+        @State private var canCreate = false
+        /// The window's Undo history, which records each save (D307.8).
+        @Environment(WindowUndoHistory.self) private var undoHistory: WindowUndoHistory?
         private let feature: BudgetsFeature
 
         public init(feature: BudgetsFeature) {
@@ -31,6 +38,13 @@
                             } label: {
                                 BudgetRowView(row: row)
                             }
+                            .contextMenu {
+                                // Until the budget detail and its Edit Budget button arrive (#25 part 4), this
+                                // is the way to edit a budget.
+                                if feature.useCases.form != nil {
+                                    Button(BudgetText.editBudget, systemImage: "pencil") { open(.edit(row.id)) }
+                                }
+                            }
                         }
                     } footer: {
                         Text(BudgetsViewModel.footnote)
@@ -41,6 +55,18 @@
             .overlay { emptyState }
             .navigationTitle(BudgetsViewModel.title)
             .navigationBarTitleDisplayMode(.large)
+            .toolbar {
+                if canCreate {
+                    ToolbarItem(placement: .primaryAction) {
+                        Button(BudgetText.newBudget, systemImage: "plus") { open(.new) }
+                    }
+                }
+            }
+            .sheet(item: $form) { form in
+                NavigationStack {
+                    BudgetFormView(model: form)
+                }
+            }
             .alert(
                 model.alert?.title ?? "",
                 isPresented: Binding(get: { model.alert != nil }, set: { if !$0 { model.alert = nil } }),
@@ -50,26 +76,49 @@
             } message: { alert in
                 Text(alert.message)
             }
-            .onAppear { model.load() }
-            .onChange(of: feature.revision) { model.load() }
+            .onAppear { reload() }
+            .onChange(of: feature.revision) { reload() }
+        }
+
+        private func reload() {
+            model.load()
+            canCreate = feature.canCreateBudget()
+        }
+
+        private func open(_ mode: BudgetFormViewModel.Mode) {
+            let history = undoHistory
+            do {
+                form = try feature.makeForm(mode, history: { history })
+            } catch {
+                model.alert = BudgetText.loadFailed
+            }
         }
 
         @ViewBuilder private var emptyState: some View {
             if model.isEmpty {
-                ContentUnavailableView(
-                    BudgetsViewModel.emptyTitle,
-                    systemImage: HomeDestination.budgets.symbolName,
-                    description: Text(BudgetsViewModel.emptyMessage),
-                )
+                ContentUnavailableView {
+                    Label(BudgetsViewModel.emptyTitle, systemImage: HomeDestination.budgets.symbolName)
+                } description: {
+                    Text(BudgetsViewModel.emptyMessage)
+                } actions: {
+                    createButton
+                }
                 // The chart symbol is decorative. As on Payees (#156), VoiceOver gets just the title, as a
-                // heading, and the message.
+                // heading, the message and the button.
                 .accessibilityRepresentation {
                     VStack {
                         Text(BudgetsViewModel.emptyTitle)
                             .accessibilityAddTraits(.isHeader)
                         Text(BudgetsViewModel.emptyMessage)
+                        createButton
                     }
                 }
+            }
+        }
+
+        @ViewBuilder private var createButton: some View {
+            if canCreate {
+                Button(BudgetText.createBudget) { open(.new) }
             }
         }
     }

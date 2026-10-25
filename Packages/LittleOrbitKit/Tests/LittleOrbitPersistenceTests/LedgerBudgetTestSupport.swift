@@ -13,6 +13,7 @@ func assertBudgetStorage(make: MakeBudgetRepository) throws {
     try assertBudgetRestoreAndDelete(make: make)
     try assertBudgetRestoreRefusesDamage(make: make)
     try assertBudgetWithNoCategoriesRestores(make: make)
+    try assertUndoRestoresBudgetWithNoCategories(make: make)
     try assertCategoryDeletionCountsBudgets(make: make)
 }
 
@@ -159,6 +160,46 @@ private func assertBudgetWithNoCategoriesRestores(make: MakeBudgetRepository) th
     XCTAssertEqual(restored.id, kept.id)
     XCTAssertEqual(restored.categoryIDs, [])
     XCTAssertEqual(restored.limits.first?.deletedAt, Date(timeIntervalSince1970: 2_000))
+}
+
+/// D310.2: Undo puts back a version with no categories under the stored-budget rule, which a form save refuses.
+/// The other rules still hold: a name another budget has (D310.1's check runs first) and a deleted category.
+@MainActor
+private func assertUndoRestoresBudgetWithNoCategories(make: MakeBudgetRepository) throws {
+    let repository = try make()
+    let travel = TransactionCategory(name: "Travel", kind: .expense)
+    let food = TransactionCategory(name: "Food", kind: .expense)
+    try repository.saveCategory(travel)
+    try repository.saveCategory(food)
+    try repository.saveBudget(sampleBudget(categories: [travel.id]))
+    try repository.deleteCategory(id: travel.id, reassigningTo: nil)
+    let emptied = try XCTUnwrap(try repository.budgets().first)
+    var edited = emptied
+    edited.categoryIDs = [food.id]
+    try repository.saveBudget(edited)
+
+    XCTAssertThrowsError(try repository.saveBudget(emptied)) { error in
+        XCTAssertEqual(error as? LedgerValidationError, .budgetCategoriesRequired)
+    }
+    try repository.restoreBudget(emptied)
+    let back = try XCTUnwrap(try repository.budgets().first)
+    XCTAssertEqual(back.categoryIDs, [])
+    XCTAssertEqual(back.limits.map(\.id), emptied.limits.map(\.id))
+
+    var clash = sampleBudget(categories: [food.id])
+    clash.name = "Trips"
+    try repository.saveBudget(clash)
+    var renamed = emptied
+    renamed.name = " trips "
+    XCTAssertThrowsError(try repository.restoreBudget(renamed)) { error in
+        XCTAssertEqual(error as? LedgerValidationError, .duplicateBudgetName)
+    }
+    var deletedCategory = emptied
+    deletedCategory.categoryIDs = [travel.id]
+    XCTAssertThrowsError(try repository.restoreBudget(deletedCategory)) { error in
+        XCTAssertEqual(error as? LedgerValidationError, .missingCategory)
+    }
+    XCTAssertEqual(try repository.budgets().first { $0.id == emptied.id }?.categoryIDs, [])
 }
 
 /// D307.5: the category delete prompt's counts: the budgets that would drop the category, and how many that would

@@ -19,11 +19,30 @@ extension LedgerBook {
     /// The name is trimmed, the categories are kept once each, and limits from before the start day become one
     /// limit from the start day.
     public static func savingBudget(_ budget: Budget, in snapshot: LedgerSnapshot, now: Date) throws -> LedgerSnapshot {
-        var budget = normalize(budget)
+        let budget = normalize(budget)
         try validate(budget, in: snapshot)
-        let key = LedgerText.nameKey(budget.name)
-        guard !snapshot.budgetsVisible().contains(where: { $0.id != budget.id && LedgerText.nameKey($0.name) == key })
-        else {
+        return try storing(budget, in: snapshot, now: now)
+    }
+
+    /// Puts back a version of a budget the ledger held before, for Undo and Redo (D307.8, D310.2). It's
+    /// `savingBudget(_:in:now:)` under the stored-budget rule instead of the form's: a version with no categories
+    /// is put back exactly, because a category delete can leave a budget like that (D307.5). Every other rule
+    /// still applies, so it throws, and changes nothing, for a bad field, a category that isn't live or isn't an
+    /// expense category, another live budget with the same name (`duplicateBudgetName`) or a deleted budget.
+    /// Like `savingBudget(_:in:now:)`, it doesn't check that limit IDs are unique across budgets, which
+    /// `validateStoredBudgets(in:)` does; a version from Undo or Redo only carries its own budget's limits.
+    public static func restoringBudget(_ budget: Budget, in snapshot: LedgerSnapshot, now: Date) throws
+        -> LedgerSnapshot
+    {
+        let budget = normalize(budget)
+        try validateStored(budget, in: snapshot)
+        return try storing(budget, in: snapshot, now: now)
+    }
+
+    /// The name clash and deleted-budget checks every write shares, then the write.
+    private static func storing(_ budget: Budget, in snapshot: LedgerSnapshot, now: Date) throws -> LedgerSnapshot {
+        var budget = budget
+        guard budgetNameClash(budget.name, excluding: budget.id, in: snapshot) == nil else {
             throw LedgerValidationError.duplicateBudgetName
         }
         if let existing = snapshot.budgets.first(where: { $0.id == budget.id }) {
@@ -92,6 +111,14 @@ extension LedgerBook {
         return budget
     }
 
+    /// The other live budget whose trimmed name matches `name`, ignoring case, or `nil` (D307.6). It's the one name
+    /// rule: every write refuses a clash with it, and Undo and Redo check it before writing so a clash goes stale
+    /// instead of failing every time (D310.1).
+    static func budgetNameClash(_ name: String, excluding id: UUID, in snapshot: LedgerSnapshot) -> Budget? {
+        let key = LedgerText.nameKey(name)
+        return snapshot.budgetsVisible().first { $0.id != id && LedgerText.nameKey($0.name) == key }
+    }
+
     /// The one rule for budgets that come from outside the app's own changes, a restored backup today (#174 B1).
     /// Both stores' `replaceLedger` run it before anything is replaced, and the backup decoder runs it so such a
     /// backup is damaged before a restore starts. Throws, and changes nothing, when any budget:
@@ -116,9 +143,14 @@ extension LedgerBook {
                     throw LedgerValidationError.duplicateBudgetID
                 }
             }
-            try validateFields(of: budget)
-            try validateCategories(budget.categoryIDs, in: snapshot)
+            try validateStored(budget, in: snapshot)
         }
+    }
+
+    /// One budget under the stored-budget rule: its fields and its categories, which may be none (D307.5).
+    private static func validateStored(_ budget: Budget, in snapshot: LedgerSnapshot) throws {
+        try validateFields(of: budget)
+        try validateCategories(budget.categoryIDs, in: snapshot)
     }
 
     static func validate(_ budget: Budget, in snapshot: LedgerSnapshot) throws {

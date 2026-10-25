@@ -88,9 +88,14 @@ import SwiftUI
             let changes = LedgerChanges()
             transactions.updates.follow(changes)
             // Budgets (#25): the list reloads after every ledger change, and the home screen's Budgets row counts
-            // the budgets and the overspent ones for its badge.
+            // the budgets and the overspent ones for its badge. The form saves through the same use cases, which
+            // return each change for the window's Undo history, and picks from the category tree.
+            let budgetUseCases = DefaultBudgetUseCases(repository: repository)
             budgets = BudgetsFeature(
-                useCases: BudgetScreenUseCases(list: DefaultBudgetUseCases(repository: repository)),
+                useCases: BudgetScreenUseCases(
+                    list: budgetUseCases,
+                    form: BudgetFormUseCases(budgets: budgetUseCases, changes: budgetUseCases, categories: editing),
+                ),
                 updates: transactions.updates,
             )
             // Account delete returns its change; the screens record it in the transactions' history (#93).

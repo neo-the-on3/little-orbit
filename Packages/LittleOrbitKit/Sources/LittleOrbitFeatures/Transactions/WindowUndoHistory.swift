@@ -64,6 +64,9 @@ public final class WindowUndoHistory {
         let account: Account?
         /// The name the `UndoManager` shows for it now.
         var title = ""
+        /// A change to another kind of record, such as a budget (D307.8). Such a step touches no transaction
+        /// or account, so `change` is empty and the toast, the notice and the account rules leave it alone.
+        var record: (any RecordUndoChange)?
 
         init(change: TransactionChange, outcome: ChangeOutcome, impact: ChangeImpact) {
             // The account is in the name, kept as it was when the step was recorded (D198).
@@ -76,6 +79,16 @@ public final class WindowUndoHistory {
             } else {
                 account = nil
             }
+        }
+
+        @MainActor
+        init(record: any RecordUndoChange) {
+            name = record.name
+            change = .added([])
+            outcome = ChangeOutcome()
+            impact = ChangeImpact()
+            account = nil
+            self.record = record
         }
 
         /// Every account the step needs, so deleting one of them in this window drops it (D187.9).
@@ -181,17 +194,13 @@ public final class WindowUndoHistory {
             }
             undoSteps.removeAll { $0.accountIDs.contains(account.id) }
         }
-        closeFeedback()
-        endFailure()
+        closeAfterNewStep()
         alert = newAlert
-        // A new step clears Redo, as the `UndoManager` does.
-        redoSteps.removeAll()
         if registrar != nil, outcome != nil {
             undoSteps.append(step)
             register(step, as: title(of: step))
         }
-        updates.changed()
-        refreshMenu()
+        ledgerChanged()
         return step.id
     }
 
@@ -251,6 +260,10 @@ public final class WindowUndoHistory {
         }
         closeFeedback()
         refreshMenu()
+        if let record = step.record {
+            run(step, record, undoing: undoing, title: shown)
+            return
+        }
         do {
             switch try changes.revert(step.change, expecting: step.outcome) {
             case .reverted(let inverse, let outcome):
@@ -273,6 +286,34 @@ public final class WindowUndoHistory {
                 alert = UndoAlert(
                     title: undoing ? StaleText.cantUndo(shown) : StaleText.cantRedo(shown),
                     message: staleMessage(reason, step),
+                )
+            }
+        } catch {
+            fail(step, undoing: undoing, title: shown, error: error)
+        }
+    }
+
+    /// Undo or Redo of a record step: the same rules as a transaction step, without a notice, because no
+    /// account is involved (D307.8).
+    private func run(_ step: Step, _ record: any RecordUndoChange, undoing: Bool, title shown: String) {
+        do {
+            switch try record.revert() {
+            case .reverted(let inverse):
+                step.record = inverse
+                alert = nil
+                if undoing {
+                    redoSteps.append(step)
+                } else {
+                    undoSteps.append(step)
+                }
+                register(step, as: title(of: step))
+                announce(undoing ? UndoText.undid(shown) : UndoText.redid(shown))
+                updates.changed()
+            case .stale(let message):
+                dropAfterwards(step)
+                alert = UndoAlert(
+                    title: undoing ? StaleText.cantUndo(shown) : StaleText.cantRedo(shown),
+                    message: message,
                 )
             }
         } catch {
@@ -335,6 +376,21 @@ public final class WindowUndoHistory {
 
     public func dismissNotice() {
         notice = nil
+    }
+
+    /// What any new step does first, a transaction or a record step alike: the toast and the notice close, a
+    /// failure block ends, the last alert goes, and Redo is cleared, as the `UndoManager` does.
+    func closeAfterNewStep() {
+        closeFeedback()
+        endFailure()
+        alert = nil
+        redoSteps.removeAll()
+    }
+
+    /// Every window reloads after a change from this one (D187.4).
+    func ledgerChanged() {
+        updates.changed()
+        refreshMenu()
     }
 
     private func closeFeedback() {

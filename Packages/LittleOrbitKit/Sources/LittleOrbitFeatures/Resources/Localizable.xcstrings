@@ -14,6 +14,30 @@
         }
       }
     },
+    "%1$@ amounts can have up to %2$lld decimal places.": {
+      "comment": "Budget form: error under the limit. %1$@ is a currency code such as INR; %2$lld is how many decimal places it has.",
+      "extractionState": "manual",
+      "localizations": {
+        "en": {
+          "variations": {
+            "plural": {
+              "one": {
+                "stringUnit": {
+                  "state": "translated",
+                  "value": "%1$@ amounts can have up to %2$lld decimal place."
+                }
+              },
+              "other": {
+                "stringUnit": {
+                  "state": "translated",
+                  "value": "%1$@ amounts can have up to %2$lld decimal places."
+                }
+              }
+            }
+          }
+        }
+      }
+    },
     "%1$@ are removed from lists, autocomplete and reports.": {
       "comment": "Merge Payees footnote sentence (D297.3): %1$@ is the payee merged into the one kept, or the payees joined in the system list format (“A, B, and C”); how many there are picks the form.",
       "extractionState": "manual",
@@ -296,6 +320,19 @@
         }
       }
     },
+    "%1$@ — %2$@": {
+      "comment": "Budget form, currency picker: a choice. %1$@ is the currency code, %2$@ its name, for example “INR — Indian Rupee”.",
+      "extractionState": "manual",
+      "generatesSymbol": false,
+      "localizations": {
+        "en": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "%1$@ — %2$@"
+          }
+        }
+      }
+    },
     "%1$@, %2$@": {
       "comment": "Two parts joined with a comma: a backup's day and time (%1$@ the day, %2$@ the time), or its account and transaction counts as VoiceOver reads them.",
       "extractionState": "manual",
@@ -391,6 +428,19 @@
         }
       }
     },
+    "%@ amounts have no decimal places.": {
+      "comment": "Budget form: error under the limit. %@ is a currency code with no decimal places, such as JPY.",
+      "extractionState": "manual",
+      "generatesSymbol": false,
+      "localizations": {
+        "en": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "%@ amounts have no decimal places."
+          }
+        }
+      }
+    },
     "%@ are deleted after the move.": {
       "comment": "Move To sheet footer sentence. The category and its subcategories, as a list.",
       "extractionState": "manual",
@@ -405,7 +455,7 @@
       }
     },
     "%@ has changed since then. Nothing was changed.": {
-      "comment": "Alert message: an Undo or Redo that can't run because the record changed after the step was recorded, so nothing was changed. %@ is the transaction's payee or description, or an account name. Don't name a cause: the same check catches a change from anywhere.",
+      "comment": "Alert message: an Undo or Redo that can’t run because the record changed after the step was recorded, so nothing was changed. %@ is the transaction’s payee or description, an account name, or a budget or category name. Don’t name a cause: the same check catches a change from anywhere.",
       "extractionState": "manual",
       "localizations": {
         "en": {
@@ -417,7 +467,7 @@
       }
     },
     "%@ has been deleted. Nothing was changed.": {
-      "comment": "Alert message: an Undo or Redo that can't run because the record or account was deleted after the step was recorded, so nothing was changed. %@ is the transaction's payee or description, or the account name. Don't name a cause: the same check catches a change from anywhere.",
+      "comment": "Alert message: an Undo or Redo that can’t run because the record or account was deleted after the step was recorded, so nothing was changed. %@ is the transaction’s payee or description, the account name, or a budget or category name. Don’t name a cause: the same check catches a change from anywhere.",
       "extractionState": "manual",
       "localizations": {
         "en": {
@@ -493,6 +543,30 @@
         }
       }
     },
+    "%lld subcategories": {
+      "comment": "Budget form, Categories screen: under a parent category, how many subcategories it has.",
+      "extractionState": "manual",
+      "localizations": {
+        "en": {
+          "variations": {
+            "plural": {
+              "one": {
+                "stringUnit": {
+                  "state": "translated",
+                  "value": "%lld subcategory"
+                }
+              },
+              "other": {
+                "stringUnit": {
+                  "state": "translated",
+                  "value": "%lld subcategories"
+                }
+              }
+            }
+          }
+        }
+      }
+    },
     "%lld%%": {
       "comment": "VoiceOver, on a budget row: the share of what’s available that’s spent, as a whole percentage, read after the amounts.",
       "extractionState": "manual",
@@ -536,6 +610,316 @@
                 "stringUnit": {
                   "state": "translated",
                   "value": "%lld days left"
+                }
+              }
+            }
+          }
+        }
+      }
+    },
+    "A category has been deleted. Nothing was changed.": {
+      "comment": "Alert message under “Can’t Undo …” or “Can’t Redo …”: the budget step would put back a category that has been deleted since, and its name isn’t known (D309.7). Don’t name a cause: the same check catches a change from anywhere.",
+      "extractionState": "manual",
+      "generatesSymbol": false,
+      "localizations": {
+        "en": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "A category has been deleted. Nothing was changed."
+          }
+        }
+      }
+    },
+    "A category was deleted or changed. Check the categories and try again.": {
+      "comment": "Alert message under “Couldn’t Save Changes”: a picked category was deleted or became an income category in another window.",
+      "extractionState": "manual",
+      "generatesSymbol": false,
+      "localizations": {
+        "en": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "A category was deleted or changed. Check the categories and try again."
+          }
+        }
+      }
+    },
+    "A parent category includes its subcategories.": {
+      "comment": "Budget form: the footnote under the categories row.",
+      "extractionState": "manual",
+      "generatesSymbol": false,
+      "localizations": {
+        "en": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "A parent category includes its subcategories."
+          }
+        }
+      }
+    },
+    "Carry over overspending": {
+      "comment": "Budget form: switch. On, going over in a period is taken from the next one (D307.1).",
+      "extractionState": "manual",
+      "generatesSymbol": false,
+      "localizations": {
+        "en": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Carry over overspending"
+          }
+        }
+      }
+    },
+    "Carry over unspent": {
+      "comment": "Budget form: switch. On, money left in a period is added to the next one (D307.1).",
+      "extractionState": "manual",
+      "generatesSymbol": false,
+      "localizations": {
+        "en": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Carry over unspent"
+          }
+        }
+      }
+    },
+    "Carry-over": {
+      "comment": "Budget form: the section with the two carry-over switches.",
+      "extractionState": "manual",
+      "generatesSymbol": false,
+      "localizations": {
+        "en": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Carry-over"
+          }
+        }
+      }
+    },
+    "Change Budget Limit %@": {
+      "comment": "Undo and Redo name: a budget’s limit changed from the budget detail’s action sheet. %@ is the budget’s name (D307.8).",
+      "extractionState": "manual",
+      "generatesSymbol": false,
+      "localizations": {
+        "en": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Change Budget Limit %@"
+          }
+        }
+      }
+    },
+    "Choose at least one expense category.": {
+      "comment": "Budget form: error under the categories row when none are picked.",
+      "extractionState": "manual",
+      "generatesSymbol": false,
+      "localizations": {
+        "en": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Choose at least one expense category."
+          }
+        }
+      }
+    },
+    "Create Budget": {
+      "comment": "Budgets screen empty state: the button that opens the New Budget form.",
+      "extractionState": "manual",
+      "generatesSymbol": false,
+      "localizations": {
+        "en": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Create Budget"
+          }
+        }
+      }
+    },
+    "Currency": {
+      "comment": "Budget form: the currency row’s label.",
+      "extractionState": "manual",
+      "generatesSymbol": false,
+      "localizations": {
+        "en": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Currency"
+          }
+        }
+      }
+    },
+    "Custom": {
+      "comment": "Budget form, Repeat screen: the custom repeat choice and its section header.",
+      "extractionState": "manual",
+      "generatesSymbol": false,
+      "localizations": {
+        "en": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Custom"
+          }
+        }
+      }
+    },
+    "Day": {
+      "comment": "Budget form, Repeat screen: the custom repeat’s unit after “Every 1”, singular (D309.5).",
+      "extractionState": "manual",
+      "generatesSymbol": false,
+      "localizations": {
+        "en": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Day"
+          }
+        }
+      }
+    },
+    "Days": {
+      "comment": "Budget form, Repeat screen: the custom repeat’s unit after “Every N” above 1, plural (D309.5).",
+      "extractionState": "manual",
+      "generatesSymbol": false,
+      "localizations": {
+        "en": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Days"
+          }
+        }
+      }
+    },
+    "Defaults to your default currency. Expenses in other currencies aren’t counted.": {
+      "comment": "Budget form: the footnote under the limit and currency.",
+      "extractionState": "manual",
+      "generatesSymbol": false,
+      "localizations": {
+        "en": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Defaults to your default currency. Expenses in other currencies aren’t counted."
+          }
+        }
+      }
+    },
+    "Each period starts on the start day and ends the day before the next one.": {
+      "comment": "Budget form: the footnote under the start date and repeat.",
+      "extractionState": "manual",
+      "generatesSymbol": false,
+      "localizations": {
+        "en": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Each period starts on the start day and ends the day before the next one."
+          }
+        }
+      }
+    },
+    "Edit Budget": {
+      "comment": "Budget form sheet title when editing a budget.",
+      "extractionState": "manual",
+      "generatesSymbol": false,
+      "localizations": {
+        "en": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Edit Budget"
+          }
+        }
+      }
+    },
+    "Edit Budget %@": {
+      "comment": "Undo and Redo name: a budget’s edits saved, a limit changed in the form included. %@ is the budget’s name after the edit (D307.8).",
+      "extractionState": "manual",
+      "generatesSymbol": false,
+      "localizations": {
+        "en": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Edit Budget %@"
+          }
+        }
+      }
+    },
+    "Enter a limit above %@.": {
+      "comment": "Budget form: error under the limit when it’s 0, below 0 or empty. %@ is zero in the budget’s currency, for example “₹0”.",
+      "extractionState": "manual",
+      "generatesSymbol": false,
+      "localizations": {
+        "en": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Enter a limit above %@."
+          }
+        }
+      }
+    },
+    "Enter a limit like %@.": {
+      "comment": "Budget form: error under the limit when it can’t be read. %@ is an example amount, for example “1,25,000.00”.",
+      "extractionState": "manual",
+      "generatesSymbol": false,
+      "localizations": {
+        "en": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Enter a limit like %@."
+          }
+        }
+      }
+    },
+    "Every %lld": {
+      "comment": "Budget form, Repeat screen: the custom repeat’s stepper, for example “Every 3”. The unit is picked below it.",
+      "extractionState": "manual",
+      "generatesSymbol": false,
+      "localizations": {
+        "en": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Every %lld"
+          }
+        }
+      }
+    },
+    "Every 1 to 99 days, weeks, months or years.": {
+      "comment": "Budget form, Repeat screen: the footnote under the custom repeat.",
+      "extractionState": "manual",
+      "generatesSymbol": false,
+      "localizations": {
+        "en": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Every 1 to 99 days, weeks, months or years."
+          }
+        }
+      }
+    },
+    "Expense categories": {
+      "comment": "Budget form: the row that opens the Categories screen. Its value lists the picked categories.",
+      "extractionState": "manual",
+      "generatesSymbol": false,
+      "localizations": {
+        "en": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Expense categories"
+          }
+        }
+      }
+    },
+    "Expense categories · %lld selected": {
+      "comment": "Budget form, Categories screen: the section header, with how many categories are picked.",
+      "extractionState": "manual",
+      "localizations": {
+        "en": {
+          "variations": {
+            "plural": {
+              "one": {
+                "stringUnit": {
+                  "state": "translated",
+                  "value": "Expense categories · %lld selected"
+                }
+              },
+              "other": {
+                "stringUnit": {
+                  "state": "translated",
+                  "value": "Expense categories · %lld selected"
                 }
               }
             }
@@ -3791,6 +4175,19 @@
         }
       }
     },
+    "Limit": {
+      "comment": "Budget form: the limit section header and the limit field’s label.",
+      "extractionState": "manual",
+      "generatesSymbol": false,
+      "localizations": {
+        "en": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Limit"
+          }
+        }
+      }
+    },
     "little-orbit couldn’t create the export file. Make sure there’s enough storage on this device and try again. Your backup hasn’t changed.": {
       "comment": "Message of the “Couldn’t Export Backup” alert (D211.4).",
       "extractionState": "manual",
@@ -4109,6 +4506,45 @@
         }
       }
     },
+    "Month": {
+      "comment": "Budget form, Repeat screen: the custom repeat’s unit after “Every 1”, singular (D309.5).",
+      "extractionState": "manual",
+      "generatesSymbol": false,
+      "localizations": {
+        "en": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Month"
+          }
+        }
+      }
+    },
+    "Months": {
+      "comment": "Budget form, Repeat screen: the custom repeat’s unit after “Every N” above 1, plural (D309.5).",
+      "extractionState": "manual",
+      "generatesSymbol": false,
+      "localizations": {
+        "en": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Months"
+          }
+        }
+      }
+    },
+    "Months without that day start on their last day, e.g. from 31 Jan 2027: 31 Jan–27 Feb, 28 Feb–30 Mar, 31 Mar–29 Apr.": {
+      "comment": "Budget form: added to the period footnote when periods are months or years. The example is monthly periods from 31 January 2027. The dates are only an example: write them in your language’s usual date style (D309.6).",
+      "extractionState": "manual",
+      "generatesSymbol": false,
+      "localizations": {
+        "en": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Months without that day start on their last day, e.g. from 31 Jan 2027: 31 Jan–27 Feb, 28 Feb–30 Mar, 31 Mar–29 Apr."
+          }
+        }
+      }
+    },
     "More": {
       "comment": "Categories and Payees screens: the toolbar menu’s accessibility label.",
       "extractionState": "manual",
@@ -4232,7 +4668,7 @@
       }
     },
     "Name": {
-      "comment": "Category and payee editors: the name field’s placeholder and VoiceOver label.",
+      "comment": "Category, payee and budget editors: the name field’s placeholder and VoiceOver label. Also the budget form’s name section header.",
       "extractionState": "manual",
       "generatesSymbol": false,
       "localizations": {
@@ -4265,6 +4701,32 @@
           "stringUnit": {
             "state": "translated",
             "value": "New Account"
+          }
+        }
+      }
+    },
+    "New Budget": {
+      "comment": "Budget form sheet title for a new budget, and the Budgets screen’s + button’s VoiceOver name.",
+      "extractionState": "manual",
+      "generatesSymbol": false,
+      "localizations": {
+        "en": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "New Budget"
+          }
+        }
+      }
+    },
+    "New Budget %@": {
+      "comment": "Undo and Redo name: a budget added. %@ is the budget’s name, for example “Undo New Budget Eating out” (D307.8).",
+      "extractionState": "manual",
+      "generatesSymbol": false,
+      "localizations": {
+        "en": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "New Budget %@"
           }
         }
       }
@@ -4411,6 +4873,19 @@
         }
       }
     },
+    "Next periods": {
+      "comment": "Budget form, Repeat screen: the header over the current period and the two after it.",
+      "extractionState": "manual",
+      "generatesSymbol": false,
+      "localizations": {
+        "en": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Next periods"
+          }
+        }
+      }
+    },
     "No Backups Yet": {
       "comment": "Title of the Backups list when there are no backups.",
       "extractionState": "manual",
@@ -4458,6 +4933,19 @@
           "stringUnit": {
             "state": "translated",
             "value": "No Payees"
+          }
+        }
+      }
+    },
+    "None": {
+      "comment": "Budget form: the categories row’s value when none are picked.",
+      "extractionState": "manual",
+      "generatesSymbol": false,
+      "localizations": {
+        "en": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "None"
           }
         }
       }
@@ -4603,6 +5091,19 @@
         }
       }
     },
+    "Past periods of “%@” are recalculated, so their spent and carry-over can change. Each limit keeps the date it applies from.": {
+      "comment": "Action sheet message under “Recalculate Past Periods?” (D307.7). %@ is the budget’s name. Its buttons are Save and Cancel.",
+      "extractionState": "manual",
+      "generatesSymbol": false,
+      "localizations": {
+        "en": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Past periods of “%@” are recalculated, so their spent and carry-over can change. Each limit keeps the date it applies from."
+          }
+        }
+      }
+    },
     "Payee isn’t applied to transfers": {
       "comment": "Bulk edit: under Payee when the selection includes a transfer.",
       "extractionState": "manual",
@@ -4641,6 +5142,19 @@
         }
       }
     },
+    "Period": {
+      "comment": "Budget form: the section with the start date and repeat.",
+      "extractionState": "manual",
+      "generatesSymbol": false,
+      "localizations": {
+        "en": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Period"
+          }
+        }
+      }
+    },
     "Pink": {
       "comment": "Category colour name.",
       "extractionState": "manual",
@@ -4663,6 +5177,19 @@
           "stringUnit": {
             "state": "translated",
             "value": "Purple"
+          }
+        }
+      }
+    },
+    "Recalculate Past Periods?": {
+      "comment": "Action sheet title when saving a new start date or repeat for a budget with past periods (D307.7).",
+      "extractionState": "manual",
+      "generatesSymbol": false,
+      "localizations": {
+        "en": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Recalculate Past Periods?"
           }
         }
       }
@@ -4713,6 +5240,19 @@
           "stringUnit": {
             "state": "translated",
             "value": "Reorder"
+          }
+        }
+      }
+    },
+    "Repeat": {
+      "comment": "Budget form: the repeat row’s label, and the Repeat screen’s title.",
+      "extractionState": "manual",
+      "generatesSymbol": false,
+      "localizations": {
+        "en": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Repeat"
           }
         }
       }
@@ -4877,6 +5417,19 @@
         }
       }
     },
+    "Selecting a parent includes all its subcategories, also ones added later. Only expense categories are listed; income and transfers never count towards a budget.": {
+      "comment": "Budget form, Categories screen: the footnote under the list.",
+      "extractionState": "manual",
+      "generatesSymbol": false,
+      "localizations": {
+        "en": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Selecting a parent includes all its subcategories, also ones added later. Only expense categories are listed; income and transfers never count towards a budget."
+          }
+        }
+      }
+    },
     "Set a spending limit for a group of expense categories, like Eating out or Groceries. It resets every week, fortnight, month or year.": {
       "comment": "Budgets screen empty state: the message under “No budgets yet”.",
       "extractionState": "manual",
@@ -4923,6 +5476,19 @@
           "stringUnit": {
             "state": "translated",
             "value": "Spent = expenses in the budget’s categories and subcategories, minus refunds. Transfers never count. Near limit is 90% or more."
+          }
+        }
+      }
+    },
+    "Starts": {
+      "comment": "Budget form: the start date row’s label.",
+      "extractionState": "manual",
+      "generatesSymbol": false,
+      "localizations": {
+        "en": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Starts"
           }
         }
       }
@@ -5037,6 +5603,32 @@
         }
       }
     },
+    "There’s already a budget named “%@”.": {
+      "comment": "Budget form: error under the name (D307.6). %@ is the other budget’s name as stored.",
+      "extractionState": "manual",
+      "generatesSymbol": false,
+      "localizations": {
+        "en": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "There’s already a budget named “%@”."
+          }
+        }
+      }
+    },
+    "There’s already a budget named “%@”. Nothing was changed.": {
+      "comment": "Alert message under “Can’t Undo …” or “Can’t Redo …”: Undo or Redo would give a budget a name another budget has taken since, so nothing was changed (D310.1). %@ is the other budget’s name. Don’t name a cause.",
+      "extractionState": "manual",
+      "generatesSymbol": false,
+      "localizations": {
+        "en": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "There’s already a budget named “%@”. Nothing was changed."
+          }
+        }
+      }
+    },
     "There’s already a category named “%@” here.": {
       "comment": "Category editor, under the name field: another category at the same level (the same parent, or the same kind at the top level) has this name, ignoring case and spaces. The name typed.",
       "extractionState": "manual",
@@ -5120,6 +5712,19 @@
           "stringUnit": {
             "state": "translated",
             "value": "This backup was made with a newer version of little-orbit. Your data hasn’t changed."
+          }
+        }
+      }
+    },
+    "This budget no longer exists.": {
+      "comment": "Alert message under “Couldn’t Save Changes”: the budget being edited was deleted before Save, so nothing was saved (D309.3).",
+      "extractionState": "manual",
+      "generatesSymbol": false,
+      "localizations": {
+        "en": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "This budget no longer exists."
           }
         }
       }
@@ -5238,6 +5843,19 @@
         }
       }
     },
+    "This period": {
+      "comment": "Budget form, Repeat screen: marks the period containing today.",
+      "extractionState": "manual",
+      "generatesSymbol": false,
+      "localizations": {
+        "en": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "This period"
+          }
+        }
+      }
+    },
     "Today, %@": {
       "comment": "A backup's date today. %@ is the time, such as 9:12 AM.",
       "extractionState": "manual",
@@ -5351,6 +5969,19 @@
         }
       }
     },
+    "Unit": {
+      "comment": "Budget form, Repeat screen: the custom repeat’s unit picker label.",
+      "extractionState": "manual",
+      "generatesSymbol": false,
+      "localizations": {
+        "en": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Unit"
+          }
+        }
+      }
+    },
     "Unknown": {
       "comment": "What a damaged backup shows for a kind, version, date or size that can’t be read.",
       "extractionState": "manual",
@@ -5371,6 +6002,19 @@
           "stringUnit": {
             "state": "translated",
             "value": "Unknown backup"
+          }
+        }
+      }
+    },
+    "Unspent money is added to the next period. With overspending on, going over is taken from the next period.": {
+      "comment": "Budget form: the footnote under the carry-over switches.",
+      "extractionState": "manual",
+      "generatesSymbol": false,
+      "localizations": {
+        "en": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Unspent money is added to the next period. With overspending on, going over is taken from the next period."
           }
         }
       }
@@ -5485,6 +6129,32 @@
         }
       }
     },
+    "Week": {
+      "comment": "Budget form, Repeat screen: the custom repeat’s unit after “Every 1”, singular (D309.5).",
+      "extractionState": "manual",
+      "generatesSymbol": false,
+      "localizations": {
+        "en": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Week"
+          }
+        }
+      }
+    },
+    "Weeks": {
+      "comment": "Budget form, Repeat screen: the custom repeat’s unit after “Every N” above 1, plural (D309.5).",
+      "extractionState": "manual",
+      "generatesSymbol": false,
+      "localizations": {
+        "en": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Weeks"
+          }
+        }
+      }
+    },
     "Yearly": {
       "comment": "A budget that repeats every year.",
       "extractionState": "manual",
@@ -5494,6 +6164,32 @@
           "stringUnit": {
             "state": "translated",
             "value": "Yearly"
+          }
+        }
+      }
+    },
+    "Year": {
+      "comment": "Budget form, Repeat screen: the custom repeat’s unit after “Every 1”, singular (D309.5).",
+      "extractionState": "manual",
+      "generatesSymbol": false,
+      "localizations": {
+        "en": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Year"
+          }
+        }
+      }
+    },
+    "Years": {
+      "comment": "Budget form, Repeat screen: the custom repeat’s unit after “Every N” above 1, plural (D309.5).",
+      "extractionState": "manual",
+      "generatesSymbol": false,
+      "localizations": {
+        "en": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Years"
           }
         }
       }
