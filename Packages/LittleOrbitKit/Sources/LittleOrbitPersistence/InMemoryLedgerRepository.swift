@@ -155,8 +155,44 @@ extension InMemoryLedgerRepository: LedgerBackupSource {
     }
 
     /// A completed restore marks the seeding done, so even an empty backup never leads to a seed (D293.2).
+    /// Budgets are checked first by the rule the SwiftData store uses, so the two never keep different data
+    /// (`LedgerBook.validateStoredBudgets`, #174 B1); nothing changes when it throws.
     public func replaceLedger(with snapshot: LedgerSnapshot) throws {
+        try LedgerBook.validateStoredBudgets(in: snapshot)
         self.snapshot = snapshot
         markDefaultSeedDone()
+    }
+}
+
+/// Budgets (#25), through the same `LedgerBook` rules as the SwiftData store.
+extension InMemoryLedgerRepository: BudgetRepository {
+    public func budgets() throws -> [Budget] {
+        snapshot.budgetsVisible()
+    }
+
+    public func saveBudget(_ budget: Budget) throws {
+        snapshot = try LedgerBook.savingBudget(budget, in: snapshot, now: now())
+    }
+
+    public func changeBudgetLimit(
+        of budgetID: UUID,
+        to amount: Decimal,
+        fromPeriodStartingOn periodStart: CalendarDay,
+    ) throws {
+        snapshot = try LedgerBook.changingBudgetLimit(
+            of: budgetID,
+            to: amount,
+            fromPeriodStartingOn: periodStart,
+            in: snapshot,
+            now: now(),
+        )
+    }
+
+    public func deleteBudget(id: UUID) throws {
+        snapshot = try LedgerBook.deletingBudget(id: id, in: snapshot)
+    }
+
+    public func budgetLedger() throws -> LedgerSnapshot {
+        snapshot
     }
 }

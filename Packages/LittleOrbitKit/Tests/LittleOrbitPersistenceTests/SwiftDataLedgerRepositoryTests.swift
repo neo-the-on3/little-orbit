@@ -16,6 +16,15 @@
             }
         }
 
+        /// #25: budgets are saved, changed, restored and deleted, with their categories and limit history.
+        func testBudgetsOnTheInMemoryStore() throws {
+            try onMain {
+                try assertBudgetStorage {
+                    try LittleOrbitStore.makeRepository(configuration: .inMemory)
+                }
+            }
+        }
+
         func testUpdatedAtBumpsOnEdit() throws {
             try onMain {
                 let clock = TestClock(Date(timeIntervalSince1970: 1_000))
@@ -80,6 +89,8 @@
                     "TagRecord",
                     "TransactionSplitRecord",
                     "AttachmentRecord",
+                    "BudgetRecord",
+                    "BudgetLimitRecord",
                 ]
                 for name in expected {
                     XCTAssertNotNil(entity(named: name, in: schema), name)
