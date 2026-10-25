@@ -192,7 +192,7 @@ enum SearchText {
     static var noResultsMessage: String {
         FeatureText.string(
             "Check the spelling or try fewer words. Search looks at description, category, payee, tag and notes.",
-            comment: "Search empty state under No results for …",
+            comment: "Search empty state: the message under the title No Results for “%@”.",
         )
     }
 
