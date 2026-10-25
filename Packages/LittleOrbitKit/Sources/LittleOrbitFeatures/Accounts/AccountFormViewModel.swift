@@ -167,8 +167,7 @@ public final class AccountFormViewModel {
     public var iconOptions: [AccountIcon] { AccountIcon.all }
 
     public func currencyTitle(for code: String) -> String {
-        let name = locale.localizedString(forCurrencyCode: code) ?? code
-        return "\(code) — \(name)"
+        CurrencyTitle.title(for: code, locale: locale)
     }
 
     public var iconTitle: String {
