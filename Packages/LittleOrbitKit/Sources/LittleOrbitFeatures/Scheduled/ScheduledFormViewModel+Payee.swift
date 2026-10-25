@@ -64,8 +64,9 @@ extension ScheduledFormViewModel {
         return ScheduledText.createPayeeHint(name)
     }
 
-    /// Save is disabled while the payee field's text isn't resolved (D347.2).
-    public var canSave: Bool { payeeHint == nil }
+    /// Save is disabled while the payee field's text isn't resolved (D347.2), and while a required Received is
+    /// empty. A typed Received enables it, and anything wrong with it shows as an error on Save.
+    public var canSave: Bool { payeeHint == nil && receivedHint == nil }
 
     /// Picks a suggested payee. Its last-used category fills an empty Category, as on the entry sheet (#24 AC 4).
     public func choosePayee(_ suggestion: TransactionSuggestion) {

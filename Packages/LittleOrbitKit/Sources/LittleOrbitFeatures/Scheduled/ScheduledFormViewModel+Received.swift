@@ -29,6 +29,17 @@ extension ScheduledFormViewModel {
 
     public var receivedLabel: String { ScheduledText.received }
 
+    /// "Enter the amount received in JPY.", a plain hint under Received while it's required and empty, for example
+    /// after To's currency changes. Save waits for it, with no error on press (UI Designer on #207, as D347.2).
+    public var receivedHint: String? {
+        guard needsReceivedAmount, receivedText.trimmingCharacters(in: .whitespaces).isEmpty,
+            let code = receivedCurrencyCode
+        else {
+            return nil
+        }
+        return ScheduledText.enterReceived(code)
+    }
+
     /// To's currency code, the Received field's prompt.
     public var receivedCurrencyCode: String? {
         listing.account(transferAccountID)?.currencyCode

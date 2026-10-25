@@ -80,9 +80,12 @@ struct ScheduledCrossCurrencyFormTests {
         #expect(form.receivedLabel == "Received")
         #expect(form.receivedCurrencyCode == "USD")
         #expect(form.rateText == nil)
+        #expect(!form.canSave)
+        #expect(form.receivedHint == "Enter the amount received in USD.")
         #expect(!form.save())
-        #expect(form.receivedError == "Enter the amount received in USD.")
+        #expect(form.receivedError == nil, "A hint, not an error")
         form.receivedText = "0"
+        #expect(form.canSave)
         #expect(!form.save())
         #expect(form.receivedError == "Enter the amount received in USD.")
         form.receivedText = "12"
@@ -169,16 +172,60 @@ struct ScheduledCrossCurrencyFormTests {
         form.transferAccountID = Self.yen.id
         #expect(form.receivedText.isEmpty, "12 must not become ¥12")
         #expect(form.rateText == nil)
+        #expect(!form.canSave)
+        #expect(form.receivedHint == "Enter the amount received in JPY.")
+        form.receivedText = "1.5"
         #expect(!form.save())
-        #expect(form.receivedError == "Enter the amount received in JPY.")
+        #expect(form.receivedError == "JPY amounts have no decimal places.")
         form.transferAccountID = Self.wallet.id
         #expect(form.receivedError == nil, "The old currency's error goes with it")
+        #expect(form.receivedHint == "Enter the amount received in USD.")
         form.receivedText = "12"
         form.transferAccountID = scene.fund.id
         #expect(form.receivedText.isEmpty, "Back to From's currency drops it")
         #expect(form.save())
         let stored = try #require(try scene.repository.scheduleLedger().scheduledItems.first)
         #expect(stored.destinationAmount == nil)
+    }
+
+    @Test(
+        "UI Designer on #207: Save waits for a required Received, with a plain hint, and a same-currency To needs none",
+        arguments: [
+            ScheduledPlatform.iOS, .macOS,
+        ],
+    )
+    func saveWaitsForReceived(platform: ScheduledPlatform) throws {
+        let scene = try scene()
+        let card = Account(name: "USD Card", currencyCode: "USD", sortOrder: 4)
+        try scene.repository.saveAccount(card)
+        let (_, form) = try newTransfer(scene, platform: platform)
+        // From in INR, To in INR: no Received, so Save is enabled.
+        #expect(!form.needsReceivedAmount)
+        #expect(form.canSave)
+        #expect(form.receivedHint == nil)
+        form.transferAccountID = Self.wallet.id
+        form.receivedText = "12"
+        #expect(form.canSave)
+        // USD to JPY clears Received: Save is disabled, the hint shows, and pressing it shows no error.
+        form.transferAccountID = Self.yen.id
+        #expect(!form.canSave)
+        #expect(form.receivedHint == "Enter the amount received in JPY.")
+        #expect(!form.save())
+        #expect(form.receivedError == nil)
+        #expect(try scene.repository.scheduleLedger().scheduledItems.isEmpty)
+        form.receivedText = "  "
+        #expect(!form.canSave, "Spaces aren't an amount")
+        form.receivedText = "1800"
+        #expect(form.canSave)
+        #expect(form.receivedHint == nil)
+        // A same-currency To needs no Received.
+        form.transferAccountID = scene.fund.id
+        #expect(form.receivedHint == nil)
+        #expect(form.canSave)
+        form.transferAccountID = card.id
+        form.receivedText = "12"
+        #expect(form.save())
+        #expect(try scene.repository.scheduleLedger().scheduledItems.first?.destinationAmount == 12)
     }
 
     @Test("From and To are never the same account, in any currency")
