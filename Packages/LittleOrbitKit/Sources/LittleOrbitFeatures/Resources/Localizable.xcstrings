@@ -2,7 +2,7 @@
   "sourceLanguage": "en",
   "strings": {
     "%1$@ %2$@": {
-      "comment": "Two sentences in a row: %1$@ is the first, %2$@ the second (backup footnote and Keep footer, or newer-format note and its detail).",
+      "comment": "Two sentences in a row: %1$@ is the first, %2$@ the second (backup footnote and Keep footer, or newer-format note and its detail; the Undo Import confirmation’s sentences).",
       "extractionState": "manual",
       "generatesSymbol": false,
       "localizations": {
@@ -121,7 +121,7 @@
       }
     },
     "%1$@ · %2$@": {
-      "comment": "A backup's account count (%1$@) and transaction count (%2$@).",
+      "comment": "Two values joined with a middle dot: a backup’s account count (%1$@) and transaction count (%2$@); in the spending drill-down’s header, the report’s period (%1$@, such as “October 2026”) and currency code (%2$@, such as “INR”), and then the category’s share (%1$@, such as “16.9% of spending”) and that period and currency (%2$@); on the CSV import Columns step, the file’s name (%1$@) and its row count (%2$@).",
       "extractionState": "manual",
       "localizations": {
         "en": {
@@ -270,6 +270,32 @@
         }
       }
     },
+    "%1$@ · Detected": {
+      "comment": "CSV import Columns step: %1$@ is the date format (DD/MM/YYYY) the file’s dates point to.",
+      "extractionState": "manual",
+      "generatesSymbol": false,
+      "localizations": {
+        "en": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "%1$@ · Detected"
+          }
+        }
+      }
+    },
+    "%1$@ › %2$@": {
+      "comment": "A subcategory with its parent: %1$@ is the parent category, %2$@ the subcategory, as in “Food & Dining › Groceries”. Spending report rows (D289.2) and the CSV import Match step.",
+      "extractionState": "manual",
+      "generatesSymbol": false,
+      "localizations": {
+        "en": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "%1$@ › %2$@"
+          }
+        }
+      }
+    },
     "%1$@, %2$@": {
       "comment": "Two parts joined with a comma: a backup's day and time (%1$@ the day, %2$@ the time), or its account and transaction counts as VoiceOver reads them.",
       "extractionState": "manual",
@@ -326,6 +352,19 @@
           "stringUnit": {
             "state": "translated",
             "value": "%1$@, under %2$@"
+          }
+        }
+      }
+    },
+    "%1$@: “%2$@”": {
+      "comment": "CSV import Review: under a row issue, the column’s header (%1$@) and the raw value in that column (%2$@), as in Withdrawal: “1.250,00/-” (D323.3, D269).",
+      "extractionState": "manual",
+      "generatesSymbol": false,
+      "localizations": {
+        "en": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "%1$@: “%2$@”"
           }
         }
       }
@@ -500,6 +539,78 @@
         }
       }
     },
+    "%lld new accounts": {
+      "comment": "CSV import Summary: accounts the import created.",
+      "extractionState": "manual",
+      "localizations": {
+        "en": {
+          "variations": {
+            "plural": {
+              "one": {
+                "stringUnit": {
+                  "state": "translated",
+                  "value": "%lld new account"
+                }
+              },
+              "other": {
+                "stringUnit": {
+                  "state": "translated",
+                  "value": "%lld new accounts"
+                }
+              }
+            }
+          }
+        }
+      }
+    },
+    "%lld new categories": {
+      "comment": "CSV import Summary: categories the import created.",
+      "extractionState": "manual",
+      "localizations": {
+        "en": {
+          "variations": {
+            "plural": {
+              "one": {
+                "stringUnit": {
+                  "state": "translated",
+                  "value": "%lld new category"
+                }
+              },
+              "other": {
+                "stringUnit": {
+                  "state": "translated",
+                  "value": "%lld new categories"
+                }
+              }
+            }
+          }
+        }
+      }
+    },
+    "%lld new payees": {
+      "comment": "CSV import Summary: payees the import created.",
+      "extractionState": "manual",
+      "localizations": {
+        "en": {
+          "variations": {
+            "plural": {
+              "one": {
+                "stringUnit": {
+                  "state": "translated",
+                  "value": "%lld new payee"
+                }
+              },
+              "other": {
+                "stringUnit": {
+                  "state": "translated",
+                  "value": "%lld new payees"
+                }
+              }
+            }
+          }
+        }
+      }
+    },
     "%lld of these transactions have changed or been deleted since then. Nothing was changed.": {
       "comment": "Alert message: a bulk Undo or Redo that can't run because more than one of its transactions changed or was deleted after the step was recorded, so nothing was changed. %lld is how many. Don't name a cause: the same check catches a change from anywhere.",
       "extractionState": "manual",
@@ -517,6 +628,54 @@
                 "stringUnit": {
                   "state": "translated",
                   "value": "%lld of these transactions have changed or been deleted since then. Nothing was changed."
+                }
+              }
+            }
+          }
+        }
+      }
+    },
+    "%lld refunds were imported without links to their expenses. They show as “Refund (original deleted)”.": {
+      "comment": "CSV import summary: refunds the file had, imported without a link to their expense because the file has none (D323.5). “Refund (original deleted)” is the label those refunds show with.",
+      "extractionState": "manual",
+      "localizations": {
+        "en": {
+          "variations": {
+            "plural": {
+              "one": {
+                "stringUnit": {
+                  "state": "translated",
+                  "value": "%lld refund was imported without a link to its expense. It shows as “Refund (original deleted)”."
+                }
+              },
+              "other": {
+                "stringUnit": {
+                  "state": "translated",
+                  "value": "%lld refunds were imported without links to their expenses. They show as “Refund (original deleted)”."
+                }
+              }
+            }
+          }
+        }
+      }
+    },
+    "%lld rows": {
+      "comment": "CSV import: how many rows the picked file has.",
+      "extractionState": "manual",
+      "localizations": {
+        "en": {
+          "variations": {
+            "plural": {
+              "one": {
+                "stringUnit": {
+                  "state": "translated",
+                  "value": "%lld row"
+                }
+              },
+              "other": {
+                "stringUnit": {
+                  "state": "translated",
+                  "value": "%lld rows"
                 }
               }
             }
@@ -573,6 +732,43 @@
         }
       }
     },
+    "%lld transactions imported": {
+      "comment": "CSV import Summary: how many transactions were saved.",
+      "extractionState": "manual",
+      "localizations": {
+        "en": {
+          "variations": {
+            "plural": {
+              "one": {
+                "stringUnit": {
+                  "state": "translated",
+                  "value": "%lld transaction imported"
+                }
+              },
+              "other": {
+                "stringUnit": {
+                  "state": "translated",
+                  "value": "%lld transactions imported"
+                }
+              }
+            }
+          }
+        }
+      }
+    },
+    "A quoted value isn’t closed": {
+      "comment": "CSV import row issue.",
+      "extractionState": "manual",
+      "generatesSymbol": false,
+      "localizations": {
+        "en": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "A quoted value isn’t closed"
+          }
+        }
+      }
+    },
     "A subcategory always has its parent’s kind, so Kind can’t change. One level only: subcategories can’t have their own. Names must be unique within the same parent.": {
       "comment": "Category editor footnote for a subcategory.",
       "extractionState": "manual",
@@ -582,6 +778,45 @@
           "stringUnit": {
             "state": "translated",
             "value": "A subcategory always has its parent’s kind, so Kind can’t change. One level only: subcategories can’t have their own. Names must be unique within the same parent."
+          }
+        }
+      }
+    },
+    "Account is empty": {
+      "comment": "CSV import row issue (D323.15).",
+      "extractionState": "manual",
+      "localizations": {
+        "en": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Account is empty"
+          }
+        }
+      },
+      "generatesSymbol": false
+    },
+    "Account is over %@ characters": {
+      "comment": "CSV import row issue: the account name is too long. The number is the limit.",
+      "extractionState": "manual",
+      "localizations": {
+        "en": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Account is over %@ characters"
+          }
+        }
+      },
+      "generatesSymbol": false
+    },
+    "Accounts": {
+      "comment": "CSV import Match step: the section of account names in the file. CSV export: only the chosen accounts.",
+      "extractionState": "manual",
+      "generatesSymbol": false,
+      "localizations": {
+        "en": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Accounts"
           }
         }
       }
@@ -736,6 +971,71 @@
         }
       }
     },
+    "All Time": {
+      "comment": "CSV export date range: everything.",
+      "extractionState": "manual",
+      "generatesSymbol": false,
+      "localizations": {
+        "en": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "All Time"
+          }
+        }
+      }
+    },
+    "All Transactions": {
+      "comment": "macOS sidebar item and its screen title: every transaction, with the toolbar search. CSV export: every account.",
+      "extractionState": "manual",
+      "generatesSymbol": false,
+      "localizations": {
+        "en": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "All Transactions"
+          }
+        }
+      }
+    },
+    "Already imported": {
+      "comment": "CSV import Review and summary: the count of rows identical to an existing transaction, and such a row’s label.",
+      "extractionState": "manual",
+      "localizations": {
+        "en": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Already imported"
+          }
+        }
+      },
+      "generatesSymbol": false
+    },
+    "Already imported means an exact match. Possible duplicate means the same account, type and amount within 3 days, with a matching payee or description. Both start unticked; tick a row to import it anyway.": {
+      "comment": "CSV import Review: the footer under the Not Selected section.",
+      "extractionState": "manual",
+      "localizations": {
+        "en": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Already imported means an exact match. Possible duplicate means the same account, type and amount within 3 days, with a matching payee or description. Both start unticked; tick a row to import it anyway."
+          }
+        }
+      },
+      "generatesSymbol": false
+    },
+    "Also Created": {
+      "comment": "CSV import Summary: the section of accounts, categories and payees the import created.",
+      "extractionState": "manual",
+      "generatesSymbol": false,
+      "localizations": {
+        "en": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Also Created"
+          }
+        }
+      }
+    },
     "Amber": {
       "comment": "Category colour name.",
       "extractionState": "manual",
@@ -745,6 +1045,45 @@
           "stringUnit": {
             "state": "translated",
             "value": "Amber"
+          }
+        }
+      }
+    },
+    "Amount is empty": {
+      "comment": "CSV import row issue (D323.15).",
+      "extractionState": "manual",
+      "localizations": {
+        "en": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Amount is empty"
+          }
+        }
+      },
+      "generatesSymbol": false
+    },
+    "Amount can’t be read": {
+      "comment": "CSV import row issue (D323.3).",
+      "extractionState": "manual",
+      "localizations": {
+        "en": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Amount can’t be read"
+          }
+        }
+      },
+      "generatesSymbol": false
+    },
+    "Amount is zero": {
+      "comment": "CSV import row issue.",
+      "extractionState": "manual",
+      "generatesSymbol": false,
+      "localizations": {
+        "en": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Amount is zero"
           }
         }
       }
@@ -868,6 +1207,19 @@
           "stringUnit": {
             "state": "translated",
             "value": "Automatic daily backups, Back Up Now, export and restore. Backups stay on this %@."
+          }
+        }
+      }
+    },
+    "Back": {
+      "comment": "CSV import sheet: go to the previous step.",
+      "extractionState": "manual",
+      "generatesSymbol": false,
+      "localizations": {
+        "en": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Back"
           }
         }
       }
@@ -1042,8 +1394,21 @@
         }
       }
     },
+    "Both Expense Amount and Income Amount are filled in": {
+      "comment": "CSV import row issue (D323.3): a row has an amount in both columns.",
+      "extractionState": "manual",
+      "localizations": {
+        "en": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Both Expense Amount and Income Amount are filled in"
+          }
+        }
+      },
+      "generatesSymbol": false
+    },
     "Cancel": {
-      "comment": "Category and payee sheets and alerts: close without changing anything.",
+      "comment": "Category and payee sheets and alerts, the CSV import and export sheets, and the Undo Import confirmation: close without changing anything.",
       "extractionState": "manual",
       "generatesSymbol": false,
       "localizations": {
@@ -1067,6 +1432,44 @@
         }
       }
     },
+    "Can’t Import": {
+      "comment": "CSV import Review: the section of rows that can’t be imported.",
+      "extractionState": "manual",
+      "generatesSymbol": false,
+      "localizations": {
+        "en": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Can’t Import"
+          }
+        }
+      }
+    },
+    "Can’t import": {
+      "comment": "CSV import Review and summary: the count of rows whose content keeps them from being imported (D323.17).",
+      "extractionState": "manual",
+      "localizations": {
+        "en": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Can’t import"
+          }
+        }
+      },
+      "generatesSymbol": false
+    },
+    "Can’t Import “%@”": {
+      "comment": "CSV import: alert title when the picked file isn’t a CSV file (D323.7). %@ is the file’s name.",
+      "extractionState": "manual",
+      "localizations": {
+        "en": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Can’t Import “%@”"
+          }
+        }
+      }
+    },
     "Can’t Merge Categories": {
       "comment": "Alert title: a merge would put two subcategories with the same name under one parent (D291.1).",
       "extractionState": "manual",
@@ -1076,6 +1479,18 @@
           "stringUnit": {
             "state": "translated",
             "value": "Can’t Merge Categories"
+          }
+        }
+      }
+    },
+    "Can’t Read “%@”": {
+      "comment": "CSV import: alert title when the picked file is empty (D323.7, D268.1). %@ is the file’s name.",
+      "extractionState": "manual",
+      "localizations": {
+        "en": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Can’t Read “%@”"
           }
         }
       }
@@ -1104,8 +1519,21 @@
         }
       }
     },
+    "Can’t Undo Import": {
+      "comment": "CSV import: alert title when Undo Import is refused because something changed since.",
+      "extractionState": "manual",
+      "generatesSymbol": false,
+      "localizations": {
+        "en": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Can’t Undo Import"
+          }
+        }
+      }
+    },
     "Categories": {
-      "comment": "Settings row and screen title: the category manager.",
+      "comment": "Settings row and screen title: the category manager. CSV import Match step: the section of category names in the file.",
       "extractionState": "manual",
       "generatesSymbol": false,
       "localizations": {
@@ -1118,7 +1546,7 @@
       }
     },
     "Category": {
-      "comment": "Transaction form: the category picker’s title.",
+      "comment": "Transaction form: the category picker’s title. CSV import column field: the category.",
       "extractionState": "manual",
       "generatesSymbol": false,
       "localizations": {
@@ -1129,6 +1557,19 @@
           }
         }
       }
+    },
+    "Category is over %@ characters": {
+      "comment": "CSV import row issue: the category name is too long. The number is the limit.",
+      "extractionState": "manual",
+      "localizations": {
+        "en": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Category is over %@ characters"
+          }
+        }
+      },
+      "generatesSymbol": false
     },
     "category.delete.movingDeletes": {
       "comment": "Category delete alert sentence, for a category with no subcategories: %lld is how many transactions and split lines use it, which picks “it” or “them”.",
@@ -1925,6 +2366,19 @@
         }
       }
     },
+    "Choose a Date column, and an Amount column or Expense Amount and Income Amount columns.": {
+      "comment": "CSV import Columns step: why Next is off.",
+      "extractionState": "manual",
+      "localizations": {
+        "en": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Choose a Date column, and an Amount column or Expense Amount and Income Amount columns."
+          }
+        }
+      },
+      "generatesSymbol": false
+    },
     "Colour": {
       "comment": "Category editor row: the category’s colour.",
       "extractionState": "manual",
@@ -1934,6 +2388,58 @@
           "stringUnit": {
             "state": "translated",
             "value": "Colour"
+          }
+        }
+      }
+    },
+    "Columns": {
+      "comment": "CSV import: the step where each column gets a field.",
+      "extractionState": "manual",
+      "generatesSymbol": false,
+      "localizations": {
+        "en": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Columns"
+          }
+        }
+      }
+    },
+    "Columns in File": {
+      "comment": "CSV import Columns step: the section of the file’s columns.",
+      "extractionState": "manual",
+      "generatesSymbol": false,
+      "localizations": {
+        "en": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Columns in File"
+          }
+        }
+      }
+    },
+    "Comma (1.234,56)": {
+      "comment": "CSV import decimal separator: a comma.",
+      "extractionState": "manual",
+      "generatesSymbol": false,
+      "localizations": {
+        "en": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Comma (1.234,56)"
+          }
+        }
+      }
+    },
+    "Comma-separated, UTF-8 with BOM. Columns: Date, Type, Account, To Account, Amount, Destination Amount, Currency, Category, Payee, Description, Notes. Expenses are negative.": {
+      "comment": "CSV export: the footer describing the file. The column names are the file’s own and stay in English.",
+      "extractionState": "manual",
+      "generatesSymbol": false,
+      "localizations": {
+        "en": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Comma-separated, UTF-8 with BOM. Columns: Date, Type, Account, To Account, Amount, Destination Amount, Currency, Category, Payee, Description, Notes. Expenses are negative."
           }
         }
       }
@@ -1986,6 +2492,19 @@
         }
       }
     },
+    "Couldn’t Export": {
+      "comment": "CSV export: alert title when the file couldn’t be made or saved.",
+      "extractionState": "manual",
+      "generatesSymbol": false,
+      "localizations": {
+        "en": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Couldn’t Export"
+          }
+        }
+      }
+    },
     "Couldn’t Export Backup": {
       "comment": "Alert title when the export file couldn't be created or written before the save panel opens, a full disk included (D211.4). The only button is OK.",
       "extractionState": "manual",
@@ -1994,6 +2513,19 @@
           "stringUnit": {
             "state": "translated",
             "value": "Couldn’t Export Backup"
+          }
+        }
+      }
+    },
+    "Couldn’t Import": {
+      "comment": "CSV import: alert title when saving the import failed.",
+      "extractionState": "manual",
+      "generatesSymbol": false,
+      "localizations": {
+        "en": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Couldn’t Import"
           }
         }
       }
@@ -2044,6 +2576,18 @@
           "stringUnit": {
             "state": "translated",
             "value": "Couldn’t Make the Change"
+          }
+        }
+      }
+    },
+    "Couldn’t Open “%@”": {
+      "comment": "CSV import: alert title when the picked file, or the current accounts, couldn’t be read (D323.7, D268.6). %@ is the file’s name.",
+      "extractionState": "manual",
+      "localizations": {
+        "en": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Couldn’t Open “%@”"
           }
         }
       }
@@ -2121,6 +2665,32 @@
         }
       }
     },
+    "Couldn’t Undo Import": {
+      "comment": "CSV import: alert title when Undo Import failed and nothing was removed.",
+      "extractionState": "manual",
+      "localizations": {
+        "en": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Couldn’t Undo Import"
+          }
+        }
+      },
+      "generatesSymbol": false
+    },
+    "Create New": {
+      "comment": "CSV import Match step: the choice that creates a new record for a name.",
+      "extractionState": "manual",
+      "generatesSymbol": false,
+      "localizations": {
+        "en": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Create New"
+          }
+        }
+      }
+    },
     "Create “%@”": {
       "comment": "Transaction form category picker: adds the typed name as a new category. %@ is the name typed, trimmed.",
       "extractionState": "manual",
@@ -2130,6 +2700,45 @@
           "stringUnit": {
             "state": "translated",
             "value": "Create “%@”"
+          }
+        }
+      }
+    },
+    "Currency": {
+      "comment": "CSV import column field: the currency code. Spending report: the currency picker’s label, shown only with spending in 2 or more currencies.",
+      "extractionState": "manual",
+      "generatesSymbol": false,
+      "localizations": {
+        "en": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Currency"
+          }
+        }
+      }
+    },
+    "Currency can’t be read": {
+      "comment": "CSV import row issue (D323.3).",
+      "extractionState": "manual",
+      "localizations": {
+        "en": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Currency can’t be read"
+          }
+        }
+      },
+      "generatesSymbol": false
+    },
+    "Currency differs from the account’s %@": {
+      "comment": "CSV import row issue: %@ is the account’s currency code; amounts are never converted.",
+      "extractionState": "manual",
+      "generatesSymbol": false,
+      "localizations": {
+        "en": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Currency differs from the account’s %@"
           }
         }
       }
@@ -2159,6 +2768,19 @@
         }
       }
     },
+    "Custom": {
+      "comment": "CSV export date range: chosen start and end dates.",
+      "extractionState": "manual",
+      "generatesSymbol": false,
+      "localizations": {
+        "en": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Custom"
+          }
+        }
+      }
+    },
     "Cyan": {
       "comment": "Category colour name.",
       "extractionState": "manual",
@@ -2180,6 +2802,109 @@
           "stringUnit": {
             "state": "translated",
             "value": "Damaged"
+          }
+        }
+      }
+    },
+    "Date": {
+      "comment": "CSV import column field: the transaction date.",
+      "extractionState": "manual",
+      "generatesSymbol": false,
+      "localizations": {
+        "en": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Date"
+          }
+        }
+      }
+    },
+    "Date and an amount are required. Use one signed Amount column, or separate Expense Amount and Income Amount columns.": {
+      "comment": "CSV import Columns step: the footer under the columns.",
+      "extractionState": "manual",
+      "localizations": {
+        "en": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Date and an amount are required. Use one signed Amount column, or separate Expense Amount and Income Amount columns."
+          }
+        }
+      },
+      "generatesSymbol": false
+    },
+    "Date can’t be read as %@": {
+      "comment": "CSV import row issue (D323.3): %@ is the date format the file was read with, such as “DD/MM/YYYY”.",
+      "extractionState": "manual",
+      "localizations": {
+        "en": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Date can’t be read as %@"
+          }
+        }
+      }
+    },
+    "Date Format": {
+      "comment": "CSV import Columns step: the date order picker’s label.",
+      "extractionState": "manual",
+      "generatesSymbol": false,
+      "localizations": {
+        "en": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Date Format"
+          }
+        }
+      }
+    },
+    "Date is empty": {
+      "comment": "CSV import row issue (D323.15).",
+      "extractionState": "manual",
+      "localizations": {
+        "en": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Date is empty"
+          }
+        }
+      },
+      "generatesSymbol": false
+    },
+    "Date Range": {
+      "comment": "CSV export: the date range picker’s label.",
+      "extractionState": "manual",
+      "generatesSymbol": false,
+      "localizations": {
+        "en": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Date Range"
+          }
+        }
+      }
+    },
+    "DD/MM/YYYY": {
+      "comment": "CSV import date format: day, month, year.",
+      "extractionState": "manual",
+      "generatesSymbol": false,
+      "localizations": {
+        "en": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "DD/MM/YYYY"
+          }
+        }
+      }
+    },
+    "Decimal Separator": {
+      "comment": "CSV import Columns step: the decimal separator picker’s label.",
+      "extractionState": "manual",
+      "generatesSymbol": false,
+      "localizations": {
+        "en": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Decimal Separator"
           }
         }
       }
@@ -2623,6 +3348,71 @@
         }
       }
     },
+    "Description shortened to %@ characters": {
+      "comment": "CSV import Review: a row whose description was cut to the limit (D105). The number is the limit.",
+      "extractionState": "manual",
+      "localizations": {
+        "en": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Description shortened to %@ characters"
+          }
+        }
+      },
+      "generatesSymbol": false
+    },
+    "Destination Amount": {
+      "comment": "CSV import column field: what a transfer between currencies receives.",
+      "extractionState": "manual",
+      "generatesSymbol": false,
+      "localizations": {
+        "en": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Destination Amount"
+          }
+        }
+      }
+    },
+    "Destination Amount can’t be read": {
+      "comment": "CSV import row issue (D323.3).",
+      "extractionState": "manual",
+      "localizations": {
+        "en": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Destination Amount can’t be read"
+          }
+        }
+      },
+      "generatesSymbol": false
+    },
+    "Destination Amount is required when the currencies differ": {
+      "comment": "CSV import row issue (D29).",
+      "extractionState": "manual",
+      "generatesSymbol": false,
+      "localizations": {
+        "en": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Destination Amount is required when the currencies differ"
+          }
+        }
+      }
+    },
+    "Destination Amount must equal Amount for same-currency transfers": {
+      "comment": "CSV import row issue (D29).",
+      "extractionState": "manual",
+      "generatesSymbol": false,
+      "localizations": {
+        "en": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Destination Amount must equal Amount for same-currency transfers"
+          }
+        }
+      }
+    },
     "Details": {
       "comment": "Category editor: the section header over Kind, Parent, Icon, Colour.",
       "extractionState": "manual",
@@ -2663,7 +3453,7 @@
       }
     },
     "Done": {
-      "comment": "Categories and Payees screens: ends reordering or selecting. Transaction form category picker: puts the checked category on the form.",
+      "comment": "Categories and Payees screens: ends reordering or selecting. Transaction form category picker: puts the checked category on the form. CSV import summary: closes the import sheet.",
       "extractionState": "manual",
       "generatesSymbol": false,
       "localizations": {
@@ -2671,6 +3461,19 @@
           "stringUnit": {
             "state": "translated",
             "value": "Done"
+          }
+        }
+      }
+    },
+    "Don’t Import": {
+      "comment": "CSV import Columns step: the choice that skips a column.",
+      "extractionState": "manual",
+      "generatesSymbol": false,
+      "localizations": {
+        "en": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Don’t Import"
           }
         }
       }
@@ -2993,6 +3796,18 @@
         }
       }
     },
+    "Everything this import added from “%@” is removed.": {
+      "comment": "Undo Import confirmation: the message’s first sentence (D281, D323.8). %@ is the imported file’s name.",
+      "extractionState": "manual",
+      "localizations": {
+        "en": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Everything this import added from “%@” is removed."
+          }
+        }
+      }
+    },
     "Expense": {
       "comment": "A category's kind, and the Categories screen's Expense tab.",
       "extractionState": "manual",
@@ -3018,6 +3833,19 @@
           }
         }
       }
+    },
+    "Expense Amount": {
+      "comment": "CSV import column field: a file’s money-out column (D323.2). Title case, as a menu item.",
+      "extractionState": "manual",
+      "localizations": {
+        "en": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Expense Amount"
+          }
+        }
+      },
+      "generatesSymbol": false
     },
     "Expense categories can’t be merged with income ones, so they aren’t listed.": {
       "comment": "Merge sheet footnote sentence, merging an income category.",
@@ -3046,7 +3874,7 @@
       }
     },
     "Export": {
-      "comment": "The iOS Export sheet’s confirm button; the share sheet follows directly, so no ellipsis.",
+      "comment": "The iOS Export sheet’s confirm button (backups, and the CSV export sheet); the share sheet or save panel follows directly, so no ellipsis.",
       "extractionState": "manual",
       "generatesSymbol": false,
       "localizations": {
@@ -3070,14 +3898,66 @@
         }
       }
     },
+    "Export CSV": {
+      "comment": "CSV export sheet: the title.",
+      "extractionState": "manual",
+      "generatesSymbol": false,
+      "localizations": {
+        "en": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Export CSV"
+          }
+        }
+      }
+    },
+    "Export Transactions to CSV": {
+      "comment": "iOS Settings › Import & Export row: export transactions as a CSV file.",
+      "extractionState": "manual",
+      "localizations": {
+        "en": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Export Transactions to CSV"
+          }
+        }
+      },
+      "generatesSymbol": false
+    },
+    "Export Transactions…": {
+      "comment": "Mac File menu item (⇧⌘E): export transactions as a CSV file.",
+      "extractionState": "manual",
+      "localizations": {
+        "en": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Export Transactions…"
+          }
+        }
+      },
+      "generatesSymbol": false
+    },
     "Export…": {
-      "comment": "Button on a backup that opens the Export sheet (macOS, and the iOS backup detail).",
+      "comment": "Button that opens the Export sheet on a backup (macOS, and the iOS backup detail). Mac CSV export sheet: the button that opens the save panel.",
       "extractionState": "manual",
       "localizations": {
         "en": {
           "stringUnit": {
             "state": "translated",
             "value": "Export…"
+          }
+        }
+      }
+    },
+    "Format": {
+      "comment": "CSV import Columns step: the section with the date format and decimal separator.",
+      "extractionState": "manual",
+      "generatesSymbol": false,
+      "localizations": {
+        "en": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Format"
           }
         }
       }
@@ -3145,6 +4025,147 @@
         }
       }
     },
+    "Import": {
+      "comment": "CSV import Review: the toolbar button that saves the selected rows.",
+      "extractionState": "manual",
+      "generatesSymbol": false,
+      "localizations": {
+        "en": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Import"
+          }
+        }
+      }
+    },
+    "Import %lld Transactions": {
+      "comment": "CSV import Review: the button that saves the selected rows.",
+      "extractionState": "manual",
+      "localizations": {
+        "en": {
+          "variations": {
+            "plural": {
+              "one": {
+                "stringUnit": {
+                  "state": "translated",
+                  "value": "Import %lld Transaction"
+                }
+              },
+              "other": {
+                "stringUnit": {
+                  "state": "translated",
+                  "value": "Import %lld Transactions"
+                }
+              }
+            }
+          }
+        }
+      }
+    },
+    "Import & Export": {
+      "comment": "Settings row and screen title: CSV import and export.",
+      "extractionState": "manual",
+      "generatesSymbol": false,
+      "localizations": {
+        "en": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Import & Export"
+          }
+        }
+      }
+    },
+    "Import Complete": {
+      "comment": "CSV import Summary: the title.",
+      "extractionState": "manual",
+      "generatesSymbol": false,
+      "localizations": {
+        "en": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Import Complete"
+          }
+        }
+      }
+    },
+    "Import CSV": {
+      "comment": "CSV import sheet: the title.",
+      "extractionState": "manual",
+      "generatesSymbol": false,
+      "localizations": {
+        "en": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Import CSV"
+          }
+        }
+      }
+    },
+    "Import CSV from Files": {
+      "comment": "iOS Settings › Import & Export row: pick a CSV file in Files to import.",
+      "extractionState": "manual",
+      "localizations": {
+        "en": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Import CSV from Files"
+          }
+        }
+      },
+      "generatesSymbol": false
+    },
+    "Import transactions from a bank or another app’s CSV file. Exported files open in Numbers, Excel and other apps. Files stay on this device.": {
+      "comment": "Settings › Import & Export: the footer under the import and export rows.",
+      "extractionState": "manual",
+      "generatesSymbol": false,
+      "localizations": {
+        "en": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Import transactions from a bank or another app’s CSV file. Exported files open in Numbers, Excel and other apps. Files stay on this device."
+          }
+        }
+      }
+    },
+    "Import Undone": {
+      "comment": "CSV import Summary after Undo Import: the title.",
+      "extractionState": "manual",
+      "generatesSymbol": false,
+      "localizations": {
+        "en": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Import Undone"
+          }
+        }
+      }
+    },
+    "Importing…": {
+      "comment": "CSV import: progress while the transactions are saved.",
+      "extractionState": "manual",
+      "generatesSymbol": false,
+      "localizations": {
+        "en": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Importing…"
+          }
+        }
+      }
+    },
+    "Import…": {
+      "comment": "Mac File menu item (⇧⌘I): pick a CSV file to import.",
+      "extractionState": "manual",
+      "localizations": {
+        "en": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Import…"
+          }
+        }
+      },
+      "generatesSymbol": false
+    },
     "Income": {
       "comment": "A category's kind, and the Categories screen's Income tab.",
       "extractionState": "manual",
@@ -3170,6 +4191,19 @@
           }
         }
       }
+    },
+    "Income Amount": {
+      "comment": "CSV import column field: a file’s money-in column (D323.2). Title case, as a menu item.",
+      "extractionState": "manual",
+      "localizations": {
+        "en": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Income Amount"
+          }
+        }
+      },
+      "generatesSymbol": false
     },
     "Income categories can’t be merged with expense ones, so they aren’t listed.": {
       "comment": "Merge sheet footnote sentence, merging an expense category.",
@@ -3206,6 +4240,19 @@
           "stringUnit": {
             "state": "translated",
             "value": "Indigo"
+          }
+        }
+      }
+    },
+    "ISO 8601 Dates": {
+      "comment": "CSV export: write dates as 2026-10-20 14:30:00 instead of the short date.",
+      "extractionState": "manual",
+      "generatesSymbol": false,
+      "localizations": {
+        "en": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "ISO 8601 Dates"
           }
         }
       }
@@ -3624,6 +4671,19 @@
         }
       }
     },
+    "little-orbit couldn’t read this file. Try again. Nothing was imported.": {
+      "comment": "CSV import: reading the picked file failed (D323.7). “little-orbit” is the app’s name.",
+      "extractionState": "manual",
+      "localizations": {
+        "en": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "little-orbit couldn’t read this file. Try again. Nothing was imported."
+          }
+        }
+      },
+      "generatesSymbol": false
+    },
     "little-orbit couldn’t read your backups folder. Your backups and data haven’t changed. Try again later.": {
       "comment": "Description under “Couldn’t Load Backups” in the Backups list (D211.5).",
       "extractionState": "manual",
@@ -3692,6 +4752,19 @@
           "stringUnit": {
             "state": "translated",
             "value": "Manual backup"
+          }
+        }
+      }
+    },
+    "Match": {
+      "comment": "CSV import: the step where names in the file are matched to accounts, categories and payees.",
+      "extractionState": "manual",
+      "generatesSymbol": false,
+      "localizations": {
+        "en": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Match"
           }
         }
       }
@@ -3817,6 +4890,19 @@
           "stringUnit": {
             "state": "translated",
             "value": "Mixed types"
+          }
+        }
+      }
+    },
+    "MM/DD/YYYY": {
+      "comment": "CSV import date format: month, day, year.",
+      "extractionState": "manual",
+      "generatesSymbol": false,
+      "localizations": {
+        "en": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "MM/DD/YYYY"
           }
         }
       }
@@ -3964,6 +5050,19 @@
           "stringUnit": {
             "state": "translated",
             "value": "Name"
+          }
+        }
+      }
+    },
+    "Names that match existing ones, ignoring case, use them. The rest are created when you import.": {
+      "comment": "CSV import Match step: the footer.",
+      "extractionState": "manual",
+      "generatesSymbol": false,
+      "localizations": {
+        "en": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Names that match existing ones, ignoring case, use them. The rest are created when you import."
           }
         }
       }
@@ -4122,6 +5221,19 @@
         }
       }
     },
+    "Next": {
+      "comment": "CSV import sheet: go to the next step.",
+      "extractionState": "manual",
+      "generatesSymbol": false,
+      "localizations": {
+        "en": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Next"
+          }
+        }
+      }
+    },
     "No Backups Yet": {
       "comment": "Title of the Backups list when there are no backups.",
       "extractionState": "manual",
@@ -4160,6 +5272,32 @@
         }
       }
     },
+    "No Transactions Found in This File": {
+      "comment": "CSV import: alert title when the picked file has only a header row (D323.7).",
+      "extractionState": "manual",
+      "localizations": {
+        "en": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "No Transactions Found in This File"
+          }
+        }
+      },
+      "generatesSymbol": false
+    },
+    "No transactions match.": {
+      "comment": "CSV export: nothing in the chosen accounts and dates.",
+      "extractionState": "manual",
+      "generatesSymbol": false,
+      "localizations": {
+        "en": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "No transactions match."
+          }
+        }
+      }
+    },
     "Not Enough Storage to Restore": {
       "comment": "Alert title when a restore stopped because the disk was full while the safe copy of the current data was being made (D211.8). Restore only; Back Up Now shows the list's line instead. The only button is OK.",
       "extractionState": "manual",
@@ -4168,6 +5306,84 @@
           "stringUnit": {
             "state": "translated",
             "value": "Not Enough Storage to Restore"
+          }
+        }
+      }
+    },
+    "Not Selected": {
+      "comment": "CSV import Review: the section of rows that aren’t ticked, such as duplicates.",
+      "extractionState": "manual",
+      "generatesSymbol": false,
+      "localizations": {
+        "en": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Not Selected"
+          }
+        }
+      }
+    },
+    "Not selected": {
+      "comment": "CSV import summary: the count of rows that could be imported but weren’t ticked (D327.4). Sentence case, like the other counts.",
+      "extractionState": "manual",
+      "generatesSymbol": false,
+      "localizations": {
+        "en": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Not selected"
+          }
+        }
+      }
+    },
+    "Notes": {
+      "comment": "CSV import column field: the notes.",
+      "extractionState": "manual",
+      "generatesSymbol": false,
+      "localizations": {
+        "en": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Notes"
+          }
+        }
+      }
+    },
+    "Notes shortened to %@ characters": {
+      "comment": "CSV import Review: a row whose notes were cut to the limit (D323.16). The number is the limit.",
+      "extractionState": "manual",
+      "localizations": {
+        "en": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Notes shortened to %@ characters"
+          }
+        }
+      },
+      "generatesSymbol": false
+    },
+    "Nothing else changes.": {
+      "comment": "Undo Import confirmation: the message’s last sentence (D281, D323.8).",
+      "extractionState": "manual",
+      "localizations": {
+        "en": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Nothing else changes."
+          }
+        }
+      },
+      "generatesSymbol": false
+    },
+    "Nothing is saved until you tap Import.": {
+      "comment": "CSV import Review: the note under the Import button.",
+      "extractionState": "manual",
+      "generatesSymbol": false,
+      "localizations": {
+        "en": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Nothing is saved until you tap Import."
           }
         }
       }
@@ -4185,6 +5401,45 @@
         }
       }
     },
+    "Nothing was imported.": {
+      "comment": "CSV import: the message when the picked file has only a header row (D323.7).",
+      "extractionState": "manual",
+      "localizations": {
+        "en": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Nothing was imported."
+          }
+        }
+      },
+      "generatesSymbol": false
+    },
+    "Nothing was imported. Try again.": {
+      "comment": "CSV import: saving failed and nothing changed.",
+      "extractionState": "manual",
+      "generatesSymbol": false,
+      "localizations": {
+        "en": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Nothing was imported. Try again."
+          }
+        }
+      }
+    },
+    "Nothing was removed. Try again.": {
+      "comment": "CSV import: Undo Import failed and nothing changed.",
+      "extractionState": "manual",
+      "generatesSymbol": false,
+      "localizations": {
+        "en": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Nothing was removed. Try again."
+          }
+        }
+      }
+    },
     "Off": {
       "comment": "Monthly Backups stepper value at 0.",
       "extractionState": "manual",
@@ -4198,7 +5453,7 @@
       }
     },
     "OK": {
-      "comment": "Closes a category or payee alert.",
+      "comment": "Closes a category or payee alert, or a CSV import or export alert.",
       "extractionState": "manual",
       "generatesSymbol": false,
       "localizations": {
@@ -4262,6 +5517,19 @@
         }
       }
     },
+    "Payee is over %@ characters": {
+      "comment": "CSV import row issue: the payee name is too long. The number is the limit.",
+      "extractionState": "manual",
+      "localizations": {
+        "en": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Payee is over %@ characters"
+          }
+        }
+      },
+      "generatesSymbol": false
+    },
     "Payee isn’t applied to transfers": {
       "comment": "Bulk edit: under Payee when the selection includes a transfer.",
       "extractionState": "manual",
@@ -4275,7 +5543,7 @@
       }
     },
     "Payees": {
-      "comment": "Settings row and screen title: the payee manager.",
+      "comment": "Settings row and screen title: the payee manager. CSV import Match step: the section of payee names in the file.",
       "extractionState": "manual",
       "generatesSymbol": false,
       "localizations": {
@@ -4300,6 +5568,19 @@
         }
       }
     },
+    "Period (1,234.56)": {
+      "comment": "CSV import decimal separator: a period.",
+      "extractionState": "manual",
+      "generatesSymbol": false,
+      "localizations": {
+        "en": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Period (1,234.56)"
+          }
+        }
+      }
+    },
     "Pink": {
       "comment": "Category colour name.",
       "extractionState": "manual",
@@ -4313,6 +5594,45 @@
         }
       }
     },
+    "Possible duplicates": {
+      "comment": "CSV import Review and summary: the count of rows close to an existing transaction.",
+      "extractionState": "manual",
+      "localizations": {
+        "en": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Possible duplicates"
+          }
+        }
+      },
+      "generatesSymbol": false
+    },
+    "Possible duplicate": {
+      "comment": "CSV import Review: the label of a row close to an existing transaction.",
+      "extractionState": "manual",
+      "localizations": {
+        "en": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Possible duplicate"
+          }
+        }
+      },
+      "generatesSymbol": false
+    },
+    "Preview": {
+      "comment": "CSV import Columns step: the section showing the first rows as they’ll be read.",
+      "extractionState": "manual",
+      "generatesSymbol": false,
+      "localizations": {
+        "en": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Preview"
+          }
+        }
+      }
+    },
     "Purple": {
       "comment": "Category colour name.",
       "extractionState": "manual",
@@ -4322,6 +5642,19 @@
           "stringUnit": {
             "state": "translated",
             "value": "Purple"
+          }
+        }
+      }
+    },
+    "Reading File…": {
+      "comment": "CSV import: progress while the file is read or checked.",
+      "extractionState": "manual",
+      "generatesSymbol": false,
+      "localizations": {
+        "en": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Reading File…"
           }
         }
       }
@@ -4359,6 +5692,43 @@
           "stringUnit": {
             "state": "translated",
             "value": "Redid %@"
+          }
+        }
+      }
+    },
+    "Remove": {
+      "comment": "CSV import Undo Import confirmation: the destructive button.",
+      "extractionState": "manual",
+      "generatesSymbol": false,
+      "localizations": {
+        "en": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Remove"
+          }
+        }
+      }
+    },
+    "Remove %lld Imported Transactions?": {
+      "comment": "CSV import: the Undo Import confirmation’s title (D281).",
+      "extractionState": "manual",
+      "localizations": {
+        "en": {
+          "variations": {
+            "plural": {
+              "one": {
+                "stringUnit": {
+                  "state": "translated",
+                  "value": "Remove %lld Imported Transaction?"
+                }
+              },
+              "other": {
+                "stringUnit": {
+                  "state": "translated",
+                  "value": "Remove %lld Imported Transactions?"
+                }
+              }
+            }
           }
         }
       }
@@ -4484,6 +5854,71 @@
         }
       }
     },
+    "Review": {
+      "comment": "CSV import: the step that lists what will be imported.",
+      "extractionState": "manual",
+      "generatesSymbol": false,
+      "localizations": {
+        "en": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Review"
+          }
+        }
+      }
+    },
+    "Row %1$lld: %2$@": {
+      "comment": "CSV import: %1$lld is the row number and %2$@ why it can’t be imported.",
+      "extractionState": "manual",
+      "generatesSymbol": false,
+      "localizations": {
+        "en": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Row %1$lld: %2$@"
+          }
+        }
+      }
+    },
+    "Row %lld": {
+      "comment": "CSV import: a row’s number in the file, counting the header as row 1, as a spreadsheet does.",
+      "extractionState": "manual",
+      "generatesSymbol": false,
+      "localizations": {
+        "en": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Row %lld"
+          }
+        }
+      }
+    },
+    "Row has fewer columns than the header": {
+      "comment": "CSV import row issue (D323.15).",
+      "extractionState": "manual",
+      "localizations": {
+        "en": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Row has fewer columns than the header"
+          }
+        }
+      },
+      "generatesSymbol": false
+    },
+    "Rows Not Imported": {
+      "comment": "CSV import Summary: the section of rows that weren’t imported.",
+      "extractionState": "manual",
+      "generatesSymbol": false,
+      "localizations": {
+        "en": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Rows Not Imported"
+          }
+        }
+      }
+    },
     "Save": {
       "comment": "Category and payee editors: saves the change.",
       "extractionState": "manual",
@@ -4532,6 +5967,45 @@
           "stringUnit": {
             "state": "translated",
             "value": "Select"
+          }
+        }
+      }
+    },
+    "Shortened": {
+      "comment": "CSV import Review: the count of rows whose description or notes were shortened to fit.",
+      "extractionState": "manual",
+      "generatesSymbol": false,
+      "localizations": {
+        "en": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Shortened"
+          }
+        }
+      }
+    },
+    "Some dates could be read either way. Check the date format.": {
+      "comment": "CSV import Columns step: shown when the file’s dates fit more than one date order.",
+      "extractionState": "manual",
+      "generatesSymbol": false,
+      "localizations": {
+        "en": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Some dates could be read either way. Check the date format."
+          }
+        }
+      }
+    },
+    "Some imported transactions have changed since, so nothing was removed.": {
+      "comment": "CSV import: Undo Import refused because an imported transaction was edited or deleted.",
+      "extractionState": "manual",
+      "generatesSymbol": false,
+      "localizations": {
+        "en": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Some imported transactions have changed since, so nothing was removed."
           }
         }
       }
@@ -4610,6 +6084,18 @@
         }
       }
     },
+    "That includes %@.": {
+      "comment": "Undo Import confirmation: the middle sentence, only when the import created accounts, categories or payees (D281). %@ is a list such as “the new account “Travel Card” and 3 new payees”.",
+      "extractionState": "manual",
+      "localizations": {
+        "en": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "That includes %@."
+          }
+        }
+      }
+    },
     "The account": {
       "comment": "Alert message subject when an account's name is unknown.",
       "extractionState": "manual",
@@ -4618,6 +6104,19 @@
           "stringUnit": {
             "state": "translated",
             "value": "The account"
+          }
+        }
+      }
+    },
+    "The CSV file couldn’t be created. Try again.": {
+      "comment": "CSV export: making or saving the file failed.",
+      "extractionState": "manual",
+      "generatesSymbol": false,
+      "localizations": {
+        "en": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "The CSV file couldn’t be created. Try again."
           }
         }
       }
@@ -4634,6 +6133,32 @@
         }
       }
     },
+    "The file has no Account column, so every row goes to this account.": {
+      "comment": "CSV import account step: the footer.",
+      "extractionState": "manual",
+      "generatesSymbol": false,
+      "localizations": {
+        "en": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "The file has no Account column, so every row goes to this account."
+          }
+        }
+      }
+    },
+    "The file is empty. Nothing was imported.": {
+      "comment": "CSV import: the picked file has no bytes, or only blank lines (D323.7).",
+      "extractionState": "manual",
+      "localizations": {
+        "en": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "The file is empty. Nothing was imported."
+          }
+        }
+      },
+      "generatesSymbol": false
+    },
     "The first automatic backup is made after you change something. You can also back up now or restore from a backup file.": {
       "comment": "The macOS Backups tab when there are no backups.",
       "extractionState": "manual",
@@ -4642,6 +6167,18 @@
           "stringUnit": {
             "state": "translated",
             "value": "The first automatic backup is made after you change something. You can also back up now or restore from a backup file."
+          }
+        }
+      }
+    },
+    "the new account “%@”": {
+      "comment": "Undo Import confirmation: in the “That includes …” list when the import created exactly one account (D281). %@ is its name.",
+      "extractionState": "manual",
+      "localizations": {
+        "en": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "the new account “%@”"
           }
         }
       }
@@ -4871,6 +6408,97 @@
         }
       }
     },
+    "This isn’t a CSV file. In a spreadsheet app, export it as CSV, then import that file. Nothing was imported.": {
+      "comment": "CSV import: the picked file is a spreadsheet, PDF or other file that isn’t CSV text (D323.7).",
+      "extractionState": "manual",
+      "localizations": {
+        "en": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "This isn’t a CSV file. In a spreadsheet app, export it as CSV, then import that file. Nothing was imported."
+          }
+        }
+      },
+      "generatesSymbol": false
+    },
+    "This Month": {
+      "comment": "Spending report period preset and CSV export date range: the current calendar month.",
+      "extractionState": "manual",
+      "generatesSymbol": false,
+      "localizations": {
+        "en": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "This Month"
+          }
+        }
+      }
+    },
+    "To Account": {
+      "comment": "CSV import column field: a transfer’s destination account.",
+      "extractionState": "manual",
+      "generatesSymbol": false,
+      "localizations": {
+        "en": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "To Account"
+          }
+        }
+      }
+    },
+    "To Account is over %@ characters": {
+      "comment": "CSV import row issue: the transfer’s To Account name is too long. The number is the limit.",
+      "extractionState": "manual",
+      "localizations": {
+        "en": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "To Account is over %@ characters"
+          }
+        }
+      },
+      "generatesSymbol": false
+    },
+    "To Account must differ from Account": {
+      "comment": "CSV import row issue (D50, D108).",
+      "extractionState": "manual",
+      "generatesSymbol": false,
+      "localizations": {
+        "en": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "To Account must differ from Account"
+          }
+        }
+      }
+    },
+    "To Import": {
+      "comment": "CSV import Review: the section of rows that will be imported.",
+      "extractionState": "manual",
+      "generatesSymbol": false,
+      "localizations": {
+        "en": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "To Import"
+          }
+        }
+      }
+    },
+    "To import": {
+      "comment": "CSV import Review: the count of rows that will be imported.",
+      "extractionState": "manual",
+      "localizations": {
+        "en": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "To import"
+          }
+        }
+      },
+      "generatesSymbol": false
+    },
     "Today, %@": {
       "comment": "A backup's date today. %@ is the time, such as 9:12 AM.",
       "extractionState": "manual",
@@ -4879,6 +6507,45 @@
           "stringUnit": {
             "state": "translated",
             "value": "Today, %@"
+          }
+        }
+      }
+    },
+    "Too many decimal places for %@": {
+      "comment": "CSV import row issue: %@ is the account’s currency code.",
+      "extractionState": "manual",
+      "generatesSymbol": false,
+      "localizations": {
+        "en": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Too many decimal places for %@"
+          }
+        }
+      }
+    },
+    "Transactions": {
+      "comment": "CSV export: the section choosing which transactions.",
+      "extractionState": "manual",
+      "generatesSymbol": false,
+      "localizations": {
+        "en": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Transactions"
+          }
+        }
+      }
+    },
+    "Transfer has no To Account": {
+      "comment": "CSV import row issue.",
+      "extractionState": "manual",
+      "generatesSymbol": false,
+      "localizations": {
+        "en": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Transfer has no To Account"
           }
         }
       }
@@ -4919,6 +6586,19 @@
           }
         }
       }
+    },
+    "Type must be Expense, Income, Transfer or Refund": {
+      "comment": "CSV import row issue (D323.3). The Type values are the file’s own and stay in English.",
+      "extractionState": "manual",
+      "localizations": {
+        "en": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Type must be Expense, Income, Transfer or Refund"
+          }
+        }
+      },
+      "generatesSymbol": false
     },
     "Unarchive": {
       "comment": "Button on an archived category: put it back in pickers. Also the default button of the “Unarchive “%1$@”?” alert (D302).",
@@ -4983,6 +6663,45 @@
           }
         }
       }
+    },
+    "Undo Import": {
+      "comment": "iOS CSV import summary: the button that asks, then removes everything just imported.",
+      "extractionState": "manual",
+      "generatesSymbol": false,
+      "localizations": {
+        "en": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Undo Import"
+          }
+        }
+      }
+    },
+    "Undo Import…": {
+      "comment": "Mac CSV import summary: the button that asks, then removes everything just imported (D281).",
+      "extractionState": "manual",
+      "localizations": {
+        "en": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Undo Import…"
+          }
+        }
+      },
+      "generatesSymbol": false
+    },
+    "Undo removes the whole batch: these transactions and anything this import created. Balances go back to what they were. You can undo this import until you close this summary.": {
+      "comment": "CSV import summary: the footer under Undo Import (D323.8, D323.18).",
+      "extractionState": "manual",
+      "localizations": {
+        "en": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Undo removes the whole batch: these transactions and anything this import created. Balances go back to what they were. You can undo this import until you close this summary."
+          }
+        }
+      },
+      "generatesSymbol": false
     },
     "Unknown": {
       "comment": "What a damaged backup shows for a kind, version, date or size that can’t be read.",
@@ -5105,6 +6824,43 @@
         }
       }
     },
+    "Which account is this file for?": {
+      "comment": "CSV import: the title of the step that picks the account for a file without an Account column.",
+      "extractionState": "manual",
+      "generatesSymbol": false,
+      "localizations": {
+        "en": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Which account is this file for?"
+          }
+        }
+      }
+    },
+    "Will export %lld transactions": {
+      "comment": "CSV export: how many transactions the chosen options export.",
+      "extractionState": "manual",
+      "localizations": {
+        "en": {
+          "variations": {
+            "plural": {
+              "one": {
+                "stringUnit": {
+                  "state": "translated",
+                  "value": "Will export %lld transaction"
+                }
+              },
+              "other": {
+                "stringUnit": {
+                  "state": "translated",
+                  "value": "Will export %lld transactions"
+                }
+              }
+            }
+          }
+        }
+      }
+    },
     "Yellow": {
       "comment": "Category colour name.",
       "extractionState": "manual",
@@ -5130,6 +6886,19 @@
         }
       }
     },
+    "Your accounts couldn’t be read. Try again.": {
+      "comment": "CSV import: reading the current accounts, categories and payees failed.",
+      "extractionState": "manual",
+      "generatesSymbol": false,
+      "localizations": {
+        "en": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Your accounts couldn’t be read. Try again."
+          }
+        }
+      }
+    },
     "Your categories weren’t changed. Try again.": {
       "comment": "Alert message: a category change failed and nothing was saved.",
       "extractionState": "manual",
@@ -5151,6 +6920,19 @@
           "stringUnit": {
             "state": "translated",
             "value": "Your change was saved, but couldn’t be read back, so it can’t be undone."
+          }
+        }
+      }
+    },
+    "Your data changed, so this preview was updated.": {
+      "comment": "CSV import: an inline note at the top of the current step, and a VoiceOver announcement, when accounts, categories, payees or transactions changed while the import sheet was open and the preview was planned again (D327.1).",
+      "extractionState": "manual",
+      "generatesSymbol": false,
+      "localizations": {
+        "en": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Your data changed, so this preview was updated."
           }
         }
       }
@@ -5272,6 +7054,19 @@
           "stringUnit": {
             "state": "translated",
             "value": "little-orbit makes a backup once a day after you change something. Backups stay on this %@."
+          }
+        }
+      }
+    },
+    "YYYY-MM-DD": {
+      "comment": "CSV import date format: year, month, day.",
+      "extractionState": "manual",
+      "generatesSymbol": false,
+      "localizations": {
+        "en": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "YYYY-MM-DD"
           }
         }
       }
@@ -5637,7 +7432,7 @@
       }
     },
     "Amount": {
-      "comment": "Scheduled form section header and field label.",
+      "comment": "Scheduled form section header and field label. CSV import column field: the amount, negative for expenses.",
       "extractionState": "manual",
       "generatesSymbol": false,
       "localizations": {
@@ -5650,7 +7445,7 @@
       }
     },
     "Description": {
-      "comment": "Scheduled form field: what the item is, such as Rent.",
+      "comment": "Scheduled form field: what the item is, such as Rent. CSV import column field: the description.",
       "extractionState": "manual",
       "generatesSymbol": false,
       "localizations": {
@@ -5663,7 +7458,7 @@
       }
     },
     "Payee": {
-      "comment": "Scheduled form picker: who is paid or pays.",
+      "comment": "Scheduled form picker: who is paid or pays. CSV import column field: the payee.",
       "extractionState": "manual",
       "generatesSymbol": false,
       "localizations": {
@@ -5676,7 +7471,7 @@
       }
     },
     "Account": {
-      "comment": "Scheduled form picker: the account it’s recorded in.",
+      "comment": "Scheduled form picker: the account it’s recorded in. CSV import: the step that picks the account for a file without an Account column, and the column field for the account.",
       "extractionState": "manual",
       "generatesSymbol": false,
       "localizations": {
@@ -5689,7 +7484,7 @@
       }
     },
     "From": {
-      "comment": "Scheduled transfer form picker: the account money leaves.",
+      "comment": "Scheduled transfer form picker: the account money leaves. CSV export custom range: the first day.",
       "extractionState": "manual",
       "generatesSymbol": false,
       "localizations": {
@@ -5702,7 +7497,7 @@
       }
     },
     "To": {
-      "comment": "Scheduled transfer form picker: the account money goes to.",
+      "comment": "Scheduled transfer form picker: the account money goes to. CSV export custom range: the last day, included.",
       "extractionState": "manual",
       "generatesSymbol": false,
       "localizations": {
@@ -6589,7 +8384,7 @@
       }
     },
     "Type": {
-      "comment": "Scheduled form: the label VoiceOver reads for the Expense / Income / Transfer control.",
+      "comment": "Scheduled form: the label VoiceOver reads for the Expense / Income / Transfer control. CSV import column field: expense, income, transfer or refund.",
       "extractionState": "manual",
       "generatesSymbol": false,
       "localizations": {
