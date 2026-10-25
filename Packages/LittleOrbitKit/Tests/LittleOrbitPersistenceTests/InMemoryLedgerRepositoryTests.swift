@@ -52,6 +52,15 @@ final class InMemoryLedgerRepositoryTests: XCTestCase {
         }
     }
 
+    /// #30: an import saved and undone, and Undo Import refused after a change, on this store.
+    func testImportCommitAndUndo() throws {
+        try onMain {
+            try assertImportStorage {
+                InMemoryLedgerRepository()
+            }
+        }
+    }
+
     /// D293: an existing install's store has no pending marker, so it counts as seeded and is never seeded.
     func testAStoreWithoutAPendingMarkerIsNeverSeeded() throws {
         try onMain {
