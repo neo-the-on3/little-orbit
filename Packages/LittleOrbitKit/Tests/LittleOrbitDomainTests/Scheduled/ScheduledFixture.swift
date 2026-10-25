@@ -89,7 +89,7 @@ enum ScheduledFixture {
 final class FakeScheduleRepository: ScheduleRepository {
     var snapshot: LedgerSnapshot
     var now = ScheduledFixture.date(2026, 10, 20)
-    private(set) var saves = 0
+    var saves = 0
 
     init(_ snapshot: LedgerSnapshot = ScheduledFixture.ledger) {
         self.snapshot = snapshot

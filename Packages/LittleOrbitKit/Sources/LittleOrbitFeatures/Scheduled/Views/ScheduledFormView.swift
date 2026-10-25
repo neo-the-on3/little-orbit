@@ -7,9 +7,10 @@
         import UIKit
     #endif
 
-    /// New and Edit Scheduled Item (#26 frame "New scheduled – form, 31st rule preview"): type, amount, payee,
-    /// category and account; then Schedule (Starts, Repeat with its stepper row, Ends and End Date), the Next Due
-    /// Dates preview with its month-end footnote (D24), and Process automatically. Standard Form controls only.
+    /// New and Edit Scheduled Item (#26 frame "New scheduled – form, 31st rule preview"): type, amount, payee (the #23
+    /// autocomplete with Create, #197), category and account; then Schedule (Starts, Repeat with its stepper row,
+    /// Ends and End Date), the Next Due Dates preview with its month-end footnote (D24), and Process automatically.
+    /// Standard Form controls only.
     struct ScheduledFormView: View {
         @Bindable var model: ScheduledFormViewModel
         @Environment(\.dismiss) private var dismiss
@@ -40,8 +41,30 @@
                 }
                 Section {
                     if model.showsCategory {
-                        Picker(model.payeeLabel, selection: $model.payeeID) {
-                            ForEach(model.payeeChoices) { Text(verbatim: $0.name).tag($0.id) }
+                        // The #23 payee autocomplete: matching payees, then Create for a new name (#197).
+                        TextField(model.payeeLabel, text: $model.payeeText, prompt: Text(model.payeePrompt))
+                        ForEach(model.payeeSuggestions) { suggestion in
+                            Button {
+                                model.choosePayee(suggestion)
+                            } label: {
+                                Label(suggestion.text, systemImage: "person")
+                            }
+                        }
+                        if let create = model.createPayeeTitle {
+                            Button {
+                                model.createPayee()
+                            } label: {
+                                Label {
+                                    VStack(alignment: .leading) {
+                                        Text(verbatim: create)
+                                        Text(model.createPayeeSubtitle)
+                                            .font(.subheadline)
+                                            .foregroundStyle(.secondary)
+                                    }
+                                } icon: {
+                                    Image(systemName: "plus.circle")
+                                }
+                            }
                         }
                         Picker(model.categoryLabel, selection: $model.categoryID) {
                             ForEach(model.categoryChoices) { Text(verbatim: $0.name).tag($0.id) }

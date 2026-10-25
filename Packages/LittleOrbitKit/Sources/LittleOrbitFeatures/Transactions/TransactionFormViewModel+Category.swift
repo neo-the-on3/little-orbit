@@ -117,10 +117,10 @@ extension TransactionFormViewModel {
 
 extension Payee {
     /// A payee the form offers: live and not archived.
-    fileprivate var isPickable: Bool { deletedAt == nil && !isArchived }
+    var isPickable: Bool { deletedAt == nil && !isArchived }
 
     /// The same name, ignoring case, as the save's payee reuse compares (`resolvePayee`).
-    fileprivate func matches(_ trimmedName: String) -> Bool {
+    func matches(_ trimmedName: String) -> Bool {
         name.compare(trimmedName, options: [.caseInsensitive]) == .orderedSame
     }
 }
