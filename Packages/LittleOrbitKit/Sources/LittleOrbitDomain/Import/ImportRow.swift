@@ -182,13 +182,14 @@ public enum ImportText {
         return (String(text.prefix(noteLimit - 1)) + "…", true)
     }
 
-    /// A line break inside a quoted cell is one LF, whatever the file's line endings: a CRLF or a lone CR
-    /// becomes LF, so a file saved on Windows leaves no carriage return in a description or a note.
+    /// A line break inside a quoted cell is one LF, whatever the file's line endings: a CRLF, a CR CR LF or a
+    /// lone CR becomes LF, so a file saved on Windows leaves no carriage return in a description or a note.
+    /// Read scalar by scalar, since Swift's characters fold CR LF into one and would hide a CR before it.
     public static func lineBreaks(_ text: String) -> String {
-        guard text.contains(where: \.isNewline) else {
+        guard text.unicodeScalars.contains("\r") else {
             return text
         }
-        return text.replacing("\r\n", with: "\n").replacing("\r", with: "\n")
+        return CSVLineBreak.normalized(text)
     }
 
     /// Trimmed, or `nil` when blank.

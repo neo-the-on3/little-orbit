@@ -25,6 +25,15 @@ struct CSVReaderTests {
         #expect(table.records.map(\.rowNumber) == [2, 4])
     }
 
+    @Test("CR CR LF between records is one line break: no blank records, and the row numbers don't shift")
+    func doubledCarriageReturn() throws {
+        let table = try CSVReader.read("Date,Amount\r\r\n2026-10-20,5\r\r\n2026-10-21,6\r\r\n\r\r\n2026-10-22,7")
+        #expect(table.header == ["Date", "Amount"])
+        #expect(table.records.map(\.fields) == [["2026-10-20", "5"], ["2026-10-21", "6"], ["2026-10-22", "7"]])
+        // The blank line before the last record still counts, as in a spreadsheet.
+        #expect(table.records.map(\.rowNumber) == [2, 3, 5])
+    }
+
     @Test("A quote left open to the end is flagged on its row")
     func unterminated() throws {
         let table = try CSVReader.read("Date,Description\n2026-10-20,\"open\n")
