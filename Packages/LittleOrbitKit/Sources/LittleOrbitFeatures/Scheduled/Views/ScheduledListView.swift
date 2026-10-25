@@ -3,9 +3,10 @@
     import SwiftUI
 
     /// The Scheduled list (#26 frames "Scheduled – overdue, due today, upcoming" on iOS and "Scheduled – overdue,
-    /// due today, upcoming, completed; sidebar badge" on macOS). After a catch-up recorded something while the app
-    /// was closed, an info hint comes first. Overdue starts with its hint row, then lists each missed occurrence on
-    /// its own row; then Due Today, Upcoming and a Completed row with its count. Rows are standard navigation links
+    /// due today, upcoming, completed; sidebar badge" on macOS, where it's `ScheduledTableView`). On iOS, after a
+    /// catch-up recorded something while the app was closed, an info hint comes first. Overdue starts with its hint
+    /// row, then lists each missed occurrence on its own row; then Due Today, Upcoming and a Completed row with its
+    /// count. Rows are standard navigation links
     /// to the item; the context menu has Pay Now, Skip This Occurrence, Edit and Delete. It sits inside the caller's
     /// NavigationStack. Whichever Scheduled screen is on top presents the form, confirmations and alerts. A watch Pay
     /// or Skip the iPhone didn't apply shows as a card above everything else until OK (D374, D376).
@@ -17,6 +18,8 @@
     public struct ScheduledListView<Link: Hashable>: View {
         @State private var model: ScheduledListViewModel
         @Environment(WindowUndoHistory.self) private var undoHistory
+        /// The item the Mac Table opened with Return or a double-click.
+        @State private var openedItem: UUID?
         private let feature: ScheduledFeature
         /// Whether the list registers its own destinations or a parent stack builds them (with the slot and a way to
         /// push, always together).
@@ -46,12 +49,65 @@
 
         public var body: some View {
             if host.slot != nil {
-                list
+                shared
             } else {
-                list.navigationDestination(for: ScheduledRoute.self) { route in
+                shared.navigationDestination(for: ScheduledRoute.self) { route in
                     ScheduledDestination(model: model, route: route, linkValue: linkValue)
                 }
             }
+        }
+
+        /// The modifiers both platforms share, around the Mac's Table or the iOS List.
+        private var shared: some View {
+            content
+                .overlay {
+                    if model.isEmpty {
+                        ContentUnavailableView {
+                            Label(model.emptyTitle, systemImage: "clock")
+                        } description: {
+                            Text(model.emptyMessage)
+                        } actions: {
+                            // The same add flow as the toolbar button (D334.6).
+                            Button(model.addTitle) { model.openNew() }
+                        }
+                    }
+                }
+                .navigationTitle(model.title)
+                .toolbar {
+                    // No shortcut: ⌘N stays New Transaction.
+                    ToolbarItem(placement: .primaryAction) {
+                        Button(model.addTitle, systemImage: "plus") { model.openNew() }
+                            .help(model.addTitle)
+                    }
+                }
+                .navigationDestination(item: $openedItem) { id in
+                    ScheduledItemView(model: model, itemID: id)
+                }
+                .scheduledSheets(model, on: .list)
+                .onAppear {
+                    // A form save is this window's Undo step (D351.1).
+                    model.recordStep = { [undoHistory] change, name, subject in
+                        undoHistory.record(change, named: name, subject: subject)
+                    }
+                    model.screenAppeared(.list)
+                    model.load()
+                    feature.watchNotices?.reload()
+                }
+                .onDisappear { model.screenDisappeared(.list) }
+                .onChange(of: feature.revision) {
+                    model.load()
+                    // An item-changed card names the item as it's called now, or goes if it was deleted.
+                    feature.watchNotices?.reload()
+                }
+        }
+
+        /// The Mac shows a Table (D340.13); iOS keeps its List.
+        @ViewBuilder private var content: some View {
+            #if os(macOS)
+                ScheduledTableView(model: model) { openedItem = $0 }
+            #else
+                list
+            #endif
         }
 
         private var list: some View {
@@ -110,41 +166,6 @@
                         }
                     }
                 }
-            }
-            .overlay {
-                if model.isEmpty {
-                    ContentUnavailableView {
-                        Label(model.emptyTitle, systemImage: "clock")
-                    } description: {
-                        Text(model.emptyMessage)
-                    } actions: {
-                        // The same add flow as the toolbar button (D334.6).
-                        Button(model.addTitle) { model.openNew() }
-                    }
-                }
-            }
-            .navigationTitle(model.title)
-            .toolbar {
-                ToolbarItem(placement: .primaryAction) {
-                    Button(model.addTitle, systemImage: "plus") { model.openNew() }
-                        .help(model.addTitle)
-                }
-            }
-            .scheduledSheets(model, on: .list)
-            .onAppear {
-                // A form save is this window's Undo step (D351.1).
-                model.recordStep = { [undoHistory] change, name, subject in
-                    undoHistory.record(change, named: name, subject: subject)
-                }
-                model.screenAppeared(.list)
-                model.load()
-                feature.watchNotices?.reload()
-            }
-            .onDisappear { model.screenDisappeared(.list) }
-            .onChange(of: feature.revision) {
-                model.load()
-                // An item-changed card names the item as it's called now, or goes if it was deleted.
-                feature.watchNotices?.reload()
             }
         }
 
