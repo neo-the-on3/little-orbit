@@ -3,7 +3,7 @@
     import SwiftUI
 
     /// The import sheet: Columns, the target account when the file names none, Match, Review and the summary.
-    /// Standard grouped forms and controls; all logic is in `CSVImportViewModel`.
+    /// Standard grouped forms, lists and controls; all logic is in `CSVImportViewModel`.
     struct CSVImportSheet: View {
         @Bindable var model: CSVImportViewModel
         /// For the shared store-change signal (D327.1).
@@ -12,34 +12,17 @@
 
         var body: some View {
             NavigationStack {
-                Form {
-                    // D327.1: one line of secondary footnote text, the first thing under the step's name. Text
-                    // only, not an alert or a banner; VoiceOver hears it once, through `model.announce`.
-                    if let notice = model.dataChangedNotice {
-                        Section {
-                        } footer: {
-                            Text(notice)
+                stepContainer
+                    .navigationTitle(ImportExportText.importTitle)
+                    .navigationSubtitle(model.stepTitle)
+                    .toolbar { toolbar }
+                    .overlay {
+                        if model.isWorking {
+                            ProgressView(model.workingText)
+                                .padding()
+                                .background(.regularMaterial, in: .rect(cornerRadius: 12))
                         }
                     }
-                    switch model.step {
-                    case .pickFile, .columns: CSVColumnsStep(model: model)
-                    case .account: CSVAccountStep(model: model)
-                    case .match: CSVMatchStep(model: model)
-                    case .review: CSVReviewStep(model: model)
-                    case .summary: CSVSummaryStep(model: model)
-                    }
-                }
-                .formStyle(.grouped)
-                .navigationTitle(ImportExportText.importTitle)
-                .navigationSubtitle(model.stepTitle)
-                .toolbar { toolbar }
-                .overlay {
-                    if model.isWorking {
-                        ProgressView(model.workingText)
-                            .padding()
-                            .background(.regularMaterial, in: .rect(cornerRadius: 12))
-                    }
-                }
             }
             #if os(macOS)
                 // Small enough for a default-size window; the form scrolls when the steps run longer.
@@ -75,6 +58,40 @@
                 Task { await model.dataChanged() }
             }
             .onDisappear { model.close() }
+        }
+
+        /// Match and Review list a row per name or per file row, so they're a `List`, which lays out only the
+        /// rows on screen, with or without VoiceOver or another accessibility client. A grouped `Form` lays out
+        /// every row on the Mac, which hung a 5,200-row file (Tester's Mac pass on #190). The short steps stay a
+        /// grouped `Form`.
+        @ViewBuilder
+        private var stepContainer: some View {
+            switch model.step {
+            case .match, .review:
+                List { stepContent }
+            case .pickFile, .columns, .account, .summary:
+                Form { stepContent }
+                    .formStyle(.grouped)
+            }
+        }
+
+        @ViewBuilder
+        private var stepContent: some View {
+            // D327.1: one line of secondary footnote text, the first thing under the step's name. Text only, not
+            // an alert or a banner; VoiceOver hears it once, through `model.announce`.
+            if let notice = model.dataChangedNotice {
+                Section {
+                } footer: {
+                    Text(notice)
+                }
+            }
+            switch model.step {
+            case .pickFile, .columns: CSVColumnsStep(model: model)
+            case .account: CSVAccountStep(model: model)
+            case .match: CSVMatchStep(model: model)
+            case .review: CSVReviewStep(model: model)
+            case .summary: CSVSummaryStep(model: model)
+            }
         }
 
         #if os(iOS)
