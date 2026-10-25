@@ -17,8 +17,11 @@
         let open: (UUID) -> Void
         @State private var selection: ScheduledTableRow.ID?
         /// Which columns show, their order and widths, per window: the header's context menu changes them.
-        @SceneStorage("scheduledTableColumns")
+        @SceneStorage(Self.columnsKey)
         private var columnCustomization = TableColumnCustomization<ScheduledTableRow>()
+
+        /// The scene storage key for the saved customization.
+        static let columnsKey = "scheduledTableColumns"
 
         /// Stable column IDs for the saved customization.
         private enum ColumnID {
@@ -149,6 +152,14 @@
             .onKeyPress(keys: Self.shortcutKeys, phases: .down) { press in
                 handle(press)
             }
+            #if DEBUG
+                // Testing hook: `-LittleOrbitScheduledColumns repeat-shown` shows Repeat in the first window.
+                .task {
+                    if ScheduledColumnsLaunchPreset.takeShowsRepeat() {
+                        columnCustomization[visibility: ColumnID.repeatRule] = .visible
+                    }
+                }
+            #endif
         }
 
         /// Delete and E: with ⌘, the context menu's shortcuts. ⌘↩ isn't one until #201's Pay sheet is on this base,
