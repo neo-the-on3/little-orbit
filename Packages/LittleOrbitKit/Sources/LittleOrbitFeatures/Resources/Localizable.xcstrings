@@ -467,6 +467,19 @@
         }
       }
     },
+    "%@ is due today": {
+      "comment": "Reminder notification title on an occurrence’s due day (D340.7): %@ is the scheduled item’s name.",
+      "extractionState": "manual",
+      "generatesSymbol": false,
+      "localizations": {
+        "en": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "%@ is due today"
+          }
+        }
+      }
+    },
     "%@ is then deleted.": {
       "comment": "Merge sheet footnote sentence. The merged category.",
       "extractionState": "manual",
@@ -2427,6 +2440,19 @@
           "stringUnit": {
             "state": "translated",
             "value": "Change Payee"
+          }
+        }
+      }
+    },
+    "Click to pay or skip.": {
+      "comment": "Mac reminder body for a manual scheduled item, with no amount, account or category (D354.3).",
+      "extractionState": "manual",
+      "generatesSymbol": false,
+      "localizations": {
+        "en": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Click to pay or skip."
           }
         }
       }
@@ -4471,6 +4497,19 @@
         }
       }
     },
+    "It’s recorded automatically, once.": {
+      "comment": "Reminder body for an automatic scheduled item, with no amount, account or category (D340.7).",
+      "extractionState": "manual",
+      "generatesSymbol": false,
+      "localizations": {
+        "en": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "It’s recorded automatically, once."
+          }
+        }
+      }
+    },
     "It’s removed from this %@. This can’t be undone.": {
       "comment": "Message of the confirmation before deleting one backup. %@ is the device.",
       "extractionState": "manual",
@@ -5570,6 +5609,58 @@
         }
       }
     },
+    "Notifications are off for little-orbit, so reminders can’t arrive. Turn them on in Settings.": {
+      "comment": "iOS Scheduled form footer under Open Settings, when notifications are denied (D341.3).",
+      "extractionState": "manual",
+      "generatesSymbol": false,
+      "localizations": {
+        "en": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Notifications are off for little-orbit, so reminders can’t arrive. Turn them on in Settings."
+          }
+        }
+      }
+    },
+    "Notifications are off for little-orbit, so reminders can’t arrive. Turn them on in System Settings.": {
+      "comment": "Mac Scheduled form footer under Open System Settings, when notifications are denied (D359).",
+      "extractionState": "manual",
+      "generatesSymbol": false,
+      "localizations": {
+        "en": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Notifications are off for little-orbit, so reminders can’t arrive. Turn them on in System Settings."
+          }
+        }
+      }
+    },
+    "Notify when due": {
+      "comment": "Scheduled form toggle: send a local notification on each occurrence’s due day (D341).",
+      "extractionState": "manual",
+      "generatesSymbol": false,
+      "localizations": {
+        "en": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Notify when due"
+          }
+        }
+      }
+    },
+    "Notify when due (%@)": {
+      "comment": "Mac Scheduled form toggle (D360.3): send a local notification on each occurrence’s due day; %@ is the Reminder Time in the device’s time format, such as 09:00.",
+      "extractionState": "manual",
+      "generatesSymbol": false,
+      "localizations": {
+        "en": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Notify when due (%@)"
+          }
+        }
+      }
+    },
     "Nothing was imported.": {
       "comment": "CSV import: the message when the picked file has only a header row (D323.7).",
       "extractionState": "manual",
@@ -5656,6 +5747,32 @@
           "stringUnit": {
             "state": "translated",
             "value": "Only income categories are offered."
+          }
+        }
+      }
+    },
+    "Open Settings": {
+      "comment": "iOS Scheduled form row above the notifications-off footer: opens notification settings.",
+      "extractionState": "manual",
+      "generatesSymbol": false,
+      "localizations": {
+        "en": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Open Settings"
+          }
+        }
+      }
+    },
+    "Open System Settings": {
+      "comment": "Mac Scheduled form row above the notifications-off footer: opens System Settings.",
+      "extractionState": "manual",
+      "generatesSymbol": false,
+      "localizations": {
+        "en": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Open System Settings"
           }
         }
       }
@@ -5899,6 +6016,32 @@
           "stringUnit": {
             "state": "translated",
             "value": "Redid %@"
+          }
+        }
+      }
+    },
+    "Reminder Time": {
+      "comment": "Settings › Scheduled Items: the time picker for when reminders arrive (D341.4).",
+      "extractionState": "manual",
+      "generatesSymbol": false,
+      "localizations": {
+        "en": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Reminder Time"
+          }
+        }
+      }
+    },
+    "Reminders arrive at %@ (Settings › Scheduled Items).": {
+      "comment": "Scheduled form footnote under Notify when due (D340.7): %@ is the Reminder Time in the device’s time format, such as 09:00.",
+      "extractionState": "manual",
+      "generatesSymbol": false,
+      "localizations": {
+        "en": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Reminders arrive at %@ (Settings › Scheduled Items)."
           }
         }
       }
@@ -6151,6 +6294,32 @@
         }
       }
     },
+    "Scheduled Items": {
+      "comment": "Settings section, and the Mac Settings tab, for scheduled items’ reminders (D341.4).",
+      "extractionState": "manual",
+      "generatesSymbol": false,
+      "localizations": {
+        "en": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Scheduled Items"
+          }
+        }
+      }
+    },
+    "Scheduled items set to “Notify when due” remind you at this time.": {
+      "comment": "Settings › Scheduled Items footer under Reminder Time (D341.4).",
+      "extractionState": "manual",
+      "generatesSymbol": false,
+      "localizations": {
+        "en": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Scheduled items set to “Notify when due” remind you at this time."
+          }
+        }
+      }
+    },
     "Search or create": {
       "comment": "Transaction form category picker: the search field’s placeholder. Typing a new name offers to create it.",
       "extractionState": "manual",
@@ -6275,6 +6444,19 @@
           "stringUnit": {
             "state": "translated",
             "value": "Tap a category’s arrow to show its subcategories (one level). Archived categories stay out of pickers but keep their history in reports. Uncategorised isn’t a category: expenses and income without one show the gray ? chip; transfers never have a category."
+          }
+        }
+      }
+    },
+    "Tap to pay or skip.": {
+      "comment": "iOS reminder body for a manual scheduled item, with no amount, account or category (D340.7).",
+      "extractionState": "manual",
+      "generatesSymbol": false,
+      "localizations": {
+        "en": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Tap to pay or skip."
           }
         }
       }
