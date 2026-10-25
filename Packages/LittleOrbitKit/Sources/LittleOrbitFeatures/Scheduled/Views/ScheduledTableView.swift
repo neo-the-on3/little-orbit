@@ -6,9 +6,10 @@
     /// The Mac Scheduled list as a Table (#26 frame "Scheduled – overdue, due today, upcoming, completed; sidebar
     /// badge", D340.13, D355): Due 96, Name 180, Repeat 150, Account 120, Amount 120 (trailing) and Status filling the
     /// rest, in sections Overdue, Due Today, Upcoming and Completed with no counts (D334.2), each ordered by due
-    /// date. Return or a double-click opens the item. With a row selected, ⌘↩ pays it, ⌘E edits it, and ⌘⌫, the
-    /// Delete key or Edit ▸ Delete asks to delete it; Skip This Occurrence… has no shortcut. The catch-up and overdue
-    /// hints sit above it, and the counts and the automatic line below it. Columns aren't sortable.
+    /// date. Return or a double-click opens the item. With a row selected, ⌘E edits it, and ⌘⌫, the Delete key or
+    /// Edit ▸ Delete asks to delete it. ⌘↩ waits for #201's Pay sheet (D360.2); the menu's Pay Now and Skip This
+    /// Occurrence… have no shortcut. The catch-up and overdue hints sit above it, and the counts and the automatic
+    /// line below it. Columns aren't sortable.
     struct ScheduledTableView: View {
         let model: ScheduledListViewModel
         /// Opens an item's screen in the caller's stack.
@@ -28,6 +29,9 @@
                 VStack(alignment: .leading, spacing: Spacing.space2) {
                     if let hint = model.catchUpHint {
                         Label(hint, systemImage: "info.circle")
+                            // Drawn: only now is it shown (D338.6). Keyed on the text, so a catch-up that
+                            // replaces it while it's on screen is marked shown too (Tech Architect, #198).
+                            .task(id: hint) { model.catchUpHintAppeared() }
                     }
                     if let hint = model.overdueHint {
                         Label(hint, systemImage: "exclamationmark.triangle")
@@ -42,7 +46,7 @@
                 TableColumn(model.dueColumn) { row in
                     Text(verbatim: row.due)
                 }
-                .width(ideal: 96)
+                .width(min: 80, ideal: 96)
                 TableColumn(model.nameColumn) { row in
                     Label {
                         Text(verbatim: row.name)
@@ -51,22 +55,25 @@
                             .accessibilityHidden(true)
                     }
                 }
-                .width(ideal: 180)
+                // Name and Repeat give up width first, so Account and Status aren't clipped in a 900-point
+                // window (Tester, #205).
+                .width(min: 100, ideal: 180)
                 TableColumn(model.repeatColumn) { row in
                     Text(verbatim: row.repeatText)
+                        .help(row.repeatText)
                 }
-                .width(ideal: 150)
+                .width(min: 110, ideal: 170)
                 TableColumn(model.accountColumn) { row in
                     Text(verbatim: row.account)
                 }
-                .width(ideal: 120)
+                .width(min: 120, ideal: 120)
                 TableColumn(model.amountColumn) { row in
                     Text(verbatim: row.amount)
                         .foregroundStyle(row.tone.color)
                         .monospacedDigit()
                         .frame(maxWidth: .infinity, alignment: .trailing)
                 }
-                .width(ideal: 120)
+                .width(min: 100, ideal: 120)
                 TableColumn(model.statusColumn) { row in
                     Text(verbatim: row.status)
                         .foregroundStyle(.secondary)
@@ -92,40 +99,25 @@
             }
             // Edit ▸ Delete and the Delete key, the standard Mac path (Tech Architect NB 2).
             .onDeleteCommand {
-                if let row = selectedRow {
-                    model.confirmDelete(row.itemID)
-                }
+                model.tableCommand(.delete, selection: selection)
             }
             .onKeyPress(keys: Self.shortcutKeys, phases: .down) { press in
                 handle(press)
             }
         }
 
-        /// Return, keypad Enter, Delete and E: with ⌘, the context menu's shortcuts.
-        private static let shortcutKeys: Set<KeyEquivalent> = [.return, KeyEquivalent("\u{3}"), .delete, "e", "E"]
+        /// Delete and E: with ⌘, the context menu's shortcuts. ⌘↩ isn't one until #201's Pay sheet is on this base,
+        /// because it would record straight away (D360.2).
+        private static let shortcutKeys: Set<KeyEquivalent> = [.delete, "e", "E"]
 
-        private var selectedRow: ScheduledRow? {
-            selection.flatMap { model.tableRow(id: $0)?.row }
-        }
-
-        /// ⌘↩ (or ⌘ keypad Enter) Pay Now, ⌘E Edit…, ⌘⌫ Delete Scheduled Item… on the selected row, as the context
-        /// menu shows them. ⌘ must be held, with no other modifier; Caps Lock and the keypad flag don't count.
+        /// ⌘E Edit… and ⌘⌫ Delete Scheduled Item… on the selected row only (D360.2). ⌘ must be held, with no other
+        /// modifier; Caps Lock and the keypad flag don't count.
         private func handle(_ press: KeyPress) -> KeyPress.Result {
-            guard press.modifiers.subtracting([.capsLock, .numericPad]) == .command, let row = selectedRow else {
+            guard press.modifiers.subtracting([.capsLock, .numericPad]) == .command else {
                 return .ignored
             }
-            switch press.key {
-            case .return, KeyEquivalent("\u{3}"):
-                guard row.canSettle else {
-                    return .ignored
-                }
-                model.payNow(row)
-            case .delete:
-                model.confirmDelete(row.itemID)
-            default:
-                model.openEditor(row.itemID)
-            }
-            return .handled
+            let command: ScheduledTableCommand = press.key == .delete ? .delete : .edit
+            return model.tableCommand(command, selection: selection) ? .handled : .ignored
         }
 
         @ViewBuilder private var footer: some View {

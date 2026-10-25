@@ -76,8 +76,10 @@
                 .toolbar {
                     // No shortcut: ⌘N stays New Transaction.
                     ToolbarItem(placement: .primaryAction) {
+                        // Told apart from the window's other + by its help and spoken label (Tester, #205).
                         Button(model.addTitle, systemImage: "plus") { model.openNew() }
-                            .help(model.addTitle)
+                            .help(model.newItemTitle)
+                            .accessibilityLabel(model.newItemTitle)
                     }
                 }
                 .navigationDestination(item: $openedItem) { id in
@@ -252,8 +254,9 @@
 
         var body: some View {
             if row.canSettle {
+                // No ⌘↩ until #201's "Pay ‹item›" sheet is on this base: it would record straight away (D360.2).
+                // Whichever of #201 and #205 lands second wires ⌘↩ to open that sheet.
                 Button(model.payNowTitle, systemImage: "checkmark.circle") { model.payNow(row) }
-                    .macShortcut(.return)
                 Button(model.skipMenuTitle, systemImage: "forward") { model.confirmSkip(row) }
                 Divider()
             }
