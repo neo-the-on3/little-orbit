@@ -83,6 +83,12 @@ public final class ScheduledListViewModel {
     @ObservationIgnored private var loaded = false
     /// What catch-up recorded that the catch-up hint hasn't reported yet, read at each load (D338.6).
     public private(set) var pendingCatchUp: [ScheduledCatchUpGroup] = []
+    /// Whether this list's hint row has actually appeared on screen. Only that marks the hint shown, never a load.
+    @ObservationIgnored private var catchUpHintAppearedHere = false
+    /// This list left the Scheduled screens after its hint appeared: the notice is gone from app settings, but this
+    /// list keeps showing it if it comes back. The Mac's detail column may report the list disappearing and
+    /// appearing again while it stays on screen, and that mustn't take away a hint that's still in view.
+    @ObservationIgnored private var keepsHintAfterLeaving = false
     public let platform: ScheduledPlatform
 
     @ObservationIgnored private let useCases: ScheduledScreenUseCases
@@ -114,22 +120,31 @@ public final class ScheduledListViewModel {
         } catch {
             alert = ScheduledText.loadFailed
         }
-        pendingCatchUp = useCases.notices.pending()
-        noteCatchUpHintShown()
+        let stored = useCases.notices.pending()
+        if !stored.isEmpty || !keepsHintAfterLeaving {
+            pendingCatchUp = stored
+            keepsHintAfterLeaving = false
+        }
+        forgetCatchUpHintWithNothingToName()
     }
 
-    /// While the list is on screen, its catch-up hint counts as shown; one with nothing left to name (its items were
-    /// deleted) is forgotten (D338.6).
-    private func noteCatchUpHintShown() {
-        guard loaded, visibleScreens.contains(.list), !pendingCatchUp.isEmpty else {
+    /// While the list is on screen, a pending catch-up hint with nothing left to name (its items were deleted) is
+    /// forgotten (D338.6).
+    private func forgetCatchUpHintWithNothingToName() {
+        guard loaded, visibleScreens.contains(.list), !pendingCatchUp.isEmpty, catchUpHint == nil else {
             return
         }
-        if catchUpHint == nil {
-            useCases.notices.clear()
-            pendingCatchUp = []
-        } else {
-            useCases.notices.markShown()
+        useCases.notices.clear()
+        pendingCatchUp = []
+    }
+
+    /// The hint row appeared on screen: only now does the hint count as shown (D338.6).
+    public func catchUpHintAppeared() {
+        guard loaded, catchUpHint != nil else {
+            return
         }
+        catchUpHintAppearedHere = true
+        useCases.notices.markShown()
     }
 
     // MARK: Presenting
@@ -144,7 +159,7 @@ public final class ScheduledListViewModel {
         visibleScreens.removeAll { $0 == screen }
         visibleScreens.append(screen)
         if screen == .list {
-            noteCatchUpHintShown()
+            forgetCatchUpHintWithNothingToName()
         }
     }
 
@@ -158,8 +173,19 @@ public final class ScheduledListViewModel {
         Task { @MainActor [weak self] in
             await Task.yield()
             if let self, self.visibleScreens.isEmpty {
-                self.dismissCatchUpHint()
+                self.leftScheduled()
             }
+        }
+    }
+
+    /// The list left the Scheduled screens: a shown hint goes from app settings, so the next visit doesn't show it,
+    /// but one that appeared in this list stays in this list in case it was only re-shown in place (D338.6).
+    private func leftScheduled() {
+        useCases.notices.dismissIfShown()
+        if catchUpHintAppearedHere && !pendingCatchUp.isEmpty {
+            keepsHintAfterLeaving = true
+        } else {
+            pendingCatchUp = useCases.notices.pending()
         }
     }
 
@@ -167,6 +193,8 @@ public final class ScheduledListViewModel {
     public func dismissCatchUpHint() {
         useCases.notices.dismissIfShown()
         pendingCatchUp = useCases.notices.pending()
+        catchUpHintAppearedHere = false
+        keepsHintAfterLeaving = false
     }
 
     public var title: String { ScheduledText.title }

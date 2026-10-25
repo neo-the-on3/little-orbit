@@ -35,9 +35,15 @@ struct ScheduledCatchUpHintTests {
         // Not on screen yet: leaving keeps it.
         list.dismissCatchUpHint()
         #expect(list.catchUpHint != nil)
-        // Shown, then left: it goes, in every window.
+        // Loaded on screen but not drawn yet: not shown, so leaving keeps it.
         list.screenAppeared(.list)
         list.load()
+        list.dismissCatchUpHint()
+        mac.load()
+        #expect(mac.catchUpHint != nil)
+        // Drawn, then left: it goes, in every window.
+        list.load()
+        list.catchUpHintAppeared()
         list.dismissCatchUpHint()
         mac.load()
         #expect(list.catchUpHint == nil && mac.catchUpHint == nil)
@@ -72,6 +78,7 @@ struct ScheduledCatchUpHintTests {
         )
         // Shown, then the app quits on Scheduled: the next launch doesn't show it again.
         relaunched.screenAppeared(.list)
+        relaunched.catchUpHintAppeared()
         let third = scene.feature().makeList()
         third.load()
         #expect(third.catchUpHint == nil)
@@ -103,6 +110,7 @@ struct ScheduledCatchUpHintTests {
         list.screenAppeared(.list)
         list.load()
         #expect(list.catchUpHint == "1 missed automatic Rent transaction was recorded: 1 Oct. It’s recorded only once.")
+        list.catchUpHintAppeared()
         list.dismissCatchUpHint()
 
         var water = scene.item("Plant watering", day: 1, automatic: true, month: 10)
@@ -115,6 +123,7 @@ struct ScheduledCatchUpHintTests {
             list.catchUpHint
                 == "25 missed automatic Plant watering transactions were recorded, from 1 Oct to 25 Oct. Each is recorded only once. Manual items aren’t recorded for you: each missed one is listed under Overdue."
         )
+        list.catchUpHintAppeared()
         list.dismissCatchUpHint()
 
         scene.now = ScheduledScene.date(CalendarDay(year: 2026, month: 11, day: 2))
@@ -126,6 +135,7 @@ struct ScheduledCatchUpHintTests {
             list.catchUpHint
                 == "9 missed automatic transactions were recorded: \(parts). Each is recorded only once. Manual items aren’t recorded for you: each missed one is listed under Overdue."
         )
+        list.catchUpHintAppeared()
         list.dismissCatchUpHint()
 
         try scene.add(
@@ -140,6 +150,52 @@ struct ScheduledCatchUpHintTests {
             list.catchUpHint
                 == "5 missed automatic transactions were recorded for 3 items. Each is recorded only once. Manual items aren’t recorded for you: each missed one is listed under Overdue."
         )
+    }
+
+    @Test(
+        "Tester #198 bug: the hint is shown only once drawn, and a disappear and reappear in place keeps it",
+        arguments: [ScheduledPlatform.iOS, .macOS],
+    )
+    func catchUpHintSurvivesReappearing(platform: ScheduledPlatform) async throws {
+        let scene = try ScheduledScene()
+        try scene.add(scene.item("Rent", day: 1, automatic: true))
+        let feature = scene.feature()
+        feature.catchUp(atLaunch: true)
+        let list = scene.list(feature, platform: platform)
+        // The list view's onAppear: loading on screen doesn't count as showing the hint.
+        list.screenAppeared(.list)
+        list.load()
+        #expect(list.catchUpHint != nil)
+        #expect(scene.notices.notice()?.shown == false)
+        // The Mac's detail column reports the list disappearing and appearing again before the hint is drawn.
+        list.screenDisappeared(.list)
+        await Self.settle()
+        list.screenAppeared(.list)
+        list.load()
+        #expect(list.catchUpHint != nil)
+        #expect(scene.notices.notice() != nil)
+        // The hint row appears: now it's shown.
+        list.catchUpHintAppeared()
+        #expect(scene.notices.notice()?.shown == true)
+        // Re-shown in place after it was drawn: it stays in this list, and the notice is used up.
+        list.screenDisappeared(.list)
+        await Self.settle()
+        list.screenAppeared(.list)
+        list.load()
+        #expect(list.catchUpHint != nil)
+        #expect(scene.notices.notice() == nil)
+        // The next visit is a new list, which shows nothing.
+        let next = scene.list(feature, platform: platform)
+        next.screenAppeared(.list)
+        next.load()
+        #expect(next.catchUpHint == nil)
+    }
+
+    /// Lets the list's deferred "left the Scheduled screens" check run.
+    private static func settle() async {
+        for _ in 0..<5 {
+            await Task.yield()
+        }
     }
 
     @Test("Tech Architect NB 1: a restore clears a pending catch-up hint")

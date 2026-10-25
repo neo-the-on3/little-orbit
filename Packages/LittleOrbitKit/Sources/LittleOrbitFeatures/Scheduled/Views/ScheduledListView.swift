@@ -28,6 +28,8 @@
                 if let hint = model.catchUpHint {
                     Section {
                         Label(hint, systemImage: "info.circle")
+                            // Shown only once it's really on screen, not when the list loads (D338.6).
+                            .onAppear { model.catchUpHintAppeared() }
                     }
                 }
                 if !model.overdueRows.isEmpty {
