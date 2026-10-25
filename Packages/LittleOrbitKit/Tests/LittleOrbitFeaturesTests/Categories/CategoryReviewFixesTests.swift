@@ -276,6 +276,11 @@ extension CountingReads: MoveSubcategoryUseCase, MergeCategoriesUseCase, DeleteC
         return try management.mergeTargets(for: categoryID)
     }
 
+    func mergeImpact(of categoryID: UUID) throws -> CategoryMergeImpact {
+        reads += 1
+        return try management.mergeImpact(of: categoryID)
+    }
+
     func merge(_ sourceID: UUID, into survivingID: UUID) throws {
         try management.merge(sourceID, into: survivingID)
     }

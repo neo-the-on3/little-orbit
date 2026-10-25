@@ -52,6 +52,19 @@ public struct CategoryDeletionImpact: Equatable, Sendable {
     }
 }
 
+/// What merging a category away would change in budgets, for the Merge footnote (D295.1, D307.5). Budgets
+/// that pick one of the merged category's subcategories aren't in it: those subcategories move under the
+/// survivor, so the budgets keep them.
+public struct CategoryMergeImpact: Equatable, Sendable {
+    /// The names of the budgets that pick the merged category itself, sorted. Each picks the survivor
+    /// instead after the merge.
+    public var budgetNames: [String]
+
+    public init(budgetNames: [String] = []) {
+        self.budgetNames = budgetNames
+    }
+}
+
 @MainActor
 public protocol SaveCategoryUseCase {
     /// Adds a category after its siblings. A subcategory takes its parent's kind, whatever `kind` says, and
@@ -91,6 +104,8 @@ public protocol MergeCategoriesUseCase {
     /// The live, unarchived categories `categoryID` can merge into: the same kind, outside its own subtree,
     /// and only top-level ones when it has subcategories. Other kinds are never offered (#24).
     func mergeTargets(for categoryID: UUID) throws -> [TransactionCategory]
+    /// What merging `categoryID` into another category would change in budgets.
+    func mergeImpact(of categoryID: UUID) throws -> CategoryMergeImpact
     /// Merges the source into the survivor in one save, all or nothing (D287.4). It isn't an Undo step
     /// (D287.2). See `LedgerBook.mergingCategories`.
     func merge(_ sourceID: UUID, into survivingID: UUID) throws
@@ -251,6 +266,12 @@ public struct DefaultCategoryManagementUseCase: CategoryManagementUseCase {
         }
     }
 
+    public func mergeImpact(of categoryID: UUID) throws -> CategoryMergeImpact {
+        _ = try existing(categoryID)
+        let picking = try liveBudgets().filter { $0.categoryIDs.contains(categoryID) }
+        return CategoryMergeImpact(budgetNames: Self.sortedNames(picking))
+    }
+
     public func merge(_ sourceID: UUID, into survivingID: UUID) throws {
         try repository.atomically { try repository.mergeCategories(sourceID, into: survivingID) }
     }
@@ -268,9 +289,7 @@ public struct DefaultCategoryManagementUseCase: CategoryManagementUseCase {
             }
         let categories = try repository.categories()
         let liveIDs = Set(categories.filter { $0.deletedAt == nil }.map(\.id))
-        // Both stores serve budgets too; a repository without them has none to count.
-        let budgets = try (repository as? any BudgetRepository)?.budgets() ?? []
-        let affected = budgets.filter { $0.categoryIDs.contains(where: subtree.contains) }
+        let affected = try liveBudgets().filter { $0.categoryIDs.contains(where: subtree.contains) }
         let leftEmpty = affected.filter { budget in
             budget.categoryIDs.allSatisfy { subtree.contains($0) || !liveIDs.contains($0) }
         }
@@ -278,7 +297,7 @@ public struct DefaultCategoryManagementUseCase: CategoryManagementUseCase {
             transactionCount: transactions.count,
             splitLineCount: splitLines.count,
             subcategoryCount: subtree.count - 1,
-            budgetNames: affected.map(\.name).sorted { $0.localizedStandardCompare($1) == .orderedAscending },
+            budgetNames: Self.sortedNames(affected),
             budgetsLeftWithoutCategories: leftEmpty.count,
         )
     }
@@ -310,6 +329,15 @@ public struct DefaultCategoryManagementUseCase: CategoryManagementUseCase {
             throw LedgerValidationError.missingCategory
         }
         return category
+    }
+
+    /// The budgets that aren't deleted. Both stores serve budgets too; a repository without them has none.
+    private func liveBudgets() throws -> [Budget] {
+        try ((repository as? any BudgetRepository)?.budgets() ?? []).filter { $0.deletedAt == nil }
+    }
+
+    private static func sortedNames(_ budgets: [Budget]) -> [String] {
+        budgets.map(\.name).sorted { $0.localizedStandardCompare($1) == .orderedAscending }
     }
 
     /// The category's id with its subcategories' ids (one level).
