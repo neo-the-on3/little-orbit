@@ -89,8 +89,8 @@ public struct BackupFileEntry: Equatable, Sendable, Codable {
 }
 
 /// The sections a backup holds (D62, D96). Sections for features that haven't shipped are reserved: format 1
-/// writes them empty. Budgets (#25) fill theirs within format 1 while the schema is still V1 in development
-/// (D294): a backup without budgets reads as before. After the first release, filling a section bumps
+/// writes them empty. Budgets (#25) and scheduled items (#26) fill theirs within format 1 while the schema is still
+/// V1 in development (D294): a backup without them reads as before. After the first release, filling a section bumps
 /// `BackupFormat.currentVersion` and migrates older files.
 public enum BackupSection: String, CaseIterable, Sendable, Codable {
     case accounts
@@ -104,6 +104,7 @@ public enum BackupSection: String, CaseIterable, Sendable, Codable {
     case budgets
     // Reserved until their tickets ship. #40 doesn't wait for them.
     case importRules
+    /// Listed in the manifest only when the backup has scheduled items (#26).
     case scheduledItems
     case reconciliationHistory
     case sharedSettings
@@ -206,7 +207,8 @@ public struct BackupContents: Equatable, Sendable, Codable {
     public var importRules: [BackupReservedRecord]
     /// Budgets with their limit history (#25). Empty in backups made before budgets.
     public var budgets: [Budget]
-    public var scheduledItems: [BackupReservedRecord]
+    /// Scheduled items with their settled occurrences (#26). Empty in backups made before them.
+    public var scheduledItems: [ScheduledItem]
     public var reconciliationHistory: [BackupReservedRecord]
     public var sharedSettings: BackupSharedSettings
 
@@ -225,7 +227,10 @@ public struct BackupContents: Equatable, Sendable, Codable {
         if !budgets.isEmpty && !self.manifest.sections.contains(.budgets) {
             self.manifest.sections.append(.budgets)
         }
-        scheduledItems = []
+        scheduledItems = ordered.scheduledItems
+        if !scheduledItems.isEmpty && !self.manifest.sections.contains(.scheduledItems) {
+            self.manifest.sections.append(.scheduledItems)
+        }
         reconciliationHistory = []
         self.sharedSettings = sharedSettings
     }
@@ -241,6 +246,7 @@ public struct BackupContents: Equatable, Sendable, Codable {
             splits: splits,
             attachments: attachments,
             budgets: budgets,
+            scheduledItems: scheduledItems,
         )
     }
 
@@ -255,6 +261,7 @@ public struct BackupContents: Equatable, Sendable, Codable {
             splits: ledger.splits.sorted { $0.id.uuidString < $1.id.uuidString },
             attachments: ledger.attachments.sorted { $0.id.uuidString < $1.id.uuidString },
             budgets: ledger.budgets.sorted { $0.id.uuidString < $1.id.uuidString },
+            scheduledItems: ledger.scheduledItems.sorted { $0.id.uuidString < $1.id.uuidString },
         )
     }
 }

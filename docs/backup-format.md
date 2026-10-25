@@ -70,7 +70,7 @@ format bump (#100).
 | Path | Contents |
 | --- | --- |
 | `manifest.json` | What the backup is, and every other file's path, size and SHA-256. Written last. |
-| `shared.json` | Ledger data that isn't per account and per year: accounts, categories, payees, tags, budgets with their limit history, the reserved sections and shared settings. Also the few records that have no account or no transaction (`unfiled`). |
+| `shared.json` | Ledger data that isn't per account and per year: accounts, categories, payees, tags, budgets with their limit history, scheduled items with their settled occurrences, the reserved sections and shared settings. Also the few records that have no account or no transaction (`unfiled`). |
 | `transfers/<year>.json` | Transfers, by the year of each transaction's own local date. |
 | `accounts/<account id>/<year>.json` | Every other transaction of that account, by year, with its splits and attachment details. |
 | `attachments/<attachment id>` | Attachment bytes, exactly as stored. |
@@ -143,8 +143,21 @@ break the stores' rule (`LedgerBook.validateStoredBudgets`: a missing, removed o
 or less or with too many decimals, a custom repeat outside 1–99, an unknown currency, a day that doesn't exist, or a
 repeated ID) is damaged, and nothing is replaced. A budget with no categories is valid (D307.5). The tests pin a
 backup written before budgets (`Format 1 Before Budgets` in the Features test fixtures) and its fingerprint, until
-format 1 freezes with V1 at the first release. After the first release, the format that fills a reserved section, or changes
-the layout, raises `BackupFormat.currentVersion` and migrates older backups on restore.
+format 1 freezes with V1 at the first release.
+
+Scheduled items (#26) likewise fill the reserved `scheduledItems` section of `shared.json` within format 1, as the
+schema is still V1 and changes in place (D294). Each item carries its settled occurrences (day, `posted` or
+`skipped`, and the transaction it recorded), so a restored ledger never records an occurrence again, and any
+`pending` ones: unpaid days of the schedule before a start or repeat edit, which stay overdue until paid or skipped
+(D336.1). A backup without scheduled items writes the section as before, its manifest doesn't list it, and its
+fingerprint doesn't change; older backups read with no scheduled items. The repeat is written as `{"kind": "never"}`
+or `{"kind": "every", "unit": "month", "count": 1}`, and days as `{"year", "month", "day"}`. A backup whose scheduled
+items break the stores' rule (`LedgerBook.validateStoredScheduledItems`: an end before the start, a repeat outside
+1–99, a day that doesn't exist, a repeated item ID, or one occurrence settled twice) is damaged, and nothing is
+replaced.
+
+After the first release, the format that fills a reserved section, or changes the layout, raises
+`BackupFormat.currentVersion` and migrates older backups on restore.
 
 ## Retention
 

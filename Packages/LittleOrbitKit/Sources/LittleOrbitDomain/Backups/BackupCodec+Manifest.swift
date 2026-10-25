@@ -2,12 +2,11 @@ import Foundation
 
 extension LedgerSnapshot: Encodable {
     private enum CodingKeys: String, CodingKey {
-        case accounts, transactions, categories, payees, tags, splits, attachments, budgets
+        case accounts, transactions, categories, payees, tags, splits, attachments, budgets, scheduledItems
     }
 
-    /// Budgets are written only when there are some, so a ledger without budgets keeps the fingerprint it had
-    /// before budgets existed.
-
+    /// Budgets and scheduled items are written only when there are some, so a ledger without them keeps the
+    /// fingerprint it had before they existed (#25, #26).
     public func encode(to encoder: any Encoder) throws {
         var container = encoder.container(keyedBy: CodingKeys.self)
         try container.encode(accounts, forKey: .accounts)
@@ -19,6 +18,9 @@ extension LedgerSnapshot: Encodable {
         try container.encode(attachments, forKey: .attachments)
         if !budgets.isEmpty {
             try container.encode(budgets, forKey: .budgets)
+        }
+        if !scheduledItems.isEmpty {
+            try container.encode(scheduledItems, forKey: .scheduledItems)
         }
     }
 }
@@ -56,5 +58,12 @@ struct NewerManifestBackup: Decodable {
 
     private enum CodingKeys: String, CodingKey {
         case kind, createdAt, nameIndex, month
+    }
+}
+
+extension BackupCodec {
+    /// Where an attachment's bytes are in a backup folder.
+    static func attachmentPath(_ id: UUID) -> String {
+        "\(BackupFormat.attachmentsFolder)/\(id.uuidString)"
     }
 }
