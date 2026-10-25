@@ -33,6 +33,11 @@ Phase 2 fields are columns and relationships on day one, with defaults, so using
 - Transaction `status` (default `cleared`), `tags`, `splits`, `attachments`, `refundOfID`, `isRefund` (default `false`), `deletedAt`
 - `deletedAt` on every entity, including splits and attachments
 - Tag, `TransactionSplit`, and `Attachment` entities
+- `BudgetRecord` and `BudgetLimitRecord` (#25), added to V1 in place (D294.5). A budget links to the categories it
+  picked (many-to-many, inverse `CategoryRecord.budgets`) and owns its limit history (cascade). Start days are kept
+  as year, month and day. A changed V1 means a development store reset; nothing has shipped. Like every other
+  record, a budget or limit carries `deletedAt` for sync but is removed outright when deleted. Restores check budgets
+  with `LedgerBook.validateStoredBudgets` before either store replaces anything, so the two stores keep the same data.
 
 Money is not a `Decimal` column. Each amount is an `Int64` number of minor units plus an `Int16` scale (`openingBalanceMinor` / `openingBalanceScale`, and the same pair for transaction amounts, destination amounts, credit limits, and splits). The domain type stays `Decimal`. 750.10 in a 2-digit currency is stored as minor units `75010` and scale `2`.
 
@@ -47,6 +52,9 @@ Do not relax these when adding a version:
 - Enums are stored as `String` raw values. Unknown values decode to a fallback (`AccountType.other`, `TransactionType.expense`, `TransactionStatus.cleared`, `CategoryKind.expense`).
 
 ## How to ship the next version
+
+Until the first release there's no V2: `LittleOrbitSchemaV1` changes in place, with no migration between
+development builds (D294.1). V1 is frozen at the first release (D294.2). These steps apply only after that.
 
 1. Leave `LittleOrbitSchemaV1` and its nested model classes unchanged. Editing them rewrites the version that devices already have.
 2. Add `LittleOrbitSchemaV2` with a higher `Schema.Version`. Copy the V1 models and apply the change there.
@@ -74,6 +82,7 @@ A custom stage uses `MigrationStage.custom(fromVersion:toVersion:willMigrate:did
 
 ## What does not belong in a migration of this schema
 
-`Budget`, `ScheduledTemplate`, and `ExchangeRate` are new entities on their own tickets. Adding a new entity is its own schema version when those tickets land. `AccountFolder` (#43) is not reserved here, because a placeholder shape would itself need a migration once the real fields are known. An optional relationship added then can be a lightweight stage.
+`ScheduledTemplate` and `ExchangeRate` are new entities on their own tickets. Before the first release they go
+straight into V1, as budgets did (D294.5). `AccountFolder` (#43) is not reserved here, because a placeholder shape would itself need a migration once the real fields are known. An optional relationship added then can be a lightweight stage.
 
-The domain type is `TransactionCategory`. The SwiftData class stays `CategoryRecord`, so the stored entity name is unchanged. Deleting a category does not update budgets yet. There is no budget entity in V1.
+The domain type is `TransactionCategory`. The SwiftData class stays `CategoryRecord`, so the stored entity name is unchanged. Deleting or merging a category updates the budgets that picked it: they pick the target instead, or drop it when its transactions are left uncategorised (D217.7, D295.1).

@@ -19,6 +19,15 @@ final class InMemoryLedgerRepositoryTests: XCTestCase {
         }
     }
 
+    /// #25: budgets are saved, changed, restored and deleted.
+    func testBudgets() throws {
+        try onMain {
+            try assertBudgetStorage {
+                InMemoryLedgerRepository()
+            }
+        }
+    }
+
     /// D293: an existing install's store has no pending marker, so it counts as seeded and is never seeded.
     func testAStoreWithoutAPendingMarkerIsNeverSeeded() throws {
         try onMain {
