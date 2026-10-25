@@ -302,6 +302,8 @@
             /// posted or skipped (`ScheduledOutcome`).
             public var outcome: String = ScheduledOutcome.posted.rawValue
             public var transactionID: UUID?
+            /// `true` only when the app recorded it (S81, D354.1); unset for the user's Pay or Skip.
+            public var recordedAutomatically: Bool?
             public var createdAt: Date = Date(timeIntervalSinceReferenceDate: 0)
             public var updatedAt: Date = Date(timeIntervalSinceReferenceDate: 0)
             public var deletedAt: Date?
