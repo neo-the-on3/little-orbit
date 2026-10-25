@@ -3,10 +3,11 @@
     import LittleOrbitDomain
     import SwiftData
 
-    /// A scheduled item's settled occurrences (#26). Kept beside `SwiftDataRecordMapping.swift`, which maps the item.
+    /// A scheduled item's occurrence records (#26), with an occurrence's own values (D45). Kept beside
+    /// `SwiftDataRecordMapping.swift`, which maps the item.
     extension LittleOrbitSchemaV1.ScheduledOccurrenceRecord: IdentifiedLedgerRecord {
         var recordID: UUID { id }
-        func apply(_ occurrence: ScheduledOccurrence) {
+        func apply(_ occurrence: ScheduledOccurrence) throws {
             id = occurrence.id
             year = occurrence.day.year
             month = occurrence.day.month
@@ -14,6 +15,7 @@
             outcome = occurrence.outcome.rawValue
             transactionID = occurrence.transactionID
             recordedAutomatically = occurrence.recordedAutomatically
+            try apply(occurrence.edit)
             createdAt = occurrence.createdAt
             updatedAt = occurrence.updatedAt
             deletedAt = occurrence.deletedAt
@@ -27,9 +29,57 @@
                 outcome: ScheduledOutcome(rawValue: outcome) ?? .posted,
                 transactionID: transactionID,
                 recordedAutomatically: recordedAutomatically,
+                edit: makeEdit(),
                 createdAt: createdAt,
                 updatedAt: updatedAt,
                 deletedAt: deletedAt,
+            )
+        }
+
+        private func apply(_ edit: ScheduledOccurrenceEdit?) throws {
+            editFields = edit.map { $0.fields.map(\.rawValue).joined(separator: ",") }
+            editYear = edit?.day?.year
+            editMonth = edit?.day?.month
+            editDayOfMonth = edit?.day?.day
+            // Kept with the decimal places it has, so it reads back exactly, whatever the account's currency.
+            let amount = try edit?.amount
+                .map { try MinorUnitDecimal.store($0, scale: MinorUnitDecimal.fractionalDigits(in: $0)) }
+            editAmountMinor = amount?.minorUnits
+            editAmountScale = amount?.scale
+            editAccountID = edit?.accountID
+            editTransferAccountID = edit?.transferAccountID
+            editCategoryID = edit?.categoryID
+            editPayeeID = edit?.payeeID
+            editDetails = edit?.details
+            editNote = edit?.note
+        }
+
+        private func makeEdit() -> ScheduledOccurrenceEdit? {
+            guard let editFields else {
+                return nil
+            }
+            // An unknown field name is left out: the occurrence follows the item for it.
+            let fields = editFields.split(separator: ",").compactMap { ScheduledEditField(rawValue: String($0)) }
+            var day: CalendarDay?
+            if let editYear, let editMonth, let editDayOfMonth {
+                day = CalendarDay(year: editYear, month: editMonth, day: editDayOfMonth)
+            }
+            var amount: Decimal?
+            if let editAmountMinor, let editAmountScale {
+                amount = MinorUnitDecimal.decimal(
+                    from: MinorUnitDecimal.Stored(minorUnits: editAmountMinor, scale: editAmountScale)
+                )
+            }
+            return ScheduledOccurrenceEdit(
+                fields: fields,
+                day: day,
+                amount: amount,
+                accountID: editAccountID,
+                transferAccountID: editTransferAccountID,
+                categoryID: editCategoryID,
+                payeeID: editPayeeID,
+                details: editDetails,
+                note: editNote,
             )
         }
     }

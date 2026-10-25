@@ -56,6 +56,11 @@ Phase 2 fields are columns and relationships on day one, with defaults, so using
   and the ID of the transaction it records come from the item ID and the occurrence's day, and the occurrence is
   saved in the same `save()` as its transaction, so an occurrence is recorded once across relaunches, windows and
   clock changes, and two devices derive the same IDs once sync arrives. A changed V1 means a development store reset.
+  An occurrence edited with "This occurrence only" (#197, D45) keeps its own values on its record, in optional
+  `edit…` columns: the fields it sets (comma-separated `ScheduledEditField` names), a moved due day as year, month
+  and day, an amount as minor units and scale (kept with its own decimal places), and the account, transfer account,
+  category, payee, description and note. An open one has the outcome `edited`; the record keeps its own day as its
+  key, so a moved occurrence's IDs don't change.
 
 Money is not a `Decimal` column. Each amount is an `Int64` number of minor units plus an `Int16` scale (`openingBalanceMinor` / `openingBalanceScale`, and the same pair for transaction amounts, destination amounts, credit limits, and splits). The domain type stays `Decimal`. 750.10 in a 2-digit currency is stored as minor units `75010` and scale `2`.
 

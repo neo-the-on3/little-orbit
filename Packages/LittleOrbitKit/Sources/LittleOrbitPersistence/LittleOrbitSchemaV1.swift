@@ -295,18 +295,35 @@
             public init() {}
         }
 
-        /// One settled occurrence of a scheduled item, keyed by the item and its due day (#26).
+        /// One occurrence of a scheduled item with a record, keyed by the item and its own day (#26): settled, kept
+        /// due after an edit, or with its own values from "This occurrence only" (D45).
         @Model
         public final class ScheduledOccurrenceRecord {
             public var id: UUID = UUID()
             public var year: Int = 1970
             public var month: Int = 1
             public var dayOfMonth: Int = 1
-            /// posted or skipped (`ScheduledOutcome`).
+            /// posted, skipped, pending or edited (`ScheduledOutcome`).
             public var outcome: String = ScheduledOutcome.posted.rawValue
             public var transactionID: UUID?
             /// `true` only when the app recorded it (S81, D354.1); unset for the user's Pay or Skip.
             public var recordedAutomatically: Bool?
+            /// The occurrence's own fields (`ScheduledEditField` raw values, comma-separated), or `nil` with none. A
+            /// field listed with a `nil` value below was cleared on purpose.
+            public var editFields: String?
+            /// The day the occurrence is due on instead of its own day.
+            public var editYear: Int?
+            public var editMonth: Int?
+            public var editDayOfMonth: Int?
+            /// Its own amount, in minor units at `editAmountScale` decimal places.
+            public var editAmountMinor: Int64?
+            public var editAmountScale: Int16?
+            public var editAccountID: UUID?
+            public var editTransferAccountID: UUID?
+            public var editCategoryID: UUID?
+            public var editPayeeID: UUID?
+            public var editDetails: String?
+            public var editNote: String?
             public var createdAt: Date = Date(timeIntervalSinceReferenceDate: 0)
             public var updatedAt: Date = Date(timeIntervalSinceReferenceDate: 0)
             public var deletedAt: Date?

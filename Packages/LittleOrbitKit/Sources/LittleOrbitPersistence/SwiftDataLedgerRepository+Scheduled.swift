@@ -220,7 +220,7 @@
             let occurrenceRecords = try upsert(allOccurrences, existing: occurrences) {
                 LittleOrbitSchemaV1.ScheduledOccurrenceRecord()
             } apply: { record, occurrence in
-                record.apply(occurrence)
+                try record.apply(occurrence)
             }
             for record in occurrenceRecords.values {
                 record.item = nil
