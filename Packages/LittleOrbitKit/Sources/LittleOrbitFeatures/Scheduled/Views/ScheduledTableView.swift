@@ -60,10 +60,14 @@
                 // the D355 strings whole in a 900-point window (UI Designer on #205).
                 .width(min: 80, ideal: 180)
                 TableColumn(model.repeatColumn) { row in
+                    // "Monthly on the 30th or last day" needs about 191 points (D368): one line, truncating at the
+                    // tail, with the full rule as help, as Status does (UI Designer on #205).
                     Text(verbatim: row.repeatText)
+                        .lineLimit(1)
+                        .truncationMode(.tail)
                         .help(row.repeatText)
                 }
-                .width(min: 132, ideal: 170)
+                .width(min: 150, ideal: 200)
                 TableColumn(model.accountColumn) { row in
                     Text(verbatim: row.account)
                 }
