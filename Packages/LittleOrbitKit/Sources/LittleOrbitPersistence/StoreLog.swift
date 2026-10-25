@@ -11,11 +11,23 @@ public enum StoreLog {
         case defaultSeedFailed = "The default categories couldn't be seeded; the next launch tries again."
         case seedMarkerNotWritten = "The pending-seed marker couldn't be written; this store won't be seeded."
         case seedMarkerNotRemoved = "The pending-seed marker couldn't be removed; the empty-store check still applies."
+        case scheduledCatchUpFailed =
+            "Scheduled items couldn't be caught up; the next launch or activation tries again."
+        case scheduledItemsNotRecorded = "Some scheduled items couldn't be recorded; they're tried again next time."
+        case scheduledItemsCreatedAfterToday =
+            "Some scheduled items were created on a later day than today; nothing is due for them until then."
     }
 
     #if canImport(OSLog)
         private static let logger = Logger(subsystem: "LittleOrbit", category: "Store")
     #endif
+
+    /// An event with no error to report, such as some scheduled items left unrecorded.
+    public static func notice(_ event: Event) {
+        #if canImport(OSLog)
+            logger.notice("\(event.rawValue, privacy: .public)")
+        #endif
+    }
 
     public static func failure(_ event: Event, _ error: any Error) {
         let error = error as NSError

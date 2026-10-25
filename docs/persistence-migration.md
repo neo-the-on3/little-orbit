@@ -33,7 +33,8 @@ Phase 2 fields are columns and relationships on day one, with defaults, so using
 - Transaction `status` (default `cleared`), `tags`, `splits`, `attachments`, `refundOfID`, `isRefund` (default `false`), `deletedAt`
 - `deletedAt` on every entity, including splits and attachments. V1 ships with hard deletes and leaves it unused
   (always `nil`): `LedgerBook` removes the record outright and never sets `deletedAt` (accounts, transactions,
-  splits, attachments, categories, payees, tags, and budgets with their limits)
+  splits, attachments, categories, payees, tags, budgets with their limits, and scheduled items with their
+  occurrences)
 - Tag, `TransactionSplit`, and `Attachment` entities
 - `BudgetRecord` and `BudgetLimitRecord` (#25), added to V1 in place (D294.5). A budget links to the categories it
   picked (many-to-many, inverse `CategoryRecord.budgets`) and owns its limit history (cascade). Start days are kept
@@ -41,6 +42,14 @@ Phase 2 fields are columns and relationships on day one, with defaults, so using
   record, a budget or limit carries `deletedAt` for sync but is removed outright when deleted. Restores check budgets
   with `LedgerBook.validateStoredBudgets` before either store replaces anything, so the two stores keep the same data.
   That includes refusing a category picked twice or two limits from one day, which the app never saves.
+- `ScheduledItemRecord` and `ScheduledOccurrenceRecord` (#26), added to V1 in place before the first release
+  (D294). An item keeps its account, transfer account, category and payee as optional UUID columns, not
+  relationships, so an account delete can hide it and its Undo bring it back (D288.1). Days (start, end, resume) are
+  year, month and day columns; the repeat is a kind (`never` or `every`), an optional unit and an optional count.
+  An item owns its settled occurrences (cascade, inverse `ScheduledOccurrenceRecord.item`). Each occurrence's ID
+  and the ID of the transaction it records come from the item ID and the occurrence's day, and the occurrence is
+  saved in the same `save()` as its transaction, so an occurrence is recorded once across relaunches, windows and
+  clock changes, and two devices derive the same IDs once sync arrives. A changed V1 means a development store reset.
 
 Money is not a `Decimal` column. Each amount is an `Int64` number of minor units plus an `Int16` scale (`openingBalanceMinor` / `openingBalanceScale`, and the same pair for transaction amounts, destination amounts, credit limits, and splits). The domain type stays `Decimal`. 750.10 in a 2-digit currency is stored as minor units `75010` and scale `2`.
 
@@ -90,7 +99,7 @@ A custom stage uses `MigrationStage.custom(fromVersion:toVersion:willMigrate:did
 
 ## What does not belong in a migration of this schema
 
-`ScheduledTemplate` and `ExchangeRate` are new entities on their own tickets. Before the first release they go
-straight into V1, as budgets did (D294.5). `AccountFolder` (#43) is not reserved here, because a placeholder shape would itself need a migration once the real fields are known. An optional relationship added then can be a lightweight stage.
+`ExchangeRate` is a new entity on its own ticket. Before the first release it goes straight into V1, as budgets and
+scheduled items did (D294.5, D294). `AccountFolder` (#43) is not reserved here, because a placeholder shape would itself need a migration once the real fields are known. An optional relationship added then can be a lightweight stage.
 
 The domain type is `TransactionCategory`. The SwiftData class stays `CategoryRecord`, so the stored entity name is unchanged. Deleting or merging a category updates the budgets that picked it: they pick the target instead, or drop it when its transactions are left uncategorised (D217.7, D295.1).

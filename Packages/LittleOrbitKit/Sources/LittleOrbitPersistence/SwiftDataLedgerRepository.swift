@@ -10,7 +10,7 @@
         private let context: ModelContext
         let now: @MainActor () -> Date
         /// While `atomically` runs, reads and writes use this snapshot, and one save at the end stores it.
-        private var batch: LedgerSnapshot?
+        private(set) var batch: LedgerSnapshot?
         /// The store's pending-seed marker file (D293, `StoreLocation.pendingSeedMarkerURL`), or `nil` for a store
         /// with none, which counts as seeded. An in-memory container keeps the marker as `pendingInMemory`.
         private let seedMarkerURL: URL?
@@ -134,7 +134,10 @@
             let descriptor = FetchDescriptor<LittleOrbitSchemaV1.TransactionRecord>(
                 predicate: #Predicate { $0.payee?.id == payeeID && $0.deletedAt == nil }
             )
-            return try context.fetchCount(descriptor)
+            let scheduled = FetchDescriptor<LittleOrbitSchemaV1.ScheduledItemRecord>(
+                predicate: #Predicate { $0.payeeID == payeeID && $0.deletedAt == nil }
+            )
+            return try context.fetchCount(descriptor) + context.fetchCount(scheduled)
         }
 
         public func deletePayee(id: UUID) throws {
@@ -215,7 +218,7 @@
             return try loadStored()
         }
 
-        private func persist(_ snapshot: LedgerSnapshot) throws {
+        func persist(_ snapshot: LedgerSnapshot) throws {
             if batch != nil {
                 batch = snapshot
                 return
@@ -247,6 +250,7 @@
                 splits: try fetch(LittleOrbitSchemaV1.TransactionSplitRecord.self).map { $0.makeSplit() },
                 attachments: attachments,
                 budgets: try fetch(LittleOrbitSchemaV1.BudgetRecord.self).map { $0.makeBudget() },
+                scheduledItems: try fetch(LittleOrbitSchemaV1.ScheduledItemRecord.self).map { $0.makeScheduledItem() },
             )
         }
 
@@ -327,6 +331,7 @@
             }
 
             try applyBudgets(snapshot, categories: categoryRecords)
+            try applyScheduledItems(snapshot, currencies: currencies)
             clearRelationships(
                 transactions: transactionRecords,
                 categories: categoryRecords,
@@ -469,9 +474,11 @@
         /// is either fully replaced or unchanged (D63).
         /// A completed restore also marks the seeding done, so even an empty backup never leads to a seed (D293.2).
         /// Budgets are checked first by the rule the in-memory store uses, so a link to a missing category is never
-        /// dropped here and kept there (`LedgerBook.validateStoredBudgets`, #174 B1); nothing changes when it throws.
+        /// dropped here and kept there (`LedgerBook.validateStoredBudgets`, #174 B1), and scheduled items by theirs
+        /// (`LedgerBook.validateStoredScheduledItems`, #26); nothing changes when either throws.
         public func replaceLedger(with snapshot: LedgerSnapshot) throws {
             try LedgerBook.validateStoredBudgets(in: snapshot)
+            try LedgerBook.validateStoredScheduledItems(in: snapshot)
             try persist(snapshot)
             markDefaultSeedDone()
         }
@@ -492,6 +499,7 @@
         /// SwiftData writes them to its own file on save (B1).
         public func replaceLedger(with snapshot: LedgerSnapshot, attachments: any BackupAttachmentReading) throws {
             try LedgerBook.validateStoredBudgets(in: snapshot)
+            try LedgerBook.validateStoredScheduledItems(in: snapshot)
             try write(snapshot, attachmentBytes: attachments)
             markDefaultSeedDone()
         }

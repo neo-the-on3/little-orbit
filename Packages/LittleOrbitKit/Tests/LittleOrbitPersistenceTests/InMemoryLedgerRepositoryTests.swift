@@ -28,6 +28,30 @@ final class InMemoryLedgerRepositoryTests: XCTestCase {
         }
     }
 
+    func testScheduledItemsStoreAndPostOnce() throws {
+        try onMain {
+            try assertScheduledStorage {
+                InMemoryLedgerRepository()
+            }
+        }
+    }
+
+    func testAFailedCatchUpPostingWritesNothing() throws {
+        try onMain {
+            try assertFailedCatchUpPostingWritesNothing {
+                InMemoryLedgerRepository()
+            }
+        }
+    }
+
+    func testAccountDeleteKeepsAThreeDecimalScheduledItem() throws {
+        try onMain {
+            try assertAccountDeleteKeepsAThreeDecimalItem {
+                InMemoryLedgerRepository()
+            }
+        }
+    }
+
     /// D293: an existing install's store has no pending marker, so it counts as seeded and is never seeded.
     func testAStoreWithoutAPendingMarkerIsNeverSeeded() throws {
         try onMain {
