@@ -61,13 +61,14 @@
                 .width(min: 80, ideal: 180)
                 TableColumn(model.repeatColumn) { row in
                     // "Monthly on the 30th or last day" needs about 191 points (D368): one line, truncating at the
-                    // tail, with the full rule as help, as Status does (UI Designer on #205).
+                    // tail, with the full rule as help, as Status does. Min 120 keeps the minimums at 620 points
+                    // (UI Designer on #205, Tech Architect NB 1).
                     Text(verbatim: row.repeatText)
                         .lineLimit(1)
                         .truncationMode(.tail)
                         .help(row.repeatText)
                 }
-                .width(min: 150, ideal: 200)
+                .width(min: 120, ideal: 200)
                 TableColumn(model.accountColumn) { row in
                     Text(verbatim: row.account)
                 }
@@ -80,7 +81,7 @@
                 }
                 .width(min: 100, ideal: 120)
                 TableColumn(model.statusColumn) { row in
-                    // "Due today · Notifications off" needs about 175 points, more than the 140 minimum: it
+                    // "Due today · Notifications off" needs about 175 points, more than the 120 minimum: it
                     // truncates, with the full text as help (UI Designer on #205).
                     Text(verbatim: row.status)
                         .foregroundStyle(.secondary)
@@ -88,7 +89,7 @@
                         .truncationMode(.tail)
                         .help(row.status)
                 }
-                .width(min: 140)
+                .width(min: 120)
             } rows: {
                 ForEach(model.tableSections) { section in
                     Section(section.title) {
