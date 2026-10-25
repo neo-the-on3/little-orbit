@@ -8954,7 +8954,7 @@
       }
     },
     "New Scheduled Item": {
-      "comment": "Scheduled form title: a new item (D334.6).",
+      "comment": "Scheduled form title: a new item (D334.6). Also the help and spoken label of the Scheduled toolbar’s + button.",
       "extractionState": "manual",
       "generatesSymbol": false,
       "localizations": {
