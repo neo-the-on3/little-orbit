@@ -63,7 +63,9 @@ public final class ScheduledFormViewModel: Identifiable {
     public var accountID: UUID? {
         didSet { accountChanged() }
     }
-    public var transferAccountID: UUID?
+    public var transferAccountID: UUID? {
+        didSet { transferAccountChanged(from: oldValue) }
+    }
     /// A transfer to an account in another currency: the amount that arrives, in To's currency (D17, #197 item 9).
     public var receivedText: String
     public var categoryID: UUID?

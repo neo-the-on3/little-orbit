@@ -150,6 +150,37 @@ struct ScheduledCrossCurrencyFormTests {
         #expect(stored.destinationAmount == nil)
     }
 
+    @Test(
+        "Tech Architect NB 2: a To in another currency clears the typed Received; one in the same currency keeps it",
+        arguments: [
+            ScheduledPlatform.iOS, .macOS,
+        ],
+    )
+    func toCurrencyChanges(platform: ScheduledPlatform) throws {
+        let scene = try scene()
+        let card = Account(name: "USD Card", currencyCode: "USD", sortOrder: 4)
+        try scene.repository.saveAccount(card)
+        let (_, form) = try newTransfer(scene, platform: platform)
+        form.transferAccountID = Self.wallet.id
+        form.receivedText = "12"
+        form.transferAccountID = card.id
+        #expect(form.receivedText == "12", "USD to USD: still $12")
+        #expect(form.rateText != nil)
+        form.transferAccountID = Self.yen.id
+        #expect(form.receivedText.isEmpty, "12 must not become ¥12")
+        #expect(form.rateText == nil)
+        #expect(!form.save())
+        #expect(form.receivedError == "Enter the amount received in JPY.")
+        form.transferAccountID = Self.wallet.id
+        #expect(form.receivedError == nil, "The old currency's error goes with it")
+        form.receivedText = "12"
+        form.transferAccountID = scene.fund.id
+        #expect(form.receivedText.isEmpty, "Back to From's currency drops it")
+        #expect(form.save())
+        let stored = try #require(try scene.repository.scheduleLedger().scheduledItems.first)
+        #expect(stored.destinationAmount == nil)
+    }
+
     @Test("From and To are never the same account, in any currency")
     func fromChanges() throws {
         let scene = try scene()
