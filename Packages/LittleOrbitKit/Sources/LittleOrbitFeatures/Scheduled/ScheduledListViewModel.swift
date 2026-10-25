@@ -90,6 +90,8 @@ public final class ScheduledListViewModel {
     /// list keeps showing it if it comes back. The Mac's detail column may report the list disappearing and
     /// appearing again while it stays on screen, and that mustn't take away a hint that's still in view.
     @ObservationIgnored private var keepsHintAfterLeaving = false
+    /// The notices' `clearCount` at the last load: a change means a restore forgot the hint this list kept.
+    @ObservationIgnored private var seenClearCount: Int?
     public let platform: ScheduledPlatform
 
     @ObservationIgnored private let useCases: ScheduledScreenUseCases
@@ -122,6 +124,14 @@ public final class ScheduledListViewModel {
             alert = ScheduledText.loadFailed
         }
         let stored = useCases.notices.pending()
+        let clearCount = useCases.notices.clearCount
+        if let seenClearCount, seenClearCount != clearCount {
+            // A restore replaced the ledger: the hint this list kept after reporting it goes too (Tech Architect
+            // #198 NB1).
+            keepsHintAfterLeaving = false
+            catchUpHintAppearedHere = false
+        }
+        seenClearCount = clearCount
         if !stored.isEmpty || !keepsHintAfterLeaving {
             pendingCatchUp = stored
             keepsHintAfterLeaving = false

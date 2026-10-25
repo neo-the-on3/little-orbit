@@ -211,6 +211,29 @@ struct ScheduledCatchUpHintTests {
         await settle()
     }
 
+    @Test("Tech Architect #198 NB1: a restore drops a hint the list kept after re-showing it in place")
+    func restoreDropsAKeptHint() async throws {
+        let scene = try ScheduledScene()
+        try scene.add(scene.item("Rent", day: 1, automatic: true))
+        let feature = scene.feature()
+        feature.catchUp(atLaunch: true)
+        let list = Self.visit(feature)
+        list.catchUpHintAppeared()
+        // Re-shown in place after it was drawn: this list keeps it, and the notice is used up.
+        await Self.leave(list)
+        list.screenAppeared(.list)
+        list.load()
+        #expect(list.catchUpHint != nil)
+        #expect(scene.notices.notice() == nil)
+        // A restore replaces the ledger, then every window reloads: the kept hint goes too.
+        scene.updates.ledgerReplaced()
+        list.load()
+        #expect(list.catchUpHint == nil)
+        // Later reloads don't bring it back.
+        list.load()
+        #expect(list.catchUpHint == nil)
+    }
+
     @Test("Tech Architect NB 1: a restore clears a pending catch-up hint")
     func restoreClearsTheHint() throws {
         let scene = try ScheduledScene()
