@@ -8,7 +8,8 @@ import Foundation
 /// never posted again, however often catch-up runs, after a relaunch, from another window or after a clock change.
 extension LedgerBook {
     /// Points every scheduled item that uses one of `sourceIDs` at `targetID`, or at no category when it's `nil`,
-    /// for a category delete or merge.
+    /// for a category delete or merge. An occurrence's own category goes to `targetID` too; with no target it
+    /// follows the item's (#202 B2).
     static func reassignScheduledItems(
         from sourceIDs: Set<UUID>,
         to targetID: UUID?,
@@ -22,52 +23,21 @@ extension LedgerBook {
             snapshot.scheduledItems[index].categoryID = targetID
             snapshot.scheduledItems[index].updatedAt = now
         }
+        if let targetID {
+            repointEdits(.category, from: sourceIDs, to: targetID, in: &snapshot, now: now)
+        }
     }
 
     /// The live items whose accounts all still exist. An item on a deleted account waits, out of every list,
     /// until the account comes back with Undo or the next launch removes it (D288.1). An occurrence whose own
-    /// account or To account was deleted follows the item's again, here and so in every list, Pay and catch-up
-    /// (#202 B1). Its stored value is kept, so Undo of the delete gives the occurrence its own account back.
+    /// account, To account, category or payee is gone follows the item's again, here and so in every list, Pay and
+    /// catch-up (#202 B1, B2). Its stored value is kept, so Undo of an account delete gives it back.
     public static func activeScheduledItems(in snapshot: LedgerSnapshot) -> [ScheduledItem] {
         snapshot.scheduledItemsVisible()
             .filter { item in
                 !item.accountIDs.isEmpty && item.accountIDs.allSatisfy { activeAccount($0, in: snapshot) != nil }
             }
-            .map { withoutMissingEditAccounts($0, in: snapshot) }
-    }
-
-    /// The ledger with every occurrence's own account or To account that it doesn't have taken off, so those
-    /// occurrences follow the item's (#202 B1). A restore applies it: a backup made after deleting an account one
-    /// occurrence used still restores, rather than being refused as damaged.
-    public static func withoutMissingEditAccounts(in snapshot: LedgerSnapshot) -> LedgerSnapshot {
-        var snapshot = snapshot
-        snapshot.scheduledItems = snapshot.scheduledItems.map { withoutMissingEditAccounts($0, in: snapshot) }
-        return snapshot
-    }
-
-    static func withoutMissingEditAccounts(_ item: ScheduledItem, in snapshot: LedgerSnapshot) -> ScheduledItem {
-        var item = item
-        let missing: (UUID?) -> Bool = { id in id.map { activeAccount($0, in: snapshot) == nil } ?? false }
-        for index in item.occurrences.indices {
-            guard var edit = item.occurrences[index].edit else {
-                continue
-            }
-            if edit.has(.account), missing(edit.accountID) {
-                edit.remove(.account)
-            }
-            if edit.has(.transferAccount), missing(edit.transferAccountID) {
-                edit.remove(.transferAccount)
-            }
-            guard edit != item.occurrences[index].edit else {
-                continue
-            }
-            // An `edited` record left with no values of its own is an open occurrence like any other.
-            if edit.isEmpty, item.occurrences[index].outcome == .edited {
-                item.occurrences[index].outcome = .pending
-            }
-            item.occurrences[index].edit = edit.isEmpty ? nil : edit
-        }
-        return item
+            .map { withoutMissingEditReferences($0, in: snapshot) }
     }
 
     /// Adds or changes an item. An edit keeps the stored occurrence records, never the caller's, so a form opened

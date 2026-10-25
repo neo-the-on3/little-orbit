@@ -151,6 +151,8 @@ extension LedgerBook {
             snapshot.scheduledItems[index].payeeID = survivingID
             snapshot.scheduledItems[index].updatedAt = now
         }
+        // An occurrence's own payee goes to the survivor too (#202 B2).
+        repointEdits(.payee, from: [sourceID], to: survivingID, in: &snapshot, now: now)
         surviving = mergedPayee(source, into: surviving)
         surviving.updatedAt = now
         replace(&snapshot.payees, with: surviving)
