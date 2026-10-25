@@ -660,7 +660,7 @@
       }
     },
     "%lld rows": {
-      "comment": "CSV import: how many rows the picked file has.",
+      "comment": "CSV import: how many rows the picked file has, or on the Debit & Credit Match step how many file rows use a name, both halves of a transfer included.",
       "extractionState": "manual",
       "localizations": {
         "en": {
@@ -1022,6 +1022,19 @@
         }
       },
       "generatesSymbol": false
+    },
+    "Already imported means an exact match: the same account, date and time, amount, type, category and notes. Possible duplicate means the same account, type and amount within 3 days, with a matching payee or description. Both start unticked; tick a row to import it anyway. Notes shortened means notes over %@ characters are cut to %@. Those rows stay ticked and import.": {
+      "comment": "Debit & Credit import Review: the footer under the Not Selected section (D324.2). Both numbers are the notes limit.",
+      "extractionState": "manual",
+      "generatesSymbol": false,
+      "localizations": {
+        "en": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Already imported means an exact match: the same account, date and time, amount, type, category and notes. Possible duplicate means the same account, type and amount within 3 days, with a matching payee or description. Both start unticked; tick a row to import it anyway. Notes shortened means notes over %@ characters are cut to %@. Those rows stay ticked and import."
+          }
+        }
+      }
     },
     "Also Created": {
       "comment": "CSV import Summary: the section of accounts, categories and payees the import created.",
@@ -2718,7 +2731,7 @@
       }
     },
     "Currency": {
-      "comment": "CSV import column field: the currency code. Spending report: the currency picker’s label, shown only with spending in 2 or more currencies.",
+      "comment": "CSV import column field: the currency code. Spending report: the currency picker’s label, shown only with spending in 2 or more currencies. Debit & Credit import Match step: a new account’s currency picker.",
       "extractionState": "manual",
       "generatesSymbol": false,
       "localizations": {
@@ -2846,7 +2859,7 @@
       "generatesSymbol": false
     },
     "Date can’t be read as %@": {
-      "comment": "CSV import row issue (D323.3): %@ is the date format the file was read with, such as “DD/MM/YYYY”.",
+      "comment": "CSV import row issue (D323.3): %@ is the date format the file was read with, such as “DD/MM/YYYY”, or a Debit & Credit export’s “YYYY-MM-DD HH:mm:ss”.",
       "extractionState": "manual",
       "localizations": {
         "en": {
@@ -2905,6 +2918,19 @@
           "stringUnit": {
             "state": "translated",
             "value": "DD/MM/YYYY"
+          }
+        }
+      }
+    },
+    "Debit & Credit export detected. Every column is mapped; you can still change any of them. Extra columns are ignored.": {
+      "comment": "CSV import Columns step: the note when the file’s header is a Debit & Credit export (D44). “Debit & Credit” is another app’s name.",
+      "extractionState": "manual",
+      "generatesSymbol": false,
+      "localizations": {
+        "en": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Debit & Credit export detected. Every column is mapped; you can still change any of them. Extra columns are ignored."
           }
         }
       }
@@ -3517,6 +3543,19 @@
         }
       }
     },
+    "Each total is in the account’s own currency. Transfers aren’t income or expense, so they’re not counted here. Both halves of a transfer in the file become one transfer.": {
+      "comment": "Debit & Credit import Review: the footer under the totals by account.",
+      "extractionState": "manual",
+      "generatesSymbol": false,
+      "localizations": {
+        "en": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Each total is in the account’s own currency. Transfers aren’t income or expense, so they’re not counted here. Both halves of a transfer in the file become one transfer."
+          }
+        }
+      }
+    },
     "Edit %1$lld Transactions in %2$@": {
       "comment": "Undo name: several transactions edited at once in one account (D198). %1$lld is the number of transactions; %2$@ is the account name.",
       "extractionState": "manual",
@@ -3822,7 +3861,7 @@
       }
     },
     "Expense": {
-      "comment": "A category's kind, and the Categories screen's Expense tab.",
+      "comment": "A category’s kind, and the Categories screen’s Expense tab. Debit & Credit import Review: an account’s expense total.",
       "extractionState": "manual",
       "generatesSymbol": false,
       "localizations": {
@@ -4038,6 +4077,19 @@
         }
       }
     },
+    "If you map accounts with different currencies, a transfer between them needs both halves in the file, so the other half can give the amount received. A transfer with only one half would be listed as an error.": {
+      "comment": "Debit & Credit import Match step: the note under the accounts (D29, D331).",
+      "extractionState": "manual",
+      "generatesSymbol": false,
+      "localizations": {
+        "en": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "If you map accounts with different currencies, a transfer between them needs both halves in the file, so the other half can give the amount received. A transfer with only one half would be listed as an error."
+          }
+        }
+      }
+    },
     "Import": {
       "comment": "iOS CSV import Review: the top-trailing toolbar button that saves the ticked rows. The count is in the summary on the page.",
       "extractionState": "manual",
@@ -4180,7 +4232,7 @@
       "generatesSymbol": false
     },
     "Income": {
-      "comment": "A category's kind, and the Categories screen's Income tab.",
+      "comment": "A category’s kind, and the Categories screen’s Income tab. Debit & Credit import Review: an account’s income total.",
       "extractionState": "manual",
       "generatesSymbol": false,
       "localizations": {
@@ -5092,6 +5144,32 @@
         }
       }
     },
+    "New accounts": {
+      "comment": "Debit & Credit import Review: how many accounts will be created.",
+      "extractionState": "manual",
+      "generatesSymbol": false,
+      "localizations": {
+        "en": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "New accounts"
+          }
+        }
+      }
+    },
+    "New categories": {
+      "comment": "Debit & Credit import Review: how many categories will be created.",
+      "extractionState": "manual",
+      "generatesSymbol": false,
+      "localizations": {
+        "en": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "New categories"
+          }
+        }
+      }
+    },
     "New Category": {
       "comment": "Category editor title: adding.",
       "extractionState": "manual",
@@ -5101,6 +5179,19 @@
           "stringUnit": {
             "state": "translated",
             "value": "New Category"
+          }
+        }
+      }
+    },
+    "New payees": {
+      "comment": "Debit & Credit import Review: how many payees will be created.",
+      "extractionState": "manual",
+      "generatesSymbol": false,
+      "localizations": {
+        "en": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "New payees"
           }
         }
       }
@@ -5685,6 +5776,18 @@
         }
       }
     },
+    "received %@": {
+      "comment": "Debit & Credit import Review: in a transfer row’s details, the amount the receiving account gets when the two accounts have different currencies (D17, D330.1), as in “received €5,000.00”. %@ is that amount with its currency symbol. Lowercase, because it follows a middle dot.",
+      "extractionState": "manual",
+      "localizations": {
+        "en": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "received %@"
+          }
+        }
+      }
+    },
     "Recent Automatic Backups": {
       "comment": "Stepper label: how many recent automatic backups are kept (1–30).",
       "extractionState": "manual",
@@ -5932,6 +6035,18 @@
       },
       "generatesSymbol": false
     },
+    "Rows %1$lld and %2$lld": {
+      "comment": "Debit & Credit import Review: a transfer whose two halves were both in the file (D38.5), with the row numbers of both halves (D43), as in “Rows 4 and 6”.",
+      "extractionState": "manual",
+      "localizations": {
+        "en": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Rows %1$lld and %2$lld"
+          }
+        }
+      }
+    },
     "Rows Not Imported": {
       "comment": "CSV import Summary: the section of rows that weren’t imported.",
       "extractionState": "manual",
@@ -6168,6 +6283,19 @@
           "stringUnit": {
             "state": "translated",
             "value": "The file has no Account column, so every row goes to this account."
+          }
+        }
+      }
+    },
+    "The file has no currency column. A matched account keeps its own currency; a new account uses your region’s currency unless you change it.": {
+      "comment": "Debit & Credit import Match step: the note above the accounts.",
+      "extractionState": "manual",
+      "generatesSymbol": false,
+      "localizations": {
+        "en": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "The file has no currency column. A matched account keeps its own currency; a new account uses your region’s currency unless you change it."
           }
         }
       }
@@ -6550,6 +6678,19 @@
         }
       }
     },
+    "Totals by Account": {
+      "comment": "Debit & Credit import Review: the section of income and expense totals of the ticked rows.",
+      "extractionState": "manual",
+      "generatesSymbol": false,
+      "localizations": {
+        "en": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Totals by Account"
+          }
+        }
+      }
+    },
     "Transactions": {
       "comment": "CSV export: the section choosing which transactions.",
       "extractionState": "manual",
@@ -6559,6 +6700,19 @@
           "stringUnit": {
             "state": "translated",
             "value": "Transactions"
+          }
+        }
+      }
+    },
+    "Transfer Account must differ from Account": {
+      "comment": "Debit & Credit import row issue (D50, D111): both sides of a transfer are the same account. “Transfer Account” and “Account” are the file’s column names.",
+      "extractionState": "manual",
+      "generatesSymbol": false,
+      "localizations": {
+        "en": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Transfer Account must differ from Account"
           }
         }
       }
@@ -6766,6 +6920,19 @@
         }
       }
     },
+    "Unrecognised amount": {
+      "comment": "Debit & Credit import row issue (D38.2): the amount isn’t a number this format allows, or has more decimals than the account’s currency.",
+      "extractionState": "manual",
+      "generatesSymbol": false,
+      "localizations": {
+        "en": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Unrecognised amount"
+          }
+        }
+      }
+    },
     "Update little-orbit to Restore This Backup": {
       "comment": "Alert title when a backup was made by a newer version of the app.",
       "extractionState": "manual",
@@ -6872,6 +7039,19 @@
           "stringUnit": {
             "state": "translated",
             "value": "Which account is this file for?"
+          }
+        }
+      }
+    },
+    "Will Be Created": {
+      "comment": "Debit & Credit import Review: the section counting the new accounts, categories and payees.",
+      "extractionState": "manual",
+      "generatesSymbol": false,
+      "localizations": {
+        "en": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Will Be Created"
           }
         }
       }
@@ -7106,6 +7286,19 @@
           "stringUnit": {
             "state": "translated",
             "value": "YYYY-MM-DD"
+          }
+        }
+      }
+    },
+    "YYYY-MM-DD HH:mm:ss": {
+      "comment": "CSV import: the date and time layout of a Debit & Credit export, named in a row issue.",
+      "extractionState": "manual",
+      "generatesSymbol": false,
+      "localizations": {
+        "en": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "YYYY-MM-DD HH:mm:ss"
           }
         }
       }

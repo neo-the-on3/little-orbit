@@ -70,9 +70,68 @@ extension CSVImportViewModel {
         step == .review && readyCount > 0 && !isWorking
     }
 
+    /// A row issue in the file format's wording.
+    func issueText(_ issue: ImportRowIssue) -> String {
+        ImportRowFormatter.issueText(issue, debitAndCredit: isDebitAndCredit, dateOrder: dateOrder)
+    }
+
+    // MARK: Debit & Credit preview (#60)
+
+    /// The footer under Not Selected: #60 compares fewer fields and counts shortened notes (D324.2).
+    public var notSelectedFooter: String {
+        isDebitAndCredit ? ImportExportText.debitAndCreditNotSelectedFooter : ImportExportText.notSelectedFooter
+    }
+
+    /// The new accounts, categories and payees the ticked rows need, shown before anything is saved (#60).
+    public var createdCounts: ImportCreatedCounts {
+        reviewTotals.created
+    }
+
+    /// Income and expense of the ticked rows per account, each in its own currency, transfers left out (#60).
+    public var accountTotals: [ImportAccountTotalRow] {
+        reviewTotals.accounts
+    }
+
+    /// Builds `reviewTotals` again for the current plan and ticks: when a plan lands or the ticks change, so
+    /// drawing Review reads stored values (Tech Architect 5648615659 NB1). Only Debit & Credit shows them.
+    func refreshReviewTotals() {
+        guard isDebitAndCredit, let preview else {
+            reviewTotals = ImportReviewTotals()
+            return
+        }
+        reviewTotalsBuilds += 1
+        reviewTotals = ImportReviewTotals(created: preview.created(selection), accounts: accountTotals(of: preview))
+    }
+
+    private func accountTotals(of preview: ImportPreview) -> [ImportAccountTotalRow] {
+        let accounts = Dictionary(ledger.accounts.map { ($0.id, $0) }, uniquingKeysWith: { first, _ in first })
+        return preview.totals(selection)
+            .map { total in
+                let name: String
+                let currency: String
+                switch total.account {
+                case .existing(let id):
+                    let account = accounts[id]
+                    name = account?.name ?? ""
+                    currency = account?.currencyCode ?? defaultCurrency
+                case .new(let key):
+                    let match = preview.matches.first { $0.key == key }
+                    name = match?.name ?? ""
+                    currency = match?.currencyCode ?? defaultCurrency
+                }
+                return ImportAccountTotalRow(
+                    id: total.account,
+                    name: name,
+                    currencyCode: currency,
+                    income: money.string(total.income, currencyCode: currency),
+                    expense: money.string(-total.expense, currencyCode: currency),
+                )
+            }
+    }
+
     func summary(of row: ImportRow) -> String {
         if let issue = row.issues.first {
-            return ImportExportText.issue(issue, dateOrder: dateOrder)
+            return issueText(issue)
         }
         var parts: [String] = []
         if let date = row.date {

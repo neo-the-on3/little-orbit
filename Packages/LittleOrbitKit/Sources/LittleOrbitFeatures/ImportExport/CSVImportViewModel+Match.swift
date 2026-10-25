@@ -17,4 +17,13 @@ extension CSVImportViewModel {
     public var payeeMatches: [ImportMatchRow] {
         matchSections.payees
     }
+
+    /// The Match step's notes about currencies, only for a Debit & Credit file.
+    public var accountsHeaderNote: String? {
+        isDebitAndCredit ? ImportExportText.newAccountCurrencyNote : nil
+    }
+
+    public var accountsFooterNote: String? {
+        isDebitAndCredit ? ImportExportText.differentCurrenciesNote : nil
+    }
 }

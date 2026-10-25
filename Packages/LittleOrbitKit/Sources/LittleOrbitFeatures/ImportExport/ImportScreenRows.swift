@@ -29,6 +29,10 @@ public struct ImportMatchRow: Identifiable, Equatable, Sendable {
     public let choice: ImportMatchChoice
     /// The existing records it can be matched to, by id and name.
     public let options: [ImportMatchOption]
+    /// A new account's currency when the file has no currency column (#60), which the user can change.
+    public var newAccountCurrency: String?
+    /// Under the name: how many file rows use it, “2 rows”, for a Debit & Credit file (#60); `nil` otherwise.
+    public var detail: String?
 }
 
 public struct ImportMatchOption: Identifiable, Equatable, Sendable {
@@ -55,8 +59,10 @@ public struct ImportReviewRow: Identifiable, Equatable, Sendable {
     public let detail: String
     public let amount: String
     public let tone: AmountTone
-    /// Why it can't import, why it isn't selected, or that it was shortened.
+    /// Why it can't import (the first reason), why it isn't selected, or that it was shortened.
     public let message: String?
+    /// Every reason it can't import, one per line in the format's order (D110, D111), else just `message`.
+    public var reasons: [String] = []
     public let messageStyle: ImportReviewMessageStyle
     /// Under a row issue: the column and its raw value, “Withdrawal: “1.250,00/-”” (D323.3).
     public let source: String?
