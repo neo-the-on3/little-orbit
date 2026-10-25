@@ -37,7 +37,7 @@ enum MetadataText {
         FeatureText.string(
             "Rename",
             comment:
-                "Mac Metadata manager, a row’s context menu: edit the name in the row (Return saves, Esc cancels).",
+                "Mac Metadata manager, a category or payee row’s context menu: edit the name in the row (Return saves, Esc cancels).",
         )
     }
 
@@ -58,7 +58,7 @@ enum MetadataText {
     static var usedColumn: String {
         FeatureText.string(
             "Used",
-            comment: "Mac Metadata manager: the column with how many transactions use each category.",
+            comment: "Mac Metadata manager: the column with how many transactions use each category or payee.",
         )
     }
 

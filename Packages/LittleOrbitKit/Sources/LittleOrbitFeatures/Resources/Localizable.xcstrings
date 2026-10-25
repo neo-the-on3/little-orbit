@@ -525,7 +525,7 @@
       }
     },
     "%lld selected": {
-      "comment": "Payees screen, select mode, bottom toolbar: %lld is how many payees are chosen; on the Mac, the Metadata manager’s status bar: how many categories are selected.",
+      "comment": "Payees screen, select mode, bottom toolbar: %lld is how many payees are chosen; on the Mac, the Metadata manager’s status bar: how many categories or payees are selected.",
       "extractionState": "manual",
       "generatesSymbol": false,
       "localizations": {
@@ -1105,7 +1105,7 @@
       }
     },
     "Categories": {
-      "comment": "Settings row and screen title: the category manager.",
+      "comment": "Settings row and screen title: the category manager; on the Mac, the Metadata window’s Categories segment.",
       "extractionState": "manual",
       "generatesSymbol": false,
       "localizations": {
@@ -3784,7 +3784,7 @@
       }
     },
     "Merge…": {
-      "comment": "Payees screen, select mode: opens Merge Payees for the chosen payees; on the Mac, the Metadata manager’s toolbar button and context menu item that open Merge Categories.",
+      "comment": "Payees screen, select mode: opens Merge Payees for the chosen payees; on the Mac, the Metadata manager’s toolbar button and context menu item that open Merge Categories or Merge Payees.",
       "extractionState": "manual",
       "generatesSymbol": false,
       "localizations": {
@@ -4148,7 +4148,7 @@
       }
     },
     "No Payees": {
-      "comment": "Payees screen with no payees: the title.",
+      "comment": "Payees screen with no payees: the title; also the Mac Metadata manager’s empty Payees table.",
       "extractionState": "manual",
       "generatesSymbol": false,
       "localizations": {
@@ -4275,7 +4275,7 @@
       }
     },
     "Payees": {
-      "comment": "Settings row and screen title: the payee manager.",
+      "comment": "Settings row and screen title: the payee manager; on the Mac, the Metadata window’s Payees segment.",
       "extractionState": "manual",
       "generatesSymbol": false,
       "localizations": {
@@ -4288,7 +4288,7 @@
       }
     },
     "Payees you enter on transactions appear here.": {
-      "comment": "Payees screen with no payees: the explanation.",
+      "comment": "Payees screen with no payees: the explanation; also the Mac Metadata manager’s empty Payees table.",
       "extractionState": "manual",
       "generatesSymbol": false,
       "localizations": {
@@ -5364,7 +5364,7 @@
       }
     },
     "Rename": {
-      "comment": "Mac Metadata manager, a row’s context menu: edit the name in the row (Return saves, Esc cancels).",
+      "comment": "Mac Metadata manager, a category or payee row’s context menu: edit the name in the row (Return saves, Esc cancels).",
       "extractionState": "manual",
       "generatesSymbol": false,
       "localizations": {
@@ -5403,7 +5403,7 @@
       }
     },
     "Used": {
-      "comment": "Mac Metadata manager: the column with how many transactions use each category.",
+      "comment": "Mac Metadata manager: the column with how many transactions use each category or payee.",
       "extractionState": "manual",
       "generatesSymbol": false,
       "localizations": {
@@ -5615,6 +5615,109 @@
                 "stringUnit": {
                   "state": "translated",
                   "value": "Merge %lld Categories"
+                }
+              }
+            }
+          }
+        }
+      }
+    },
+    "Show": {
+      "comment": "Mac Metadata manager toolbar: the hidden label of the Categories and Payees switch, read by VoiceOver.",
+      "extractionState": "manual",
+      "generatesSymbol": false,
+      "localizations": {
+        "en": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Show"
+          }
+        }
+      }
+    },
+    "Last category": {
+      "comment": "Mac Metadata manager, Payees: the column with each payee’s last-used category.",
+      "extractionState": "manual",
+      "generatesSymbol": false,
+      "localizations": {
+        "en": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Last category"
+          }
+        }
+      }
+    },
+    "Return saves · Esc cancels · names must be unique": {
+      "comment": "Mac Metadata manager status bar while a payee is being renamed in its row. Payee names are unique across all payees, ignoring case and outer spaces.",
+      "extractionState": "manual",
+      "generatesSymbol": false,
+      "localizations": {
+        "en": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Return saves · Esc cancels · names must be unique"
+          }
+        }
+      }
+    },
+    "Select two or more payees to merge.": {
+      "comment": "Mac Metadata manager, Payees: the tooltip on the disabled Merge button.",
+      "extractionState": "manual",
+      "generatesSymbol": false,
+      "localizations": {
+        "en": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Select two or more payees to merge."
+          }
+        }
+      }
+    },
+    "%1$@ become one payee.": {
+      "comment": "Mac Merge Payees sheet message: %1$@ is the two or more payees’ names, in the table’s order, joined in the system list format (“A, B and C”).",
+      "extractionState": "manual",
+      "generatesSymbol": false,
+      "localizations": {
+        "en": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "%1$@ become one payee."
+          }
+        }
+      }
+    },
+    "Keep name:": {
+      "comment": "Mac Merge Payees sheet: the pop-up button’s label, choosing the payee whose name is kept.",
+      "extractionState": "manual",
+      "generatesSymbol": false,
+      "localizations": {
+        "en": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Keep name:"
+          }
+        }
+      }
+    },
+    "Merge %lld Payees": {
+      "comment": "Mac Merge Payees sheet title: %lld is how many payees are merged (two or more).",
+      "extractionState": "manual",
+      "generatesSymbol": false,
+      "localizations": {
+        "en": {
+          "variations": {
+            "plural": {
+              "one": {
+                "stringUnit": {
+                  "state": "translated",
+                  "value": "Merge %lld Payee"
+                }
+              },
+              "other": {
+                "stringUnit": {
+                  "state": "translated",
+                  "value": "Merge %lld Payees"
                 }
               }
             }
