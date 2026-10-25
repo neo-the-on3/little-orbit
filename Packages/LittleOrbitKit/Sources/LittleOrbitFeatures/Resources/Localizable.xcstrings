@@ -6399,6 +6399,538 @@
           }
         }
       }
+    },
+    "%@ unused": {
+      "comment": "Budget detail, on a past period: what was left when it ended. %@ is an amount such as ₹1,500.00.",
+      "extractionState": "manual",
+      "generatesSymbol": false,
+      "localizations": {
+        "en": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "%@ unused"
+          }
+        }
+      }
+    },
+    "of %@ available": {
+      "comment": "Budget detail: under the amount left. %@ is what the period has to spend, its limit plus anything carried over.",
+      "extractionState": "manual",
+      "generatesSymbol": false,
+      "localizations": {
+        "en": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "of %@ available"
+          }
+        }
+      }
+    },
+    "Overspent · limit %@": {
+      "comment": "Budget detail: under the amount over the limit. %@ is the period’s limit.",
+      "extractionState": "manual",
+      "generatesSymbol": false,
+      "localizations": {
+        "en": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Overspent · limit %@"
+          }
+        }
+      }
+    },
+    "Ended %1$@ · of %2$@": {
+      "comment": "Budget detail, on a past period: under the amount unused or over. %1$@ is the last day, such as 30 Sep; %2$@ is what the period had to spend.",
+      "extractionState": "manual",
+      "generatesSymbol": false,
+      "localizations": {
+        "en": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Ended %1$@ · of %2$@"
+          }
+        }
+      }
+    },
+    "Spent %@": {
+      "comment": "Budget detail: under the bar. %@ is what the period’s expenses less refunds add up to.",
+      "extractionState": "manual",
+      "generatesSymbol": false,
+      "localizations": {
+        "en": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Spent %@"
+          }
+        }
+      }
+    },
+    "resets %@": {
+      "comment": "Budget detail: after the days left, such as “12 days left · resets 1 Nov”. %@ is the next period’s first day.",
+      "extractionState": "manual",
+      "generatesSymbol": false,
+      "localizations": {
+        "en": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "resets %@"
+          }
+        }
+      }
+    },
+    "Previous Period": {
+      "comment": "Budget detail: button that shows the period before this one.",
+      "extractionState": "manual",
+      "generatesSymbol": false,
+      "localizations": {
+        "en": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Previous Period"
+          }
+        }
+      }
+    },
+    "Next Period": {
+      "comment": "Budget detail: button that shows the period after this one.",
+      "extractionState": "manual",
+      "generatesSymbol": false,
+      "localizations": {
+        "en": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Next Period"
+          }
+        }
+      }
+    },
+    "Limit in this period": {
+      "comment": "Budget detail, on a past period: the label of the limit that applied to that period.",
+      "extractionState": "manual",
+      "generatesSymbol": false,
+      "localizations": {
+        "en": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Limit in this period"
+          }
+        }
+      }
+    },
+    "Carried over from %@": {
+      "comment": "Budget detail: label of what the period before passed to this one. %@ is that period’s dates, such as 1–30 Sep 2026.",
+      "extractionState": "manual",
+      "generatesSymbol": false,
+      "localizations": {
+        "en": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Carried over from %@"
+          }
+        }
+      }
+    },
+    "Carried over to %@": {
+      "comment": "Budget detail, on a past period: label of what it passed to the next one. %@ is the next period’s dates, such as 1–31 Oct 2026.",
+      "extractionState": "manual",
+      "generatesSymbol": false,
+      "localizations": {
+        "en": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Carried over to %@"
+          }
+        }
+      }
+    },
+    "On": {
+      "comment": "Budget detail: a carry-over switch is on.",
+      "extractionState": "manual",
+      "generatesSymbol": false,
+      "localizations": {
+        "en": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "On"
+          }
+        }
+      }
+    },
+    "%1$lld expenses from %2$@ (%3$@) aren’t included.": {
+      "comment": "Budget detail hint (D311.1): the period’s expenses in the budget’s categories from one account in another currency, which aren’t counted. %1$lld is how many; %2$@ is the account’s name; %3$@ is its currency code, such as USD. Followed by “This budget counts %@ accounts only.”",
+      "extractionState": "manual",
+      "generatesSymbol": false,
+      "localizations": {
+        "en": {
+          "variations": {
+            "plural": {
+              "one": {
+                "stringUnit": {
+                  "state": "translated",
+                  "value": "%1$lld expense from %2$@ (%3$@) isn’t included."
+                }
+              },
+              "other": {
+                "stringUnit": {
+                  "state": "translated",
+                  "value": "%1$lld expenses from %2$@ (%3$@) aren’t included."
+                }
+              }
+            }
+          }
+        }
+      }
+    },
+    "%1$lld expenses from %2$lld accounts in other currencies aren’t included.": {
+      "comment": "Budget detail hint (D311.1): the period’s expenses in the budget’s categories from two or more accounts in other currencies, which aren’t counted. %1$lld is how many expenses (2 or more); %2$lld is how many accounts (2 or more). Followed by “This budget counts %@ accounts only.”",
+      "extractionState": "manual",
+      "generatesSymbol": false,
+      "localizations": {
+        "en": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "%1$lld expenses from %2$lld accounts in other currencies aren’t included."
+          }
+        }
+      }
+    },
+    "This budget counts %@ accounts only.": {
+      "comment": "Budget detail hint (D311.1), after the sentence about expenses in other currencies: %@ is the budget’s currency code, such as INR.",
+      "extractionState": "manual",
+      "generatesSymbol": false,
+      "localizations": {
+        "en": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "This budget counts %@ accounts only."
+          }
+        }
+      }
+    },
+    "You have no %1$@ account, so nothing counts yet. This budget counts %1$@ accounts only.": {
+      "comment": "Budget detail hint (D307.3): no account is in the budget’s currency. %1$@ is that currency code, such as EUR.",
+      "extractionState": "manual",
+      "generatesSymbol": false,
+      "localizations": {
+        "en": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "You have no %1$@ account, so nothing counts yet. This budget counts %1$@ accounts only."
+          }
+        }
+      }
+    },
+    "The limit was %1$@ in this period. The change to %2$@ applies from %3$@ onwards.": {
+      "comment": "Budget detail hint on a past period whose limit was changed later (D311.3): %1$@ is that period’s limit and %2$@ the newer limit. %3$@ is when the newer limit starts: a month and year such as “Oct 2026” for monthly and yearly budgets, otherwise a date such as “15 Oct 2026”.",
+      "extractionState": "manual",
+      "generatesSymbol": false,
+      "localizations": {
+        "en": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "The limit was %1$@ in this period. The change to %2$@ applies from %3$@ onwards."
+          }
+        }
+      }
+    },
+    "Transactions · %lld": {
+      "comment": "Budget detail: header over the period’s transactions. %lld is how many rows there are.",
+      "extractionState": "manual",
+      "generatesSymbol": false,
+      "localizations": {
+        "en": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Transactions · %lld"
+          }
+        }
+      }
+    },
+    "%1$@ (incl. %2$@)": {
+      "comment": "Budget detail categories: a picked category and the subcategories it covers. %1$@ is the category; %2$@ is its subcategories in the system list format.",
+      "extractionState": "manual",
+      "generatesSymbol": false,
+      "localizations": {
+        "en": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "%1$@ (incl. %2$@)"
+          }
+        }
+      }
+    },
+    "%1$@ › %2$@": {
+      "comment": "Budget detail categories: a picked subcategory under its parent. %1$@ is the parent; %2$@ is the subcategory.",
+      "extractionState": "manual",
+      "generatesSymbol": false,
+      "localizations": {
+        "en": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "%1$@ › %2$@"
+          }
+        }
+      }
+    },
+    "%1$@ = %2$@": {
+      "comment": "Budget detail footnote sum (S72): %1$@ is the amounts joined with − and +; %2$@ is their total.",
+      "extractionState": "manual",
+      "generatesSymbol": false,
+      "localizations": {
+        "en": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "%1$@ = %2$@"
+          }
+        }
+      }
+    },
+    "Adding an expense in %@ updates this budget straight away. Transfers never count.": {
+      "comment": "Budget detail footnote (D311.6), after the sum of the rows when there are two or more: %@ is the budget’s categories in the system “or” list format, such as “Restaurants or Coffee”.",
+      "extractionState": "manual",
+      "generatesSymbol": false,
+      "localizations": {
+        "en": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Adding an expense in %@ updates this budget straight away. Transfers never count."
+          }
+        }
+      }
+    },
+    "Refund": {
+      "comment": "Budget detail: title of a refund with no payee or description, or the start of “Refund · payee” (D233).",
+      "extractionState": "manual",
+      "generatesSymbol": false,
+      "localizations": {
+        "en": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Refund"
+          }
+        }
+      }
+    },
+    "Refund (original deleted)": {
+      "comment": "Budget detail: title of a refund whose expense was deleted (D233).",
+      "extractionState": "manual",
+      "generatesSymbol": false,
+      "localizations": {
+        "en": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Refund (original deleted)"
+          }
+        }
+      }
+    },
+    "Split": {
+      "comment": "Budget detail: marks a row that shows one line of a split expense, as in “Split · Household”.",
+      "extractionState": "manual",
+      "generatesSymbol": false,
+      "localizations": {
+        "en": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Split"
+          }
+        }
+      }
+    },
+    "No Categories": {
+      "comment": "Budget detail empty state title (D307.5): every category the budget picked was deleted.",
+      "extractionState": "manual",
+      "generatesSymbol": false,
+      "localizations": {
+        "en": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "No Categories"
+          }
+        }
+      }
+    },
+    "Pick at least one category to track spending.": {
+      "comment": "Budget detail empty state message, under “No Categories”. Its button is “Edit Budget”.",
+      "extractionState": "manual",
+      "generatesSymbol": false,
+      "localizations": {
+        "en": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Pick at least one category to track spending."
+          }
+        }
+      }
+    },
+    "budget.detail.deleted.title": {
+      "comment": "Budget detail: the screen’s title when the budget on show was deleted elsewhere (D311.7). It has no message or button; Back returns to the Budgets list.",
+      "extractionState": "manual",
+      "generatesSymbol": false,
+      "localizations": {
+        "en": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "This budget no longer exists."
+          }
+        }
+      }
+    },
+    "Budget Actions": {
+      "comment": "Budget detail: VoiceOver name of the toolbar’s ⋯ menu.",
+      "extractionState": "manual",
+      "generatesSymbol": false,
+      "localizations": {
+        "en": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Budget Actions"
+          }
+        }
+      }
+    },
+    "Change Budget Limit": {
+      "comment": "Budget detail: menu item and sheet title for changing the limit from this period on.",
+      "extractionState": "manual",
+      "generatesSymbol": false,
+      "localizations": {
+        "en": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Change Budget Limit"
+          }
+        }
+      }
+    },
+    "Delete Budget": {
+      "comment": "Budget detail: the destructive action that deletes the budget.",
+      "extractionState": "manual",
+      "generatesSymbol": false,
+      "localizations": {
+        "en": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Delete Budget"
+          }
+        }
+      }
+    },
+    "Delete the “%@” budget?": {
+      "comment": "Delete budget confirmation title. %@ is the budget’s name; keep the curly quotes (D307 amendment).",
+      "extractionState": "manual",
+      "generatesSymbol": false,
+      "localizations": {
+        "en": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Delete the “%@” budget?"
+          }
+        }
+      }
+    },
+    "The budget and its history are removed. Your transactions aren’t changed and still count in Reports.": {
+      "comment": "Delete budget confirmation message, under “Delete the “%@” budget?”.",
+      "extractionState": "manual",
+      "generatesSymbol": false,
+      "localizations": {
+        "en": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "The budget and its history are removed. Your transactions aren’t changed and still count in Reports."
+          }
+        }
+      }
+    },
+    "Was %@.": {
+      "comment": "Change Budget Limit sheet: under the new limit. %@ is the current limit.",
+      "extractionState": "manual",
+      "generatesSymbol": false,
+      "localizations": {
+        "en": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Was %@."
+          }
+        }
+      }
+    },
+    "Change limit to %@?": {
+      "comment": "Change limit confirmation title. %@ is the new limit.",
+      "extractionState": "manual",
+      "generatesSymbol": false,
+      "localizations": {
+        "en": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Change limit to %@?"
+          }
+        }
+      }
+    },
+    "Applies from this period (%1$@) onwards. Earlier periods keep their limit of %2$@.": {
+      "comment": "Change limit confirmation message. %1$@ is the current period’s dates, such as 1–31 Oct 2026; %2$@ is the limit earlier periods keep.",
+      "extractionState": "manual",
+      "generatesSymbol": false,
+      "localizations": {
+        "en": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Applies from this period (%1$@) onwards. Earlier periods keep their limit of %2$@."
+          }
+        }
+      }
+    },
+    "Apply from This Period": {
+      "comment": "Change limit confirmation: the button that saves the new limit from the current period on.",
+      "extractionState": "manual",
+      "generatesSymbol": false,
+      "localizations": {
+        "en": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Apply from This Period"
+          }
+        }
+      }
+    },
+    "Delete Budget %@": {
+      "comment": "Undo and Redo name: a budget deleted from the budget detail. %@ is the budget’s name (D307.8).",
+      "extractionState": "manual",
+      "generatesSymbol": false,
+      "localizations": {
+        "en": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Delete Budget %@"
+          }
+        }
+      }
+    },
+    "Starts tomorrow": {
+      "comment": "Budget row status and budget detail headline: the budget starts tomorrow. Shown instead of the figures before it starts (D308 amendment).",
+      "extractionState": "manual",
+      "generatesSymbol": false,
+      "localizations": {
+        "en": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Starts tomorrow"
+          }
+        }
+      }
+    },
+    "Starts %@": {
+      "comment": "Budget row status and budget detail headline before the budget starts (D308 amendment): %@ is the start date, such as “1 Nov”, or “3 Jan 2027” in another year.",
+      "extractionState": "manual",
+      "generatesSymbol": false,
+      "localizations": {
+        "en": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Starts %@"
+          }
+        }
+      }
     }
   },
   "version": "1.0"

@@ -7,6 +7,7 @@ extension BudgetText {
         case .new: FeatureText.format("New Budget %@", name)
         case .edit: FeatureText.format("Edit Budget %@", name)
         case .changeLimit: FeatureText.format("Change Budget Limit %@", name)
+        case .delete: FeatureText.format("Delete Budget %@", name)
         }
     }
 
