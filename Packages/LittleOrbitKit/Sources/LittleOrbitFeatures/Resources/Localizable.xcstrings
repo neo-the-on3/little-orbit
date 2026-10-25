@@ -10667,6 +10667,228 @@
           }
         }
       }
+    },
+    "Its scheduled item is deleted.": {
+      "comment": "Account delete confirmation, after the first sentence: the account has one scheduled item (D288).",
+      "extractionState": "manual",
+      "generatesSymbol": false,
+      "localizations": {
+        "en": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Its scheduled item is deleted."
+          }
+        }
+      }
+    },
+    "Its scheduled item, a transfer to or from another account, is deleted.": {
+      "comment": "Account delete confirmation, after the first sentence: the account’s only scheduled item is a transfer (D288).",
+      "extractionState": "manual",
+      "generatesSymbol": false,
+      "localizations": {
+        "en": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Its scheduled item, a transfer to or from another account, is deleted."
+          }
+        }
+      }
+    },
+    "Its %lld scheduled items are deleted.": {
+      "comment": "Account delete confirmation, after the first sentence: %lld is how many scheduled items the account has (2 or more), none of them transfers (D288).",
+      "extractionState": "manual",
+      "generatesSymbol": false,
+      "localizations": {
+        "en": {
+          "variations": {
+            "plural": {
+              "one": {
+                "stringUnit": {
+                  "state": "translated",
+                  "value": "Its %lld scheduled item is deleted."
+                }
+              },
+              "other": {
+                "stringUnit": {
+                  "state": "translated",
+                  "value": "Its %lld scheduled items are deleted."
+                }
+              }
+            }
+          }
+        }
+      }
+    },
+    "Its %1$lld scheduled items are deleted, including %2$lld transfers to or from other accounts.": {
+      "comment": "Account delete confirmation, after the first sentence: %1$lld is how many scheduled items the account has (2 or more); %2$lld how many of them are transfers to or from other accounts (1 or more) (D288).",
+      "extractionState": "manual",
+      "generatesSymbol": false,
+      "localizations": {
+        "en": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Its %#@items@ deleted, including %#@transfers@."
+          },
+          "substitutions": {
+            "items": {
+              "argNum": 1,
+              "formatSpecifier": "lld",
+              "variations": {
+                "plural": {
+                  "one": {
+                    "stringUnit": {
+                      "state": "translated",
+                      "value": "%arg scheduled item is"
+                    }
+                  },
+                  "other": {
+                    "stringUnit": {
+                      "state": "translated",
+                      "value": "%arg scheduled items are"
+                    }
+                  }
+                }
+              }
+            },
+            "transfers": {
+              "argNum": 2,
+              "formatSpecifier": "lld",
+              "variations": {
+                "plural": {
+                  "one": {
+                    "stringUnit": {
+                      "state": "translated",
+                      "value": "%arg transfer to or from another account"
+                    }
+                  },
+                  "other": {
+                    "stringUnit": {
+                      "state": "translated",
+                      "value": "%arg transfers to or from other accounts"
+                    }
+                  }
+                }
+              }
+            }
+          }
+        }
+      }
+    },
+    "This account has no transactions. %@ You can undo this. Hide it instead to keep it; hidden accounts still count toward net wealth.": {
+      "comment": "Account delete confirmation message: the account has no transactions but has scheduled items. %@ is the sentence saying its scheduled items are deleted (D288).",
+      "extractionState": "manual",
+      "generatesSymbol": false,
+      "localizations": {
+        "en": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "This account has no transactions. %@ You can undo this. Hide it instead to keep it; hidden accounts still count toward net wealth."
+          }
+        }
+      }
+    },
+    "This deletes %1$lld transactions. %2$@ Attachments are deleted too. You can undo this. Hide it instead to keep everything; hidden accounts still count toward net wealth.": {
+      "comment": "Account delete confirmation message with scheduled items: %1$lld is the number of transactions, none of them transfers; %2$@ is the sentence saying the account’s scheduled items are deleted (D288).",
+      "extractionState": "manual",
+      "generatesSymbol": false,
+      "localizations": {
+        "en": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "This deletes %#@transactions@. %2$@ Attachments are deleted too. You can undo this. Hide it instead to keep everything; hidden accounts still count toward net wealth."
+          },
+          "substitutions": {
+            "transactions": {
+              "argNum": 1,
+              "formatSpecifier": "lld",
+              "variations": {
+                "plural": {
+                  "one": {
+                    "stringUnit": {
+                      "state": "translated",
+                      "value": "%arg transaction"
+                    }
+                  },
+                  "other": {
+                    "stringUnit": {
+                      "state": "translated",
+                      "value": "%arg transactions"
+                    }
+                  }
+                }
+              }
+            }
+          }
+        }
+      }
+    },
+    "This deletes 1 transaction, a transfer to or from another account whose balance will change. %@ Attachments are deleted too. You can undo this. Hide it instead to keep everything; hidden accounts still count toward net wealth.": {
+      "comment": "Account delete confirmation message with scheduled items: the account’s only transaction is a transfer. %@ is the sentence saying its scheduled items are deleted (D288).",
+      "extractionState": "manual",
+      "generatesSymbol": false,
+      "localizations": {
+        "en": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "This deletes 1 transaction, a transfer to or from another account whose balance will change. %@ Attachments are deleted too. You can undo this. Hide it instead to keep everything; hidden accounts still count toward net wealth."
+          }
+        }
+      }
+    },
+    "This deletes %1$lld transactions, including %2$lld transfers to or from other accounts whose balances will change. %3$@ Attachments are deleted too. You can undo this. Hide it instead to keep everything; hidden accounts still count toward net wealth.": {
+      "comment": "Account delete confirmation message with scheduled items: %1$lld is the number of transactions (2 or more); %2$lld how many of them are transfers (1 or more), whose other accounts’ balances will change; %3$@ is the sentence saying the account’s scheduled items are deleted (D288).",
+      "extractionState": "manual",
+      "generatesSymbol": false,
+      "localizations": {
+        "en": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "This deletes %#@transactions@, including %#@transfers@. %3$@ Attachments are deleted too. You can undo this. Hide it instead to keep everything; hidden accounts still count toward net wealth."
+          },
+          "substitutions": {
+            "transactions": {
+              "argNum": 1,
+              "formatSpecifier": "lld",
+              "variations": {
+                "plural": {
+                  "one": {
+                    "stringUnit": {
+                      "state": "translated",
+                      "value": "%arg transaction"
+                    }
+                  },
+                  "other": {
+                    "stringUnit": {
+                      "state": "translated",
+                      "value": "%arg transactions"
+                    }
+                  }
+                }
+              }
+            },
+            "transfers": {
+              "argNum": 2,
+              "formatSpecifier": "lld",
+              "variations": {
+                "plural": {
+                  "one": {
+                    "stringUnit": {
+                      "state": "translated",
+                      "value": "%arg transfer to or from another account whose balance will change"
+                    }
+                  },
+                  "other": {
+                    "stringUnit": {
+                      "state": "translated",
+                      "value": "%arg transfers to or from other accounts whose balances will change"
+                    }
+                  }
+                }
+              }
+            }
+          }
+        }
+      }
     }
   },
   "version": "1.0"

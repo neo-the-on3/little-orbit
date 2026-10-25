@@ -1,4 +1,5 @@
 import Foundation
+import LittleOrbitDomain
 
 /// Counts for the iOS home section and the macOS sidebar rows.
 ///
@@ -31,11 +32,14 @@ public protocol PlannedItemsSource: AnyObject {
     /// The accounts a scheduled item uses, as its account or as To, Completed items included: Edit Account locks
     /// their currency (D381.3). Throws when the items can't be read, so Edit Account can fail closed.
     func scheduledAccountIDs() throws -> Set<UUID>
+    /// The scheduled items an account delete deletes with it, for its confirmation (D288).
+    func scheduledItems() -> [ScheduledItem]
 }
 
 extension PlannedItemsSource {
     /// None, for a source with no scheduled items.
     public func scheduledAccountIDs() -> Set<UUID> { [] }
+    public func scheduledItems() -> [ScheduledItem] { [] }
 }
 
 /// Used until #25 and #26 provide real counts.
