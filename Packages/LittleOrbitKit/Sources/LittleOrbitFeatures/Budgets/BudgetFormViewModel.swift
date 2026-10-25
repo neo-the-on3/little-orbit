@@ -398,3 +398,8 @@ enum BudgetDays {
         return CalendarDay(year: parts.year ?? 1970, month: parts.month ?? 1, day: parts.day ?? 1)
     }
 }
+
+/// Each open sheet is its own view model, so a sheet can be shown for one (`sheet(item:)`).
+extension BudgetFormViewModel: Identifiable {
+    public nonisolated var id: ObjectIdentifier { ObjectIdentifier(self) }
+}

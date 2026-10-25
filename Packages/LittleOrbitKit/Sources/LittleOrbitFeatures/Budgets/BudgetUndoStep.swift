@@ -1,9 +1,9 @@
 import Foundation
 import LittleOrbitDomain
 
-/// A budget save, or a limit change, as one step of the window's Undo history (D307.8). Undo and Redo keep the
-/// user's action as its name, with the budget's name after the step: “New Budget Eating out”, “Edit Budget
-/// Eating out” or “Change Budget Limit Eating out”. A stale step says “Eating out has changed since then.
+/// A budget save, a limit change, a delete or a Mac duplicate as one step of the window's Undo history (D307.8).
+/// Undo and Redo keep the user's action as its name, with the budget's name after the step: “New Budget Eating
+/// out”, “Edit Budget Eating out”, “Change Budget Limit Eating out” or “Duplicate Budget Eating out copy”. A stale step says “Eating out has changed since then.
 /// Nothing was changed.”, “Eating out has been deleted. …”, for a category it would put back, “Groceries has
 /// been deleted. …” (D228.5, the D306 amendment), or, for a name another budget took since, “There’s already a
 /// budget named “Eating out”. Nothing was changed.” (D310.1).
@@ -16,6 +16,8 @@ struct BudgetUndoStep: RecordUndoChange {
         case changeLimit
         /// Delete Budget, from the budget detail (#25 part 4).
         case delete
+        /// Duplicate Budget, on the Mac (#25 part 5, D307.6). The step is named after the copy.
+        case duplicate
     }
 
     let name: String
@@ -27,15 +29,18 @@ struct BudgetUndoStep: RecordUndoChange {
     let categoryNames: [UUID: String]
 
     /// The step for a change just made, or `nil` when what it left can't be read back, so it couldn't be
-    /// checked and isn't kept (D187.5).
+    /// checked and isn't kept (D187.5). Without `budgetName` it's named after the budget the change left, such as
+    /// a duplicate's copy.
     static func make(
         _ change: BudgetChange,
         action: Action,
-        budgetName: String,
+        budgetName: String?,
         categoryNames: [UUID: String],
         changes: any BudgetChangesUseCase,
     ) -> BudgetUndoStep? {
-        guard let outcome = try? changes.outcome(of: change) else {
+        guard let outcome = try? changes.outcome(of: change),
+            let budgetName = budgetName ?? outcome.budget?.name
+        else {
             return nil
         }
         return BudgetUndoStep(

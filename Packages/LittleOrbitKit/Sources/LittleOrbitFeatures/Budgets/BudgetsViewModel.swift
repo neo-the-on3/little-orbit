@@ -39,6 +39,17 @@ public final class BudgetsViewModel {
         hasLoaded && rows.isEmpty
     }
 
+    /// “5 budgets · 1 overspent”, under the Mac list's title. `nil` before the first load and with no budgets,
+    /// when the empty state says it instead.
+    public var summaryText: String? {
+        guard hasLoaded, !rows.isEmpty else {
+            return nil
+        }
+        let count = BudgetText.budgetCount(rows.count)
+        let overspent = rows.filter { $0.status == .overspent }.count
+        return overspent == 0 ? count : BudgetText.pair(count, BudgetText.overspentCount(overspent))
+    }
+
     public func load() {
         do {
             let today = today()
