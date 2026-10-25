@@ -129,11 +129,13 @@ import SwiftUI
                 },
             )
             scheduled.catchUp(atLaunch: true)
-            // Account delete returns its change; the screens record it in the transactions' history (#93).
+            // Account delete returns its change; the screens record it in the transactions' history (#93). Every
+            // account change moves the shared store-change signal, so an open import re-plans (D327.1).
             accounts = AccountsFeature(
                 useCases: AccountUseCases(repository: repository),
                 plannedItems: scheduled,
                 ledgerChanges: changes,
+                updates: transactions.updates,
             )
             backups = AppComposition.makeBackups(source: repository, storage: backupStorage, changes: changes)
             // Settings › Categories and Payees (#24): the category and payee use cases, the category editor's
