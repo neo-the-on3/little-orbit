@@ -97,6 +97,50 @@ struct ImportCommitTests {
         try repository.saveTransaction(edited)
         #expect(throws: ImportUndoError.changedSinceImport) { try useCase.undo(receipt) }
         #expect(try repository.transactions().count == 3)
+        // The edit is kept as the user made it, not reverted.
+        #expect(try repository.transactions().first { $0.id == edited.id }?.details == "Edited")
+        #expect(try repository.payees().map(\.name).contains("Cinema Hall"))
+    }
+
+    @Test("Undo Import refuses, changing nothing, once an imported transaction was deleted")
+    func undoAfterDelete() throws {
+        let repository = try repository()
+        let useCase = DefaultImportLedgerUseCase(repository: repository)
+        let preview = try preview(useCase)
+        let receipt = try useCase.commit(preview, selection: preview.defaultSelection, fileName: "bank.csv")
+        let milk = try #require(try repository.transactions().first { $0.details == "Milk" })
+        try repository.deleteTransaction(id: milk.id)
+        #expect(throws: ImportUndoError.changedSinceImport) { try useCase.undo(receipt) }
+        #expect(try repository.transactions().count == 2)
+        #expect(try repository.accounts().contains { $0.name == "New Card" })
+    }
+
+    @Test("Undo Import refuses, changing nothing, once an imported expense was split or given an attachment")
+    func undoAfterSplitOrAttachment() throws {
+        // Only an uncategorised transaction can be split, so the file's expense has no category.
+        let text = "Date,Type,Account,Amount,Payee\n2026-10-20,Expense,Everyday Savings,-450,Corner Shop\n"
+        for change in ["split", "attachment"] {
+            let repository = try repository()
+            let useCase = DefaultImportLedgerUseCase(repository: repository)
+            let preview = try F.preview(text, ledger: try useCase.ledger())
+            let receipt = try useCase.commit(preview, selection: preview.defaultSelection, fileName: "bank.csv")
+            let shop = try #require(try repository.transactions().first)
+            if change == "split" {
+                try repository.replaceSplits(
+                    [
+                        TransactionSplit(categoryID: F.groceriesID, amount: 300),
+                        TransactionSplit(categoryID: F.foodID, amount: 150),
+                    ],
+                    for: shop.id,
+                )
+            } else {
+                try repository.saveAttachment(
+                    Attachment(transactionID: shop.id, fileName: "receipt.jpg", contentType: "image/jpeg")
+                )
+            }
+            #expect(throws: ImportUndoError.changedSinceImport, "\(change)") { try useCase.undo(receipt) }
+            #expect(try repository.transactions().count == 1, "\(change)")
+        }
     }
 
     @Test("Undo Import refuses, changing nothing, once a refund was linked to an imported expense")

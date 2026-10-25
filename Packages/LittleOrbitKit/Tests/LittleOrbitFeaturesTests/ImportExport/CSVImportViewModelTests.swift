@@ -315,4 +315,25 @@ struct CSVImportViewModelTests {
         #expect(model.alert?.title == "Can’t Undo Import")
         #expect(try repository.transactions().count == 7)
     }
+
+    @Test("Undo Import after an imported transaction was edited refuses with Can’t Undo Import and keeps the edit")
+    func undoRefusedAfterEdit() async throws {
+        let repository = try F.repository()
+        let model = F.model(repository)
+        await model.open(data: try F.data("Little Orbit Export"), fileName: "export.csv")
+        await model.next()
+        await model.next()
+        await model.commit()
+        var shop = try #require(try repository.transactions().first { $0.details == "Milk, eggs and bread" })
+        shop.details = "Milk and eggs"
+        try repository.saveTransaction(shop)
+        model.requestUndo()
+        model.undo()
+        #expect(!model.isUndone)
+        #expect(model.alert?.title == "Can’t Undo Import")
+        #expect(model.alert?.message == "Some imported transactions have changed since, so nothing was removed.")
+        #expect(model.canUndo)
+        #expect(try repository.transactions().count == 6)
+        #expect(try repository.transactions().contains { $0.details == "Milk and eggs" })
+    }
 }

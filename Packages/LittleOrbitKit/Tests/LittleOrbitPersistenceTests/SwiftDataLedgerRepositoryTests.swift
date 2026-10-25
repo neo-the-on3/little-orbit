@@ -139,6 +139,15 @@
             }
         }
 
+        /// #30: an import saved and undone, and Undo Import refused after a change, on SwiftData storage.
+        func testImportCommitAndUndoOnTheInMemoryStore() throws {
+            try onMain {
+                try assertImportStorage {
+                    try LittleOrbitStore.makeRepository(configuration: .inMemory)
+                }
+            }
+        }
+
         func testUpdatedAtBumpsOnEdit() throws {
             try onMain {
                 let clock = TestClock(Date(timeIntervalSince1970: 1_000))
