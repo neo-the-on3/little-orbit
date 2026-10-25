@@ -2,26 +2,28 @@ import Foundation
 import LittleOrbitDomain
 
 /// One row of the Mac Scheduled Table (#26 frame "Scheduled – overdue, due today, upcoming, completed; sidebar
-/// badge", D340.13): the list row it acts on, and the text of each column.
+/// badge", D340.13, D355): the list row it acts on, and the text of each column.
 public struct ScheduledTableRow: Identifiable, Equatable, Sendable {
     /// The list row's ID, so selection, Pay Now, Skip, Edit and Delete act on the same occurrence.
     public var id: String { row.id }
     public let row: ScheduledRow
-    /// "15 Oct", or "15 Oct 2027" outside this year; empty for a completed item.
+    /// "15 Oct", or "15 Jan 2027" outside this year; a completed item's last due date (D355.3).
     public let due: String
     public let name: String
-    /// "Monthly", "Every 2 months, last day".
+    /// The long form: "Monthly on the 15th", "Every 2 weeks on Saturday" (D356.2).
     public let repeatText: String
     /// The account, or a transfer's From account.
     public let account: String
     public let amount: String
     public let tone: AmountTone
-    /// "Overdue · 5 days", "Due today", "Upcoming" or "Completed", with " · Auto" for an automatic item.
+    /// The time state, then the mode (D355.2, D356.1): "Overdue · 5 days", "Due today · Automatic",
+    /// "Due today · 09:00", "Automatic", "Automatic + notify", "Notify 09:00", "Ended 5 Oct", or blank for a plain
+    /// manual upcoming item (D355.1).
     public let status: String
 }
 
-/// One section of the Table: Overdue, Due Today, Upcoming, then "Completed · 1". Only Completed shows a count
-/// (D334.2).
+/// One section of the Table: Overdue, Due Today, Upcoming, then Completed. No header has a count; the footer
+/// counts (D334.2, D355).
 public struct ScheduledTableSection: Identifiable, Equatable, Sendable {
     public enum Kind: String, Sendable {
         case overdue, dueToday, upcoming, completed
@@ -34,9 +36,13 @@ public struct ScheduledTableSection: Identifiable, Equatable, Sendable {
 }
 
 extension ScheduledListViewModel {
-    /// The Table's sections with rows, in board order: each overdue occurrence on its own row, oldest first
-    /// (D340.6, D340.13), then due today, then each upcoming item on its next due day, then the completed items.
-    public var tableSections: [ScheduledTableSection] {
+    /// Builds the Table's sections and its ID lookup once per listing, on the Mac only (Tech Architect NB 1). In
+    /// board order: each overdue occurrence on its own row, oldest first (D340.6, D340.13), then due today, then
+    /// each upcoming item on its next due day, then the completed items.
+    func rebuildTable() {
+        guard platform == .macOS else {
+            return
+        }
         let presenter = ScheduledPresenter(listing: listing, locale: locale)
         let board = listing.board
         var sections: [ScheduledTableSection] = []
@@ -48,17 +54,17 @@ extension ScheduledListViewModel {
         add(.overdue, overdueHeader, board.overdue.map { tableRow($0.item, $0.day, .overdue, presenter) })
         add(.dueToday, dueTodayHeader, board.dueToday.map { tableRow($0.item, $0.day, .dueToday, presenter) })
         add(.upcoming, upcomingHeader, board.upcoming.map { tableRow($0.item, $0.day, .upcoming, presenter) })
-        add(
-            .completed,
-            ScheduledText.pair(completedTitle, completedCount),
-            board.completed.map { tableRow($0, nil, .completed, presenter) },
+        add(.completed, completedTitle, board.completed.map { tableRow($0, nil, .completed, presenter) })
+        tableSections = sections
+        tableRowsByID = Dictionary(
+            sections.flatMap(\.rows).map { ($0.id, $0) },
+            uniquingKeysWith: { first, _ in first },
         )
-        return sections
     }
 
     /// The Table row with `id`, for the selection's keyboard shortcuts.
     public func tableRow(id: String) -> ScheduledTableRow? {
-        tableSections.lazy.flatMap(\.rows).first { $0.id == id }
+        tableRowsByID[id]
     }
 
     /// "8 scheduled · 2 overdue · double-click to open · right-click for actions". The overdue count counts
@@ -68,9 +74,9 @@ extension ScheduledListViewModel {
         guard !board.isEmpty else {
             return nil
         }
-        var parts = [ScheduledText.scheduledCount(board.itemCount.formatted(.number.locale(locale)))]
+        var parts = [ScheduledText.scheduledCount(board.itemCount)]
         if board.overdueCount > 0 {
-            parts.append(ScheduledText.overdueCount(board.overdueCount.formatted(.number.locale(locale))))
+            parts.append(ScheduledText.overdueCount(board.overdueCount))
         }
         parts += [ScheduledText.doubleClickToOpen, ScheduledText.rightClickForActions]
         return parts.dropFirst().reduce(parts[0]) { ScheduledText.pair($0, $1) }
@@ -84,6 +90,23 @@ extension ScheduledListViewModel {
     public var amountColumn: String { ScheduledText.amount }
     public var statusColumn: String { ScheduledText.statusColumn }
 
+    /// The Reminder Time in the device's format (D341.4), as a notified item's Status names it.
+    var reminderTimeText: String {
+        var calendar = Calendar(identifier: .gregorian)
+        calendar.timeZone = TimeZone(identifier: "UTC") ?? .current
+        let components = DateComponents(
+            year: 2001,
+            month: 1,
+            day: 1,
+            hour: reminderTime.hour ?? 9,
+            minute: reminderTime.minute ?? 0,
+        )
+        let date = calendar.date(from: components) ?? Date(timeIntervalSinceReferenceDate: 9 * 3_600)
+        var style = Date.FormatStyle(date: .omitted, time: .shortened).locale(locale)
+        style.timeZone = calendar.timeZone
+        return date.formatted(style)
+    }
+
     private func tableRow(
         _ item: ScheduledItem,
         _ day: CalendarDay?,
@@ -91,35 +114,46 @@ extension ScheduledListViewModel {
         _ presenter: ScheduledPresenter,
     ) -> ScheduledTableRow {
         let row = presenter.row(item, day: day, kind: kind)
-        var repeatText = presenter.ruleText(item.repeatRule)
-        if let day, ScheduleCalendar.isShortened(day, of: item) {
-            repeatText = ScheduledText.lastDay(repeatText)
-        }
-        var status: String
-        switch kind {
-        case .overdue:
-            status = ScheduledText.overdueDays(day.map { Self.days(from: $0, to: listing.board.today) } ?? 0)
-        case .dueToday:
-            status = ScheduledText.dueTodayRow
-        case .upcoming:
-            status = upcomingHeader
-        case .completed:
-            status = completedTitle
-        }
-        if item.processesAutomatically {
-            status = ScheduledText.pair(status, ScheduledText.automatic)
-        }
+        let shown = day ?? lastDueDay(of: item)
         let (amount, tone) = presenter.amountText(of: item)
         return ScheduledTableRow(
             row: row,
-            due: day.map(presenter.dateText) ?? "",
+            due: shown.map(presenter.dateText) ?? "",
             name: row.title,
-            repeatText: repeatText,
+            repeatText: ScheduledRepeatText.long(item, locale: locale),
             account: listing.account(item.accountID)?.name ?? "",
             amount: amount,
             tone: tone,
-            status: status,
+            status: status(of: item, on: day, kind: kind, presenter: presenter),
         )
+    }
+
+    /// The time state first, then the mode, which only due-today and upcoming rows carry (D355.2, D356.1). An
+    /// automatic item is overdue only after Undo Pay (D344.1), and reads like a manual one.
+    private func status(
+        of item: ScheduledItem,
+        on day: CalendarDay?,
+        kind: ScheduledPresenter.Kind,
+        presenter: ScheduledPresenter,
+    ) -> String {
+        switch kind {
+        case .overdue:
+            return ScheduledText.overdueDays(day.map { Self.days(from: $0, to: listing.board.today) } ?? 0)
+        case .dueToday:
+            if item.processesAutomatically {
+                return ScheduledText.dueTodayAutomatic
+            }
+            return item.notifiesWhenDue ? ScheduledText.dueTodayAt(reminderTimeText) : ScheduledText.dueTodayRow
+        case .upcoming:
+            switch (item.processesAutomatically, item.notifiesWhenDue) {
+            case (true, true): return ScheduledText.automaticAndNotify
+            case (true, false): return ScheduledText.automaticStatus
+            case (false, true): return ScheduledText.notifyAt(reminderTimeText)
+            case (false, false): return ""
+            }
+        case .completed:
+            return ScheduledText.ended(lastDueDay(of: item).map(presenter.dateText) ?? "")
+        }
     }
 
     /// Whole days from `first` to `last`, counted on calendar days.
