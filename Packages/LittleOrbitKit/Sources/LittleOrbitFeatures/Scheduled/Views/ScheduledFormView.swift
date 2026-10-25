@@ -1,0 +1,121 @@
+#if canImport(SwiftUI) && (os(iOS) || os(macOS))
+    import LittleOrbitDomain
+    import LittleOrbitTheme
+    import SwiftUI
+
+    /// New and Edit Scheduled Item (#26 frame "New scheduled – form, 31st rule preview"): type, amount, payee,
+    /// category and account; then Schedule (Starts, Repeat with its stepper row, Ends and End Date), the Next Due
+    /// Dates preview with its month-end footnote (D24), and Process automatically. Standard Form controls only.
+    struct ScheduledFormView: View {
+        @Bindable var model: ScheduledFormViewModel
+        @Environment(\.dismiss) private var dismiss
+
+        var body: some View {
+            Form {
+                Section {
+                    // The segmented control hides its label; VoiceOver reads it as "Type".
+                    Picker(model.typeLabel, selection: $model.type) {
+                        ForEach(TransactionType.allCases, id: \.self) { type in
+                            Text(model.typeName(type)).tag(type)
+                        }
+                    }
+                    .pickerStyle(.segmented)
+                    .labelsHidden()
+                }
+                Section {
+                    TextField(model.amountLabel, text: $model.amountText)
+                        #if os(iOS)
+                            .keyboardType(.decimalPad)
+                        #endif
+                    if let error = model.amountError {
+                        Text(error).foregroundStyle(Color(ThemeColor.destructiveDefault))
+                    }
+                    TextField(model.descriptionLabel, text: $model.details)
+                }
+                Section {
+                    if model.showsCategory {
+                        Picker(model.payeeLabel, selection: $model.payeeID) {
+                            ForEach(model.payeeChoices) { Text(verbatim: $0.name).tag($0.id) }
+                        }
+                        Picker(model.categoryLabel, selection: $model.categoryID) {
+                            ForEach(model.categoryChoices) { Text(verbatim: $0.name).tag($0.id) }
+                        }
+                    }
+                    Picker(model.accountLabel, selection: $model.accountID) {
+                        ForEach(model.accountChoices) { Text(verbatim: $0.name).tag($0.id) }
+                    }
+                    if model.type == .transfer {
+                        Picker(model.toLabel, selection: $model.transferAccountID) {
+                            ForEach(model.toChoices) { Text(verbatim: $0.name).tag($0.id) }
+                        }
+                    }
+                    if let error = model.formError {
+                        Text(error).foregroundStyle(Color(ThemeColor.destructiveDefault))
+                    }
+                }
+                Section(model.scheduleHeader) {
+                    DatePicker(model.startsLabel, selection: $model.startDate, displayedComponents: .date)
+                    Picker(model.repeatLabel, selection: $model.frequency) {
+                        ForEach(ScheduledFrequency.allCases) { Text(model.frequencyName($0)).tag($0) }
+                    }
+                    if model.frequency != .never {
+                        // The whole phrase: "Monthly" at 1, "Every 2 months" at 2 (D334.4).
+                        Stepper(value: $model.interval, in: model.intervalRange) {
+                            Text(model.intervalText)
+                        }
+                        Picker(model.endsLabel, selection: $model.hasEnd) {
+                            Text(model.endsNeverTitle).tag(false)
+                            Text(model.endsOnDateTitle).tag(true)
+                        }
+                        if model.hasEnd {
+                            DatePicker(model.endDateLabel, selection: $model.endDate, displayedComponents: .date)
+                        }
+                    }
+                }
+                Section {
+                    ForEach(model.preview) { row in
+                        LabeledContent(row.date, value: row.note ?? "")
+                    }
+                } header: {
+                    Text(model.previewHeader)
+                } footer: {
+                    if let footnote = model.previewFootnote {
+                        Text(footnote)
+                    }
+                }
+                Section {
+                    Toggle(model.automaticLabel, isOn: $model.processesAutomatically)
+                    TextField(model.noteLabel, text: $model.note, axis: .vertical)
+                } footer: {
+                    Text(model.automaticFootnote)
+                }
+            }
+            .formStyle(.grouped)
+            .navigationTitle(model.title)
+            #if os(iOS)
+                .navigationBarTitleDisplayMode(.inline)
+            #endif
+            .toolbar {
+                ToolbarItem(placement: .cancellationAction) {
+                    Button(model.cancelTitle) { dismiss() }
+                }
+                ToolbarItem(placement: .confirmationAction) {
+                    Button(model.confirmTitle) {
+                        if model.save() {
+                            dismiss()
+                        }
+                    }
+                }
+            }
+            .alert(
+                model.alert?.title ?? "",
+                isPresented: Binding(get: { model.alert != nil }, set: { if !$0 { model.alert = nil } }),
+                presenting: model.alert,
+            ) { _ in
+                Button(model.okayTitle) { model.alert = nil }
+            } message: { alert in
+                Text(alert.message)
+            }
+        }
+    }
+#endif

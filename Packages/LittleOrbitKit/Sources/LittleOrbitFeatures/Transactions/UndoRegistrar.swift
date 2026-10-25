@@ -96,6 +96,7 @@ public enum UndoEvent: Equatable, Sendable {
 public final class LedgerUpdates {
     public private(set) var revision = 0
     @ObservationIgnored private var histories: [WeakHistory] = []
+    @ObservationIgnored private var replacedHandlers: [(id: UUID, run: @MainActor () -> Void)] = []
 
     private struct WeakHistory {
         weak var history: WindowUndoHistory?
@@ -105,6 +106,26 @@ public final class LedgerUpdates {
 
     func changed() {
         revision += 1
+    }
+
+    /// One `onLedgerReplaced` handler, for removing it again.
+    struct ReplacedHandler: Hashable {
+        fileprivate let id: UUID
+    }
+
+    /// Runs `handler` on every restore, before the reload, for state kept beside the ledger, such as the
+    /// Scheduled catch-up hint (#26). Something registered per window, rather than once per launch, removes its
+    /// handler with the returned token when it goes (Tech Architect NB 3).
+    @discardableResult
+    func onLedgerReplaced(_ handler: @escaping @MainActor () -> Void) -> ReplacedHandler {
+        let token = ReplacedHandler(id: UUID())
+        replacedHandlers.append((token.id, handler))
+        return token
+    }
+
+    /// Stops running a handler from `onLedgerReplaced`. Removing it twice does nothing.
+    func removeLedgerReplacedHandler(_ token: ReplacedHandler) {
+        replacedHandlers.removeAll { $0.id == token.id }
     }
 
     func add(_ history: WindowUndoHistory) {
@@ -120,6 +141,9 @@ public final class LedgerUpdates {
             // A failed or stale Undo's alert is about a step that's gone now, so it doesn't outlive the old data
             // (Tech Architect N6).
             entry.history?.alert = nil
+        }
+        for handler in replacedHandlers {
+            handler.run()
         }
         revision += 1
     }

@@ -59,8 +59,12 @@ import SwiftUI
         let backups: BackupsViewModel
         let categories: CategoriesFeature
         let payees: PayeesFeature
+        let scheduled: ScheduledFeature
 
-        init(repository: some LedgerRepository & LedgerBackupSource, backupStorage: any BackupStorage) {
+        init(
+            repository: some LedgerRepository & ScheduleRepository & LedgerBackupSource,
+            backupStorage: any BackupStorage,
+        ) {
             let transactionUseCases = TransactionUseCases(
                 repository: repository,
                 categoryNames: CatalogDefaultCategoryNames(),
@@ -83,8 +87,53 @@ import SwiftUI
             // undo history is cleared, so Undo never replays a step made against the old data (D187.2, N6).
             let changes = LedgerChanges()
             transactions.updates.follow(changes)
+            // Scheduled items (#26), over the device's clock and time zone, read on every call. Their due automatic
+            // occurrences are recorded here, each once, before the accounts and the overdue badge are read (#26
+            // QA), and again whenever the app becomes active.
+            // The zone is the auto-updating one, so a zone change while the app runs is picked up (D21).
+            let timeZone: @MainActor () -> TimeZone = { TimeZone.autoupdatingCurrent }
+            var scheduledNow: @MainActor () -> Date = { Date() }
+            #if DEBUG
+                // D337.2: `-LittleOrbitScheduledToday 2026-11-20` moves today, and new items' creation day, for
+                // scheduled items only. Not in release builds.
+                if let day = ScheduledDebugClock.overriddenDay(in: ProcessInfo.processInfo.arguments) {
+                    scheduledNow = ScheduledDebugClock.clock(
+                        today: day,
+                        launchedAt: Date(),
+                        timeZone: timeZone,
+                        now: { Date() },
+                    )
+                }
+            #endif
+            let scheduledUseCases = DefaultScheduledUseCases(
+                repository: repository,
+                now: scheduledNow,
+                timeZone: timeZone,
+            )
+            scheduled = ScheduledFeature(
+                useCases: ScheduledScreenUseCases(
+                    load: scheduledUseCases,
+                    manage: scheduledUseCases,
+                    catchUp: scheduledUseCases,
+                    // The catch-up hint stays pending in app settings until Scheduled has shown it (D338.6).
+                    notices: ScheduledCatchUpNotices(store: UserDefaultsScheduledCatchUpNotices()),
+                ),
+                updates: transactions.updates,
+                onCatchUpProblem: { problem in
+                    switch problem {
+                    case .failed(let error): StoreLog.failure(.scheduledCatchUpFailed, error)
+                    case .someNotRecorded: StoreLog.notice(.scheduledItemsNotRecorded)
+                    case .createdAfterToday: StoreLog.notice(.scheduledItemsCreatedAfterToday)
+                    }
+                },
+            )
+            scheduled.catchUp(atLaunch: true)
             // Account delete returns its change; the screens record it in the transactions' history (#93).
-            accounts = AccountsFeature(useCases: AccountUseCases(repository: repository), ledgerChanges: changes)
+            accounts = AccountsFeature(
+                useCases: AccountUseCases(repository: repository),
+                plannedItems: scheduled,
+                ledgerChanges: changes,
+            )
             backups = AppComposition.makeBackups(source: repository, storage: backupStorage, changes: changes)
             // Settings › Categories and Payees (#24): the category and payee use cases, the category editor's
             // reads and saves, and the payee list's reads.
@@ -129,6 +178,10 @@ import SwiftUI
                     // background-time assertion and is cancelled cleanly if the time runs out.
                     .task { await features.backups.backUpAutomaticallyIfNeeded() }
                     .onChange(of: scenePhase) { _, phase in
+                        // A day may have passed, or the clock or time zone changed, while the app was away.
+                        if phase == .active {
+                            features.scheduled.catchUp(atLaunch: false)
+                        }
                         if phase == .background {
                             features.backups.backUpInBackground(backgroundActivity)
                         }
@@ -145,11 +198,16 @@ import SwiftUI
         @ViewBuilder
         private func content(_ features: AppFeatures) -> some View {
             #if os(macOS)
-                AccountsSplitView(feature: features.accounts, transactions: features.transactions)
+                AccountsSplitView(
+                    feature: features.accounts,
+                    transactions: features.transactions,
+                    scheduled: features.scheduled,
+                )
             #else
                 AccountsHomeView(
                     feature: features.accounts,
                     transactions: features.transactions,
+                    scheduled: features.scheduled,
                     onShowSettings: { history in
                         settingsUndoHistory = history
                         isShowingSettings = true

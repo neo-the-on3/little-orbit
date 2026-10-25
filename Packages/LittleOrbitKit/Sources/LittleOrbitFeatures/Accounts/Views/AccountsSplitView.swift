@@ -15,15 +15,18 @@
         @State private var undoSlot = WindowUndoSlot()
         private let feature: AccountsFeature
         private let transactions: TransactionsFeature
+        /// The Scheduled screens (#26); without them the sidebar row shows its placeholder.
+        private let scheduled: ScheduledFeature?
 
         private var undoHistory: WindowUndoHistory {
             undoSlot.history(from: transactions)
         }
 
         /// Both features come from the composition root, which built them once with the injected use cases.
-        public init(feature: AccountsFeature, transactions: TransactionsFeature) {
+        public init(feature: AccountsFeature, transactions: TransactionsFeature, scheduled: ScheduledFeature? = nil) {
             self.feature = feature
             self.transactions = transactions
+            self.scheduled = scheduled
             _model = State(initialValue: feature.accounts)
             _deleteConfirmation = State(initialValue: AccountDeleteConfirmation(model: feature.accounts))
         }
@@ -207,6 +210,13 @@
                     .id(id)
                 } else {
                     noSelection
+                }
+            case .home(.scheduled) where scheduled != nil:
+                if let scheduled {
+                    // Its own stack, so a row opens the item in the detail column.
+                    NavigationStack {
+                        ScheduledListView(feature: scheduled)
+                    }
                 }
             case .home(let destination):
                 UpcomingFeatureView(
