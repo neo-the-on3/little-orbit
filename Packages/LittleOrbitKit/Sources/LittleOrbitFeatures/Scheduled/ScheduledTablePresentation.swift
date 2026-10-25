@@ -10,8 +10,8 @@ public struct ScheduledTableRow: Identifiable, Equatable, Sendable {
     /// "15 Oct", or "15 Jan 2027" outside this year; a completed item's last due date (D355.3).
     public let due: String
     public let name: String
-    /// The long form: "Monthly on the 15th", "Every 2 weeks on Saturday" (D356.2), with ", last day" when this
-    /// occurrence falls on a short month's last day (D356.2, D357).
+    /// The long form: "Monthly on the 15th", "Every 2 weeks on Saturday" (D356.2), "Monthly on the 30th or last day"
+    /// (D368).
     public let repeatText: String
     /// The account, or a transfer's From account.
     public let account: String
@@ -146,7 +146,7 @@ extension ScheduledListViewModel {
             row: row,
             due: shown.map(presenter.dateText) ?? "",
             name: row.title,
-            repeatText: ScheduledRepeatText.long(item, on: day, locale: locale),
+            repeatText: ScheduledRepeatText.long(item, locale: locale),
             account: listing.account(item.accountID)?.name ?? "",
             amount: amount,
             tone: tone,

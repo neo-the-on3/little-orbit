@@ -121,7 +121,7 @@
       }
     },
     "%1$@ · %2$@": {
-      "comment": "Two values joined with a middle dot: a backup’s account count (%1$@) and transaction count (%2$@); in the spending drill-down’s header, the report’s period (%1$@, such as “October 2026”) and currency code (%2$@, such as “INR”), and then the category’s share (%1$@, such as “16.9% of spending”) and that period and currency (%2$@); on the CSV import Columns step, the file’s name (%1$@) and its row count (%2$@).",
+      "comment": "Two values joined with a middle dot: a backup’s account count (%1$@) and transaction count (%2$@); in the spending drill-down’s header, the report’s period (%1$@, such as “October 2026”) and currency code (%2$@, such as “INR”), and then the category’s share (%1$@, such as “16.9% of spending”) and that period and currency (%2$@); on the CSV import Columns step, the file’s name (%1$@) and its row count (%2$@); a Scheduled row’s name, a description and its payee (“Rent · Landlord”); the iOS Scheduled row detail, built up part by part (“Monthly · Auto · Everyday Savings”); a Scheduled form category under its parent (“Home · Rent”); the Mac Scheduled Table footer (“8 scheduled · 2 overdue · double-click to open”); and the Mac Scheduled Table Status (“Due today · Notifications off”, “Automatic · Notifications off”).",
       "extractionState": "manual",
       "localizations": {
         "en": {
@@ -8549,7 +8549,7 @@
       }
     },
     "%@, last day": {
-      "comment": "Scheduled row detail: %@ is the repeat, such as Monthly; this date is the month’s last day.",
+      "comment": "iOS Scheduled list row detail: %@ is the short repeat, such as “Monthly”; this occurrence falls on a shorter month’s last day (D334.3). The Mac Scheduled Table uses “Monthly on the %@ or last day” instead (D368).",
       "extractionState": "manual",
       "generatesSymbol": false,
       "localizations": {
@@ -8850,7 +8850,7 @@
       }
     },
     "Ended %@": {
-      "comment": "Scheduled item screen: a completed item’s last due date, as in “Ended 5 Oct” (D334.13). Also the Mac Scheduled Table’s Status cell for a completed item (D355.4).",
+      "comment": "Scheduled item screen, iOS and Mac: a completed item’s last due date, as in “Ended 5 Oct” (D334.13). The Mac Scheduled Table’s Status reads just “Ended” (D365.1).",
       "extractionState": "manual",
       "generatesSymbol": false,
       "localizations": {
@@ -10046,6 +10046,18 @@
           "stringUnit": {
             "state": "translated",
             "value": "Ended"
+          }
+        }
+      }
+    },
+    "Monthly on the %@ or last day": {
+      "comment": "Mac Scheduled Table Repeat column: every month on the 29th or 30th, when a month may be shorter and the item falls on its last day instead. %@ is the day of the month as an ordinal, for example “30th” (D368).",
+      "extractionState": "manual",
+      "localizations": {
+        "en": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Monthly on the %@ or last day"
           }
         }
       }

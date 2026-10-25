@@ -23,6 +23,12 @@ extension ScheduledText {
         FeatureText.format("Monthly on the %@", ordinal)
     }
 
+    /// "Monthly on the 30th or last day": a monthly rule on the 29th or 30th, which falls on a shorter month's
+    /// last day (D368). It replaces the iOS row's ", last day" on the Mac.
+    static func monthlyOnTheOrLastDay(_ ordinal: String) -> String {
+        FeatureText.format("Monthly on the %@ or last day", ordinal)
+    }
+
     static var monthlyOnTheLastDay: String {
         FeatureText.string(
             "Monthly on the last day",
@@ -60,26 +66,9 @@ extension ScheduledText {
 }
 
 /// The long Repeat text, from the item's anchor: its start day's weekday, day of the month, or day and month
-/// (D24). A monthly item on the 31st is on the last day in every month.
+/// (D24). A monthly item on the 31st is on the last day in every month, and one on the 29th or 30th on the last day
+/// of a shorter month (D368).
 enum ScheduledRepeatText {
-    /// The long form for the occurrence on `day`: "Monthly on the 30th, last day" when `day` is a shorter month's
-    /// last day (the iOS row's note, D356.2, D357). A rule that already says "last day" doesn't repeat it.
-    static func long(_ item: ScheduledItem, on day: CalendarDay?, locale: Locale) -> String {
-        let text = long(item, locale: locale)
-        guard let day, ScheduleCalendar.isShortened(day, of: item), !saysLastDay(item) else {
-            return text
-        }
-        return ScheduledText.lastDay(text)
-    }
-
-    /// A monthly rule on the 31st reads "on the last day" already.
-    private static func saysLastDay(_ item: ScheduledItem) -> Bool {
-        guard case .every(_, .month) = item.repeatRule else {
-            return false
-        }
-        return item.startDay.day >= 31
-    }
-
     static func long(_ item: ScheduledItem, locale: Locale) -> String {
         guard case .every(let count, let unit) = item.repeatRule else {
             return ScheduledText.once
@@ -97,7 +86,12 @@ enum ScheduledRepeatText {
                     ? ScheduledText.monthlyOnTheLastDay : ScheduledText.everyMonthsOnTheLastDay(count)
             }
             let ordinal = ordinal(anchor.day, locale: locale)
-            return count == 1 ? ScheduledText.monthlyOnThe(ordinal) : ScheduledText.everyMonthsOnThe(count, ordinal)
+            if count == 1 {
+                // The 29th or 30th: some months are shorter (D368).
+                return anchor.day >= 29
+                    ? ScheduledText.monthlyOnTheOrLastDay(ordinal) : ScheduledText.monthlyOnThe(ordinal)
+            }
+            return ScheduledText.everyMonthsOnThe(count, ordinal)
         case .year:
             let dayAndMonth = dayAndMonth(anchor, locale: locale)
             return count == 1 ? ScheduledText.yearlyOn(dayAndMonth) : ScheduledText.everyYearsOn(count, dayAndMonth)
