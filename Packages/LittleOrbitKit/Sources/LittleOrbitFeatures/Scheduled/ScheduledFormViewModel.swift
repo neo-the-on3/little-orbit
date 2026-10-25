@@ -361,7 +361,8 @@ public final class ScheduledFormViewModel: Identifiable {
         formError = nil
         // Only this save's deleted-item alert closes the form: the item may be back (an Undo elsewhere) (#258).
         alertClosesForm = false
-        // Save is disabled until the payee field is resolved; this covers Return on the Mac too (D347.2).
+        // Save is disabled until the payee field is resolved and a required Received is filled in; this covers
+        // Return on the Mac too (D347.2).
         guard canSave else {
             return false
         }

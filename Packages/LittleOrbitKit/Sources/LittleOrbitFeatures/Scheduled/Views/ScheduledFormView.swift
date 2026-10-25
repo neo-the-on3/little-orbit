@@ -151,7 +151,7 @@
                             dismiss()
                         }
                     }
-                    // Until the payee field's text is resolved (D347.2).
+                    // Until the payee field's text is resolved (D347.2) and a required Received is filled in.
                     .disabled(!model.canSave)
                 }
             }
@@ -252,6 +252,10 @@
             #endif
             if let error = model.receivedError {
                 Text(error).foregroundStyle(Color(ThemeColor.destructiveDefault))
+            } else if let hint = model.receivedHint {
+                // A hint, not an error: Save waits for it (D347.2's pattern).
+                Text(verbatim: hint)
+                    .foregroundStyle(.secondary)
             }
             if let rate = model.rateText {
                 Label {
