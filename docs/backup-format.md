@@ -70,7 +70,7 @@ format bump (#100).
 | Path | Contents |
 | --- | --- |
 | `manifest.json` | What the backup is, and every other file's path, size and SHA-256. Written last. |
-| `shared.json` | Ledger data that isn't per account and per year: accounts, categories, payees, tags, the reserved sections and shared settings. Also the few records that have no account or no transaction (`unfiled`). |
+| `shared.json` | Ledger data that isn't per account and per year: accounts, categories, payees, tags, budgets with their limit history, the reserved sections and shared settings. Also the few records that have no account or no transaction (`unfiled`). |
 | `transfers/<year>.json` | Transfers, by the year of each transaction's own local date. |
 | `accounts/<account id>/<year>.json` | Every other transaction of that account, by year, with its splits and attachment details. |
 | `attachments/<attachment id>` | Attachment bytes, exactly as stored. |
@@ -134,7 +134,16 @@ copy of your current data first, so nothing was replaced. Your data hasn’t cha
 
 A file in the folder that the manifest doesn't list, such as `.DS_Store`, is ignored.
 
-Format 1 is the first version, so there's no migration code. The format that fills a reserved section, or changes
+Format 1 is the first version, so there's no migration code. Until the first release the schema is still V1 and
+changes in place (D294), so budgets (#25) fill the reserved `budgets` section within format 1. A backup without
+budgets writes `"budgets": []` as before, its manifest doesn't list the section, and its fingerprint doesn't change;
+older backups read with no budgets. Each budget's repeat is written as `{"kind": "monthly"}` or
+`{"kind": "custom", "unit": "week", "count": 3}`, and days as `{"year", "month", "day"}`. A backup whose budgets
+break the stores' rule (`LedgerBook.validateStoredBudgets`: a missing, removed or non-expense category, a limit of 0
+or less or with too many decimals, a custom repeat outside 1–99, an unknown currency, a day that doesn't exist, or a
+repeated ID) is damaged, and nothing is replaced. A budget with no categories is valid (D307.5). The tests pin a
+backup written before budgets (`Format 1 Before Budgets` in the Features test fixtures) and its fingerprint, until
+format 1 freezes with V1 at the first release. After the first release, the format that fills a reserved section, or changes
 the layout, raises `BackupFormat.currentVersion` and migrates older backups on restore.
 
 ## Retention

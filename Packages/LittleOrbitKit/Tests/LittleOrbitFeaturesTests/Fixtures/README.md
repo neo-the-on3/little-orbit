@@ -13,3 +13,10 @@
 - `makeNewerDotDotSample()` in `BackupAppleArchiveServiceTests.swift` makes it, and a test checks the checked-in file is byte for byte what it makes. Apple Archive refuses to read the `../outside.json` header, so the reader sees the manifest, a `..` folder and then an entry it refused. To make it again on a Mac, run `LITTLE_ORBIT_WRITE_FIXTURES="$PWD/Tests/LittleOrbitFeaturesTests/Fixtures" swift test --filter BackupAppleArchiveServiceTests` in `Packages/LittleOrbitKit`.
 - Importing it must show "Update little-orbit to Restore This Backup", never "This Backup Is Damaged", and write nothing anywhere: no `outside.json`, no temporary extraction, no Before restore backup, and no change to the data, the list or the Backups folder.
 - For manual QA, copy it to the simulator or the Mac like the sample above, then open it with Restore from File… or File > Restore from Backup….
+
+`Format 1 Before Budgets/` (#174 review, Q9 conditions a and b)
+
+- A stored backup folder exactly as `main` wrote it at 1f27b72, before budgets: `manifest.json`, `shared.json`, two account year files and one attachment. The data is `FormatOneSample` in the Domain tests: made-up names, fixed IDs and dates.
+- Its checksums and fingerprint use the tests' fake hashing (`FakeBackupHashing`), so the Linux tests can check them.
+- `BackupFormatOneFixtureTests` decodes it with no budgets, writes it back byte for byte with the same fingerprint, and restores it into the in-memory store. `BackupBudgetTests.pinnedFingerprint` pins the same ledger's fingerprint.
+- Never regenerate it with a newer build: it stands for backups made before budgets, until format 1 freezes with V1.
