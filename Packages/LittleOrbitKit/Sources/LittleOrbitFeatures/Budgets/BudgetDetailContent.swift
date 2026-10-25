@@ -46,11 +46,17 @@ public struct BudgetTransactionRow: Identifiable, Equatable, Sendable {
     public var title: String
     /// “Restaurants · Everyday Savings”, or “Split · Household · Everyday Savings” for a split line.
     public var subtitle: String
+    /// The Mac table's Category column: “Restaurants”, or “Split · Household” for a split line (D240, D241.1).
+    public var categoryText: String
+    /// The Mac table's Account column.
+    public var accountText: String
     /// “−₹250.00”, or “+₹300.00” for a refund (D173.2).
     public var amountText: String
     public var tone: AmountTone
     /// “20 Oct”, or “3 Jan 2027” in another year.
     public var dateText: String
+    /// The Mac table's Date column, always with the year: “20 Oct 2026” (D239.4).
+    public var fullDateText: String
     public var symbolName: String
     public var accessibilityLabel: String
 }

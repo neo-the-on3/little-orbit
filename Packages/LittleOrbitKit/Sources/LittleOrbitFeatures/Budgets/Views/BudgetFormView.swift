@@ -261,8 +261,4 @@
             .navigationBarTitleDisplayMode(.inline)
         }
     }
-
-    extension BudgetFormViewModel: Identifiable {
-        public nonisolated var id: ObjectIdentifier { ObjectIdentifier(self) }
-    }
 #endif

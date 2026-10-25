@@ -1643,7 +1643,7 @@
       }
     },
     "Category": {
-      "comment": "Transaction form: the category picker’s title.",
+      "comment": "Transaction form: the category picker’s title. Also the Mac budget detail’s transactions table column.",
       "extractionState": "manual",
       "generatesSymbol": false,
       "localizations": {
@@ -5143,7 +5143,7 @@
       }
     },
     "Period": {
-      "comment": "Budget form: the section with the start date and repeat.",
+      "comment": "Budget form: the section with the start date and repeat. Also the Mac budget list’s column with the repeat and the days left.",
       "extractionState": "manual",
       "generatesSymbol": false,
       "localizations": {
@@ -6928,6 +6928,342 @@
           "stringUnit": {
             "state": "translated",
             "value": "Starts %@"
+          }
+        }
+      }
+    },
+    "Duplicate Budget %@": {
+      "comment": "Undo and Redo name: a budget duplicated on the Mac. %@ is the original budget’s name, such as “Eating out” (D307.8, D313.1).",
+      "extractionState": "manual",
+      "generatesSymbol": false,
+      "localizations": {
+        "en": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Duplicate Budget %@"
+          }
+        }
+      }
+    },
+    "Budget": {
+      "comment": "Mac menu bar: the Budget menu, with the commands for budgets. Also the Mac budget list’s name column.",
+      "extractionState": "manual",
+      "generatesSymbol": false,
+      "localizations": {
+        "en": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Budget"
+          }
+        }
+      }
+    },
+    "New Budget…": {
+      "comment": "Mac Budget menu, right-click menu and the empty list’s button: opens New Budget.",
+      "extractionState": "manual",
+      "generatesSymbol": false,
+      "localizations": {
+        "en": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "New Budget…"
+          }
+        }
+      }
+    },
+    "Open Budget": {
+      "comment": "Mac budget list right-click menu: shows the budget’s detail.",
+      "extractionState": "manual",
+      "generatesSymbol": false,
+      "localizations": {
+        "en": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Open Budget"
+          }
+        }
+      }
+    },
+    "Edit Budget…": {
+      "comment": "Mac Budget menu and right-click menu: opens Edit Budget.",
+      "extractionState": "manual",
+      "generatesSymbol": false,
+      "localizations": {
+        "en": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Edit Budget…"
+          }
+        }
+      }
+    },
+    "Change Budget Limit…": {
+      "comment": "Mac Budget menu and budget detail: opens Change Budget Limit for this period onwards.",
+      "extractionState": "manual",
+      "generatesSymbol": false,
+      "localizations": {
+        "en": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Change Budget Limit…"
+          }
+        }
+      }
+    },
+    "Duplicate": {
+      "comment": "Mac Budget menu and right-click menu: saves a copy of the budget straight away (D307.6).",
+      "extractionState": "manual",
+      "generatesSymbol": false,
+      "localizations": {
+        "en": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Duplicate"
+          }
+        }
+      }
+    },
+    "Show Previous Period": {
+      "comment": "Mac Budget menu and right-click menu: shows the budget’s period before the one on show.",
+      "extractionState": "manual",
+      "generatesSymbol": false,
+      "localizations": {
+        "en": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Show Previous Period"
+          }
+        }
+      }
+    },
+    "Show Next Period": {
+      "comment": "Mac Budget menu and right-click menu: shows the budget’s period after the one on show.",
+      "extractionState": "manual",
+      "generatesSymbol": false,
+      "localizations": {
+        "en": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Show Next Period"
+          }
+        }
+      }
+    },
+    "Show Current Period": {
+      "comment": "Mac Budget menu: goes back to the budget’s current period from a past one.",
+      "extractionState": "manual",
+      "generatesSymbol": false,
+      "localizations": {
+        "en": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Show Current Period"
+          }
+        }
+      }
+    },
+    "Today": {
+      "comment": "Mac budget detail: button next to the period arrows that goes back to the current period.",
+      "extractionState": "manual",
+      "generatesSymbol": false,
+      "localizations": {
+        "en": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Today"
+          }
+        }
+      }
+    },
+    "Delete Budget…": {
+      "comment": "Mac Budget menu, right-click menu and Edit Budget: asks before deleting the budget.",
+      "extractionState": "manual",
+      "generatesSymbol": false,
+      "localizations": {
+        "en": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Delete Budget…"
+          }
+        }
+      }
+    },
+    "%lld budgets": {
+      "comment": "Mac budget list, under the title: how many budgets there are. %lld is the number (D313.4).",
+      "extractionState": "manual",
+      "generatesSymbol": false,
+      "localizations": {
+        "en": {
+          "variations": {
+            "plural": {
+              "one": {
+                "stringUnit": {
+                  "state": "translated",
+                  "value": "%lld budget"
+                }
+              },
+              "other": {
+                "stringUnit": {
+                  "state": "translated",
+                  "value": "%lld budgets"
+                }
+              }
+            }
+          }
+        }
+      }
+    },
+    "%lld overspent": {
+      "comment": "Mac budget list, under the title after the number of budgets: how many are over their limit this period. %lld is the number (D313.4).",
+      "extractionState": "manual",
+      "generatesSymbol": false,
+      "localizations": {
+        "en": {
+          "variations": {
+            "plural": {
+              "one": {
+                "stringUnit": {
+                  "state": "translated",
+                  "value": "%lld overspent"
+                }
+              },
+              "other": {
+                "stringUnit": {
+                  "state": "translated",
+                  "value": "%lld overspent"
+                }
+              }
+            }
+          }
+        }
+      }
+    },
+    "%@ copy": {
+      "comment": "The name of a duplicated budget on the Mac, like the Finder’s copies. %@ is the budget’s name, shortened when the copy’s name would be over 100 characters (D307.6, D313.2).",
+      "extractionState": "manual",
+      "generatesSymbol": false,
+      "localizations": {
+        "en": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "%@ copy"
+          }
+        }
+      }
+    },
+    "%@ copy %lld": {
+      "comment": "The name of a second or later duplicate of a budget on the Mac. %@ is the budget’s name, shortened when the copy’s name would be over 100 characters; %lld is 2 or more (D307.6, D313.2).",
+      "extractionState": "manual",
+      "generatesSymbol": false,
+      "localizations": {
+        "en": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "%@ copy %lld"
+          }
+        }
+      }
+    },
+    "Progress": {
+      "comment": "Mac budget list: the column with each budget’s bar.",
+      "extractionState": "manual",
+      "generatesSymbol": false,
+      "localizations": {
+        "en": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Progress"
+          }
+        }
+      }
+    },
+    "Spent": {
+      "comment": "Mac budget list: the column with spent of what’s available.",
+      "extractionState": "manual",
+      "generatesSymbol": false,
+      "localizations": {
+        "en": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Spent"
+          }
+        }
+      }
+    },
+    "Left": {
+      "comment": "Mac budget list: the column with what’s left, unused or over.",
+      "extractionState": "manual",
+      "generatesSymbol": false,
+      "localizations": {
+        "en": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Left"
+          }
+        }
+      }
+    },
+    "Date": {
+      "comment": "Mac budget detail: the transactions table’s date column.",
+      "extractionState": "manual",
+      "generatesSymbol": false,
+      "localizations": {
+        "en": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Date"
+          }
+        }
+      }
+    },
+    "Payee": {
+      "comment": "Mac budget detail: the transactions table’s payee column.",
+      "extractionState": "manual",
+      "generatesSymbol": false,
+      "localizations": {
+        "en": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Payee"
+          }
+        }
+      }
+    },
+    "Account": {
+      "comment": "Mac budget detail: the transactions table’s account column.",
+      "extractionState": "manual",
+      "generatesSymbol": false,
+      "localizations": {
+        "en": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Account"
+          }
+        }
+      }
+    },
+    "Amount": {
+      "comment": "Mac budget detail: the transactions table’s amount column.",
+      "extractionState": "manual",
+      "generatesSymbol": false,
+      "localizations": {
+        "en": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Amount"
+          }
+        }
+      }
+    },
+    "Categories: %@": {
+      "comment": "Mac budget detail, under the figures: the budget’s categories. %@ is the list, such as “Shopping trips (incl. Clothes, Electronics)” (D313.7).",
+      "extractionState": "manual",
+      "generatesSymbol": false,
+      "localizations": {
+        "en": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Categories: %@"
           }
         }
       }

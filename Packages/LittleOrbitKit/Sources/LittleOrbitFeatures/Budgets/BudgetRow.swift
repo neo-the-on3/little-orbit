@@ -34,6 +34,9 @@ public struct BudgetRow: Identifiable, Equatable, Sendable {
     public var timingText: String?
     /// The whole row for VoiceOver, with the symbol's meaning in words.
     public var accessibilityLabel: String
+    /// Whether the current period has one before it, for the Mac's Show Previous Period from the list, which is
+    /// dimmed in a budget's first period (UI Designer's #180 B1). Always false with no categories.
+    public var hasPreviousPeriod: Bool
 
     init(_ summary: BudgetSummary, today: CalendarDay, money: MoneyFormatter, dates: BudgetStartDates) {
         let figures = summary.current.figures
@@ -49,6 +52,7 @@ public struct BudgetRow: Identifiable, Equatable, Sendable {
         name = summary.budget.name
         self.status = status
         statusSymbol = Self.symbol(for: status)
+        hasPreviousPeriod = status != .noCategories && summary.current.period.index > 0
 
         switch status {
         case .noCategories:

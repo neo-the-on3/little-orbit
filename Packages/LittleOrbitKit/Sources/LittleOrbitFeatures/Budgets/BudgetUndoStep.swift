@@ -1,12 +1,12 @@
 import Foundation
 import LittleOrbitDomain
 
-/// A budget save, or a limit change, as one step of the window's Undo history (D307.8). Undo and Redo keep the
-/// user's action as its name, with the budget's name after the step: “New Budget Eating out”, “Edit Budget
-/// Eating out” or “Change Budget Limit Eating out”. A stale step says “Eating out has changed since then.
-/// Nothing was changed.”, “Eating out has been deleted. …”, for a category it would put back, “Groceries has
-/// been deleted. …” (D228.5, the D306 amendment), or, for a name another budget took since, “There’s already a
-/// budget named “Eating out”. Nothing was changed.” (D310.1).
+/// A budget save, a limit change, a delete or a Mac duplicate as one step of the window's Undo history (D307.8).
+/// Undo and Redo keep the user's action as its name, with the budget's name after the step: “New Budget Eating
+/// out”, “Edit Budget Eating out”, “Change Budget Limit Eating out” or “Duplicate Budget Eating out” (D313.1). A
+/// stale step says “Eating out has changed since then. Nothing was changed.”, “Eating out has been deleted. …”,
+/// for a category it would put back, “Groceries has been deleted. …” (D228.5, the D306 amendment), or, for a name
+/// another budget took since, “There’s already a budget named “Eating out”. Nothing was changed.” (D310.1).
 @MainActor
 struct BudgetUndoStep: RecordUndoChange {
     /// What the user did, for the step's name.
@@ -16,9 +16,13 @@ struct BudgetUndoStep: RecordUndoChange {
         case changeLimit
         /// Delete Budget, from the budget detail (#25 part 4).
         case delete
+        /// Duplicate Budget, on the Mac (#25 part 5, D307.6). The step is named after the original (D313.1); its
+        /// stale messages name the copy, the budget it puts back or deletes.
+        case duplicate
     }
 
     let name: String
+    /// The budget the stale messages name: the one the step puts back or deletes, a duplicate's copy.
     let budgetName: String
     let change: BudgetChange
     let outcome: BudgetChangeOutcome
@@ -40,7 +44,7 @@ struct BudgetUndoStep: RecordUndoChange {
         }
         return BudgetUndoStep(
             name: BudgetText.undoName(action, budgetName),
-            budgetName: budgetName,
+            budgetName: action == .duplicate ? outcome.budget?.name ?? budgetName : budgetName,
             change: change,
             outcome: outcome,
             changes: changes,
