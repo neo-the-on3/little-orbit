@@ -53,7 +53,13 @@ extension CSVImportViewModel {
         ImportExportText.importButton(readyCount)
     }
 
-    /// The note under Review's Import button: tap on iOS, click on the Mac (D367).
+    /// The Review toolbar's one Import: “Import” on iOS, where the summary shows the count, and the sheet's
+    /// default button “Import N Transactions” on the Mac (UI Designer, 26 Oct).
+    public func importActionTitle(on platform: ImportExportPlatform) -> String {
+        platform == .mac ? importTitle : ImportExportText.importAction
+    }
+
+    /// The note under Review's counts: tap on iOS, click on the Mac (D367).
     public func reviewFooter(on platform: ImportExportPlatform) -> String {
         platform == .mac ? ImportExportText.nothingSavedMac : ImportExportText.nothingSaved
     }
