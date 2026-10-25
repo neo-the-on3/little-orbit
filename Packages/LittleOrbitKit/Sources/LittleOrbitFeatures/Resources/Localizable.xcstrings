@@ -7894,7 +7894,7 @@
       }
     },
     "Add Scheduled Item": {
-      "comment": "Scheduled screen toolbar button and menu item: opens the new scheduled item form. Also the Scheduled toolbar +’s title, help and spoken name; on the Mac, the window’s only + while Scheduled is selected.",
+      "comment": "Scheduled screen toolbar button and empty-state button: opens the new scheduled item form. Also the toolbar button’s help and spoken name; on the Mac, the window’s only + while Scheduled is selected.",
       "extractionState": "manual",
       "generatesSymbol": false,
       "localizations": {
@@ -10022,6 +10022,30 @@
                 }
               }
             }
+          }
+        }
+      }
+    },
+    "Notifications off": {
+      "comment": "Mac Scheduled Table Status: the item is set to notify when due, but notifications are off in System Settings. Alone, or after “Automatic” or “Due today” with “ · ” (D365, D366).",
+      "extractionState": "manual",
+      "localizations": {
+        "en": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Notifications off"
+          }
+        }
+      }
+    },
+    "scheduled.table.status.ended": {
+      "comment": "Mac Scheduled Table Status, completed rows: the item has no more due dates. The Due column shows the last one (D365.1).",
+      "extractionState": "manual",
+      "localizations": {
+        "en": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Ended"
           }
         }
       }

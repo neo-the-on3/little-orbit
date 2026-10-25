@@ -123,7 +123,7 @@ struct ScheduledTableTests {
         #expect(byName["Rent"]?.tone == .negative)
     }
 
-    @Test("D355.3, D355.4: a completed row shows its last due date, keeps its rule and reads Ended")
+    @Test("D355.3, D365.1: a completed row shows its last due date in Due, keeps its rule and reads just Ended")
     func completed() throws {
         let scene = try ScheduledScene()
         var gym = scene.item("Gym", day: 5, month: 8)
@@ -140,13 +140,74 @@ struct ScheduledTableTests {
         let byName = Dictionary(uniqueKeysWithValues: sections[0].rows.map { ($0.name, $0) })
         #expect(byName["Gym"]?.due == "5 Oct")
         #expect(byName["Gym"]?.repeatText == "Monthly on the 5th")
-        #expect(byName["Gym"]?.status == "Ended 5 Oct")
+        #expect(byName["Gym"]?.status == "Ended", "Due already shows the date (D365.1)")
         #expect(byName["Deposit"]?.due == "15 Oct")
         #expect(byName["Deposit"]?.repeatText == "Once")
-        #expect(byName["Deposit"]?.status == "Ended 15 Oct")
+        #expect(byName["Deposit"]?.status == "Ended")
         #expect(byName["Deposit"]?.row.canSettle == false)
         let id = try #require(byName["Deposit"]?.id)
         #expect(list.tableRow(id: id)?.row.itemID == deposit.id)
+    }
+
+    @Test("D365.2, D366: with notifications denied, only the notify part reads Notifications off")
+    func notificationsDenied() throws {
+        let scene = try ScheduledScene()
+        var upcomingManual = scene.item("Phone Plan", day: 5, month: 11)
+        upcomingManual.notifiesWhenDue = true
+        var upcomingAutomatic = scene.item("Rent", day: 1, automatic: true, month: 11)
+        upcomingAutomatic.notifiesWhenDue = true
+        var todayManual = scene.item("Water", day: 20, month: 10)
+        todayManual.notifiesWhenDue = true
+        var todayAutomatic = scene.item("Salary", day: 20, automatic: true, month: 10)
+        todayAutomatic.notifiesWhenDue = true
+        try scene.add(
+            upcomingManual,
+            upcomingAutomatic,
+            todayManual,
+            todayAutomatic,
+            scene.item("Gym", day: 3, month: 11),
+            scene.item("Insurance", day: 4, automatic: true, month: 11),
+        )
+        let list = macList(scene)
+        #expect(list.notificationsAllowed, "Allowed until #204's permission state feeds it")
+        list.notificationsAllowed = false
+        let denied = status(list)
+        #expect(denied["Phone Plan"] == "Notifications off")
+        #expect(denied["Rent"] == "Automatic · Notifications off")
+        #expect(denied["Water"] == "Due today · Notifications off")
+        #expect(denied["Salary"] == "Due today · Automatic", "Unchanged (D366)")
+        #expect(denied["Gym"] == "", "Notify off: nothing about notify")
+        #expect(denied["Insurance"] == "Automatic")
+        // The items keep their setting, and allowing notifications again restores the time (D365.2).
+        let stored = try scene.repository.scheduleLedger().scheduledItems
+        #expect(stored.first { $0.id == upcomingManual.id }?.notifiesWhenDue == true)
+        list.notificationsAllowed = true
+        let allowed = status(list)
+        #expect(allowed["Phone Plan"] == "Notify \(list.reminderTimeText)")
+        #expect(allowed["Rent"] == "Automatic + notify")
+        #expect(allowed["Water"] == "Due today · \(list.reminderTimeText)")
+        #expect(allowed["Salary"] == "Due today · Automatic")
+        #expect(allowed["Gym"] == "")
+    }
+
+    @Test("D356.2, D357: an occurrence on a short month's last day keeps the last-day note; the 31st says it already")
+    func shortMonthLastDay() throws {
+        let scene = try ScheduledScene()
+        var thirtieth = scene.item("Rent", day: 30, month: 1)
+        thirtieth.startDay = CalendarDay(year: 2027, month: 1, day: 30)
+        var last = scene.item("Card Bill", day: 31, month: 1)
+        last.startDay = CalendarDay(year: 2027, month: 1, day: 31)
+        try scene.add(thirtieth, last)
+        // Today is 2 Mar 2027: January's and February's occurrences are overdue, and February's is on the 28th.
+        scene.now = ScheduledScene.date(CalendarDay(year: 2027, month: 3, day: 2))
+        let rows = macList(scene).tableSections.flatMap(\.rows)
+        let rent = rows.filter { $0.name == "Rent" }
+        #expect(rent.map(\.due) == ["30 Jan", "28 Feb"])
+        #expect(rent.first { $0.due == "30 Jan" }?.repeatText == "Monthly on the 30th")
+        #expect(rent.first { $0.due == "28 Feb" }?.repeatText == "Monthly on the 30th, last day")
+        let card = rows.filter { $0.name == "Card Bill" }
+        #expect(card.map(\.due) == ["31 Jan", "28 Feb"])
+        #expect(card.allSatisfy { $0.repeatText == "Monthly on the last day" }, "Never “on the last day, last day”")
     }
 
     @Test("D356.2, D357: each long Repeat form, at an interval of 1 and of N")
@@ -228,7 +289,7 @@ struct ScheduledTableTests {
     }
 
     @Test("Tech Architect, #198: the Mac hint is shown once drawn, and again when a catch-up replaces it on screen")
-    func catchUpHintReplaced() throws {
+    func catchUpHintReplaced() async throws {
         let scene = try ScheduledScene()
         try scene.add(scene.item("Rent", day: 1, automatic: true))
         let feature = scene.feature()
@@ -252,7 +313,11 @@ struct ScheduledTableTests {
         // The task is keyed on the text, so it runs again and the merged hint counts as shown.
         list.catchUpHintAppeared()
         #expect(scene.notices.notice()?.shown == true)
-        list.dismissCatchUpHint()
+        // Leaving Scheduled, the list view's onDisappear (D338.6), as #213's tests do.
+        list.screenDisappeared(.list)
+        for _ in 0..<5 {
+            await Task.yield()
+        }
         let next = scene.list(feature, platform: .macOS)
         next.screenAppeared(.list)
         next.load()

@@ -246,8 +246,8 @@
     }
 
     /// Pay Now and Skip This Occurrence for a due occurrence, then Edit and Delete for its item. On the Mac the
-    /// items that ask first or open a sheet take an ellipsis, and Pay Now, Edit and Delete show ⌘↩, ⌘E and ⌘⌫
-    /// (D334.10).
+    /// items that ask first or open a sheet take an ellipsis, and Edit and Delete show ⌘E and ⌘⌫ (D334.10). Pay Now
+    /// has no shortcut until it opens #201's sheet (D360.2, D361).
     struct ScheduledRowActions: View {
         let model: ScheduledListViewModel
         let row: ScheduledRow

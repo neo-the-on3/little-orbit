@@ -62,6 +62,24 @@ extension ScheduledText {
 /// The long Repeat text, from the item's anchor: its start day's weekday, day of the month, or day and month
 /// (D24). A monthly item on the 31st is on the last day in every month.
 enum ScheduledRepeatText {
+    /// The long form for the occurrence on `day`: "Monthly on the 30th, last day" when `day` is a shorter month's
+    /// last day (the iOS row's note, D356.2, D357). A rule that already says "last day" doesn't repeat it.
+    static func long(_ item: ScheduledItem, on day: CalendarDay?, locale: Locale) -> String {
+        let text = long(item, locale: locale)
+        guard let day, ScheduleCalendar.isShortened(day, of: item), !saysLastDay(item) else {
+            return text
+        }
+        return ScheduledText.lastDay(text)
+    }
+
+    /// A monthly rule on the 31st reads "on the last day" already.
+    private static func saysLastDay(_ item: ScheduledItem) -> Bool {
+        guard case .every(_, .month) = item.repeatRule else {
+            return false
+        }
+        return item.startDay.day >= 31
+    }
+
     static func long(_ item: ScheduledItem, locale: Locale) -> String {
         guard case .every(let count, let unit) = item.repeatRule else {
             return ScheduledText.once

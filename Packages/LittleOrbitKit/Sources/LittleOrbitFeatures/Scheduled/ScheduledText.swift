@@ -143,7 +143,7 @@ enum ScheduledText {
     static var add: String {
         FeatureText.string(
             "Add Scheduled Item",
-            comment: "Scheduled screen toolbar button and menu item: opens the new scheduled item form.",
+            comment: "Scheduled screen toolbar button and empty-state button: opens the new scheduled item form.",
         )
     }
 
