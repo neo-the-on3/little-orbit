@@ -45,6 +45,9 @@
                         #if os(macOS)
                             .toggleStyle(.checkbox)
                         #endif
+                        // A grouped Form on the Mac draws the checkbox's title as separate text, so the checkbox was
+                        // unnamed without this (Tester's Mac accessibility pass at 59017dc).
+                        .accessibilityLabel(Text(model.changeFutureLabel))
                 } footer: {
                     Text(model.changeFutureFooter)
                 }
@@ -56,7 +59,9 @@
             #endif
             .toolbar {
                 ToolbarItem(placement: .cancellationAction) {
+                    // Tester's Mac accessibility pass at 59017dc: the title was only the description.
                     Button(model.cancelTitle) { dismiss() }
+                        .accessibilityLabel(Text(model.cancelTitle))
                 }
                 ToolbarItem(placement: .confirmationAction) {
                     Button(model.confirmTitle) {
@@ -64,6 +69,7 @@
                             dismiss()
                         }
                     }
+                    .accessibilityLabel(Text(model.confirmTitle))
                 }
             }
             .alert(
@@ -71,7 +77,9 @@
                 isPresented: Binding(get: { model.alert != nil }, set: { if !$0 { model.alert = nil } }),
                 presenting: model.alert,
             ) { _ in
+                // Tester's Mac accessibility pass at 59017dc: the title was only the description.
                 Button(model.okayTitle) { model.alert = nil }
+                    .accessibilityLabel(Text(model.okayTitle))
             } message: { alert in
                 Text(alert.message)
             }

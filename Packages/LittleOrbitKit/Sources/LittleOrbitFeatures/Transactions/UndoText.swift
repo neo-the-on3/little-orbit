@@ -33,6 +33,22 @@ enum UndoText {
         )
     }
 
+    /// The Edit menu's Undo: "Undo Pay Phone Plan", or "Undo" when the step has no name.
+    static func menuUndo(_ title: String?) -> String {
+        guard let title else {
+            return FeatureText.string("Undo", comment: "Mac Edit menu: Undo when there's nothing named to undo.")
+        }
+        return FeatureText.string("Undo \(title)", comment: "Mac Edit menu: Undo with the step's name.")
+    }
+
+    /// The Edit menu's Redo: "Redo Pay Phone Plan", or "Redo".
+    static func menuRedo(_ title: String?) -> String {
+        guard let title else {
+            return FeatureText.string("Redo", comment: "Mac Edit menu: Redo when there's nothing named to redo.")
+        }
+        return FeatureText.string("Redo \(title)", comment: "Mac Edit menu: Redo with the step's name.")
+    }
+
     /// VoiceOver after Undo: "Undid Delete Transaction in Household Card".
     static func undid(_ title: String) -> String {
         FeatureText.string("Undid \(title)", comment: "VoiceOver announcement after Undo. The Undo name.")
