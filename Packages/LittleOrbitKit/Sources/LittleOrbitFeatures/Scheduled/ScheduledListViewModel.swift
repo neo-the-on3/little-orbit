@@ -51,7 +51,8 @@ public struct ScheduledItemDetail: Equatable, Sendable {
     public let tone: AmountTone
     /// Label and value pairs: Account, Category, Payee, Repeat, Starts, End Date, Note.
     public let facts: [ScheduledFact]
-    /// "Next: 1 Nov", or "Ended 5 Oct" (D334.13).
+    /// "Next: 1 Nov", the next date on the schedule from today even while older days are overdue (D369), or
+    /// "Ended 5 Oct" when none follows (D334.13).
     public let next: String
     /// The overdue and due-today occurrences, each with its own Pay Now and Skip (S76).
     public let due: [ScheduledRow]
@@ -320,7 +321,9 @@ public final class ScheduledListViewModel {
             .map {
                 rows.row($0.item, day: $0.day, kind: .dueToday)
             }
-        let next = listing.board.upcoming.first { $0.item.id == itemID }?.day ?? due.first?.occurrence
+        // D369: the next unsettled day on the current rule from today, never an overdue day; the overdue ones keep
+        // their own rows above (D339, D340).
+        let next = ScheduleCalendar.firstOccurrence(of: item, onOrAfter: listing.board.today) { !item.isSettled($0) }
         return ScheduledItemDetail(
             itemID: itemID,
             title: presenter.name(of: item),
