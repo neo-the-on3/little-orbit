@@ -37,3 +37,7 @@
 *.xcscheme text eol=lf
 *.plist text=auto eol=lf
 *.xcstrings text eol=lf
+
+# CSV import fixtures keep their exact bytes: CRLF line endings, a byte order mark and quoted line breaks are
+# what the tests and Tester's manual checks read.
+Packages/LittleOrbitKit/Tests/LittleOrbitFeaturesTests/Fixtures/CSV/*.csv -text

@@ -1,0 +1,9 @@
+Date,Type,Account,To Account,Amount,Currency,Payee
+2026-10-20,Expense,Everyday Savings,,-450,INR,Corner Shop
+2026-13-40,Expense,Everyday Savings,,-450,INR,Corner Shop
+2026-10-21,Expense,Everyday Savings,,12abc,INR,Corner Shop
+2026-10-22,Transfer,Everyday Savings,Everyday Savings,100,INR,
+2026-10-23,Expense,Everyday Savings,,-4.505,INR,Corner Shop
+2026-10-24,Expense,Everyday Savings,,-50,USD,Corner Shop
+2026-10-25,Gift,Everyday Savings,,-50,INR,Corner Shop
+2026-10-26,Expense,Everyday Savings,,-75,INR,"Unclosed
