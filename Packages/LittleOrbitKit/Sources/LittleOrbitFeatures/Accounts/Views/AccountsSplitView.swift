@@ -15,15 +15,18 @@
         @State private var undoSlot = WindowUndoSlot()
         private let feature: AccountsFeature
         private let transactions: TransactionsFeature
+        /// The Budgets screen's feature (#25 part 5). Without it the sidebar's Budgets row shows a placeholder.
+        private let budgets: BudgetsFeature?
 
         private var undoHistory: WindowUndoHistory {
             undoSlot.history(from: transactions)
         }
 
-        /// Both features come from the composition root, which built them once with the injected use cases.
-        public init(feature: AccountsFeature, transactions: TransactionsFeature) {
+        /// The features come from the composition root, which built them once with the injected use cases.
+        public init(feature: AccountsFeature, transactions: TransactionsFeature, budgets: BudgetsFeature? = nil) {
             self.feature = feature
             self.transactions = transactions
+            self.budgets = budgets
             _model = State(initialValue: feature.accounts)
             _deleteConfirmation = State(initialValue: AccountDeleteConfirmation(model: feature.accounts))
         }
@@ -207,6 +210,11 @@
                     .id(id)
                 } else {
                     noSelection
+                }
+            case .home(.budgets) where budgets != nil:
+                if let budgets {
+                    // Replaces the Budgets placeholder (UI Designer's #175 NB5).
+                    MacBudgetsView(feature: budgets)
                 }
             case .home(let destination):
                 UpcomingFeatureView(
