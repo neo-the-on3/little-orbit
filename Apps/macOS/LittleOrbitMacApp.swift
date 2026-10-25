@@ -23,10 +23,14 @@ struct LittleOrbitMacApp: App {
         }
 
         // The Metadata manager (#24 part 5): its own window, opened from the app menu after Settings…, for
-        // managing categories across both kinds.
+        // managing categories and payees.
         Window(MetadataWindow.title, id: MetadataWindow.id) {
             if case .success(let features) = features {
-                MetadataWindow(categories: features.categories, updates: features.transactions.updates)
+                MetadataWindow(
+                    categories: features.categories,
+                    payees: features.payees,
+                    updates: features.transactions.updates,
+                )
             }
         }
 
