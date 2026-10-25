@@ -21,7 +21,8 @@ struct ImportReviewState: Equatable, Sendable {
 
     init() {}
 
-    init(preview: ImportPreview, entries: [ImportReviewEntry], selection: Set<Int>) {
+    /// The rows and their fixed counts, not yet split by the ticks.
+    init(preview: ImportPreview, entries: [ImportReviewEntry]) {
         self.entries = entries
         for row in preview.rows {
             switch row.status {
@@ -30,7 +31,6 @@ struct ImportReviewState: Equatable, Sendable {
             case .ready, .failed: break
             }
         }
-        partition(selection)
     }
 
     /// Splits the rows by the ticks: one pass, set lookups only.
@@ -91,26 +91,21 @@ struct ImportRowFormatter: Sendable {
         accountsByID = Dictionary(ledger.accounts.map { ($0.id, $0) }, uniquingKeysWith: { first, _ in first })
     }
 
-    /// A finished plan: the preview, its ticks, and the rows Review and Match show.
+    /// A finished plan: the preview and the rows Review and Match show. The ticks are chosen on the main actor
+    /// when it lands, against the ticks as they are then (`ImportReviewState.partition`).
     struct Planned: Sendable {
         let preview: ImportPreview
-        let selection: Set<Int>
         let review: ImportReviewState
         let matches: ImportMatchSections
     }
 
-    func plan(_ preview: ImportPreview, ticks: Set<Int>) -> Planned {
-        Planned(
-            preview: preview,
-            selection: ticks,
-            review: review(preview, selection: ticks),
-            matches: matches(preview),
-        )
+    func plan(_ preview: ImportPreview) -> Planned {
+        Planned(preview: preview, review: review(preview), matches: matches(preview))
     }
 
     // MARK: Review
 
-    func review(_ preview: ImportPreview, selection: Set<Int>) -> ImportReviewState {
+    func review(_ preview: ImportPreview) -> ImportReviewState {
         let records = recordIndex()
         let entries = preview.rows.map { row in
             ImportReviewEntry(
@@ -118,7 +113,7 @@ struct ImportRowFormatter: Sendable {
                 hasWarnings: row.isSelectable && !row.row.warnings.isEmpty,
             )
         }
-        return ImportReviewState(preview: preview, entries: entries, selection: selection)
+        return ImportReviewState(preview: preview, entries: entries)
     }
 
     /// Each record's position by its row number, for the D349 source line.

@@ -50,6 +50,8 @@ public final class CSVImportViewModel {
     /// Review's and Match's rows, built with each plan (`ImportRowFormatter`).
     var reviewState = ImportReviewState()
     var matchSections = ImportMatchSections()
+    /// Counts plans, so only the latest one lands.
+    @ObservationIgnored var planGeneration = 0
     public private(set) var receipt: ImportReceipt?
     public internal(set) var isUndone = false
     /// D327.1: “Your data changed, so this preview was updated.”, shown inline at the top of the current step
@@ -347,18 +349,19 @@ public final class CSVImportViewModel {
         matchSections = ImportMatchSections()
     }
 
-    /// Plans the preview off the main actor, with the Review and Match rows and the ticks, behind “Reading…”.
+    /// Plans the preview off the main actor, with the Review and Match rows, behind “Reading…”. Only the latest
+    /// plan lands: one that a newer plan overtook, such as two quick Match changes, is dropped, and the newest one
+    /// clears `isWorking`, so Next and Import stay off until it's in (Tech Architect B2 on #190).
     func plan() async {
         guard let file else { return }
+        planGeneration += 1
+        let generation = planGeneration
         startWork(ImportExportText.reading)
-        defer { isWorking = false }
         let pipeline = useCases.pipeline
         let settings = settings
         let ledger = ledger
         let choices = choices
         let currency = defaultCurrency
-        let previous = preview
-        let ticks = selection
         let formatter = ImportRowFormatter(
             file: file,
             ledger: ledger,
@@ -370,21 +373,29 @@ public final class CSVImportViewModel {
         )
         let planned =
             await Task.detached {
-                let preview = pipeline.preview(
-                    rows: pipeline.rows(in: file, settings: settings),
-                    ledger: ledger,
-                    choices: choices,
-                    settings: settings,
-                    defaultCurrency: currency,
+                formatter.plan(
+                    pipeline.preview(
+                        rows: pipeline.rows(in: file, settings: settings),
+                        ledger: ledger,
+                        choices: choices,
+                        settings: settings,
+                        defaultCurrency: currency,
+                    )
                 )
-                return formatter.plan(preview, ticks: Self.reselect(preview, previous: previous, selection: ticks))
             }
             .value
+        guard generation == planGeneration else { return }
+        isWorking = false
         guard !isClosed else { return }
+        // Ticks changed during the wait count: the new plan is re-selected against the ticks as they are now
+        // (Tech Architect B1 on #190).
+        let ticks = Self.reselect(planned.preview, previous: preview, selection: selection)
+        var review = planned.review
+        review.partition(ticks)
         preview = planned.preview
-        reviewState = planned.review
+        reviewState = review
         matchSections = planned.matches
-        selection = planned.selection
+        selection = ticks
         if isDataChangePending {
             isDataChangePending = false
             await refreshLedger()
