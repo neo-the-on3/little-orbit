@@ -14,7 +14,8 @@ struct LittleOrbitMacApp: App {
     }
 
     var body: some Scene {
-        WindowGroup {
+        // The main windows. A tapped reminder opens a new one by this ID when none is open (S33).
+        WindowGroup(id: UserNotificationScheduling.mainWindowID) {
             RootView(features: features)
         }
         .commands {

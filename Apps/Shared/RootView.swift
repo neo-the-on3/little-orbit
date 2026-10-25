@@ -147,6 +147,19 @@
             return { Date() }
         }
 
+        /// Tapping a reminder opens its item in one window, which takes the tap once its navigation is up (S33): on
+        /// iOS the scene the system sent it to, on the Mac the main window brought to the front.
+        static func routeReminderTaps(from notifications: UserNotificationScheduling, to taps: ScheduledReminderTaps) {
+            notifications.onOpenItem = { [taps] itemID, scene in
+                #if os(macOS)
+                    let window = UserNotificationScheduling.bringMainWindowForward(among: taps.windows)
+                    taps.tapped(itemID: itemID, window: window)
+                #else
+                    taps.tapped(itemID: itemID, window: scene)
+                #endif
+            }
+        }
+
         /// The transactions feature over `repository`. The default categories are seeded here, at launch, before any
         /// screen can write (D291.7, D293.4), and nowhere else. A failed seed is only logged (D293.3): the app opens
         /// as normal and the next launch tries again while the store is still empty. An account's history also shows
@@ -265,6 +278,8 @@
             // 'Notify when due' reminders (#26, D340.7): local notifications through the system center, worded in
             // the privacy version, at the Reminder Time kept in app settings. Rescheduled after catch-up, at launch
             // and on activation, and after every change.
+            // Made here, at launch, so it's the notification center's delegate before launch ends and a tap from a
+            // cold launch reaches it (S33).
             let notifications = UserNotificationScheduling()
             let reminderUseCases = AppComposition.makeReminderUseCases(
                 repository: repository,
@@ -294,6 +309,7 @@
                     }
                 },
             )
+            AppComposition.routeReminderTaps(from: notifications, to: scheduled.reminderTaps)
             scheduled.catchUp(atLaunch: true)
             watch = AppComposition.makeWatch(
                 link: watchLink,
@@ -358,6 +374,11 @@
         /// on macOS, where the app isn't suspended.
         var backgroundActivity: (any BackgroundActivity)?
         @Environment(\.scenePhase) private var scenePhase
+        /// This window's open sheets, which a tapped reminder asks before it navigates (S33).
+        @State private var openSheets = OpenSheets()
+        #if os(macOS)
+            @Environment(\.openWindow) private var openWindow
+        #endif
         #if os(iOS)
             @State private var isShowingSettings = false
             /// The undo history of the window Settings was opened from (D287.4).
@@ -368,6 +389,15 @@
             switch features {
             case .success(let features):
                 content(features)
+                    .environment(openSheets)
+                    #if os(macOS)
+                        // A tapped reminder opens a new main window when none is open (UI Designer 6402418696).
+                        .onAppear {
+                            UserNotificationScheduling.openMainWindow = { [openWindow] in
+                                openWindow(id: UserNotificationScheduling.mainWindowID)
+                            }
+                        }
+                    #endif
                     // The automatic backup: at most once a day, at launch and when the app goes to the background
                     // (D62). It skips itself when nothing changed. In the background it runs inside a
                     // background-time assertion and is cancelled cleanly if the time runs out.
@@ -424,6 +454,9 @@
                         scheduledUpcoming: features.scheduledUpcoming,
                         onCategoryRemoval: { settingsUndoHistory?.clearAfterRemoval() },
                     )
+                    // Settings holds nothing unsaved itself, so a tapped reminder closes it first, unless a sheet
+                    // over it has unsaved edits (S33, UI Designer 6402418696).
+                    .openSheet(hasUnsavedEdits: { false }, close: { isShowingSettings = false })
                 }
             #endif
         }
