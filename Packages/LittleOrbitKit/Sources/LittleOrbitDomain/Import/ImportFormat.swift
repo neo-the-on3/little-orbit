@@ -298,7 +298,8 @@ struct RowReader {
         guard let column = mapping.column(for: field) else {
             return nil
         }
-        return ImportText.value(record.field(column))
+        let text = ImportText.value(record.field(column))
+        return field.isFreeText ? text.map(TransactionCSVWriter.unprotectedText) : text
     }
 
     /// A name field, or `nil` with a reason when it's over the 100-character limit.
@@ -338,5 +339,16 @@ struct RowReader {
         issues.enumerated()
             .sorted { ($0.element.column, $0.offset) < ($1.element.column, $1.offset) }
             .map(\.element)
+    }
+}
+
+extension ImportField {
+    /// Whether the field is free text, which an export protects from spreadsheet formulas with a leading
+    /// apostrophe that import removes again (D323.1). Dates, Type, amounts and currency are never protected.
+    var isFreeText: Bool {
+        switch self {
+        case .account, .toAccount, .category, .payee, .description, .notes: true
+        case .date, .type, .amount, .destinationAmount, .currency, .expenseAmount, .incomeAmount: false
+        }
     }
 }
