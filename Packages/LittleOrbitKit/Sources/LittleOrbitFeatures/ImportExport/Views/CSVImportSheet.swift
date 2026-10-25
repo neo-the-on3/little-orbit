@@ -59,7 +59,7 @@
                 isPresented: Binding(get: { model.alert != nil }, set: { if !$0 { model.alert = nil } }),
                 presenting: model.alert,
             ) { _ in
-                ImportAlertOKButton()
+                Button(ImportExportText.okay) {}
             } message: { alert in
                 Text(alert.message)
             }
