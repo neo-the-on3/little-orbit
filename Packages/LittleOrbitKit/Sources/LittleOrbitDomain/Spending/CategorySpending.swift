@@ -29,29 +29,52 @@ public enum CategorySpending {
         through end: CalendarDay,
     ) -> [CategoryCurrency: Decimal] {
         var totals: [CategoryCurrency: Decimal] = [:]
-        func add(_ amount: Decimal, to categoryID: UUID?, in currency: String) {
-            totals[CategoryCurrency(categoryID: categoryID, currencyCode: currency), default: 0] += amount
+        for entry in entries(in: snapshot, from: start, through: end) {
+            totals[CategoryCurrency(categoryID: entry.categoryID, currencyCode: entry.currencyCode), default: 0] +=
+                entry.amount
         }
+        return totals
+    }
+
+    /// Each amount that counts toward spending, on its own day: an expense or split line adds, a refund
+    /// subtracts. `spending(in:from:through:)` is these added up; budgets split them by period (#25).
+    public static func entries(
+        in snapshot: LedgerSnapshot,
+        from start: CalendarDay,
+        through end: CalendarDay,
+    ) -> [SpendingEntry] {
+        var entries: [SpendingEntry] = []
         // Grouped once, so a read doesn't scan every split for each expense.
         let linesByTransaction = Dictionary(grouping: snapshot.splitsVisible(), by: \.transactionID)
-        for (transaction, currency) in counted(in: snapshot, from: start, through: end) {
+        for counted in counted(in: snapshot, from: start, through: end) {
+            let transaction = counted.transaction
+            func add(_ amount: Decimal, to categoryID: UUID?) {
+                entries.append(
+                    SpendingEntry(
+                        day: counted.day,
+                        categoryID: categoryID,
+                        currencyCode: counted.currencyCode,
+                        amount: amount,
+                    )
+                )
+            }
             switch transaction.type {
             case .expense:
                 let lines = linesByTransaction[transaction.id] ?? []
                 if lines.isEmpty {
-                    add(transaction.amount, to: transaction.categoryID, in: currency)
+                    add(transaction.amount, to: transaction.categoryID)
                 } else {
                     for line in lines {
-                        add(line.amount, to: line.categoryID, in: currency)
+                        add(line.amount, to: line.categoryID)
                     }
                 }
             case .income where transaction.isRefund:
-                add(-transaction.amount, to: transaction.categoryID, in: currency)
+                add(-transaction.amount, to: transaction.categoryID)
             case .income, .transfer:
                 continue
             }
         }
-        return totals
+        return entries
     }
 
     /// Income per category and currency for the same days, refunds left out (D19).
@@ -61,9 +84,13 @@ public enum CategorySpending {
         through end: CalendarDay,
     ) -> [CategoryCurrency: Decimal] {
         var totals: [CategoryCurrency: Decimal] = [:]
-        for (transaction, currency) in counted(in: snapshot, from: start, through: end)
-        where transaction.type == .income && !transaction.isRefund {
-            totals[CategoryCurrency(categoryID: transaction.categoryID, currencyCode: currency), default: 0] +=
+        for counted in counted(in: snapshot, from: start, through: end)
+        where counted.transaction.type == .income && !counted.transaction.isRefund {
+            let transaction = counted.transaction
+            totals[
+                CategoryCurrency(categoryID: transaction.categoryID, currencyCode: counted.currencyCode),
+                default: 0,
+            ] +=
                 transaction.amount
         }
         return totals
@@ -85,12 +112,18 @@ public enum CategorySpending {
             .reduce(Decimal(0), +)
     }
 
-    /// The live transactions dated in the range, with their account's currency.
+    private struct Counted {
+        var transaction: Transaction
+        var currencyCode: String
+        var day: CalendarDay
+    }
+
+    /// The live transactions dated in the range, with their account's currency and their own day.
     private static func counted(
         in snapshot: LedgerSnapshot,
         from start: CalendarDay,
         through end: CalendarDay,
-    ) -> [(Transaction, String)] {
+    ) -> [Counted] {
         var currencies: [UUID: String] = [:]
         for account in snapshot.accounts where account.deletedAt == nil {
             currencies[account.id] = account.currencyCode
@@ -103,8 +136,25 @@ public enum CategorySpending {
             else {
                 return nil
             }
-            return (transaction, currency)
+            return Counted(transaction: transaction, currencyCode: currency, day: day)
         }
+    }
+}
+
+/// One amount counted toward a category's spending, on the transaction's own calendar day.
+public struct SpendingEntry: Equatable, Sendable {
+    public var day: CalendarDay
+    /// `nil` for uncategorised.
+    public var categoryID: UUID?
+    public var currencyCode: String
+    /// Positive for an expense or split line, negative for a refund.
+    public var amount: Decimal
+
+    public init(day: CalendarDay, categoryID: UUID?, currencyCode: String, amount: Decimal) {
+        self.day = day
+        self.categoryID = categoryID
+        self.currencyCode = currencyCode
+        self.amount = amount
     }
 }
 
