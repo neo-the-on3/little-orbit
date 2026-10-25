@@ -120,8 +120,34 @@
         }
       }
     },
+    "%1$@ of %2$@": {
+      "comment": "Budget row: %1$@ spent of %2$@ available in the current period.",
+      "extractionState": "manual",
+      "generatesSymbol": false,
+      "localizations": {
+        "en": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "%1$@ of %2$@"
+          }
+        }
+      }
+    },
+    "%1$@ of %2$@ · %3$lld%%": {
+      "comment": "Budget row near its limit: %1$@ spent of %2$@ available, and the share spent as a whole percentage.",
+      "extractionState": "manual",
+      "generatesSymbol": false,
+      "localizations": {
+        "en": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "%1$@ of %2$@ · %3$lld%%"
+          }
+        }
+      }
+    },
     "%1$@ · %2$@": {
-      "comment": "A backup's account count (%1$@) and transaction count (%2$@).",
+      "comment": "Two things in a row: a backup’s account count (%1$@) and transaction count (%2$@), a budget’s repeat (%1$@) and its days left (%2$@), or, below 0 available, a budget’s “₹0.00 spent” (%1$@) and “−₹500.00 available” (%2$@).",
       "extractionState": "manual",
       "localizations": {
         "en": {
@@ -424,6 +450,108 @@
           "stringUnit": {
             "state": "translated",
             "value": "%@ is then deleted."
+          }
+        }
+      }
+    },
+    "%@ left": {
+      "comment": "Budget row status: %@ is the amount left to spend in the current period.",
+      "extractionState": "manual",
+      "generatesSymbol": false,
+      "localizations": {
+        "en": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "%@ left"
+          }
+        }
+      }
+    },
+    "%@ spent": {
+      "comment": "Budget row, when carried overspending leaves less than 0 available: %@ is the amount spent in the current period, e.g. “₹0.00 spent”.",
+      "extractionState": "manual",
+      "generatesSymbol": false,
+      "localizations": {
+        "en": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "%@ spent"
+          }
+        }
+      }
+    },
+    "%@ available": {
+      "comment": "Budget row, when carried overspending leaves less than 0 available: %@ is what’s available, a negative amount, e.g. “−₹500.00 available”.",
+      "extractionState": "manual",
+      "generatesSymbol": false,
+      "localizations": {
+        "en": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "%@ available"
+          }
+        }
+      }
+    },
+    "%lld%%": {
+      "comment": "VoiceOver, on a budget row: the share of what’s available that’s spent, as a whole percentage, read after the amounts.",
+      "extractionState": "manual",
+      "generatesSymbol": false,
+      "localizations": {
+        "en": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "%lld%%"
+          }
+        }
+      }
+    },
+    "%@ over": {
+      "comment": "Budget row status: %@ is how much the current period is over what’s available.",
+      "extractionState": "manual",
+      "generatesSymbol": false,
+      "localizations": {
+        "en": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "%@ over"
+          }
+        }
+      }
+    },
+    "%lld days left": {
+      "comment": "Budget row: whole days to the next period.",
+      "extractionState": "manual",
+      "localizations": {
+        "en": {
+          "variations": {
+            "plural": {
+              "one": {
+                "stringUnit": {
+                  "state": "translated",
+                  "value": "%lld day left"
+                }
+              },
+              "other": {
+                "stringUnit": {
+                  "state": "translated",
+                  "value": "%lld days left"
+                }
+              }
+            }
+          }
+        }
+      }
+    },
+    "Last day": {
+      "comment": "Budget row: today is the current period’s last day.",
+      "extractionState": "manual",
+      "generatesSymbol": false,
+      "localizations": {
+        "en": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Last day"
           }
         }
       }
@@ -1038,6 +1166,19 @@
           "stringUnit": {
             "state": "translated",
             "value": "Blue"
+          }
+        }
+      }
+    },
+    "Budgets": {
+      "comment": "Budgets screen title, pushed from the home screen’s Budgets row.",
+      "extractionState": "manual",
+      "generatesSymbol": false,
+      "localizations": {
+        "en": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Budgets"
           }
         }
       }
@@ -2006,6 +2147,19 @@
           "stringUnit": {
             "state": "translated",
             "value": "Couldn’t Load Backups"
+          }
+        }
+      }
+    },
+    "Couldn’t Load Budgets": {
+      "comment": "Alert title: the budget list couldn’t be read. Its message is “Try again.” and its only button is OK.",
+      "extractionState": "manual",
+      "generatesSymbol": false,
+      "localizations": {
+        "en": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Couldn’t Load Budgets"
           }
         }
       }
@@ -2993,6 +3147,102 @@
         }
       }
     },
+    "Every %lld days": {
+      "comment": "A budget with a custom repeat in days.",
+      "extractionState": "manual",
+      "localizations": {
+        "en": {
+          "variations": {
+            "plural": {
+              "one": {
+                "stringUnit": {
+                  "state": "translated",
+                  "value": "Every day"
+                }
+              },
+              "other": {
+                "stringUnit": {
+                  "state": "translated",
+                  "value": "Every %lld days"
+                }
+              }
+            }
+          }
+        }
+      }
+    },
+    "Every %lld months": {
+      "comment": "A budget with a custom repeat in months.",
+      "extractionState": "manual",
+      "localizations": {
+        "en": {
+          "variations": {
+            "plural": {
+              "one": {
+                "stringUnit": {
+                  "state": "translated",
+                  "value": "Every month"
+                }
+              },
+              "other": {
+                "stringUnit": {
+                  "state": "translated",
+                  "value": "Every %lld months"
+                }
+              }
+            }
+          }
+        }
+      }
+    },
+    "Every %lld weeks": {
+      "comment": "A budget with a custom repeat in weeks.",
+      "extractionState": "manual",
+      "localizations": {
+        "en": {
+          "variations": {
+            "plural": {
+              "one": {
+                "stringUnit": {
+                  "state": "translated",
+                  "value": "Every week"
+                }
+              },
+              "other": {
+                "stringUnit": {
+                  "state": "translated",
+                  "value": "Every %lld weeks"
+                }
+              }
+            }
+          }
+        }
+      }
+    },
+    "Every %lld years": {
+      "comment": "A budget with a custom repeat in years.",
+      "extractionState": "manual",
+      "localizations": {
+        "en": {
+          "variations": {
+            "plural": {
+              "one": {
+                "stringUnit": {
+                  "state": "translated",
+                  "value": "Every year"
+                }
+              },
+              "other": {
+                "stringUnit": {
+                  "state": "translated",
+                  "value": "Every %lld years"
+                }
+              }
+            }
+          }
+        }
+      }
+    },
     "Expense": {
       "comment": "A category's kind, and the Categories screen's Expense tab.",
       "extractionState": "manual",
@@ -3102,6 +3352,19 @@
           "stringUnit": {
             "state": "translated",
             "value": "Format unknown"
+          }
+        }
+      }
+    },
+    "Fortnightly": {
+      "comment": "A budget that repeats every two weeks.",
+      "extractionState": "manual",
+      "generatesSymbol": false,
+      "localizations": {
+        "en": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Fortnightly"
           }
         }
       }
@@ -3821,6 +4084,19 @@
         }
       }
     },
+    "Monthly": {
+      "comment": "A budget that repeats every month.",
+      "extractionState": "manual",
+      "generatesSymbol": false,
+      "localizations": {
+        "en": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Monthly"
+          }
+        }
+      }
+    },
     "Monthly Backups": {
       "comment": "Stepper label: for how many months the first automatic backup of each month is kept (0–24).",
       "extractionState": "manual",
@@ -3964,6 +4240,19 @@
           "stringUnit": {
             "state": "translated",
             "value": "Name"
+          }
+        }
+      }
+    },
+    "Near limit": {
+      "comment": "VoiceOver, on a budget row: the budget has spent 90% or more of what’s available.",
+      "extractionState": "manual",
+      "generatesSymbol": false,
+      "localizations": {
+        "en": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Near limit"
           }
         }
       }
@@ -4134,6 +4423,19 @@
         }
       }
     },
+    "No budgets yet": {
+      "comment": "Budgets screen empty state: the title, read as a heading.",
+      "extractionState": "manual",
+      "generatesSymbol": false,
+      "localizations": {
+        "en": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "No budgets yet"
+          }
+        }
+      }
+    },
     "No category": {
       "comment": "Transaction form category picker: the subtitle under “Uncategorised”.",
       "extractionState": "manual",
@@ -4168,6 +4470,32 @@
           "stringUnit": {
             "state": "translated",
             "value": "Not Enough Storage to Restore"
+          }
+        }
+      }
+    },
+    "Nothing spent yet": {
+      "comment": "Budget row status: nothing is spent in the current period.",
+      "extractionState": "manual",
+      "generatesSymbol": false,
+      "localizations": {
+        "en": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Nothing spent yet"
+          }
+        }
+      }
+    },
+    "No categories": {
+      "comment": "Budget row status: every category the budget picked was deleted, so it can’t count anything.",
+      "extractionState": "manual",
+      "generatesSymbol": false,
+      "localizations": {
+        "en": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "No categories"
           }
         }
       }
@@ -4245,6 +4573,19 @@
           "stringUnit": {
             "state": "translated",
             "value": "Orange"
+          }
+        }
+      }
+    },
+    "Overspent": {
+      "comment": "VoiceOver, on a budget row: the budget has spent more than what’s available.",
+      "extractionState": "manual",
+      "generatesSymbol": false,
+      "localizations": {
+        "en": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Overspent"
           }
         }
       }
@@ -4536,6 +4877,19 @@
         }
       }
     },
+    "Set a spending limit for a group of expense categories, like Eating out or Groceries. It resets every week, fortnight, month or year.": {
+      "comment": "Budgets screen empty state: the message under “No budgets yet”.",
+      "extractionState": "manual",
+      "generatesSymbol": false,
+      "localizations": {
+        "en": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Set a spending limit for a group of expense categories, like Eating out or Groceries. It resets every week, fortnight, month or year."
+          }
+        }
+      }
+    },
     "Something Went Wrong": {
       "comment": "Alert title in Backups when no other case applies (D211.9). Its message is the catalog's own, never the error's text. The only button is OK.",
       "extractionState": "manual",
@@ -4556,6 +4910,19 @@
           "stringUnit": {
             "state": "translated",
             "value": "Something went wrong saving your change. Please try again."
+          }
+        }
+      }
+    },
+    "Spent = expenses in the budget’s categories and subcategories, minus refunds. Transfers never count. Near limit is 90% or more.": {
+      "comment": "Budgets screen: the footnote under the list.",
+      "extractionState": "manual",
+      "generatesSymbol": false,
+      "localizations": {
+        "en": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Spent = expenses in the budget’s categories and subcategories, minus refunds. Transfers never count. Near limit is 90% or more."
           }
         }
       }
@@ -4908,7 +5275,7 @@
       }
     },
     "Try again.": {
-      "comment": "Alert message under “Couldn’t Load Payees” or “Couldn’t Load Categories”.",
+      "comment": "Alert message under “Couldn’t Load Payees”, “Couldn’t Load Categories” or “Couldn’t Load Budgets”.",
       "extractionState": "manual",
       "generatesSymbol": false,
       "localizations": {
@@ -5101,6 +5468,32 @@
           "stringUnit": {
             "state": "translated",
             "value": "Warning, This file isn’t encrypted and contains all your financial data."
+          }
+        }
+      }
+    },
+    "Weekly": {
+      "comment": "A budget that repeats every week.",
+      "extractionState": "manual",
+      "generatesSymbol": false,
+      "localizations": {
+        "en": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Weekly"
+          }
+        }
+      }
+    },
+    "Yearly": {
+      "comment": "A budget that repeats every year.",
+      "extractionState": "manual",
+      "generatesSymbol": false,
+      "localizations": {
+        "en": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Yearly"
           }
         }
       }

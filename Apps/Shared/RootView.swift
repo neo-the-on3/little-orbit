@@ -59,8 +59,12 @@ import SwiftUI
         let backups: BackupsViewModel
         let categories: CategoriesFeature
         let payees: PayeesFeature
+        let budgets: BudgetsFeature
 
-        init(repository: some LedgerRepository & LedgerBackupSource, backupStorage: any BackupStorage) {
+        init(
+            repository: some LedgerRepository & LedgerBackupSource & BudgetRepository,
+            backupStorage: any BackupStorage,
+        ) {
             let transactionUseCases = TransactionUseCases(
                 repository: repository,
                 categoryNames: CatalogDefaultCategoryNames(),
@@ -83,8 +87,18 @@ import SwiftUI
             // undo history is cleared, so Undo never replays a step made against the old data (D187.2, N6).
             let changes = LedgerChanges()
             transactions.updates.follow(changes)
+            // Budgets (#25): the list reloads after every ledger change, and the home screen's Budgets row counts
+            // the budgets and the overspent ones for its badge.
+            budgets = BudgetsFeature(
+                useCases: BudgetScreenUseCases(list: DefaultBudgetUseCases(repository: repository)),
+                updates: transactions.updates,
+            )
             // Account delete returns its change; the screens record it in the transactions' history (#93).
-            accounts = AccountsFeature(useCases: AccountUseCases(repository: repository), ledgerChanges: changes)
+            accounts = AccountsFeature(
+                useCases: AccountUseCases(repository: repository),
+                plannedItems: budgets.plannedItems,
+                ledgerChanges: changes,
+            )
             backups = AppComposition.makeBackups(source: repository, storage: backupStorage, changes: changes)
             // Settings › Categories and Payees (#24): the category and payee use cases, the category editor's
             // reads and saves, and the payee list's reads.
@@ -150,6 +164,7 @@ import SwiftUI
                 AccountsHomeView(
                     feature: features.accounts,
                     transactions: features.transactions,
+                    budgets: features.budgets,
                     onShowSettings: { history in
                         settingsUndoHistory = history
                         isShowingSettings = true

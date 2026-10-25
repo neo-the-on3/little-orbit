@@ -18,22 +18,26 @@
         @Environment(\.dynamicTypeSize) private var dynamicTypeSize
         private let feature: AccountsFeature
         private let transactions: TransactionsFeature
+        private let budgets: BudgetsFeature?
         private let onShowSettings: ((WindowUndoHistory) -> Void)?
 
         private var undoHistory: WindowUndoHistory {
             undoSlot.history(from: transactions)
         }
 
-        /// Both features come from the composition root, which built them once with the injected use cases.
+        /// The features come from the composition root, which built them once with the injected use cases.
+        /// `budgets` backs the Budgets row's screen (#25); without it, the row opens a placeholder.
         /// `onShowSettings` adds the toolbar's Settings button (#40). It gets this window's undo history, which a
         /// category merge or delete in Settings clears (D287.4).
         public init(
             feature: AccountsFeature,
             transactions: TransactionsFeature,
+            budgets: BudgetsFeature? = nil,
             onShowSettings: ((WindowUndoHistory) -> Void)? = nil,
         ) {
             self.feature = feature
             self.transactions = transactions
+            self.budgets = budgets
             self.onShowSettings = onShowSettings
             _model = State(initialValue: feature.accounts)
             _deleteConfirmation = State(initialValue: AccountDeleteConfirmation(model: feature.accounts))
@@ -315,11 +319,15 @@
                     message: "The transaction list arrives with its own issue.",
                 )
             case .home(let destination):
-                UpcomingFeatureView(
-                    title: destination.title,
-                    systemImage: destination.symbolName,
-                    message: destination.emptyText,
-                )
+                if destination == .budgets, let budgets {
+                    BudgetsView(feature: budgets)
+                } else {
+                    UpcomingFeatureView(
+                        title: destination.title,
+                        systemImage: destination.symbolName,
+                        message: destination.emptyText,
+                    )
+                }
             case .account(let id):
                 if let row = model.row(id: id) {
                     AccountDetailView(
