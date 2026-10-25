@@ -64,6 +64,9 @@ public final class WindowUndoHistory {
         let account: Account?
         /// The name the `UndoManager` shows for it now.
         var title = ""
+        /// The categories and payees its Undo or Redo would put back, by id, named as they were when it was
+        /// recorded or last ran, so a stale alert can name one deleted or merged away since (D306.1 as amended).
+        var recordNames: [UUID: String] = [:]
 
         init(change: TransactionChange, outcome: ChangeOutcome, impact: ChangeImpact) {
             // The account is in the name, kept as it was when the step was recorded (D198).
@@ -187,6 +190,8 @@ public final class WindowUndoHistory {
         // A new step clears Redo, as the `UndoManager` does.
         redoSteps.removeAll()
         if registrar != nil, outcome != nil {
+            // Only a kept step needs names for its alert, so a change with no step reads none.
+            captureRecordNames(for: step)
             undoSteps.append(step)
             register(step, as: title(of: step))
         }
@@ -256,6 +261,7 @@ public final class WindowUndoHistory {
             case .reverted(let inverse, let outcome):
                 step.change = inverse
                 step.outcome = outcome
+                captureRecordNames(for: step)
                 alert = nil
                 notice = noticeAfterApplying(step)
                 if undoing {

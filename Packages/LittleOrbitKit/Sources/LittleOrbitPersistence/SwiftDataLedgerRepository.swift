@@ -137,6 +137,12 @@
             return try context.fetchCount(descriptor)
         }
 
+        /// Only the category and payee records, never the transactions; inside `atomically`, the batch's.
+        public func recordNames(categoryIDs: Set<UUID>, payeeIDs: Set<UUID>) throws -> [UUID: String] {
+            let records = try batch ?? SwiftDataRecordNames.records(in: context)
+            return records.recordNames(categoryIDs: categoryIDs, payeeIDs: payeeIDs)
+        }
+
         public func deletePayee(id: UUID) throws {
             try mutate { try LedgerBook.deletingPayee(id: id, in: $0, now: now()) }
         }

@@ -85,6 +85,11 @@ struct ChangeChecker {
         if !altered.isEmpty || !outcome.removedAccountIDs.isDisjoint(with: live) {
             return .stale(.changed(altered))
         }
+        let orphaned = try RemovedReferenceCheck(repository: repository)
+            .transactions(change, expecting: outcome, current: current)
+        if !orphaned.transactionIDs.isEmpty {
+            return .stale(.referenceRemoved(orphaned.transactionIDs, removed: orphaned.removed))
+        }
         let blocking = try refundOriginalsBlocking(change, current: current)
         if !blocking.isEmpty {
             return .stale(.changed(blocking))

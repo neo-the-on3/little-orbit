@@ -101,6 +101,39 @@ public enum StaleReason: Equatable, Sendable {
     case changed([UUID])
     /// Some of these transactions were changed and others deleted (a bulk step, D189.2).
     case changedAndDeleted(changed: [UUID], deleted: [UUID])
+    /// Reverting would put these transactions back in a category, or under a payee, that has been deleted or
+    /// merged away since, or give one of their split lines such a category (D287.4). `removed` lists those
+    /// records once each, in the transactions' order, so the caller can name one (D306.1). An archived
+    /// category or payee isn't removed (D295.7).
+    case referenceRemoved([UUID], removed: [RemovedReference])
+}
+
+/// A category or payee a stale step would put back that has been deleted or merged away since (D287.4). Ids
+/// only, no app text: how the alert names it is up to the caller.
+public enum RemovedReference: Hashable, Sendable {
+    case category(UUID)
+    case payee(UUID)
+
+    /// The removed category's or payee's id.
+    public var id: UUID {
+        switch self {
+        case .category(let id), .payee(let id): id
+        }
+    }
+
+    public var categoryID: UUID? {
+        switch self {
+        case .category(let id): id
+        case .payee: nil
+        }
+    }
+
+    public var payeeID: UUID? {
+        switch self {
+        case .category: nil
+        case .payee(let id): id
+        }
+    }
 }
 
 /// The stale check's result: the ledger still holds what the change left, or it doesn't, and why.

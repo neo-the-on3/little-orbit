@@ -89,6 +89,10 @@ public final class InMemoryLedgerRepository: LedgerRepository {
         snapshot.payeeReferenceCount(payeeID)
     }
 
+    public func recordNames(categoryIDs: Set<UUID>, payeeIDs: Set<UUID>) throws -> [UUID: String] {
+        snapshot.recordNames(categoryIDs: categoryIDs, payeeIDs: payeeIDs)
+    }
+
     public func deletePayee(id: UUID) throws {
         snapshot = try LedgerBook.deletingPayee(id: id, in: snapshot, now: now())
     }

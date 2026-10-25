@@ -6,6 +6,8 @@ import LittleOrbitDomain
 extension WindowUndoHistory {
     /// "Corner Bakery has changed since then. Nothing was changed." (D187.5, X1–X6). It never names a cause:
     /// the check is by value, so a change from another window or from outside any window reads the same (D228).
+    /// A step that would put back a deleted or merged-away category or payee names that record instead, with
+    /// the same "has been deleted" message (D306.1 as amended).
     func staleMessage(_ reason: StaleReason, _ step: Step) -> String {
         switch reason {
         case .accountDeleted(let ids):
@@ -19,7 +21,53 @@ extension WindowUndoHistory {
             return staleRecords(ids, step, deleted: false)
         case .changedAndDeleted(let changed, let deleted):
             return StaleText.changedOrDeleted(changed.count + deleted.count)
+        case .referenceRemoved(let ids, let removed):
+            // One transaction: the existing D228 message names the removed category or payee, the first one if
+            // it lost both (D306.1 as amended). More are counted, as any bulk step is (D189.2). A record no one
+            // can name keeps the step's own wording.
+            if ids.count == 1, let name = removedName(removed, step) {
+                return StaleText.deleted(name)
+            }
+            return staleRecords(ids, step, deleted: false)
         }
+    }
+
+    /// The first removed record with a name: as the store still has it, else as the step kept it.
+    private func removedName(_ removed: [RemovedReference], _ step: Step) -> String? {
+        let ids = removed.map(\.id)
+        let stored = try? loadLedger.recordNames(
+            categoryIDs: Set(removed.compactMap(\.categoryID)),
+            payeeIDs: Set(removed.compactMap(\.payeeID)),
+        )
+        return ids.lazy.compactMap { stored?[$0] ?? step.recordNames[$0] }.first
+    }
+
+    /// Keeps the names of the categories and payees the step's next Undo or Redo would put back (D306.1). It
+    /// reads only those names, never the whole ledger (NB8). A name already kept stays when the store no longer
+    /// has the record, and follows a rename when it does.
+    func captureRecordNames(for step: Step) {
+        var versions = Array(step.outcome.transactions.values)
+        var splits: [TransactionSplit] = []
+        switch step.change.core {
+        case .removed(let items):
+            versions += items.map(\.transaction)
+            splits += items.flatMap(\.splits)
+        case .replaced(let previous):
+            versions += previous
+        case .removedAccount(let removed):
+            versions += removed.transactions.map(\.transaction)
+            splits += removed.transactions.flatMap(\.splits)
+        case .added, .addedAccount, .createdPayees, .removedPayees:
+            break
+        }
+        let categoryIDs = Set(versions.compactMap(\.categoryID) + splits.compactMap(\.categoryID))
+        let payeeIDs = Set(versions.compactMap(\.payeeID))
+        guard !categoryIDs.isEmpty || !payeeIDs.isEmpty,
+            let names = try? loadLedger.recordNames(categoryIDs: categoryIDs, payeeIDs: payeeIDs)
+        else {
+            return
+        }
+        step.recordNames.merge(names) { _, current in current }
     }
 
     private func staleRecords(_ ids: [UUID], _ step: Step, deleted: Bool) -> String {
