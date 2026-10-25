@@ -107,14 +107,22 @@
             return change
         }
 
-        public func saveScheduledOccurrence(
+        public func updateScheduledOccurrence(
             _ item: ScheduledItem,
             editing save: ScheduledOccurrenceSave,
+            payee: ScheduledPendingPayee?,
             today: CalendarDay,
             now: Date,
-        ) throws {
-            try mutate {
-                try LedgerBook.savingScheduledOccurrence(item, editing: save, in: $0, today: today, now: now)
+        ) throws -> ScheduledItemSaveChange {
+            try formSave(side: .saved) {
+                try LedgerBook.updatingScheduledOccurrence(
+                    item,
+                    editing: save,
+                    payee: payee,
+                    in: $0,
+                    today: today,
+                    now: now,
+                )
             }
         }
 

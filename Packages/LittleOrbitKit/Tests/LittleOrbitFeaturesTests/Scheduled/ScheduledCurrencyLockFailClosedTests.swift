@@ -98,12 +98,13 @@ private final class UnreadableScheduleStore: ScheduleRepository {
     func revertScheduledItemSave(_: ScheduledItemSaveChange, undone _: Bool) throws -> ScheduledItemSaveRevert {
         throw Failure()
     }
-    func saveScheduledOccurrence(
+    func updateScheduledOccurrence(
         _: ScheduledItem,
         editing _: ScheduledOccurrenceSave,
+        payee _: ScheduledPendingPayee?,
         today _: CalendarDay,
         now _: Date,
-    ) throws {
+    ) throws -> ScheduledItemSaveChange {
         throw Failure()
     }
     func deleteScheduledItem(id _: UUID) throws { throw Failure() }

@@ -135,14 +135,24 @@ final class FakeScheduleRepository: ScheduleRepository {
         return outcome.result
     }
 
-    func saveScheduledOccurrence(
+    func updateScheduledOccurrence(
         _ item: ScheduledItem,
         editing save: ScheduledOccurrenceSave,
+        payee: ScheduledPendingPayee?,
         today: CalendarDay,
         now: Date,
-    ) throws {
-        snapshot = try LedgerBook.savingScheduledOccurrence(item, editing: save, in: snapshot, today: today, now: now)
+    ) throws -> ScheduledItemSaveChange {
+        let outcome = try LedgerBook.updatingScheduledOccurrence(
+            item,
+            editing: save,
+            payee: payee,
+            in: snapshot,
+            today: today,
+            now: now,
+        )
+        snapshot = outcome.snapshot
         saves += 1
+        return outcome.change
     }
 
     func deleteScheduledItem(id: UUID) throws {

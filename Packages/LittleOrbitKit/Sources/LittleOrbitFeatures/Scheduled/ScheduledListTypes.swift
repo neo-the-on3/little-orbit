@@ -40,6 +40,8 @@ public struct ScheduledItemDetail: Equatable, Sendable {
     public let next: String
     /// The overdue and due-today occurrences, each with its own Pay Now and Skip (S76).
     public let due: [ScheduledRow]
+    /// The occurrence Edit opens the form on: the first one due, else the next one; `nil` for a completed item (D45).
+    public let editOccurrence: CalendarDay?
 }
 
 public struct ScheduledFact: Identifiable, Equatable, Sendable {

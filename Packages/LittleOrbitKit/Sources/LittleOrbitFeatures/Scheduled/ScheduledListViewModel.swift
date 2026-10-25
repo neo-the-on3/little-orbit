@@ -222,18 +222,21 @@ public final class ScheduledListViewModel {
         form = makeForm(nil)
     }
 
-    public func openEditor(_ itemID: UUID) {
+    /// Edit, from a row or the item screen: the form opens on `occurrence` (its key), so Save can ask which
+    /// occurrences to change (D45); with none, it edits the item as a whole.
+    public func openEditor(_ itemID: UUID, occurrence: CalendarDay? = nil) {
         guard let item = listing.item(itemID) else {
             return
         }
-        form = makeForm(item)
+        form = makeForm(item, occurrence: occurrence)
     }
 
-    private func makeForm(_ item: ScheduledItem?) -> ScheduledFormViewModel {
+    private func makeForm(_ item: ScheduledItem?, occurrence: CalendarDay? = nil) -> ScheduledFormViewModel {
         ScheduledFormViewModel(
             useCases: useCases,
             listing: listing,
             editing: item,
+            occurrence: occurrence,
             locale: locale,
             platform: platform,
         ) { [weak self] in

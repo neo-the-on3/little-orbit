@@ -20,22 +20,26 @@ extension ScheduledListViewModel {
             return
         }
         let rows = rows
-        let date = rows.dateText(occurrence)
-        let next = ScheduleCalendar.adding(days: 1, to: occurrence)
-            .flatMap { after in
-                ScheduleCalendar.firstOccurrence(of: item, onOrAfter: after, where: { !item.isSettled($0) })
-            }
+        // A moved occurrence reads its new day (D45).
+        let date = rows.dateText(item.dueDay(of: occurrence))
+        // The next open occurrence by the day it's due, moved ones on their new day (Tech Architect NB 6).
+        let next = ScheduleCalendar.nextOccurrence(of: item, after: item.dueDay(of: occurrence))
         let message =
             next.map {
-                ScheduledText.skipMessage(date: date, next: ScheduledPresenter.dateWithYear($0, locale: locale))
+                ScheduledText.skipMessage(date: date, next: ScheduledPresenter.dateWithYear($0.day, locale: locale))
             } ?? ScheduledText.skipLastMessage(date: date)
         confirmation = ScheduledConfirmation(
             action: .skip(itemID: row.itemID, occurrence: occurrence),
-            title: ScheduledText.skipTitle(date: date, name: rows.shortName(of: item)),
+            title: ScheduledText.skipTitle(date: date, name: rows.shortName(of: item.resolved(for: occurrence))),
             message: message,
             confirmTitle: platform == .macOS ? ScheduledText.skip : ScheduledText.skipOccurrence,
             isDestructive: false,
         )
+    }
+
+    /// Edit on a row: the form opens on the row's occurrence (D45), or on the whole item for a completed one.
+    public func openEditor(_ row: ScheduledRow) {
+        openEditor(row.itemID, occurrence: row.editOccurrence)
     }
 
     public func confirmDelete(_ itemID: UUID) {

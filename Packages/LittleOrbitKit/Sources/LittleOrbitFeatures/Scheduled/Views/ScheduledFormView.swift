@@ -12,7 +12,12 @@
     /// currencies (#197); then Schedule (Starts, Repeat with its stepper row, Ends and End Date), the Next Due Dates
     /// preview with its month-end footnote (D24), and Process automatically. Standard Form controls only. With unsaved
     /// edits, Cancel (Esc on the Mac) or a swipe down on iOS asks “Discard Changes?” first, and an Edit form's prompt
-    /// names the item (D300.1, D388.1); with none it closes.
+    /// names the item (D300.1, D388.1); with none it closes. Opened on one occurrence of a repeating item it adds a Due
+    /// Date row, and Save asks which occurrences to change when a field other than the SERIES ones changed (#197;
+    /// frames "Edit sheet – repeating item (Save asks which occurrences)" and "Edit – Save asks which occurrences
+    /// (.confirmationDialog, #197)"): a confirmation dialog on iOS, and on the Mac a three-button alert whose default
+    /// (Return) is "This occurrence only" and whose Cancel takes Esc (D106, S53). There's no up-front "Apply to"
+    /// control.
     struct ScheduledFormView: View {
         @Bindable var model: ScheduledFormViewModel
         @Environment(\.dismiss) private var dismiss
@@ -40,6 +45,9 @@
                         Text(error).foregroundStyle(Color(ThemeColor.destructiveDefault))
                     }
                     TextField(model.descriptionLabel, text: $model.details)
+                    if model.showsDueDate {
+                        DatePicker(model.dueDateLabel, selection: $model.dueDate, displayedComponents: .date)
+                    }
                 }
                 if model.showsCategory {
                     payeeSection
@@ -171,6 +179,12 @@
                     dismiss()
                 }
             }
+            .scopeQuestion(model)
+            .onChange(of: model.isFinished) { _, finished in
+                if finished {
+                    dismiss()
+                }
+            }
         }
 
         /// The app's notification settings: its page in iOS Settings, or Notifications in System Settings.
@@ -271,6 +285,44 @@
                 .font(.footnote)
                 .foregroundStyle(.secondary)
             }
+        }
+    }
+
+    extension View {
+        /// The question Save asks for a repeating item (D45): a confirmation dialog on iOS, a three-button alert on
+        /// the Mac with "This occurrence only" as its default button (Return) and Cancel on Esc (D106, S53).
+        fileprivate func scopeQuestion(_ model: ScheduledFormViewModel) -> some View {
+            let shown = Binding(
+                get: { model.scopeQuestion != nil },
+                set: { if !$0 { model.scopeQuestion = nil } },
+            )
+            #if os(macOS)
+                return alert(
+                    model.scopeQuestion?.title ?? "",
+                    isPresented: shown,
+                    presenting: model.scopeQuestion,
+                ) { question in
+                    Button(question.thisOccurrenceTitle) { model.save(scope: .thisOccurrence) }
+                        .keyboardShortcut(.defaultAction)
+                    Button(question.allFutureTitle) { model.save(scope: .allFuture) }
+                    Button(question.cancelTitle, role: .cancel) { model.scopeQuestion = nil }
+                } message: { question in
+                    Text(question.message)
+                }
+            #else
+                return confirmationDialog(
+                    model.scopeQuestion?.title ?? "",
+                    isPresented: shown,
+                    titleVisibility: .visible,
+                    presenting: model.scopeQuestion,
+                ) { question in
+                    Button(question.thisOccurrenceTitle) { model.save(scope: .thisOccurrence) }
+                    Button(question.allFutureTitle) { model.save(scope: .allFuture) }
+                    Button(question.cancelTitle, role: .cancel) { model.scopeQuestion = nil }
+                } message: { question in
+                    Text(question.message)
+                }
+            #endif
         }
     }
 #endif

@@ -295,13 +295,23 @@ extension InMemoryLedgerRepository: ScheduleRepository {
         return outcome.result
     }
 
-    public func saveScheduledOccurrence(
+    public func updateScheduledOccurrence(
         _ item: ScheduledItem,
         editing save: ScheduledOccurrenceSave,
+        payee: ScheduledPendingPayee?,
         today: CalendarDay,
         now: Date,
-    ) throws {
-        snapshot = try LedgerBook.savingScheduledOccurrence(item, editing: save, in: snapshot, today: today, now: now)
+    ) throws -> ScheduledItemSaveChange {
+        let outcome = try LedgerBook.updatingScheduledOccurrence(
+            item,
+            editing: save,
+            payee: payee,
+            in: snapshot,
+            today: today,
+            now: now,
+        )
+        snapshot = outcome.snapshot
+        return outcome.change
     }
 
     public func deleteScheduledItem(id: UUID) throws {

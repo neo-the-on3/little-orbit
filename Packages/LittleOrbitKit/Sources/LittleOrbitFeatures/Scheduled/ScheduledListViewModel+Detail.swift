@@ -15,7 +15,8 @@ extension ScheduledListViewModel {
             else {
                 return []
             }
-            return [rows.row(next.item, day: next.day, kind: .upcoming).settling(next.day)]
+            // Pay and Skip act on the occurrence's key, which "This occurrence only" may have moved off its day (D45).
+            return [rows.row(next, kind: .upcoming).settling(next.key)]
         }
     }
 
@@ -46,15 +47,14 @@ extension ScheduledListViewModel {
         }
         facts.append(fact(ScheduledText.note, item.note))
         let due =
-            listing.board.overdue.filter { $0.item.id == itemID }
-            .map { rows.row($0.item, day: $0.day, kind: .overdue) }
-            + listing.board.dueToday.filter { $0.item.id == itemID }
-            .map {
-                rows.row($0.item, day: $0.day, kind: .dueToday)
-            }
-        // D369: the next unsettled day on the current rule from today, never an overdue day; the overdue ones keep
-        // their own rows above (D339, D340).
-        let next = ScheduleCalendar.firstOccurrence(of: item, onOrAfter: listing.board.today) { !item.isSettled($0) }
+            listing.board.overdue.filter { $0.item.id == itemID }.map { rows.row($0, kind: .overdue) }
+            + listing.board.dueToday.filter { $0.item.id == itemID }.map { rows.row($0, kind: .dueToday) }
+        let upcoming = listing.board.upcoming.first { $0.item.id == itemID }
+        let dueToday = listing.board.dueToday.first { $0.item.id == itemID }
+        let firstDue = (listing.board.overdue + listing.board.dueToday).first { $0.item.id == itemID }
+        // D369: today's occurrence, else the next one still open after today, never an overdue day; the overdue
+        // ones keep their own rows above (D339, D340). Moved occurrences count on their new day (D45).
+        let next = dueToday?.day ?? ScheduleCalendar.nextOccurrence(of: item, after: listing.board.today)?.day
         return ScheduledItemDetail(
             itemID: itemID,
             title: presenter.name(of: item),
@@ -64,18 +64,20 @@ extension ScheduledListViewModel {
             next: next.map { ScheduledText.nextDue(presenter.dateText($0)) }
                 ?? ScheduledText.ended(lastDueDay(of: item).map(presenter.dateText) ?? ""),
             due: due,
+            editOccurrence: (firstDue ?? upcoming)?.key,
         )
     }
 
-    /// A completed item's last due date: its last occurrence, or the last one settled. When its whole run came
-    /// before it was created, so none was ever due, it's the rule's last date (Tester on #205).
+    /// A completed item's last due date: its last occurrence, or the last one settled, each on the day it was due,
+    /// so a moved one reads its new day (Tech Architect NB 6). When its whole run came before it was created, so
+    /// none was ever due, it's the rule's last date (Tester on #205).
     func lastDueDay(of item: ScheduledItem) -> CalendarDay? {
         let through = max(
             item.endDay ?? (item.repeatRule.repeats ? listing.board.today : item.startDay),
             item.startDay,
         )
         let ruled = ScheduleCalendar.occurrences(of: item, through: through).last
-        return [ruled, item.settledDays.max()].compactMap { $0 }.max()
+        return ([ruled].compactMap { $0 } + item.settledDays).map(item.dueDay(of:)).max()
             ?? ScheduleCalendar.lastRuledDay(of: item, through: through)
     }
 

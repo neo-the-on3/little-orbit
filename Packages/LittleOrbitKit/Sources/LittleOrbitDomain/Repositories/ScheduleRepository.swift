@@ -32,14 +32,15 @@ public protocol ScheduleRepository: AnyObject {
     /// nothing written when it's stale (D351.1, D352.2). One whose item was deleted since throws
     /// `missingScheduledItem` and writes nothing.
     func revertScheduledItemSave(_ change: ScheduledItemSaveChange, undone: Bool) throws -> ScheduledItemSaveRevert
-    /// See `LedgerBook.savingScheduledOccurrence(_:editing:in:today:now:)`: the form opened on one occurrence (D45).
-    func saveScheduledOccurrence(
+    /// See `LedgerBook.updatingScheduledOccurrence(_:editing:payee:in:today:now:)`: the form opened on one
+    /// occurrence (D45), with its pending payee, in one save. Returns what its Undo step needs, as an edit does.
+    func updateScheduledOccurrence(
         _ item: ScheduledItem,
         editing save: ScheduledOccurrenceSave,
+        payee: ScheduledPendingPayee?,
         today: CalendarDay,
         now: Date,
-    )
-        throws
+    ) throws -> ScheduledItemSaveChange
     /// See `LedgerBook.deletingScheduledItem(id:in:)`.
     func deleteScheduledItem(id: UUID) throws
     /// See `LedgerBook.settlingScheduledOccurrence(_:in:now:)`. Returns what the Pay or Skip did, with a Pay's
