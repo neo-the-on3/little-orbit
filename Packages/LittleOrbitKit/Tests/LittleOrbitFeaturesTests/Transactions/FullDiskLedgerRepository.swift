@@ -41,11 +41,6 @@ final class FullDiskLedgerRepository: LedgerRepository {
         try write()
         try base.deleteTransaction(id: id)
     }
-    func recordScheduledOccurrence(_ transaction: Transaction) throws -> Transaction {
-        try write()
-        return try base.recordScheduledOccurrence(transaction)
-    }
-
     func categories() throws -> [TransactionCategory] { try base.categories() }
     func saveCategory(_ category: TransactionCategory) throws {
         try write()

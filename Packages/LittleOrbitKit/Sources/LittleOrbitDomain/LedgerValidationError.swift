@@ -45,7 +45,6 @@ public enum LedgerValidationError: Error, Equatable, Sendable {
     case splitsNotAllowedOnTransfer
     case attachmentTooLarge
     case invalidAttachment
-    case missingScheduleKey
     case reassignCategoryKindMismatch
     case reassignCategoryInvalid
     case unknownAccount

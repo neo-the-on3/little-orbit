@@ -48,7 +48,6 @@ func assertLedgerAcceptance(make: MakeRepository) throws {
     try assertCategoryManagement(make: make)
     try assertCategoryTreeChanges(make: make)
     try assertDefaultsAreSeededOnce(make: make)
-    try assertScheduledOccurrenceIsRecordedOnce(make: make)
     try assertCurrencyLocksOnceTransactionsExist(make: make)
     try assertTransactionCannotChangeToOrFromTransfer(make: make)
     try assertTransactionsBeforeOpeningDateStillCount(make: make)
@@ -247,30 +246,6 @@ private func assertDeletingParentCategoryClearsSubcategoryTransactions(
     XCTAssertEqual(transactions.count, 1)
     XCTAssertNil(transactions[0].categoryID)
     XCTAssertTrue(try repository.categories().isEmpty)
-}
-
-@MainActor
-private func assertScheduledOccurrenceIsRecordedOnce(make: MakeRepository) throws {
-    let repository = try make()
-    let account = try saveCash(in: repository, opening: "50")
-    var calendar = Calendar(identifier: .gregorian)
-    calendar.timeZone = TimeZone(identifier: "GMT") ?? .current
-    let occurrence = try XCTUnwrap(
-        calendar.date(from: DateComponents(year: 2026, month: 11, day: 1, hour: 12))
-    )
-    let templateID = try XCTUnwrap(UUID(uuidString: "AAAAAAAA-BBBB-4CCC-8DDD-EEEEEEEEEEEE"))
-    var draft = Transaction(
-        type: .expense,
-        amount: decimal("15.00"),
-        accountID: account.id,
-        scheduledTemplateID: templateID,
-        scheduledOccurrenceDate: occurrence,
-    )
-    let first = try repository.recordScheduledOccurrence(draft)
-    draft.id = UUID()
-    let second = try repository.recordScheduledOccurrence(draft)
-    XCTAssertEqual(first.id, second.id)
-    XCTAssertEqual(try repository.transactions().count, 1)
 }
 
 @MainActor
