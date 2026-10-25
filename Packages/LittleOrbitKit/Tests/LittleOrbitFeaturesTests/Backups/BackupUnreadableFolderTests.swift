@@ -226,6 +226,12 @@ struct BackupUnreadableFolderTests {
             try? FileManager.default.removeItem(at: first.folder)
             try? FileManager.default.removeItem(at: URL(fileURLWithPath: first.folder.path + ".staging"))
         }
+        // The unreadable folder's date is the file system's, which the injected clock can't set, so the clock is
+        // set around it instead: the three backups are dated 1.5 days before, half a day before and half a day
+        // after the real time their folders are made. The real date then sits between the first and the last on
+        // any day the test runs, rather than only before the fixed dates run out.
+        let sessionStart = Date().addingTimeInterval(-2.5 * 86_400)
+        first.clock.now = sessionStart
         let backups = try await threeBackups(first)
         guard let denied = try denyReading(first.backupFolder(backups[1].id)) else {
             return
@@ -235,6 +241,7 @@ struct BackupUnreadableFolderTests {
         defer { try? FileManager.default.setAttributes([.posixPermissions: 0o755], ofItemAtPath: denied.path) }
 
         let harness = try BackupHarness(storage: FileBackupStorage(folder: first.folder))
+        harness.clock.now = sessionStart
         let window = harness.window()
         await window.load()
 
@@ -247,6 +254,7 @@ struct BackupUnreadableFolderTests {
         expectUnreadableRow(bad, now: harness.now)
         if let created {
             #expect(bad.createdAt == created)
+            #expect(backups[0].createdAt < created && created < backups[2].createdAt)
             #expect(listed.map(\.id) == [backups[2].id, bad.id, backups[0].id])
         } else {
             #expect(!bad.isDateKnown)
