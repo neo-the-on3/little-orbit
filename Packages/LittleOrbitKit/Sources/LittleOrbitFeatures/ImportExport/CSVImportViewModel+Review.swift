@@ -5,39 +5,41 @@ import LittleOrbitDomain
 extension CSVImportViewModel {
     // MARK: Review
 
+    // The counts and rows are built with the plan and split again when the ticks change (`reviewState`), so
+    // drawing Review does no per-row work.
+
     public var readyCount: Int {
-        preview?.importable(selection).count ?? 0
+        reviewState.readyCount
     }
 
     public var failedCount: Int {
-        preview?.failedCount ?? 0
+        reviewState.failed.count
     }
 
     public var shortenedCount: Int {
-        guard let preview else { return 0 }
-        return preview.importable(selection).filter { !$0.row.warnings.isEmpty }.count
+        reviewState.shortenedCount
     }
 
     public var alreadyImportedCount: Int {
-        preview?.alreadyImportedCount ?? 0
+        reviewState.alreadyImportedCount
     }
 
     public var possibleDuplicateCount: Int {
-        preview?.possibleDuplicateCount ?? 0
+        reviewState.possibleDuplicateCount
     }
 
     /// Selected rows.
     public var selectedRows: [ImportReviewRow] {
-        reviewRows { $0.isSelectable && selection.contains($0.id) }
+        reviewState.selected
     }
 
     /// Importable rows that aren't selected: duplicates by default, and any the user unticked.
     public var unselectedRows: [ImportReviewRow] {
-        reviewRows { $0.isSelectable && !selection.contains($0.id) }
+        reviewState.unselected
     }
 
     public var failedRows: [ImportReviewRow] {
-        reviewRows { !$0.isSelectable }
+        reviewState.failed
     }
 
     public func toggle(_ id: Int) {
@@ -66,107 +68,6 @@ extension CSVImportViewModel {
 
     public var canImport: Bool {
         step == .review && readyCount > 0 && !isWorking
-    }
-
-    private func reviewRows(_ include: (ImportPreviewRow) -> Bool) -> [ImportReviewRow] {
-        (preview?.rows ?? []).filter(include).map(reviewRow)
-    }
-
-    private func reviewRow(_ row: ImportPreviewRow) -> ImportReviewRow {
-        let input = row.row
-        let title = input.payee ?? input.details ?? input.category?.name ?? input.accountName ?? ""
-        var detail = [ImportExportText.row(input.rowNumber)]
-        if let date = input.date {
-            detail.append(
-                date.formatted(
-                    Date.FormatStyle(date: .abbreviated, time: .omitted, locale: locale, timeZone: timeZone)
-                )
-            )
-        }
-        if let account = draftAccountName(row) {
-            detail.append(account)
-        }
-        let currency = draftCurrency(row)
-        let signed = input.kind == .expense ? -(input.amount ?? 0) : (input.amount ?? 0)
-        let amount = input.amount.map { _ in money.string(signed, currencyCode: currency) } ?? ""
-        return ImportReviewRow(
-            id: row.id,
-            title: title,
-            detail: detail.joined(separator: " · "),
-            amount: amount,
-            tone: tone(of: input.kind),
-            message: message(for: row),
-            messageStyle: messageStyle(for: row),
-            source: source(for: row),
-            isSelectable: row.isSelectable,
-        )
-    }
-
-    private func tone(of kind: ImportRowKind?) -> AmountTone {
-        switch kind {
-        case .expense?: .negative
-        case .income?, .refund?: .positive
-        case .transfer?: .transfer
-        case nil: .neutral
-        }
-    }
-
-    private func message(for row: ImportPreviewRow) -> String? {
-        switch row.status {
-        case .failed(let issues):
-            return issues.first.map { ImportExportText.issue($0, dateOrder: dateOrder) }
-        case .alreadyImported:
-            return ImportExportText.alreadyImported
-        case .possibleDuplicate:
-            return ImportExportText.possibleDuplicate
-        case .ready:
-            return row.row.warnings.first.map(ImportExportText.warning)
-        }
-    }
-
-    private func messageStyle(for row: ImportPreviewRow) -> ImportReviewMessageStyle {
-        switch row.status {
-        case .failed: .error
-        case .alreadyImported: .secondary
-        case .possibleDuplicate, .ready: .warning
-        }
-    }
-
-    /// The column and raw value the row's first issue is about, when it's about one cell (D323.3, D349.1). An
-    /// unclosed quote names only its column, as its value runs to the end of the file (D349.2).
-    private func source(for row: ImportPreviewRow) -> String? {
-        guard case .failed(let issues) = row.status, let file, let column = row.row.issueColumn,
-            issues.first == row.row.issues.first, file.table.header.indices.contains(column)
-        else {
-            return nil
-        }
-        if issues.first == .unclosedQuote {
-            return file.table.header[column]
-        }
-        let records = file.table.records
-        let guess = row.row.rowNumber - 2
-        let record =
-            records.indices.contains(guess) && records[guess].rowNumber == row.row.rowNumber
-            ? records[guess] : records.first { $0.rowNumber == row.row.rowNumber }
-        guard let value = ImportText.value(record?.field(column)) else {
-            return nil
-        }
-        return ImportExportText.issueSource(column: file.table.header[column], value: value)
-    }
-
-    private func draftAccountName(_ row: ImportPreviewRow) -> String? {
-        switch row.draft?.account {
-        case .existing(let id)?: ledger.accounts.first { $0.id == id }?.name
-        case .new?: row.row.accountName
-        case nil: row.row.accountName
-        }
-    }
-
-    private func draftCurrency(_ row: ImportPreviewRow) -> String {
-        if case .existing(let id)? = row.draft?.account, let account = ledger.accounts.first(where: { $0.id == id }) {
-            return account.currencyCode
-        }
-        return row.row.currencyCode ?? defaultCurrency
     }
 
     func summary(of row: ImportRow) -> String {
