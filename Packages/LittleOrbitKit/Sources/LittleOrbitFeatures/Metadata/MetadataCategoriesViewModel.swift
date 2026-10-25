@@ -210,6 +210,10 @@ public final class MetadataCategoriesViewModel {
         guard rows.contains(where: { $0.id == id }) else {
             return
         }
+        // Another row's rename ends first, the same way clicking away from it does.
+        if let current = renaming?.categoryID, current != id {
+            endRename(of: current)
+        }
         selection = [id]
         renaming = screen.makeEditor(for: id)
     }
@@ -246,6 +250,21 @@ public final class MetadataCategoriesViewModel {
     /// Esc: ends the rename and keeps the old name.
     public func cancelRename() {
         renaming = nil
+    }
+
+    /// Clicking away from the row `id` was being renamed in: a valid name is saved, as Return does; a name with
+    /// an error is dropped and the old name kept, so no unfocused field or stale error is left behind (Tech
+    /// Architect's NB4 on #169). Focus leaving an earlier row's field doesn't end a rename now on another row.
+    @discardableResult
+    public func endRename(of id: UUID) -> Bool {
+        guard renaming?.categoryID == id else {
+            return false
+        }
+        if commitRename() {
+            return true
+        }
+        renaming = nil
+        return false
     }
 
     // MARK: Editor and Add
