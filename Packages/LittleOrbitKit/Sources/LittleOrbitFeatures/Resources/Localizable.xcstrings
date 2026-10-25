@@ -405,7 +405,7 @@
       }
     },
     "%@ has changed since then. Nothing was changed.": {
-      "comment": "Alert message: an Undo or Redo that can't run because the record changed after the step was recorded, so nothing was changed. %@ is the transaction's payee or description, or an account name. Don't name a cause: the same check catches a change from anywhere.",
+      "comment": "Alert message: an Undo or Redo that can’t run because the record changed after the step was recorded, so nothing was changed. %@ is the transaction’s payee or description, an account name, or a budget or category name. Don’t name a cause: the same check catches a change from anywhere.",
       "extractionState": "manual",
       "localizations": {
         "en": {
@@ -417,7 +417,7 @@
       }
     },
     "%@ has been deleted. Nothing was changed.": {
-      "comment": "Alert message: an Undo or Redo that can't run because the record or account was deleted after the step was recorded, so nothing was changed. %@ is the transaction's payee or description, or the account name. Don't name a cause: the same check catches a change from anywhere.",
+      "comment": "Alert message: an Undo or Redo that can’t run because the record or account was deleted after the step was recorded, so nothing was changed. %@ is the transaction’s payee or description, the account name, or a budget or category name. Don’t name a cause: the same check catches a change from anywhere.",
       "extractionState": "manual",
       "localizations": {
         "en": {
@@ -539,6 +539,45 @@
                 }
               }
             }
+          }
+        }
+      }
+    },
+    "A category has been deleted. Nothing was changed.": {
+      "comment": "Alert message under “Can’t Undo …” or “Can’t Redo …”: the budget step would put back a category that has been deleted since, and its name isn’t known (D309.7). Don’t name a cause: the same check catches a change from anywhere.",
+      "extractionState": "manual",
+      "generatesSymbol": false,
+      "localizations": {
+        "en": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "A category has been deleted. Nothing was changed."
+          }
+        }
+      }
+    },
+    "Change Budget Limit %@": {
+      "comment": "Undo and Redo name: a budget’s limit changed from the budget detail’s action sheet. %@ is the budget’s name (D307.8).",
+      "extractionState": "manual",
+      "generatesSymbol": false,
+      "localizations": {
+        "en": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Change Budget Limit %@"
+          }
+        }
+      }
+    },
+    "Edit Budget %@": {
+      "comment": "Undo and Redo name: a budget’s edits saved, a limit changed in the form included. %@ is the budget’s name after the edit (D307.8).",
+      "extractionState": "manual",
+      "generatesSymbol": false,
+      "localizations": {
+        "en": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Edit Budget %@"
           }
         }
       }
@@ -4269,6 +4308,19 @@
         }
       }
     },
+    "New Budget %@": {
+      "comment": "Undo and Redo name: a budget added. %@ is the budget’s name, for example “Undo New Budget Eating out” (D307.8).",
+      "extractionState": "manual",
+      "generatesSymbol": false,
+      "localizations": {
+        "en": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "New Budget %@"
+          }
+        }
+      }
+    },
     "New Category": {
       "comment": "Category editor title: adding.",
       "extractionState": "manual",
@@ -5033,6 +5085,19 @@
           "stringUnit": {
             "state": "translated",
             "value": "The transfer"
+          }
+        }
+      }
+    },
+    "There’s already a budget named “%@”. Nothing was changed.": {
+      "comment": "Alert message under “Can’t Undo …” or “Can’t Redo …”: Undo or Redo would give a budget a name another budget has taken since, so nothing was changed (D310.1). %@ is the other budget’s name. Don’t name a cause.",
+      "extractionState": "manual",
+      "generatesSymbol": false,
+      "localizations": {
+        "en": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "There’s already a budget named “%@”. Nothing was changed."
           }
         }
       }
