@@ -6,6 +6,9 @@ public struct HistoryEntry: Equatable, Sendable, Identifiable {
     public var transaction: Transaction
     public var effect: Decimal
     public var balanceAfter: Decimal
+    /// The scheduled item a projected Upcoming row comes from (S85): the occurrence isn't recorded yet, so the row
+    /// isn't a stored transaction. `nil` for a stored transaction, future-dated or not.
+    public var scheduledItemID: UUID?
 
     public var id: UUID { transaction.id }
 }
@@ -40,9 +43,20 @@ public struct AccountHistory: Equatable, Sendable {
 public struct BuildAccountHistory: Sendable {
     public init() {}
 
-    public func callAsFunction(account: Account, transactions: [Transaction], today: CalendarDay) -> AccountHistory {
+    /// `projected` are scheduled occurrences after today (`ScheduledProjection`), shown as Upcoming rows with the
+    /// stored ones and counted in the projected balances only (S85).
+    public func callAsFunction(
+        account: Account,
+        transactions: [Transaction],
+        today: CalendarDay,
+        projected: [Transaction] = [],
+    ) -> AccountHistory {
+        // Only occurrences after today, and never one whose transaction is stored, so nothing shows twice.
+        let stored = Set(transactions.map(\.id))
+        let upcomingProjections = projected.filter { !stored.contains($0.id) && TransactionTiming.day(of: $0) > today }
+        let projectedIDs = Set(upcomingProjections.map(\.id))
         let mine =
-            transactions
+            (transactions + upcomingProjections)
             .filter { $0.deletedAt == nil && ($0.accountID == account.id || $0.transferAccountID == account.id) }
             .map { (transaction: $0, day: TransactionTiming.day(of: $0)) }
             .sorted { lhs, rhs in
@@ -73,7 +87,15 @@ public struct BuildAccountHistory: Sendable {
             let effect = LedgerBook.effect(of: item.transaction, on: account.id)
             running += effect
             upcomingTotal += effect
-            upcoming.append(HistoryEntry(transaction: item.transaction, effect: effect, balanceAfter: running))
+            upcoming.append(
+                HistoryEntry(
+                    transaction: item.transaction,
+                    effect: effect,
+                    balanceAfter: running,
+                    scheduledItemID: projectedIDs.contains(item.transaction.id)
+                        ? item.transaction.scheduledTemplateID : nil,
+                )
+            )
         }
         var days: [HistoryDay] = []
         for item in past.reversed() {

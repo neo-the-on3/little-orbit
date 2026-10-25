@@ -3,7 +3,8 @@
     import SwiftUI
 
     /// The macOS history table (Figma 28:1343): Upcoming first, then history newest first. Multi-select,
-    /// double-click to edit, Delete key to delete (#23 platforms, AC 9).
+    /// double-click to edit, Delete key to delete (#23 platforms, AC 9). A scheduled occurrence's row opens its
+    /// scheduled item instead, and isn't edited or deleted here (S85).
     struct AccountTransactionsTable: View {
         @Bindable var history: AccountHistoryViewModel
         let onEdit: (Set<UUID>) -> Void
@@ -36,7 +37,16 @@
                 }
                 .width(min: 90, ideal: 100)
                 TableColumn("Payee") { row in
-                    Text(row.title)
+                    // A scheduled occurrence reads "Corner Bakery · Scheduled", the tag in grey (S85).
+                    if row.isScheduled {
+                        HStack(spacing: 0) {
+                            Text(row.title)
+                            Text(verbatim: " · " + HistoryScheduledText.tag)
+                                .foregroundStyle(Color(ThemeColor.labelSecondary))
+                        }
+                    } else {
+                        Text(row.title)
+                    }
                 }
                 TableColumn("Category") { row in
                     Text(row.categoryText)
@@ -68,7 +78,11 @@
                 }
             }
             .contextMenu(forSelectionType: UUID.self) { ids in
-                if !ids.isEmpty {
+                if ids.count == 1, let id = ids.first, history.scheduledItemID(of: id) != nil {
+                    // Not a stored transaction: it opens its scheduled item, with Pay and Skip (S85).
+                    Button(HistoryScheduledText.openItem) { onEdit(ids) }
+                } else if !history.storedIDs(ids).isEmpty {
+                    let ids = history.storedIDs(ids)
                     Button(ids.count == 1 ? "Edit Transaction…" : "Edit \(ids.count) Transactions…") { onEdit(ids) }
                     Divider()
                     Button(

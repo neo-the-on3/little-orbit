@@ -20,12 +20,15 @@
     struct AccountDetailView: View {
         let row: AccountRowModel
         let transactions: TransactionsFeature
+        /// Opens the scheduled item a scheduled Upcoming row comes from (S85); `nil` shows no scheduled rows' item.
+        let scheduled: ScheduledFeature?
         let onEdit: () -> Void
         /// Called after the ledger changes, so the account list refreshes its balances.
         let onChange: () -> Void
         @State private var history: AccountHistoryViewModel
         @State private var formSheet: TransactionFormSheet?
         @State private var bulkEditSheet: BulkEditSheet?
+        @State private var scheduledItem: ScheduledItemRoute?
         /// The step of the delete toast this screen showed.
         @State private var toastStepID: UUID?
         #if os(iOS)
@@ -39,11 +42,13 @@
         init(
             row: AccountRowModel,
             transactions: TransactionsFeature,
+            scheduled: ScheduledFeature? = nil,
             onEdit: @escaping () -> Void,
             onChange: @escaping () -> Void,
         ) {
             self.row = row
             self.transactions = transactions
+            self.scheduled = scheduled
             self.onEdit = onEdit
             self.onChange = onChange
             _history = State(initialValue: transactions.makeHistory(accountID: row.id))
@@ -58,6 +63,11 @@
                         model: sheet.model,
                         onSaved: record,
                     )
+                }
+                .sheet(item: $scheduledItem) { route in
+                    if let scheduled {
+                        ScheduledItemSheet(feature: scheduled, itemID: route.itemID)
+                    }
                 }
                 #if os(macOS)
                     .sheet(item: $bulkEditSheet) { sheet in
@@ -129,12 +139,24 @@
             undoHistory.undo()
         }
 
+        /// A scheduled Upcoming row opens its scheduled item, with Pay and Skip (S85); stored rows open the editor.
         private func edit(_ ids: Set<UUID>) {
+            if ids.count == 1, let id = ids.first, let itemID = history.scheduledItemID(of: id) {
+                openScheduled(itemID)
+                return
+            }
+            let ids = history.storedIDs(ids)
             if ids.count == 1, let id = ids.first {
                 formSheet = TransactionFormSheet(model: transactions.makeForm(.edit(id)))
             } else if ids.count > 1 {
                 let order = history.allRows.map(\.id)
                 bulkEditSheet = BulkEditSheet(model: transactions.makeBulkEdit(order.filter { ids.contains($0) }))
+            }
+        }
+
+        private func openScheduled(_ itemID: UUID) {
+            if scheduled != nil {
+                scheduledItem = ScheduledItemRoute(itemID: itemID)
             }
         }
 
@@ -278,6 +300,8 @@
                 if editMode.isEditing {
                     TransactionRowView(row: row)
                         .deleteDisabled(true)
+                        // A scheduled row isn't a transaction to select and delete (S85).
+                        .selectionDisabled(row.isScheduled)
                 } else {
                     editableRow(row)
                 }
@@ -290,7 +314,24 @@
 
             /// Delete is the List's own swipe to delete (`onDelete`), its one VoiceOver action; a custom swipe
             /// action on this button listed Delete twice (Tester's #87 recheck). The menu offers Edit.
+            @ViewBuilder
             private func editableRow(_ row: TransactionRowModel) -> some View {
+                if let itemID = row.scheduledItemID {
+                    // Not a stored transaction: it opens its scheduled item and can't be swiped away (S85).
+                    Button {
+                        openScheduled(itemID)
+                    } label: {
+                        TransactionRowView(row: row)
+                    }
+                    .buttonStyle(.plain)
+                    .accessibilityHint(HistoryScheduledText.openHint)
+                    .deleteDisabled(true)
+                } else {
+                    storedRow(row)
+                }
+            }
+
+            private func storedRow(_ row: TransactionRowModel) -> some View {
                 Button {
                     formSheet = TransactionFormSheet(model: transactions.makeForm(.edit(row.id)))
                 } label: {

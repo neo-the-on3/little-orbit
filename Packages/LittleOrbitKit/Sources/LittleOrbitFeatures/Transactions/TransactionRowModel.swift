@@ -20,6 +20,9 @@ public struct TransactionRowModel: Identifiable, Equatable, Sendable {
     /// The balance alone, for the macOS Balance column.
     public var balanceValueText: String
     public var isUpcoming: Bool
+    /// The scheduled item a projected Upcoming row comes from (S85): it shows a "Scheduled" tag and opens that item.
+    /// `nil` for a stored transaction, including future ones the user entered.
+    public var scheduledItemID: UUID?
     public var symbolName: String
     public var isUncategorised: Bool
     /// macOS columns.
@@ -27,6 +30,8 @@ public struct TransactionRowModel: Identifiable, Equatable, Sendable {
     public var categoryText: String
     public var accountText: String
     public var accessibilityLabel: String
+
+    public var isScheduled: Bool { scheduledItemID != nil }
 }
 
 /// Which list a row is in, which decides how a transfer's amount reads (UI Designer, #87 U5).
@@ -115,6 +120,9 @@ struct TransactionRowContext {
         if isUpcoming {
             spoken.append("Upcoming")
         }
+        if entry.scheduledItemID != nil {
+            spoken.append(HistoryScheduledText.tag)
+        }
         spoken.append(amountText)
         spoken.append(isUpcoming ? "projected balance \(balance)" : "balance \(balance)")
         return TransactionRowModel(
@@ -128,6 +136,7 @@ struct TransactionRowContext {
             balanceText: balanceText,
             balanceValueText: balance,
             isUpcoming: isUpcoming,
+            scheduledItemID: entry.scheduledItemID,
             symbolName: isTransfer ? "arrow.left.arrow.right" : category?.iconName ?? "questionmark",
             isUncategorised: !isTransfer && category == nil,
             dateText: text.fullDate(day),

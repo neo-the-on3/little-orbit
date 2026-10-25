@@ -93,6 +93,17 @@ public final class AccountHistoryViewModel {
     /// Every row in display order: Upcoming, then history. The macOS table lists them in two sections.
     public var allRows: [TransactionRowModel] { upcoming + sections.flatMap(\.rows) }
 
+    /// The scheduled item a projected Upcoming row comes from (S85), which a tap or double-click opens; `nil` for a
+    /// stored transaction.
+    public func scheduledItemID(of rowID: UUID) -> UUID? {
+        upcoming.first { $0.id == rowID }?.scheduledItemID
+    }
+
+    /// The rows that are stored transactions, which can be edited or deleted; projected scheduled rows can't.
+    public func storedIDs(_ ids: Set<UUID>) -> Set<UUID> {
+        ids.filter { scheduledItemID(of: $0) == nil }
+    }
+
     /// "5 selected" under the macOS table.
     public var selectionSummary: String? {
         selection.isEmpty ? nil : "\(selection.count) selected"
@@ -169,6 +180,7 @@ public final class AccountHistoryViewModel {
     /// The Delete key, swipe or context menu. One row is deleted at once with Undo; several ask first.
     @discardableResult
     public func requestDelete(ids: Set<UUID>) -> TransactionChange? {
+        let ids = storedIDs(ids)
         if ids.count == 1, let id = ids.first {
             return delete(id: id)
         }
