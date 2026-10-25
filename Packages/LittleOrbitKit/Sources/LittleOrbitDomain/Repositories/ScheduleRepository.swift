@@ -8,6 +8,9 @@ public protocol ScheduleRepository: AnyObject {
     /// The ledger the Scheduled screens read: accounts, categories, payees and scheduled items. A store may leave
     /// out the transactions, splits and attachments, which the screens never read.
     func scheduleLedger() throws -> LedgerSnapshot
+    /// Saves a payee the Scheduled form created from its payee field (#197). The same as
+    /// `LedgerRepository.savePayee(_:)`.
+    func savePayee(_ payee: Payee) throws
     /// See `LedgerBook.savingScheduledItem(_:in:today:now:)`. `now` is the use cases' clock, so a new item's
     /// creation day is the same "today" the screens use (D336.2, D337).
     func saveScheduledItem(_ item: ScheduledItem, today: CalendarDay, now: Date) throws

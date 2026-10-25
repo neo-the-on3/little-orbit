@@ -65,7 +65,12 @@ public final class ScheduledFormViewModel: Identifiable {
     }
     public var transferAccountID: UUID?
     public var categoryID: UUID?
-    public var payeeID: UUID?
+    /// The payee field's text. Typing an existing payee's name picks it; any other text picks none until its
+    /// "Create “‹name›”" row is chosen (#197, #23).
+    public var payeeText: String {
+        didSet { payeeTextChanged() }
+    }
+    public internal(set) var payeeID: UUID?
     public var startDay: CalendarDay
     public var frequency: ScheduledFrequency
     public var interval: Int
@@ -92,7 +97,7 @@ public final class ScheduledFormViewModel: Identifiable {
     /// Set once the deleted-item alert has been dismissed by any route, for the view to close the form (#258).
     public private(set) var closeRequested = false
 
-    @ObservationIgnored private let useCases: ScheduledScreenUseCases
+    @ObservationIgnored let useCases: ScheduledScreenUseCases
     @ObservationIgnored private let listing: ScheduledListing
     @ObservationIgnored private let original: ScheduledItem?
     @ObservationIgnored private let locale: Locale
@@ -103,6 +108,8 @@ public final class ScheduledFormViewModel: Identifiable {
     @ObservationIgnored private let saved: () -> Void
     /// The latest permission check, for tests to wait on.
     @ObservationIgnored private(set) var permissionCheck: Task<Void, Never>?
+    /// The listing's payees and any the payee field created.
+    @ObservationIgnored var payees: [Payee]
 
     init(
         useCases: ScheduledScreenUseCases,
@@ -130,7 +137,9 @@ public final class ScheduledFormViewModel: Identifiable {
         accountID = item?.accountID ?? accounts.first?.id
         transferAccountID = item?.transferAccountID
         categoryID = item?.categoryID
+        payees = listing.payees
         payeeID = item?.payeeID
+        payeeText = listing.payee(item?.payeeID)?.name ?? ""
         startDay = item?.startDay ?? today
         frequency = item.map { ScheduledFrequency($0.repeatRule) } ?? .month
         if case .every(let count, _) = item?.repeatRule {
@@ -265,13 +274,6 @@ public final class ScheduledFormViewModel: Identifiable {
         return [ScheduledChoice(id: nil, name: ScheduledText.none)] + categories
     }
 
-    public var payeeChoices: [ScheduledChoice] {
-        let payees = listing.payees
-            .map { ScheduledChoice(id: $0.id, name: $0.name) }
-            .sorted { $0.name.localizedStandardCompare($1.name) == .orderedAscending }
-        return [ScheduledChoice(id: nil, name: ScheduledText.none)] + payees
-    }
-
     /// A transfer has neither a category nor a payee, as on a transaction.
     public var showsCategory: Bool { type != .transfer }
 
@@ -360,6 +362,7 @@ public final class ScheduledFormViewModel: Identifiable {
         if type == .transfer {
             categoryID = nil
             payeeID = nil
+            payeeText = ""
             if transferAccountID == nil || transferAccountID == accountID {
                 transferAccountID = toChoices.first?.id
             }

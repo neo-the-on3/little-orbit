@@ -2795,6 +2795,32 @@
         }
       }
     },
+    "scheduled.payee.create": {
+      "comment": "Scheduled form payee field: the row that saves the typed name as a new payee. %@ is the name typed, trimmed.",
+      "extractionState": "manual",
+      "generatesSymbol": false,
+      "localizations": {
+        "en": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Create “%@”"
+          }
+        }
+      }
+    },
+    "New payee": {
+      "comment": "Scheduled form payee field: the subtitle of the Create row.",
+      "extractionState": "manual",
+      "generatesSymbol": false,
+      "localizations": {
+        "en": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "New payee"
+          }
+        }
+      }
+    },
     "Currency": {
       "comment": "CSV import column field: the currency code. Spending report: the currency picker’s label, shown only with spending in 2 or more currencies. Debit & Credit import Match step: a new account’s currency picker.",
       "extractionState": "manual",

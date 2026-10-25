@@ -57,6 +57,10 @@ public protocol ManageScheduledUseCase {
     /// throws `LedgerValidationError.missingScheduledItem` and saves nothing; an edit never adds it back (#258).
     func update(_ item: ScheduledItem) throws
     func delete(id: UUID) throws
+    /// The payee named `name`, ignoring case and outer spaces, or a new one saved with that name, for the form's
+    /// "Create “‹name›”" row (#197, #23). Only picking that row creates a payee; saving the item never does. `nil`
+    /// for a blank name.
+    func createPayee(named name: String) throws -> Payee?
     /// Pay now: records the occurrence on `occurrence`, dated today. `nil` when it was already settled.
     @discardableResult
     func payNow(itemID: UUID, occurrence: CalendarDay) throws -> Transaction?
@@ -208,6 +212,19 @@ public struct DefaultScheduledUseCases: LoadScheduledUseCase, ManageScheduledUse
 
     public func delete(id: UUID) throws {
         try repository.deleteScheduledItem(id: id)
+    }
+
+    public func createPayee(named name: String) throws -> Payee? {
+        let trimmed = name.trimmingCharacters(in: .whitespacesAndNewlines)
+        guard !trimmed.isEmpty else {
+            return nil
+        }
+        if let existing = try repository.scheduleLedger().payees.first(where: { $0.isLive(named: trimmed) }) {
+            return existing
+        }
+        let payee = Payee(name: trimmed, createdAt: now())
+        try repository.savePayee(payee)
+        return try repository.scheduleLedger().payees.first { $0.id == payee.id } ?? payee
     }
 
     @discardableResult

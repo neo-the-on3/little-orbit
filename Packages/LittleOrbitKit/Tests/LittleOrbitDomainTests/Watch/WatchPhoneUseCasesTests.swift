@@ -226,6 +226,8 @@ final class FlakyScheduleRepository: ScheduleRepository {
 
     func scheduleLedger() throws -> LedgerSnapshot { try base.scheduleLedger() }
 
+    func savePayee(_ payee: Payee) throws { try base.savePayee(payee) }
+
     func saveScheduledItem(_ item: ScheduledItem, today: CalendarDay, now: Date) throws {
         try base.saveScheduledItem(item, today: today, now: now)
     }
