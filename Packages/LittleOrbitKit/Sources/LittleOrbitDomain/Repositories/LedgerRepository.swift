@@ -12,6 +12,12 @@ public protocol LedgerRepository: AnyObject {
     func transactions() throws -> [Transaction]
     func saveTransaction(_ transaction: Transaction) throws
     func deleteTransaction(id: UUID) throws
+    /// Saves new transactions as one batch, with the same rules as `saveTransaction` for each
+    /// (`LedgerBook.savingNewTransactions`). An import uses it so 5,000 rows don't save one by one (#30 S35).
+    func saveNewTransactions(_ transactions: [Transaction]) throws
+    /// Deletes transactions as one batch, the same as `deleteTransaction` for each
+    /// (`LedgerBook.deletingTransactions`). Undo Import uses it.
+    func deleteTransactions(ids: [UUID]) throws
 
     func categories() throws -> [TransactionCategory]
     func saveCategory(_ category: TransactionCategory) throws
@@ -64,4 +70,24 @@ public protocol LedgerRepository: AnyObject {
     /// throws, none is. Reads inside `body` see its earlier writes. A nested call joins the outer one; if
     /// it throws, its own writes are undone, and the outer change keeps going only if its caller catches the error.
     func atomically<T>(_ body: () throws -> T) throws -> T
+}
+
+extension LedgerRepository {
+    /// One by one, for a repository without a batch path.
+    public func saveNewTransactions(_ transactions: [Transaction]) throws {
+        try atomically {
+            for transaction in transactions {
+                try saveTransaction(transaction)
+            }
+        }
+    }
+
+    /// One by one, for a repository without a batch path.
+    public func deleteTransactions(ids: [UUID]) throws {
+        try atomically {
+            for id in ids {
+                try deleteTransaction(id: id)
+            }
+        }
+    }
 }

@@ -43,6 +43,14 @@ public final class InMemoryLedgerRepository: LedgerRepository {
         snapshot = try LedgerBook.deletingTransaction(id: id, in: snapshot, now: now())
     }
 
+    public func saveNewTransactions(_ transactions: [Transaction]) throws {
+        snapshot = try LedgerBook.savingNewTransactions(transactions, in: snapshot, now: now())
+    }
+
+    public func deleteTransactions(ids: [UUID]) throws {
+        snapshot = try LedgerBook.deletingTransactions(ids: ids, in: snapshot, now: now())
+    }
+
     public func categories() throws -> [TransactionCategory] {
         snapshot.categoriesVisible()
     }
