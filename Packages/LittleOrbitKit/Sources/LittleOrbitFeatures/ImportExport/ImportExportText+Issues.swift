@@ -65,6 +65,18 @@ extension ImportExportText {
             FeatureText.format("Currency differs from the account’s %@", accountCurrency)
         case .nameTooLong(let field):
             nameTooLong(field)
+        case .transferAmountsMismatch:
+            FeatureText.string(
+                "Transfer amounts don’t match — check the new account’s currency",
+                comment:
+                    "CSV import row issue (D330.1, D330.5): a transfer’s two halves are between accounts in the same currency but have different amounts, so neither imports.",
+            )
+        case .ambiguousTransferHalf:
+            FeatureText.string(
+                "Can’t tell which row is the other half of this transfer",
+                comment:
+                    "CSV import row issue (D330.2): two or more rows are equally close to be this transfer’s other half and would make different transfers, so none of them imports.",
+            )
         }
     }
 

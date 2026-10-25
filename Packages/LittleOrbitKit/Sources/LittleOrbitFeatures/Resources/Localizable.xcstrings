@@ -1507,6 +1507,19 @@
         }
       }
     },
+    "Can’t tell which row is the other half of this transfer": {
+      "comment": "CSV import row issue (D330.2): two or more rows are equally close to be this transfer’s other half and would make different transfers, so none of them imports.",
+      "extractionState": "manual",
+      "generatesSymbol": false,
+      "localizations": {
+        "en": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Can’t tell which row is the other half of this transfer"
+          }
+        }
+      }
+    },
     "Can’t Undo %@": {
       "comment": "Alert title: an Undo that can't run because a record it changes was changed or deleted after the step was recorded. %@ is the Undo name, such as \"Edit Transaction\". Don't name a cause: the same check catches a change from anywhere.",
       "extractionState": "manual",
@@ -6546,6 +6559,19 @@
           "stringUnit": {
             "state": "translated",
             "value": "Transactions"
+          }
+        }
+      }
+    },
+    "Transfer amounts don’t match — check the new account’s currency": {
+      "comment": "CSV import row issue (D330.1, D330.5): a transfer’s two halves are between accounts in the same currency but have different amounts, so neither imports.",
+      "extractionState": "manual",
+      "generatesSymbol": false,
+      "localizations": {
+        "en": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Transfer amounts don’t match — check the new account’s currency"
           }
         }
       }

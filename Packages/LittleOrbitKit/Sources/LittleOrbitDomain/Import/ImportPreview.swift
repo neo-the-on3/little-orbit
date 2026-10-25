@@ -106,9 +106,27 @@ public enum ImportPlanner {
     ) -> ImportPreview {
         var matcher = ImportMatcher(ledger: ledger, choices: choices, defaultCurrency: defaultCurrency)
         let target = choices.targetAccountID.flatMap { id in ledger.accounts.first { $0.id == id } }
+        let pairing = pairTransfers(rows, matcher: matcher, target: target)
         var resolved: [(ImportRow, ImportDraft?)] = []
         resolved.reserveCapacity(rows.count)
-        for row in rows {
+        for (index, input) in rows.enumerated() {
+            var row = input
+            switch pairing[index] {
+            case .absorbed?:
+                // Its names still count on the Match step, so a re-plan doesn't change the list (D327, D330).
+                registerAccounts(of: row, matcher: &matcher)
+                continue
+            case .merged(let merged)?:
+                row = merged
+            case .failed(let issue)?:
+                row.issues.append(issue)
+                row.issues = row.issuesInFieldOrder(row.issues)
+                if row.issues.first == issue {
+                    row.issueColumn = issue.field.flatMap { row.transferColumns[$0] }
+                }
+            case nil:
+                break
+            }
             resolved.append(resolve(row, matcher: &matcher, target: target, timeZone: timeZone))
         }
         let detector = ImportDuplicateDetector(ledger: ledger, timeZone: timeZone)
@@ -119,6 +137,58 @@ public enum ImportPlanner {
             return ImportPreviewRow(row: row, status: detector.status(of: draft, row: row), draft: draft)
         }
         return ImportPreview(rows: previewRows, matches: matcher.orderedMatches)
+    }
+
+    /// The transfer halves a format left for pairing (#60), paired against the accounts matching resolves them
+    /// to (D330). A copy of the matcher makes the same calls in the same order as the real pass, so the
+    /// accounts and new accounts' currencies are the ones the drafts get.
+    private static func pairTransfers(
+        _ rows: [ImportRow],
+        matcher: ImportMatcher,
+        target: Account?,
+    ) -> [Int: ImportTransferPairing.Outcome] {
+        guard rows.contains(where: { $0.transferHalf != nil }) else {
+            return [:]
+        }
+        var probe = matcher
+        let refs = rows.map { row in registerAccounts(of: row, matcher: &probe, target: target) }
+        return ImportTransferPairing.outcomes(
+            rows,
+            accounts: ImportTransferPairing.Accounts(refs: refs, currency: { probe.currency(of: $0) }),
+        )
+    }
+
+    /// The accounts `resolve` would match for the row, noted with the matcher in the same order.
+    @discardableResult
+    private static func registerAccounts(
+        of row: ImportRow,
+        matcher: inout ImportMatcher,
+        target: Account? = nil,
+    ) -> (source: ImportRef?, destination: ImportRef?) {
+        let source: ImportRef? =
+            if let name = row.accountName {
+                matcher.account(named: name, currency: row.currencyCode)
+            } else {
+                target.map { .existing($0.id) }
+            }
+        var destination: ImportRef?
+        if row.kind == .transfer, let name = row.toAccountName {
+            destination = matcher.account(named: name, currency: nil)
+        }
+        return (source, destination)
+    }
+
+    /// Puts the file's and matching's issues in the format's order, then names the cell behind the first reason
+    /// (D349.1). When ordering puts a different reason first than the one its cell was found for, no file value
+    /// goes under it.
+    private static func settle(
+        _ row: inout ImportRow,
+        input: ImportRow,
+        issues: [ImportRowIssue],
+        found: [(issue: ImportRowIssue, column: Int?)],
+    ) {
+        row.issues = row.issuesInFieldOrder(issues)
+        row.issueColumn = issueColumn(of: input, found: found, issues: row.issues)
     }
 
     private static func resolve(
@@ -163,9 +233,8 @@ public enum ImportPlanner {
             }
         }
         issues += found.map(\.issue)
-        row.issues = issues
-        row.issueColumn = issueColumn(of: input, found: found, issues: issues)
-        guard issues.isEmpty, let kind = row.kind, let date = row.date, let amount = row.amount, let account else {
+        settle(&row, input: input, issues: issues, found: found)
+        guard row.issues.isEmpty, let kind = row.kind, let date = row.date, let amount = row.amount, let account else {
             if row.issues.isEmpty {
                 row.issues = [.missingAmount]
             }
@@ -209,7 +278,10 @@ public enum ImportPlanner {
             return nil
         }
         guard let received = row.destinationAmount else {
-            found.append((.destinationAmountRequired, nil))
+            // A half that can't tell its partner apart says only that (D330.2); it isn't a lone half.
+            if !row.issues.contains(.ambiguousTransferHalf) {
+                found.append((.destinationAmountRequired, nil))
+            }
             return nil
         }
         if !fits(received, destination) {
@@ -284,7 +356,7 @@ struct ImportDuplicateDetector {
         }
         let bucket = Bucket(accountID: accountID, type: draft.kind.transactionType, amount: draft.amount)
         let candidates = (buckets[bucket] ?? []).filter { sameCounterpart($0, draft) }
-        if let exact = candidates.first(where: { isExact($0, draft) }) {
+        if let exact = candidates.first(where: { isExact($0, draft, rule: row.exactMatch) }) {
             return .alreadyImported(existingID: exact.id)
         }
         let day = dayNumber(draft.date, timeZoneID: draft.timeZoneID)
@@ -309,7 +381,7 @@ struct ImportDuplicateDetector {
         return existing.isRefund == (draft.kind == .refund)
     }
 
-    private func isExact(_ existing: Transaction, _ draft: ImportDraft) -> Bool {
+    private func isExact(_ existing: Transaction, _ draft: ImportDraft, rule: ImportExactMatch) -> Bool {
         guard abs(existing.date.timeIntervalSince(draft.date)) < 1 else {
             return false
         }
@@ -319,6 +391,10 @@ struct ImportDuplicateDetector {
             case .new: UUID()  // A category the import creates can't be on an existing transaction.
             case nil: nil
             }
+        if rule == .categoryAndNotes {
+            // #60: the same account, date and time, amount, type, category and notes (D324.2).
+            return existing.categoryID == category && LedgerText.trimmedOptional(existing.note) == draft.note
+        }
         let payee: String? =
             switch draft.payee {
             case .existing(let id): payeeNames[id]
