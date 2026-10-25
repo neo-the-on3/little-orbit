@@ -108,7 +108,7 @@ public final class CSVImportViewModel {
     public private(set) var preview: ImportPreview?
     public var selection: Set<Int> = []
     public private(set) var receipt: ImportReceipt?
-    public private(set) var isUndone = false
+    public internal(set) var isUndone = false
     /// D327.1: “Your data changed, so this preview was updated.”, shown inline at the top of the current step
     /// after the preview re-planned because the ledger changed; `nil` otherwise. It isn't an alert.
     public internal(set) var dataChangedNotice: String?
@@ -231,7 +231,7 @@ public final class CSVImportViewModel {
         case .account: ImportExportText.accountStep
         case .match: ImportExportText.matchStep
         case .review: ImportExportText.reviewStep
-        case .summary: ImportExportText.importComplete
+        case .summary: summaryTitle
         }
     }
 
@@ -473,28 +473,6 @@ public final class CSVImportViewModel {
                 title: ImportExportText.importFailedTitle,
                 message: ImportExportText.importFailedMessage,
             )
-        }
-    }
-
-    // MARK: Undo Import
-
-    public func requestUndo() {
-        guard canUndo else { return }
-        isConfirmingUndo = true
-    }
-
-    public func undo() {
-        guard let receipt, canUndo else { return }
-        do {
-            try useCases.ledger.undo(receipt)
-            isUndone = true
-            changed()
-            ImportLog.event(.undone)
-        } catch let error as ImportUndoError where error == .changedSinceImport {
-            alert = ImportAlert(title: ImportExportText.undoRefusedTitle, message: ImportExportText.undoChangedMessage)
-        } catch {
-            ImportLog.event(.undoFailed)
-            alert = ImportAlert(title: ImportExportText.undoFailedTitle, message: ImportExportText.undoFailedMessage)
         }
     }
 }

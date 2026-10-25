@@ -39,6 +39,7 @@ struct CSVImportViewModelTests {
         await model.commit()
         #expect(model.step == .summary)
         #expect(model.importedText == "5 transactions imported")
+        #expect(model.stepTitle == "Import Complete")
         #expect(changes.count == 1)
         let amounts = try repository.transactions().map(\.amount).sorted()
         #expect(amounts == [120, 450, F.dec("1234.50"), 2000, 125_000])
@@ -117,7 +118,14 @@ struct CSVImportViewModelTests {
         #expect(try repository.accounts().count == 3)
         #expect(try repository.categories().isEmpty)
         #expect(try repository.payees().isEmpty)
+        // After Undo, the title and the step name say it's undone, and the line under them names the file
+        // instead of “0 transactions imported”.
         #expect(model.summaryTitle == "Import Undone")
+        #expect(model.stepTitle == "Import Undone")
+        #expect(model.importedText == "Everything this import added from “Little Orbit Export.csv” is removed.")
+        #expect(model.createdLines.isEmpty)
+        #expect(model.unlinkedRefundNote == nil)
+        #expect(!model.canUndo)
     }
 
     @Test("Remapping a name to an existing account applies before Review")

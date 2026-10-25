@@ -19,6 +19,18 @@
         @Entry var importExportRequests: ImportExportRequests?
     }
 
+    /// The OK that closes an import or export alert. Its title is also its accessibility name, which a plain
+    /// alert button didn't expose on the Mac (Tester's #190 Mac pass).
+    struct ImportAlertOKButton: View {
+        var body: some View {
+            Button {
+            } label: {
+                Text(ImportExportText.okay)
+            }
+            .accessibilityLabel(Text(ImportExportText.okay))
+        }
+    }
+
     /// One import session's sheet.
     private struct CSVImportSession: Identifiable {
         let id = UUID()
@@ -48,7 +60,7 @@
                     isPresented: Binding(get: { openAlert != nil }, set: { if !$0 { openAlert = nil } }),
                     presenting: openAlert,
                 ) { _ in
-                    Button(ImportExportText.okay) {}
+                    ImportAlertOKButton()
                 } message: { alert in
                     Text(alert.message)
                 }

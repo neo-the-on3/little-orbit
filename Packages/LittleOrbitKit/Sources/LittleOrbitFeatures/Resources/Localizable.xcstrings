@@ -3797,7 +3797,7 @@
       }
     },
     "Everything this import added from “%@” is removed.": {
-      "comment": "Undo Import confirmation: the message’s first sentence (D281, D323.8). %@ is the imported file’s name.",
+      "comment": "Undo Import confirmation: the message’s first sentence (D281, D323.8). Also the line under “Import Undone” on the CSV import summary after Undo Import. %@ is the imported file’s name.",
       "extractionState": "manual",
       "localizations": {
         "en": {
@@ -4021,19 +4021,6 @@
           "stringUnit": {
             "state": "translated",
             "value": "Icon"
-          }
-        }
-      }
-    },
-    "Import": {
-      "comment": "CSV import Review: the toolbar button that saves the selected rows.",
-      "extractionState": "manual",
-      "generatesSymbol": false,
-      "localizations": {
-        "en": {
-          "stringUnit": {
-            "state": "translated",
-            "value": "Import"
           }
         }
       }
