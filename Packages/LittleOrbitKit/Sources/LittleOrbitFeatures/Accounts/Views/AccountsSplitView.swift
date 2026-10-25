@@ -27,16 +27,24 @@
         private let transactions: TransactionsFeature
         /// The Scheduled screens (#26); without them the sidebar row shows its placeholder.
         private let scheduled: ScheduledFeature?
+        /// Reports (#27); `nil` keeps the Reports item's placeholder.
+        private let reports: ReportsFeature?
 
         private var undoHistory: WindowUndoHistory {
             undoSlot.history(from: transactions)
         }
 
-        /// Both features come from the composition root, which built them once with the injected use cases.
-        public init(feature: AccountsFeature, transactions: TransactionsFeature, scheduled: ScheduledFeature? = nil) {
+        /// The features come from the composition root, which built them once with the injected use cases.
+        public init(
+            feature: AccountsFeature,
+            transactions: TransactionsFeature,
+            scheduled: ScheduledFeature? = nil,
+            reports: ReportsFeature? = nil,
+        ) {
             self.feature = feature
             self.transactions = transactions
             self.scheduled = scheduled
+            self.reports = reports
             _model = State(initialValue: feature.accounts)
             _deleteConfirmation = State(initialValue: AccountDeleteConfirmation(model: feature.accounts))
         }
@@ -289,11 +297,18 @@
                     }
                 }
             case .home(let destination):
-                UpcomingFeatureView(
-                    title: destination.title,
-                    systemImage: destination.symbolName,
-                    message: destination.emptyText,
-                )
+                if destination == .reports, let reports {
+                    // Its own stack, so a category's transactions push inside the detail pane.
+                    NavigationStack {
+                        ReportsView(feature: reports)
+                    }
+                } else {
+                    UpcomingFeatureView(
+                        title: destination.title,
+                        systemImage: destination.symbolName,
+                        message: destination.emptyText,
+                    )
+                }
             case .scheduled:
                 // Only the iPhone and iPad stack pushes it; here the list has its own stack.
                 noSelection

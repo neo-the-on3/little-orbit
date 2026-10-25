@@ -250,6 +250,7 @@
         /// The watch's Scheduled list and its Pay and Skip (#197 item 10); `nil` with no watch link (the Mac).
         let watch: WatchPhoneFeature?
         let scheduledUpcoming: ScheduledUpcomingSettingsModel
+        let reports: ReportsFeature
         #if DEBUG
             /// Debug › Tap Scheduled Reminder on the Mac and in the iPad menu bar: a warm tap on a reminder, through
             /// the same handler as `-LittleOrbitScheduledReminderTap` (S33). Debug builds only.
@@ -370,6 +371,11 @@
                 ),
                 updates: transactions.updates,
             )
+            // Reports (#27 core): the spending report reads the same store and reloads on the same change signal.
+            reports = ReportsFeature(
+                spendingReport: DefaultLoadSpendingReportUseCase(source: repository),
+                updates: transactions.updates,
+            )
             payees = PayeesFeature(
                 useCases: PayeeScreenUseCases(
                     load: DefaultLoadPayeesUseCase(repository: repository),
@@ -445,6 +451,7 @@
                     feature: features.accounts,
                     transactions: features.transactions,
                     scheduled: features.scheduled,
+                    reports: features.reports,
                 )
                 // File › Import CSV from Files… and Export Transactions to CSV… open here, in the front window.
                 .importExport(features.importExport)
@@ -453,6 +460,7 @@
                     feature: features.accounts,
                     transactions: features.transactions,
                     scheduled: features.scheduled,
+                    reports: features.reports,
                     onShowSettings: { history in
                         settingsUndoHistory = history
                         isShowingSettings = true
