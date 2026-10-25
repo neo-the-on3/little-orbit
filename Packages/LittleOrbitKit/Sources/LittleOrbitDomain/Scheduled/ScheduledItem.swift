@@ -84,6 +84,11 @@ public struct ScheduledOccurrence: Identifiable, Hashable, Sendable, Codable {
     /// The transaction it recorded. It stays set after that transaction is deleted, so the occurrence isn't
     /// recorded again.
     public var transactionID: UUID?
+    /// `true` only when the app recorded it, on its due day or at catch-up; unset for the user's Pay or Skip, and in
+    /// backups made before it existed. Its 'Notify when due' reminder stays only when it's set (S81, D354.1). It's
+    /// only valid on a posted occurrence, so creating or restoring one keeps it unset otherwise, and reads `false` as
+    /// unset.
+    public var recordedAutomatically: Bool?
     public var createdAt: Date
     public var updatedAt: Date
     public var deletedAt: Date?
@@ -93,6 +98,7 @@ public struct ScheduledOccurrence: Identifiable, Hashable, Sendable, Codable {
         day: CalendarDay,
         outcome: ScheduledOutcome,
         transactionID: UUID? = nil,
+        recordedAutomatically: Bool? = nil,
         createdAt: Date,
         updatedAt: Date? = nil,
         deletedAt: Date? = nil,
@@ -101,9 +107,34 @@ public struct ScheduledOccurrence: Identifiable, Hashable, Sendable, Codable {
         self.day = day
         self.outcome = outcome
         self.transactionID = transactionID
+        self.recordedAutomatically = Self.normalised(recordedAutomatically, outcome: outcome)
         self.createdAt = createdAt
         self.updatedAt = updatedAt ?? createdAt
         self.deletedAt = deletedAt
+    }
+
+    private enum CodingKeys: String, CodingKey {
+        case id, day, outcome, transactionID, recordedAutomatically, createdAt, updatedAt, deletedAt
+    }
+
+    /// Reads a backup's occurrence, with `recordedAutomatically` normalised as `init` does.
+    public init(from decoder: any Decoder) throws {
+        let container = try decoder.container(keyedBy: CodingKeys.self)
+        self.init(
+            id: try container.decode(UUID.self, forKey: .id),
+            day: try container.decode(CalendarDay.self, forKey: .day),
+            outcome: try container.decode(ScheduledOutcome.self, forKey: .outcome),
+            transactionID: try container.decodeIfPresent(UUID.self, forKey: .transactionID),
+            recordedAutomatically: try container.decodeIfPresent(Bool.self, forKey: .recordedAutomatically),
+            createdAt: try container.decode(Date.self, forKey: .createdAt),
+            updatedAt: try container.decode(Date.self, forKey: .updatedAt),
+            deletedAt: try container.decodeIfPresent(Date.self, forKey: .deletedAt),
+        )
+    }
+
+    /// `true` on a posted occurrence the app recorded; unset otherwise, including `false` (D354.1).
+    private static func normalised(_ flag: Bool?, outcome: ScheduledOutcome) -> Bool? {
+        outcome == .posted && flag == true ? true : nil
     }
 }
 

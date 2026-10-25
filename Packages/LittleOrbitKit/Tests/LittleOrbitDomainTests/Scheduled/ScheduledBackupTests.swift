@@ -118,3 +118,138 @@ struct ScheduledBackupTests {
         #expect(try codec.fingerprint(of: ledger) != codec.fingerprint(of: budgetsOnly))
     }
 }
+
+/// D354.1: whether the app recorded an occurrence travels in format 1, and older backups read it as unset.
+@Suite("Scheduled occurrences recorded automatically, in backups (#26, D354.1)")
+struct ScheduledAutoRecordBackupTests {
+    private typealias Fix = ScheduledFixture
+
+    @Test("Catch-up marks what it records; the user's Pay doesn't")
+    func catchUpMarks() throws {
+        var ledger = try LedgerBook.savingScheduledItem(
+            Fix.rent(automatic: true),
+            in: Fix.ledger,
+            today: Fix.day(2026, 7, 1),
+            now: Fix.created,
+        )
+        ledger =
+            LedgerBook.catchingUpScheduledItems(in: ledger, today: Fix.day(2026, 9, 30), now: Fix.created)
+            .snapshot
+        let item = ledger.scheduledItems[0]
+        #expect(!item.occurrences.isEmpty)
+        #expect(item.occurrences.allSatisfy { $0.recordedAutomatically == true })
+        let next = try #require(
+            ScheduleCalendar.firstOccurrence(of: item, onOrAfter: Fix.day(2026, 10, 1), where: { _ in true })
+        )
+        let paid = try LedgerBook.settlingScheduledOccurrence(
+            .pay(itemID: item.id, occurrence: next, postedOn: Fix.day(2026, 9, 30)),
+            in: ledger,
+            now: Fix.created,
+        )
+        #expect(paid.snapshot.scheduledItems[0].occurrence(on: next)?.recordedAutomatically == nil)
+    }
+
+    @Test("The flag round-trips in a format 1 backup")
+    func roundTrip() throws {
+        var ledger = try LedgerBook.savingScheduledItem(
+            Fix.rent(automatic: true),
+            in: Fix.ledger,
+            today: Fix.day(2026, 7, 1),
+            now: Fix.created,
+        )
+        ledger =
+            LedgerBook.catchingUpScheduledItems(in: ledger, today: Fix.day(2026, 9, 30), now: Fix.created)
+            .snapshot
+        let codec = BackupCodec(hashing: FakeBackupHashing())
+        let manifest = BackupManifest(
+            kind: .manual,
+            createdAt: Fix.created,
+            nameIndex: 1,
+            schemaVersion: "1.0.0",
+            accountCount: ledger.accounts.count,
+            transactionCount: ledger.transactions.count,
+            attachmentCount: 0,
+        )
+        let decoded = try codec.decode(try codec.encode(BackupContents(manifest: manifest, ledger: ledger)))
+        #expect(decoded.ledger.scheduledItems[0].occurrences.allSatisfy { $0.recordedAutomatically == true })
+    }
+
+    @Test("A restore keeps the flag only on a posted occurrence, and reads false as unset")
+    func restoreNormalises() throws {
+        var ledger = try LedgerBook.savingScheduledItem(
+            Fix.rent(automatic: true),
+            in: Fix.ledger,
+            today: Fix.day(2026, 7, 1),
+            now: Fix.created,
+        )
+        let item = ledger.scheduledItems[0]
+        func occurrence(_ month: Int, _ outcome: ScheduledOutcome, _ flag: Bool?) -> ScheduledOccurrence {
+            let day = Fix.day(2026, month, 1)
+            var occurrence = ScheduledOccurrence(
+                id: ScheduledKey.occurrenceID(item: item.id, day: day),
+                day: day,
+                outcome: outcome,
+                transactionID: outcome == .posted ? UUID() : nil,
+                createdAt: Fix.created,
+            )
+            occurrence.recordedAutomatically = flag
+            return occurrence
+        }
+        let written = [
+            occurrence(7, .posted, true), occurrence(8, .posted, false), occurrence(9, .skipped, true),
+            occurrence(10, .pending, true), occurrence(11, .skipped, false),
+        ]
+        ledger.scheduledItems[0].occurrences = written
+        let codec = BackupCodec(hashing: FakeBackupHashing())
+        let manifest = BackupManifest(
+            kind: .manual,
+            createdAt: Fix.created,
+            nameIndex: 1,
+            schemaVersion: "1.0.0",
+            accountCount: ledger.accounts.count,
+            transactionCount: ledger.transactions.count,
+            attachmentCount: 0,
+        )
+        let decoded = try codec.decode(try codec.encode(BackupContents(manifest: manifest, ledger: ledger)))
+        let read = decoded.ledger.scheduledItems[0].occurrences.sorted { $0.day < $1.day }
+        #expect(read.count == written.count)
+        #expect(read.map(\.recordedAutomatically) == [true, nil, nil, nil, nil])
+        #expect(read.map(\.outcome) == written.map(\.outcome))
+        #expect(read.map(\.id) == written.map(\.id))
+        // The same rule when an occurrence is made directly, as the store's mapping does.
+        let skipped = ScheduledOccurrence(
+            id: UUID(),
+            day: Fix.day(2026, 9, 1),
+            outcome: .skipped,
+            recordedAutomatically: true,
+            createdAt: Fix.created,
+        )
+        #expect(skipped.recordedAutomatically == nil)
+    }
+
+    @Test("An occurrence from a backup made before the flag reads it as unset")
+    func olderBackupReadsUnset() throws {
+        let occurrence = ScheduledOccurrence(
+            id: UUID(),
+            day: Fix.day(2026, 9, 1),
+            outcome: .posted,
+            transactionID: UUID(),
+            recordedAutomatically: true,
+            createdAt: Fix.created,
+        )
+        var object = try #require(
+            try JSONSerialization.jsonObject(with: JSONEncoder().encode(occurrence)) as? [String: Any]
+        )
+        #expect(object["recordedAutomatically"] as? Bool == true)
+        object["recordedAutomatically"] = nil
+        let older = try JSONSerialization.data(withJSONObject: object)
+        let decoded = try JSONDecoder().decode(ScheduledOccurrence.self, from: older)
+        #expect(decoded.recordedAutomatically == nil)
+        #expect(decoded.outcome == .posted)
+        // A user's Pay is written without the key, as before.
+        var userPaid = occurrence
+        userPaid.recordedAutomatically = nil
+        let written = try #require(String(bytes: try JSONEncoder().encode(userPaid), encoding: .utf8))
+        #expect(!written.contains("recordedAutomatically"))
+    }
+}

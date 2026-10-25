@@ -13,6 +13,7 @@
             dayOfMonth = occurrence.day.day
             outcome = occurrence.outcome.rawValue
             transactionID = occurrence.transactionID
+            recordedAutomatically = occurrence.recordedAutomatically
             createdAt = occurrence.createdAt
             updatedAt = occurrence.updatedAt
             deletedAt = occurrence.deletedAt
@@ -25,6 +26,7 @@
                 // An unknown outcome reads as posted, so the occurrence is never recorded twice.
                 outcome: ScheduledOutcome(rawValue: outcome) ?? .posted,
                 transactionID: transactionID,
+                recordedAutomatically: recordedAutomatically,
                 createdAt: createdAt,
                 updatedAt: updatedAt,
                 deletedAt: deletedAt,

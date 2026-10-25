@@ -104,6 +104,17 @@ extension LedgerBook {
         in snapshot: LedgerSnapshot,
         now: Date,
     ) throws -> (snapshot: LedgerSnapshot, transaction: Transaction?) {
+        try settlingScheduledOccurrence(settlement, in: snapshot, now: now, automatically: false)
+    }
+
+    /// `automatically` marks what the app records itself, at catch-up, so its reminder stays (S81, D354.1). The
+    /// user's Pay and Skip leave it unset.
+    static func settlingScheduledOccurrence(
+        _ settlement: ScheduledSettlement,
+        in snapshot: LedgerSnapshot,
+        now: Date,
+        automatically: Bool,
+    ) throws -> (snapshot: LedgerSnapshot, transaction: Transaction?) {
         guard let item = activeScheduledItems(in: snapshot).first(where: { $0.id == settlement.itemID }) else {
             throw LedgerValidationError.missingScheduledItem
         }
@@ -123,12 +134,28 @@ extension LedgerBook {
         case .pay(_, _, let postedOn):
             if let recorded = recordedTransaction(of: item.id, on: day, in: snapshot) {
                 // The transaction is there but its record isn't (an edited backup): record it, post nothing.
-                record(.posted, transactionID: recorded.id, day: day, of: item.id, in: &snapshot, now: now)
+                record(
+                    .posted,
+                    transactionID: recorded.id,
+                    automatically: automatically,
+                    day: day,
+                    of: item.id,
+                    in: &snapshot,
+                    now: now,
+                )
                 return (snapshot, nil)
             }
             let transaction = try scheduledTransaction(for: item, occurrence: day, postedOn: postedOn, now: now)
             snapshot = try savingTransaction(transaction, in: snapshot, now: now)
-            record(.posted, transactionID: transaction.id, day: day, of: item.id, in: &snapshot, now: now)
+            record(
+                .posted,
+                transactionID: transaction.id,
+                automatically: automatically,
+                day: day,
+                of: item.id,
+                in: &snapshot,
+                now: now,
+            )
             let stored = snapshot.transactions.first { $0.id == transaction.id }
             return (snapshot, stored)
         }
@@ -165,7 +192,12 @@ extension LedgerBook {
             do {
                 for day in due {
                     let settlement = ScheduledSettlement.pay(itemID: item.id, occurrence: day, postedOn: day)
-                    let outcome = try settlingScheduledOccurrence(settlement, in: working, now: now)
+                    let outcome = try settlingScheduledOccurrence(
+                        settlement,
+                        in: working,
+                        now: now,
+                        automatically: true,
+                    )
                     working = outcome.snapshot
                     if let transaction = outcome.transaction {
                         posted.append(transaction)
@@ -336,6 +368,7 @@ extension LedgerBook {
     private static func record(
         _ outcome: ScheduledOutcome,
         transactionID: UUID?,
+        automatically: Bool = false,
         day: CalendarDay,
         of itemID: UUID,
         in snapshot: inout LedgerSnapshot,
@@ -349,6 +382,7 @@ extension LedgerBook {
             day: day,
             outcome: outcome,
             transactionID: transactionID,
+            recordedAutomatically: automatically ? true : nil,
             createdAt: now,
         )
         // A pending day kept from before an edit (D336.1) is settled in place, under the same key.
