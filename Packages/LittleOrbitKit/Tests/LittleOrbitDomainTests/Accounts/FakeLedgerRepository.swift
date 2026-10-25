@@ -137,8 +137,14 @@ final class FakeLedgerRepository: LedgerRepository {
         try write()
         snapshot = try LedgerBook.mergingPayees(sourceID, into: survivingID, in: snapshot, now: now())
     }
-    func tags() throws -> [Tag] { throw Unsupported() }
-    func saveTag(_ tag: Tag) throws { throw Unsupported() }
+    func tags() throws -> [Tag] {
+        if failsReads {
+            throw ReadFailure()
+        }
+        return snapshot.tagsVisible()
+    }
+
+    func saveTag(_ tag: Tag) throws { snapshot = try LedgerBook.savingTag(tag, in: snapshot, now: now()) }
     func deleteTag(id: UUID) throws { throw Unsupported() }
     func splits(for transactionID: UUID?) throws -> [TransactionSplit] { snapshot.splitsVisible(for: transactionID) }
     func replaceSplits(_ splits: [TransactionSplit], for transactionID: UUID) throws {
