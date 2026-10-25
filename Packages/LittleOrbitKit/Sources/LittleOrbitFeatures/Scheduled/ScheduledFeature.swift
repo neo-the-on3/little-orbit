@@ -156,6 +156,10 @@ public final class ScheduledFeature: PlannedItemsSource {
         return (items.first(where: \.notifiesWhenDue) ?? items.first)?.id
     }
 
+    public func scheduledItems() -> [ScheduledItem] {
+        (try? useCases.load.listing().board.items) ?? []
+    }
+
     public func makeList() -> ScheduledListViewModel {
         ScheduledListViewModel(useCases: useCases, locale: locale) { [weak updates] in updates?.changed() }
     }
