@@ -9639,6 +9639,122 @@
         }
       }
     },
+    "%@ overdue": {
+      "comment": "Mac Scheduled Table footer phrase: %@ is how many overdue occurrences need paying or skipping, already formatted (D340.13).",
+      "extractionState": "manual",
+      "generatesSymbol": false,
+      "localizations": {
+        "en": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "%@ overdue"
+          }
+        }
+      }
+    },
+    "%@ scheduled": {
+      "comment": "Mac Scheduled Table footer, first phrase: %@ is how many scheduled items there are, already formatted.",
+      "extractionState": "manual",
+      "generatesSymbol": false,
+      "localizations": {
+        "en": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "%@ scheduled"
+          }
+        }
+      }
+    },
+    "double-click to open": {
+      "comment": "Mac Scheduled Table footer phrase, after the counts: how to open an item.",
+      "extractionState": "manual",
+      "generatesSymbol": false,
+      "localizations": {
+        "en": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "double-click to open"
+          }
+        }
+      }
+    },
+    "Due": {
+      "comment": "Mac Scheduled Table column: the occurrence’s due date.",
+      "extractionState": "manual",
+      "generatesSymbol": false,
+      "localizations": {
+        "en": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Due"
+          }
+        }
+      }
+    },
+    "Overdue · %lld days": {
+      "comment": "Mac Scheduled Table Status column (D340.13): %lld is how many days the occurrence is overdue.",
+      "extractionState": "manual",
+      "generatesSymbol": false,
+      "localizations": {
+        "en": {
+          "variations": {
+            "plural": {
+              "one": {
+                "stringUnit": {
+                  "state": "translated",
+                  "value": "Overdue · %lld day"
+                }
+              },
+              "other": {
+                "stringUnit": {
+                  "state": "translated",
+                  "value": "Overdue · %lld days"
+                }
+              }
+            }
+          }
+        }
+      }
+    },
+    "right-click for actions": {
+      "comment": "Mac Scheduled Table footer phrase, last: where Pay Now, Skip, Edit and Delete are.",
+      "extractionState": "manual",
+      "generatesSymbol": false,
+      "localizations": {
+        "en": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "right-click for actions"
+          }
+        }
+      }
+    },
+    "scheduled.table.name": {
+      "comment": "Mac Scheduled Table column: the scheduled item’s name.",
+      "extractionState": "manual",
+      "generatesSymbol": false,
+      "localizations": {
+        "en": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Name"
+          }
+        }
+      }
+    },
+    "Status": {
+      "comment": "Mac Scheduled Table column: overdue, due today, upcoming or completed.",
+      "extractionState": "manual",
+      "generatesSymbol": false,
+      "localizations": {
+        "en": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Status"
+          }
+        }
+      }
+    },
     "Applying Changes…": {
       "comment": "Bulk edit on the Mac: title of the progress sheet while Apply changes the selected transactions. It shows only when the change takes more than half a second, and has no Cancel button (D398.3).",
       "extractionState": "manual",
