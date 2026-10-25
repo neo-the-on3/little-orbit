@@ -328,6 +328,16 @@
                     .fontWeight(model.isReordering ? .semibold : .regular)
                 }
             }
+            if transactions.hasSearch, !model.isFirstRun {
+                ToolbarItem(placement: .topBarTrailing) {
+                    // #28: opens search with the field ready to type.
+                    Button {
+                        path.append(.search)
+                    } label: {
+                        Label(SearchText.searchButton, systemImage: "magnifyingglass")
+                    }
+                }
+            }
             if model.allowsRowActions {
                 ToolbarItem(placement: .topBarTrailing) {
                     addButton
@@ -349,6 +359,18 @@
                 get: { model.isReordering ? .active : .inactive },
                 set: { model.isReordering = $0.isEditing },
             )
+        }
+
+        /// Search (#28), pushed from the magnifying glass with the field ready to type.
+        @ViewBuilder private var searchDestination: some View {
+            if let search = transactions.makeSearch() {
+                TransactionSearchView(
+                    title: SearchText.searchTitle,
+                    model: search,
+                    transactions: transactions,
+                    focusesOnAppear: true,
+                )
+            }
         }
 
         @ViewBuilder
@@ -380,6 +402,8 @@
                         linkValue: AccountsRoute.scheduled,
                     )
                 }
+            case .search:
+                searchDestination
             case .home(let destination):
                 if destination == .reports, let reports {
                     ReportsView(feature: reports)

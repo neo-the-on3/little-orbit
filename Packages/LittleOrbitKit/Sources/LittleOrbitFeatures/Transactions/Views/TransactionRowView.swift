@@ -40,7 +40,9 @@
                 Spacer(minLength: Spacing.space2)
                 VStack(alignment: .trailing, spacing: Spacing.spaceHalf) {
                     amount
-                    balance
+                    if !row.balanceText.isEmpty {
+                        balance
+                    }
                 }
                 .lineLimit(1)
                 .fixedSize()
@@ -66,8 +68,11 @@
                 amount
                     .lineLimit(1)
                     .minimumScaleFactor(0.5)
-                balance
-                    .fixedSize(horizontal: false, vertical: true)
+                // Search rows have no running balance (#28).
+                if !row.balanceText.isEmpty {
+                    balance
+                        .fixedSize(horizontal: false, vertical: true)
+                }
             }
             .frame(maxWidth: .infinity, alignment: .leading)
         }
