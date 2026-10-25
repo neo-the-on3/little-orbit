@@ -15,6 +15,7 @@ func assertBudgetStorage(make: MakeBudgetRepository) throws {
     try assertBudgetWithNoCategoriesRestores(make: make)
     try assertUndoRestoresBudgetWithNoCategories(make: make)
     try assertCategoryDeletionCountsBudgets(make: make)
+    try assertCategoryMergeCountsBudgets(make: make)
 }
 
 @MainActor
@@ -229,4 +230,37 @@ private func assertCategoryDeletionCountsBudgets(make: MakeBudgetRepository) thr
     let none = try useCases.deleteCategory.deletionImpact(of: travel.id)
     XCTAssertEqual(none.budgetNames, ["Trips", "Weekends"])
     XCTAssertEqual(none.budgetsLeftWithoutCategories, 1)
+}
+
+/// D295.1: the Merge footnote's budgets are those that pick the merged category itself. A budget that picks one
+/// of its subcategories keeps it, because the subcategory moves under the survivor.
+@MainActor
+private func assertCategoryMergeCountsBudgets(make: MakeBudgetRepository) throws {
+    let repository = try make()
+    let food = TransactionCategory(name: "Food", kind: .expense)
+    let snacks = TransactionCategory(name: "Snacks", kind: .expense, parentID: food.id)
+    let dining = TransactionCategory(name: "Dining", kind: .expense)
+    for category in [food, snacks, dining] {
+        try repository.saveCategory(category)
+    }
+    var weekends = sampleBudget(categories: [food.id])
+    weekends.name = "Weekends"
+    var monthly = sampleBudget(categories: [food.id, dining.id])
+    monthly.name = "monthly food"
+    var onlySnacks = sampleBudget(categories: [snacks.id])
+    onlySnacks.name = "Snacks"
+    for budget in [weekends, monthly, onlySnacks] {
+        try repository.saveBudget(budget)
+    }
+    let useCases = CategoryUseCases(repository: repository)
+    XCTAssertEqual(try useCases.mergeCategories.mergeImpact(of: food.id).budgetNames, ["monthly food", "Weekends"])
+    XCTAssertEqual(try useCases.mergeCategories.mergeImpact(of: snacks.id).budgetNames, ["Snacks"])
+    XCTAssertEqual(try useCases.mergeCategories.mergeImpact(of: dining.id).budgetNames, ["monthly food"])
+    XCTAssertThrowsError(try useCases.mergeCategories.mergeImpact(of: UUID())) { error in
+        XCTAssertEqual(error as? LedgerValidationError, .missingCategory)
+    }
+    try useCases.mergeCategories.merge(food.id, into: dining.id)
+    let after = try repository.budgets()
+    XCTAssertEqual(after.first { $0.id == weekends.id }?.categoryIDs, [dining.id], "It picks the survivor")
+    XCTAssertEqual(after.first { $0.id == onlySnacks.id }?.categoryIDs, [snacks.id], "It keeps its subcategory")
 }

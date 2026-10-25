@@ -67,7 +67,7 @@ public final class CategoriesViewModel {
     /// Clears this window's Undo and Redo history; the screen sets it (D287.4).
     @ObservationIgnored public var onRemoval: () -> Void = {}
 
-    @ObservationIgnored private let useCases: CategoryScreenUseCases
+    @ObservationIgnored let useCases: CategoryScreenUseCases
     @ObservationIgnored private let changed: () -> Void
 
     public init(useCases: CategoryScreenUseCases, changed: @escaping () -> Void = {}) {
@@ -224,6 +224,15 @@ public final class CategoriesViewModel {
                     CategoryText.movingDeletes(count: usedCount(impact), subcategoryCount: impact.subcategoryCount),
                 ]
             }
+            // The budgets that lose the category or a subcategory deleted with it (D307 amendment 2).
+            if let budgets = CategoryText.budgetRemoval(
+                category: category.name,
+                budgetNames: impact.budgetNames,
+                leftWithoutCategories: impact.budgetsLeftWithoutCategories,
+                lead: CategoryText.BudgetRemovalLead(usedCount: usedCount(impact)),
+            ) {
+                sentences.append(budgets)
+            }
             sentences.append(CategoryText.deletingCantBeUndone)
             deletePrompt = CategoryDeletePrompt(
                 id: id,
@@ -269,17 +278,6 @@ public final class CategoriesViewModel {
         return CategoryText.moveHeader(count: count, name: category.name, hasSubcategories: subtree.count > 1)
     }
 
-    public func moveFooter(forDeleting id: UUID) -> String {
-        guard let category = listing.category(id) else {
-            return ""
-        }
-        let names = ([category] + listing.subcategories(of: id)).map(\.name)
-        return CategoryText.sentences([
-            CategoryText.onlyKindOffered(category.kind),
-            CategoryText.deletedAfterMove(names),
-        ])
-    }
-
     private func usedCount(_ impact: CategoryDeletionImpact) -> Int {
         impact.transactionCount + impact.splitLineCount
     }
@@ -300,14 +298,18 @@ public final class CategoriesViewModel {
     }
 
     /// "25 transactions will use Food & Dining. Groceries is then deleted. Income categories can’t be merged
-    /// with expense ones, so they aren’t listed. Merging can’t be undone." Budgets join it with #25.
-    public func mergeFootnote(for id: UUID, into targetID: UUID?) -> String {
+    /// with expense ones, so they aren’t listed. Merging can’t be undone." `budgetNames`, the budgets that pick
+    /// the category, join the first sentence: “25 transactions and the budget “Monthly food” will use …”
+    /// (D295.1).
+    public func mergeFootnote(for id: UUID, into targetID: UUID?, budgetNames: [String] = []) -> String {
         guard let category = listing.category(id) else {
             return ""
         }
         var sentences: [String] = []
         if let targetID, let target = listing.category(targetID) {
-            sentences.append(CategoryText.willUse(count: listing.uses(of: id), target: target.name))
+            sentences.append(
+                CategoryText.willUse(count: listing.uses(of: id), target: target.name, budgetNames: budgetNames)
+            )
             sentences.append(CategoryText.thenDeleted(category.name))
         }
         sentences.append(CategoryText.otherKindNotListed(category.kind))

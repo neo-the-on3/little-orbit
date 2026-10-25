@@ -38,6 +38,19 @@
         }
       }
     },
+    "%1$@ are deleted after the move; budgets that used them now use %2$@.": {
+      "comment": "Move To sheet footer sentence on iOS and in the Mac Metadata window, once a target is chosen and budgets pick the category or its subcategories (D295.1): %1$@ lists the category and its subcategories; %2$@ is the chosen category their transactions and budgets move to.",
+      "extractionState": "manual",
+      "generatesSymbol": false,
+      "localizations": {
+        "en": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "%1$@ are deleted after the move; budgets that used them now use %2$@."
+          }
+        }
+      }
+    },
     "%1$@ are removed from lists, autocomplete and reports.": {
       "comment": "Merge Payees footnote sentence (D297.3): %1$@ is the payee merged into the one kept, or the payees joined in the system list format (“A, B, and C”); how many there are picks the form.",
       "extractionState": "manual",
@@ -127,6 +140,19 @@
                 }
               }
             }
+          }
+        }
+      }
+    },
+    "%1$@ is deleted after the move; budgets that used it now use %2$@.": {
+      "comment": "Move To sheet footer sentence on iOS and in the Mac Metadata window, once a target is chosen and budgets pick the category (D295.1): %1$@ is the category being deleted; %2$@ is the chosen category its transactions and budgets move to.",
+      "extractionState": "manual",
+      "generatesSymbol": false,
+      "localizations": {
+        "en": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "%1$@ is deleted after the move; budgets that used it now use %2$@."
           }
         }
       }
@@ -389,6 +415,96 @@
           "stringUnit": {
             "state": "translated",
             "value": "%1$@, under %2$@"
+          }
+        }
+      }
+    },
+    "%1$lld transactions and %2$lld budgets will use %3$@.": {
+      "comment": "Merge sheet footnote, first sentence (D295.1): %1$lld is how many transactions and split lines use the category being merged; %2$lld is how many budgets (2 or more) pick it; %3$@ is the category they move to.",
+      "extractionState": "manual",
+      "generatesSymbol": false,
+      "localizations": {
+        "en": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "%#@transactions@ and %#@budgets@ will use %3$@."
+          },
+          "substitutions": {
+            "transactions": {
+              "argNum": 1,
+              "formatSpecifier": "lld",
+              "variations": {
+                "plural": {
+                  "one": {
+                    "stringUnit": {
+                      "state": "translated",
+                      "value": "%arg transaction"
+                    }
+                  },
+                  "other": {
+                    "stringUnit": {
+                      "state": "translated",
+                      "value": "%arg transactions"
+                    }
+                  }
+                }
+              }
+            },
+            "budgets": {
+              "argNum": 2,
+              "formatSpecifier": "lld",
+              "variations": {
+                "plural": {
+                  "one": {
+                    "stringUnit": {
+                      "state": "translated",
+                      "value": "%arg budget"
+                    }
+                  },
+                  "other": {
+                    "stringUnit": {
+                      "state": "translated",
+                      "value": "%arg budgets"
+                    }
+                  }
+                }
+              }
+            }
+          }
+        }
+      }
+    },
+    "%1$lld transactions and the budget “%2$@” will use %3$@.": {
+      "comment": "Merge sheet footnote, first sentence (D295.1): %1$lld is how many transactions and split lines use the category being merged; %2$@ is the one budget that picks it; %3$@ is the category they move to.",
+      "extractionState": "manual",
+      "generatesSymbol": false,
+      "localizations": {
+        "en": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "%#@transactions@ and the budget “%2$@” will use %3$@."
+          },
+          "substitutions": {
+            "transactions": {
+              "argNum": 1,
+              "formatSpecifier": "lld",
+              "variations": {
+                "plural": {
+                  "one": {
+                    "stringUnit": {
+                      "state": "translated",
+                      "value": "%arg transaction"
+                    }
+                  },
+                  "other": {
+                    "stringUnit": {
+                      "state": "translated",
+                      "value": "%arg transactions"
+                    }
+                  }
+                }
+              }
+            }
           }
         }
       }
@@ -4162,6 +4278,268 @@
         }
       }
     },
+    "Leaving it uncategorised also removes “%1$@” from %2$lld budgets, leaving %3$lld with no categories.": {
+      "comment": "Category delete alert sentence on iOS and in the Mac Metadata window, right before “Deleting can’t be undone.” (D307 amendment 2): %1$@ is the category being deleted; %2$lld is how many budgets (2 or more) pick it or a subcategory deleted with it; %3$lld (2 or more) is how many of them are then left with no categories. Used when exactly 1 transaction or split line uses the category; “it” is that transaction, which Delete, Leave Uncategorised leaves with no category.",
+      "extractionState": "manual",
+      "generatesSymbol": false,
+      "localizations": {
+        "en": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Leaving it uncategorised also removes “%1$@” from %#@budgets@, leaving %3$lld with no categories."
+          },
+          "substitutions": {
+            "budgets": {
+              "argNum": 2,
+              "formatSpecifier": "lld",
+              "variations": {
+                "plural": {
+                  "one": {
+                    "stringUnit": {
+                      "state": "translated",
+                      "value": "%arg budget"
+                    }
+                  },
+                  "other": {
+                    "stringUnit": {
+                      "state": "translated",
+                      "value": "%arg budgets"
+                    }
+                  }
+                }
+              }
+            }
+          }
+        }
+      }
+    },
+    "Leaving it uncategorised also removes “%1$@” from %2$lld budgets, leaving 1 with no categories.": {
+      "comment": "Category delete alert sentence on iOS and in the Mac Metadata window, right before “Deleting can’t be undone.” (D307 amendment 2): %1$@ is the category being deleted; %2$lld is how many budgets (2 or more) pick it or a subcategory deleted with it, and exactly 1 of them is then left with no categories. Used when exactly 1 transaction or split line uses the category; “it” is that transaction, which Delete, Leave Uncategorised leaves with no category.",
+      "extractionState": "manual",
+      "generatesSymbol": false,
+      "localizations": {
+        "en": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Leaving it uncategorised also removes “%1$@” from %#@budgets@, leaving 1 with no categories."
+          },
+          "substitutions": {
+            "budgets": {
+              "argNum": 2,
+              "formatSpecifier": "lld",
+              "variations": {
+                "plural": {
+                  "one": {
+                    "stringUnit": {
+                      "state": "translated",
+                      "value": "%arg budget"
+                    }
+                  },
+                  "other": {
+                    "stringUnit": {
+                      "state": "translated",
+                      "value": "%arg budgets"
+                    }
+                  }
+                }
+              }
+            }
+          }
+        }
+      }
+    },
+    "Leaving it uncategorised also removes “%1$@” from %2$lld budgets.": {
+      "comment": "Category delete alert sentence on iOS and in the Mac Metadata window, right before “Deleting can’t be undone.” (D307 amendment 2): %1$@ is the category being deleted; %2$lld is how many budgets (2 or more) pick it or a subcategory deleted with it. Used when exactly 1 transaction or split line uses the category; “it” is that transaction, which Delete, Leave Uncategorised leaves with no category.",
+      "extractionState": "manual",
+      "generatesSymbol": false,
+      "localizations": {
+        "en": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Leaving it uncategorised also removes “%1$@” from %#@budgets@."
+          },
+          "substitutions": {
+            "budgets": {
+              "argNum": 2,
+              "formatSpecifier": "lld",
+              "variations": {
+                "plural": {
+                  "one": {
+                    "stringUnit": {
+                      "state": "translated",
+                      "value": "%arg budget"
+                    }
+                  },
+                  "other": {
+                    "stringUnit": {
+                      "state": "translated",
+                      "value": "%arg budgets"
+                    }
+                  }
+                }
+              }
+            }
+          }
+        }
+      }
+    },
+    "Leaving it uncategorised also removes “%1$@” from the budget “%2$@”, leaving it with no categories.": {
+      "comment": "Category delete alert sentence on iOS and in the Mac Metadata window, right before “Deleting can’t be undone.” (D307 amendment 2): %1$@ is the category being deleted; %2$@ is the one budget that picks it or a subcategory deleted with it, which is then left with no categories. Used when exactly 1 transaction or split line uses the category; “it” is that transaction, which Delete, Leave Uncategorised leaves with no category.",
+      "extractionState": "manual",
+      "generatesSymbol": false,
+      "localizations": {
+        "en": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Leaving it uncategorised also removes “%1$@” from the budget “%2$@”, leaving it with no categories."
+          }
+        }
+      }
+    },
+    "Leaving it uncategorised also removes “%1$@” from the budget “%2$@”.": {
+      "comment": "Category delete alert sentence on iOS and in the Mac Metadata window, right before “Deleting can’t be undone.” (D307 amendment 2): %1$@ is the category being deleted; %2$@ is the one budget that picks it or a subcategory deleted with it. Used when exactly 1 transaction or split line uses the category; “it” is that transaction, which Delete, Leave Uncategorised leaves with no category.",
+      "extractionState": "manual",
+      "generatesSymbol": false,
+      "localizations": {
+        "en": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Leaving it uncategorised also removes “%1$@” from the budget “%2$@”."
+          }
+        }
+      }
+    },
+    "Leaving them uncategorised also removes “%1$@” from %2$lld budgets, leaving %3$lld with no categories.": {
+      "comment": "Category delete alert sentence on iOS and in the Mac Metadata window, right before “Deleting can’t be undone.” (D307 amendment 2): %1$@ is the category being deleted; %2$lld is how many budgets (2 or more) pick it or a subcategory deleted with it; %3$lld (2 or more) is how many of them are then left with no categories. Used when 2 or more transactions or split lines use the category; “them” are those transactions, which Delete, Leave Uncategorised leaves with no category.",
+      "extractionState": "manual",
+      "generatesSymbol": false,
+      "localizations": {
+        "en": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Leaving them uncategorised also removes “%1$@” from %#@budgets@, leaving %3$lld with no categories."
+          },
+          "substitutions": {
+            "budgets": {
+              "argNum": 2,
+              "formatSpecifier": "lld",
+              "variations": {
+                "plural": {
+                  "one": {
+                    "stringUnit": {
+                      "state": "translated",
+                      "value": "%arg budget"
+                    }
+                  },
+                  "other": {
+                    "stringUnit": {
+                      "state": "translated",
+                      "value": "%arg budgets"
+                    }
+                  }
+                }
+              }
+            }
+          }
+        }
+      }
+    },
+    "Leaving them uncategorised also removes “%1$@” from %2$lld budgets, leaving 1 with no categories.": {
+      "comment": "Category delete alert sentence on iOS and in the Mac Metadata window, right before “Deleting can’t be undone.” (D307 amendment 2): %1$@ is the category being deleted; %2$lld is how many budgets (2 or more) pick it or a subcategory deleted with it, and exactly 1 of them is then left with no categories. Used when 2 or more transactions or split lines use the category; “them” are those transactions, which Delete, Leave Uncategorised leaves with no category.",
+      "extractionState": "manual",
+      "generatesSymbol": false,
+      "localizations": {
+        "en": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Leaving them uncategorised also removes “%1$@” from %#@budgets@, leaving 1 with no categories."
+          },
+          "substitutions": {
+            "budgets": {
+              "argNum": 2,
+              "formatSpecifier": "lld",
+              "variations": {
+                "plural": {
+                  "one": {
+                    "stringUnit": {
+                      "state": "translated",
+                      "value": "%arg budget"
+                    }
+                  },
+                  "other": {
+                    "stringUnit": {
+                      "state": "translated",
+                      "value": "%arg budgets"
+                    }
+                  }
+                }
+              }
+            }
+          }
+        }
+      }
+    },
+    "Leaving them uncategorised also removes “%1$@” from %2$lld budgets.": {
+      "comment": "Category delete alert sentence on iOS and in the Mac Metadata window, right before “Deleting can’t be undone.” (D307 amendment 2): %1$@ is the category being deleted; %2$lld is how many budgets (2 or more) pick it or a subcategory deleted with it. Used when 2 or more transactions or split lines use the category; “them” are those transactions, which Delete, Leave Uncategorised leaves with no category.",
+      "extractionState": "manual",
+      "generatesSymbol": false,
+      "localizations": {
+        "en": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Leaving them uncategorised also removes “%1$@” from %#@budgets@."
+          },
+          "substitutions": {
+            "budgets": {
+              "argNum": 2,
+              "formatSpecifier": "lld",
+              "variations": {
+                "plural": {
+                  "one": {
+                    "stringUnit": {
+                      "state": "translated",
+                      "value": "%arg budget"
+                    }
+                  },
+                  "other": {
+                    "stringUnit": {
+                      "state": "translated",
+                      "value": "%arg budgets"
+                    }
+                  }
+                }
+              }
+            }
+          }
+        }
+      }
+    },
+    "Leaving them uncategorised also removes “%1$@” from the budget “%2$@”, leaving it with no categories.": {
+      "comment": "Category delete alert sentence on iOS and in the Mac Metadata window, right before “Deleting can’t be undone.” (D307 amendment 2): %1$@ is the category being deleted; %2$@ is the one budget that picks it or a subcategory deleted with it, which is then left with no categories. Used when 2 or more transactions or split lines use the category; “them” are those transactions, which Delete, Leave Uncategorised leaves with no category.",
+      "extractionState": "manual",
+      "generatesSymbol": false,
+      "localizations": {
+        "en": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Leaving them uncategorised also removes “%1$@” from the budget “%2$@”, leaving it with no categories."
+          }
+        }
+      }
+    },
+    "Leaving them uncategorised also removes “%1$@” from the budget “%2$@”.": {
+      "comment": "Category delete alert sentence on iOS and in the Mac Metadata window, right before “Deleting can’t be undone.” (D307 amendment 2): %1$@ is the category being deleted; %2$@ is the one budget that picks it or a subcategory deleted with it. Used when 2 or more transactions or split lines use the category; “them” are those transactions, which Delete, Leave Uncategorised leaves with no category.",
+      "extractionState": "manual",
+      "generatesSymbol": false,
+      "localizations": {
+        "en": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Leaving them uncategorised also removes “%1$@” from the budget “%2$@”."
+          }
+        }
+      }
+    },
     "Lime": {
       "comment": "Category colour name.",
       "extractionState": "manual",
@@ -5676,6 +6054,137 @@
           "stringUnit": {
             "state": "translated",
             "value": "This account has no transactions. You can undo this. Hide it instead to keep it; hidden accounts still count toward net wealth."
+          }
+        }
+      }
+    },
+    "This also removes “%1$@” from %2$lld budgets, leaving %3$lld with no categories.": {
+      "comment": "Category delete alert sentence on iOS and in the Mac Metadata window, right before “Deleting can’t be undone.” (D307 amendment 2): %1$@ is the category being deleted; %2$lld is how many budgets (2 or more) pick it or a subcategory deleted with it; %3$lld (2 or more) is how many of them are then left with no categories. Used when the category nothing uses is deleted straight away.",
+      "extractionState": "manual",
+      "generatesSymbol": false,
+      "localizations": {
+        "en": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "This also removes “%1$@” from %#@budgets@, leaving %3$lld with no categories."
+          },
+          "substitutions": {
+            "budgets": {
+              "argNum": 2,
+              "formatSpecifier": "lld",
+              "variations": {
+                "plural": {
+                  "one": {
+                    "stringUnit": {
+                      "state": "translated",
+                      "value": "%arg budget"
+                    }
+                  },
+                  "other": {
+                    "stringUnit": {
+                      "state": "translated",
+                      "value": "%arg budgets"
+                    }
+                  }
+                }
+              }
+            }
+          }
+        }
+      }
+    },
+    "This also removes “%1$@” from %2$lld budgets, leaving 1 with no categories.": {
+      "comment": "Category delete alert sentence on iOS and in the Mac Metadata window, right before “Deleting can’t be undone.” (D307 amendment 2): %1$@ is the category being deleted; %2$lld is how many budgets (2 or more) pick it or a subcategory deleted with it, and exactly 1 of them is then left with no categories. Used when the category nothing uses is deleted straight away.",
+      "extractionState": "manual",
+      "generatesSymbol": false,
+      "localizations": {
+        "en": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "This also removes “%1$@” from %#@budgets@, leaving 1 with no categories."
+          },
+          "substitutions": {
+            "budgets": {
+              "argNum": 2,
+              "formatSpecifier": "lld",
+              "variations": {
+                "plural": {
+                  "one": {
+                    "stringUnit": {
+                      "state": "translated",
+                      "value": "%arg budget"
+                    }
+                  },
+                  "other": {
+                    "stringUnit": {
+                      "state": "translated",
+                      "value": "%arg budgets"
+                    }
+                  }
+                }
+              }
+            }
+          }
+        }
+      }
+    },
+    "This also removes “%1$@” from %2$lld budgets.": {
+      "comment": "Category delete alert sentence on iOS and in the Mac Metadata window, right before “Deleting can’t be undone.” (D307 amendment 2): %1$@ is the category being deleted; %2$lld is how many budgets (2 or more) pick it or a subcategory deleted with it. Used when the category nothing uses is deleted straight away.",
+      "extractionState": "manual",
+      "generatesSymbol": false,
+      "localizations": {
+        "en": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "This also removes “%1$@” from %#@budgets@."
+          },
+          "substitutions": {
+            "budgets": {
+              "argNum": 2,
+              "formatSpecifier": "lld",
+              "variations": {
+                "plural": {
+                  "one": {
+                    "stringUnit": {
+                      "state": "translated",
+                      "value": "%arg budget"
+                    }
+                  },
+                  "other": {
+                    "stringUnit": {
+                      "state": "translated",
+                      "value": "%arg budgets"
+                    }
+                  }
+                }
+              }
+            }
+          }
+        }
+      }
+    },
+    "This also removes “%1$@” from the budget “%2$@”, leaving it with no categories.": {
+      "comment": "Category delete alert sentence on iOS and in the Mac Metadata window, right before “Deleting can’t be undone.” (D307 amendment 2): %1$@ is the category being deleted; %2$@ is the one budget that picks it or a subcategory deleted with it, which is then left with no categories. Used when the category nothing uses is deleted straight away.",
+      "extractionState": "manual",
+      "generatesSymbol": false,
+      "localizations": {
+        "en": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "This also removes “%1$@” from the budget “%2$@”, leaving it with no categories."
+          }
+        }
+      }
+    },
+    "This also removes “%1$@” from the budget “%2$@”.": {
+      "comment": "Category delete alert sentence on iOS and in the Mac Metadata window, right before “Deleting can’t be undone.” (D307 amendment 2): %1$@ is the category being deleted; %2$@ is the one budget that picks it or a subcategory deleted with it. Used when the category nothing uses is deleted straight away.",
+      "extractionState": "manual",
+      "generatesSymbol": false,
+      "localizations": {
+        "en": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "This also removes “%1$@” from the budget “%2$@”."
           }
         }
       }

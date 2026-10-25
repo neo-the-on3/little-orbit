@@ -54,7 +54,7 @@ struct CategoryReviewFixesTests {
         #expect(counting.reads == 1, "The Parent options come from the loaded tree, once")
 
         let merge = model.makeTargetChoice(.merge(food))
-        #expect(counting.reads == 2, "The Merge rows are read once, when the sheet opens")
+        #expect(counting.reads == 3, "The Merge rows and its budgets are read once, when the sheet opens")
         for row in merge.rows {
             merge.targetID = row.id
             _ = (merge.rows, merge.header, merge.footer, merge.title)
@@ -64,7 +64,7 @@ struct CategoryReviewFixesTests {
             move.targetID = row.id
             _ = (move.rows, move.header, move.footer, move.title)
         }
-        #expect(counting.reads == 3, "Choosing rows and re-rendering read nothing more")
+        #expect(counting.reads == 5, "Choosing rows and re-rendering read nothing more")
     }
 
     private func render(_ editor: CategoryEditorViewModel) {
@@ -274,6 +274,11 @@ extension CountingReads: MoveSubcategoryUseCase, MergeCategoriesUseCase, DeleteC
     func mergeTargets(for categoryID: UUID) throws -> [TransactionCategory] {
         reads += 1
         return try management.mergeTargets(for: categoryID)
+    }
+
+    func mergeImpact(of categoryID: UUID) throws -> CategoryMergeImpact {
+        reads += 1
+        return try management.mergeImpact(of: categoryID)
     }
 
     func merge(_ sourceID: UUID, into survivingID: UUID) throws {

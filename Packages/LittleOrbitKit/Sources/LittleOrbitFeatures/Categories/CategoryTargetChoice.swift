@@ -4,7 +4,8 @@ import Observation
 
 /// The Merge “Groceries” into… or Move To sheet (#24 design, merge and move target). Its rows are read from
 /// the store once, when the sheet opens, and kept, so re-rendering or choosing a row reads nothing
-/// (Tech Architect's B1 on #155). The header and footnote come from the screen's loaded tree.
+/// (Tech Architect's B1 on #155), with the budgets the change moves. The header and footnote come from the
+/// screen's loaded tree.
 @MainActor
 @Observable
 public final class CategoryTargetChoice: Identifiable {
@@ -19,6 +20,8 @@ public final class CategoryTargetChoice: Identifiable {
     public let title: String
     public let header: String
     public var targetID: UUID?
+    /// The budgets the merge or move switches to the target, read once with the rows (D295.1).
+    public let budgetNames: [String]
     /// The sheet's own alert, so the screen under it never shows the same one (D291.1).
     public var alert: CategoryAlert?
 
@@ -32,10 +35,12 @@ public final class CategoryTargetChoice: Identifiable {
             rows = screen.mergeTargets(for: id)
             title = CategoryText.mergeTitle(screen.category(id)?.name ?? "")
             header = screen.mergeHeader(for: id)
+            budgetNames = screen.budgetNames(merging: id)
         case .move(let id):
             rows = screen.moveTargets(forDeleting: id)
             title = CategoryText.moveToTitle
             header = screen.moveHeader(forDeleting: id)
+            budgetNames = screen.budgetNames(forDeleting: id)
         }
     }
 
@@ -56,14 +61,15 @@ public final class CategoryTargetChoice: Identifiable {
         }
     }
 
-    /// The Merge footnote names the chosen target; the Move To footer doesn't change.
+    /// The Merge footnote names the chosen target, and so does the Move To footer once budgets use the
+    /// category (D295.1).
     public var footer: String {
         guard let screen else {
             return ""
         }
         return isMerge
-            ? screen.mergeFootnote(for: categoryID, into: targetID)
-            : screen.moveFooter(forDeleting: categoryID)
+            ? screen.mergeFootnote(for: categoryID, into: targetID, budgetNames: budgetNames)
+            : screen.moveFooter(forDeleting: categoryID, into: targetID, budgetNames: budgetNames)
     }
 
     /// Merges or moves into the chosen target. On failure the sheet keeps its alert and stays open.
