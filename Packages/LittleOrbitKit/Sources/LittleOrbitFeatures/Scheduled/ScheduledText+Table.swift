@@ -66,6 +66,25 @@ extension ScheduledText {
         )
     }
 
+    /// The Status's notify part when the system denies notifications (D365.2, D366); the item keeps its setting.
+    static var notificationsOff: String {
+        FeatureText.string(
+            "Notifications off",
+            comment:
+                "Mac Scheduled Table Status: the item is set to notify when due, but notifications are off in System Settings. Alone, or after “Automatic” or “Due today” with “ · ” (D365, D366).",
+        )
+    }
+
+    /// A completed row's Status; Due already shows the last date (D365.1).
+    static var endedStatus: String {
+        FeatureText.string(
+            key: "scheduled.table.status.ended",
+            defaultValue: "Ended",
+            comment:
+                "Mac Scheduled Table Status, completed rows: the item has no more due dates. The Due column shows the last one (D365.1).",
+        )
+    }
+
     /// "Notify 09:00": an upcoming manual item that reminds at the Reminder Time.
     static func notifyAt(_ time: String) -> String {
         FeatureText.format("Notify %@", time)

@@ -76,8 +76,13 @@
                 }
                 .width(min: 100, ideal: 120)
                 TableColumn(model.statusColumn) { row in
+                    // "Due today · Notifications off" needs about 175 points, more than the 140 minimum: it
+                    // truncates, with the full text as help (UI Designer on #205).
                     Text(verbatim: row.status)
                         .foregroundStyle(.secondary)
+                        .lineLimit(1)
+                        .truncationMode(.tail)
+                        .help(row.status)
                 }
                 .width(min: 140)
             } rows: {

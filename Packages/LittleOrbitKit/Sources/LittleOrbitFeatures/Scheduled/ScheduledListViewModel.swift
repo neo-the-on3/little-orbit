@@ -48,6 +48,15 @@ public final class ScheduledListViewModel {
     @ObservationIgnored public var reminderTime = DateComponents(hour: 9, minute: 0) {
         didSet { rebuildTable() }
     }
+    /// Whether the system allows notifications, for the Status's notify part (D365.2, D366). `true` until #204's
+    /// permission state feeds it, re-checked whenever the app becomes active.
+    @ObservationIgnored public var notificationsAllowed = true {
+        didSet {
+            if notificationsAllowed != oldValue {
+                rebuildTable()
+            }
+        }
+    }
     @ObservationIgnored private let changed: () -> Void
 
     public init(

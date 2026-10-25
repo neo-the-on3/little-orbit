@@ -10,15 +10,17 @@ public struct ScheduledTableRow: Identifiable, Equatable, Sendable {
     /// "15 Oct", or "15 Jan 2027" outside this year; a completed item's last due date (D355.3).
     public let due: String
     public let name: String
-    /// The long form: "Monthly on the 15th", "Every 2 weeks on Saturday" (D356.2).
+    /// The long form: "Monthly on the 15th", "Every 2 weeks on Saturday" (D356.2), with ", last day" when this
+    /// occurrence falls on a short month's last day (D356.2, D357).
     public let repeatText: String
     /// The account, or a transfer's From account.
     public let account: String
     public let amount: String
     public let tone: AmountTone
     /// The time state, then the mode (D355.2, D356.1): "Overdue · 5 days", "Due today · Automatic",
-    /// "Due today · 09:00", "Automatic", "Automatic + notify", "Notify 09:00", "Ended 5 Oct", or blank for a plain
-    /// manual upcoming item (D355.1).
+    /// "Due today · 09:00", "Automatic", "Automatic + notify", "Notify 09:00", "Ended" (D365.1), or blank for a plain
+    /// manual upcoming item (D355.1). With notifications denied, the notify part reads "Notifications off"
+    /// (D365.2, D366).
     public let status: String
 }
 
@@ -144,7 +146,7 @@ extension ScheduledListViewModel {
             row: row,
             due: shown.map(presenter.dateText) ?? "",
             name: row.title,
-            repeatText: ScheduledRepeatText.long(item, locale: locale),
+            repeatText: ScheduledRepeatText.long(item, on: day, locale: locale),
             account: listing.account(item.accountID)?.name ?? "",
             amount: amount,
             tone: tone,
@@ -153,7 +155,8 @@ extension ScheduledListViewModel {
     }
 
     /// The time state first, then the mode, which only due-today and upcoming rows carry (D355.2, D356.1). An
-    /// automatic item is overdue only after Undo Pay (D344.1), and reads like a manual one.
+    /// automatic item is overdue only after Undo Pay (D344.1), and reads like a manual one. With notifications
+    /// denied, only the notify part becomes "Notifications off", and the item keeps its setting (D365.2, D366).
     private func status(
         of item: ScheduledItem,
         on day: CalendarDay?,
@@ -164,19 +167,38 @@ extension ScheduledListViewModel {
         case .overdue:
             return ScheduledText.overdueDays(day.map { Self.days(from: $0, to: listing.board.today) } ?? 0)
         case .dueToday:
-            if item.processesAutomatically {
-                return ScheduledText.dueTodayAutomatic
-            }
-            return item.notifiesWhenDue ? ScheduledText.dueTodayAt(reminderTimeText) : ScheduledText.dueTodayRow
+            return dueTodayStatus(of: item)
         case .upcoming:
-            switch (item.processesAutomatically, item.notifiesWhenDue) {
-            case (true, true): return ScheduledText.automaticAndNotify
-            case (true, false): return ScheduledText.automaticStatus
-            case (false, true): return ScheduledText.notifyAt(reminderTimeText)
-            case (false, false): return ""
-            }
+            return upcomingStatus(of: item)
         case .completed:
-            return ScheduledText.ended(lastDueDay(of: item).map(presenter.dateText) ?? "")
+            // Due already shows the last date (D365.1).
+            return ScheduledText.endedStatus
+        }
+    }
+
+    /// "Due today · Automatic" whatever the permission (D356.1, D366), else the notify part after "Due today".
+    private func dueTodayStatus(of item: ScheduledItem) -> String {
+        if item.processesAutomatically {
+            return ScheduledText.dueTodayAutomatic
+        }
+        guard item.notifiesWhenDue else {
+            return ScheduledText.dueTodayRow
+        }
+        return notificationsAllowed
+            ? ScheduledText.dueTodayAt(reminderTimeText)
+            : ScheduledText.pair(ScheduledText.dueTodayRow, ScheduledText.notificationsOff)
+    }
+
+    /// The mode only: blank for a plain manual item (D355.1), and "Notifications off" for the notify part when
+    /// the system denies them (D365.2, D366).
+    private func upcomingStatus(of item: ScheduledItem) -> String {
+        switch (item.processesAutomatically, item.notifiesWhenDue, notificationsAllowed) {
+        case (true, true, true): ScheduledText.automaticAndNotify
+        case (true, true, false): ScheduledText.pair(ScheduledText.automaticStatus, ScheduledText.notificationsOff)
+        case (true, false, _): ScheduledText.automaticStatus
+        case (false, true, true): ScheduledText.notifyAt(reminderTimeText)
+        case (false, true, false): ScheduledText.notificationsOff
+        case (false, false, _): ""
         }
     }
 
