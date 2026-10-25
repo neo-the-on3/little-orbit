@@ -9,15 +9,25 @@
         let model: ScheduledListViewModel
         let itemID: UUID
         var settling: ScheduledSettling = .dueOccurrences
+        @Environment(WindowUndoHistory.self) private var undoHistory
 
         var body: some View {
             ScheduledItemContent(model: model, itemID: itemID, settling: settling)
                 .scheduledSheets(model, on: .item(itemID))
                 .onAppear {
+                    // A form save is this window's Undo step (D351.1), also when a reminder tap opened the item
+                    // straight onto the Mac stack and the list under it never appeared.
+                    model.recordStep = { [undoHistory] change, name, subject in
+                        undoHistory.record(change, named: name, subject: subject)
+                    }
                     model.screenAppeared(.item(itemID))
                     model.loadIfNeeded()
                 }
                 .onDisappear { model.screenDisappeared(.item(itemID)) }
+                // A reminder tap may give this screen another item without it disappearing (Tester2 6425404539).
+                .onChange(of: itemID) { old, new in
+                    model.screenChanged(from: .item(old), to: .item(new))
+                }
         }
     }
 

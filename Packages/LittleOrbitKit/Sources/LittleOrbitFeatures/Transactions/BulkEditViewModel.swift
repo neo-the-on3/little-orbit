@@ -88,6 +88,12 @@ public final class BulkEditViewModel {
     }
 
     public var count: Int { selection.count }
+
+    /// Whether a field is ticked, so closing the sheet would lose it. A tapped reminder leaves the sheet open then
+    /// (S33, Tech Architect NB1).
+    public var hasUnsavedEdits: Bool {
+        editsCategory || editsPayee || editsDetails || editsDate || editsAccount
+    }
     public var title: String { BulkEditText.title(count: count) }
     public var applyTitle: String { BulkEditText.applyTitle(count: count) }
 

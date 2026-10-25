@@ -23,13 +23,15 @@
         private let host: ScheduledListHost<Link>
         private let linkValue: (ScheduledRoute) -> Link
 
-        /// A list that registers its own destinations (the Mac's detail column stack).
+        /// A list that registers its own destinations (the Mac's detail column stack). A tapped reminder's item goes
+        /// on that stack's path, which the window owns (S33).
         public init(feature: ScheduledFeature) where Link == ScheduledRoute {
             self.init(feature: feature, host: .ownStack, linkValue: { $0 })
         }
 
         /// A list whose links push `linkValue`'s values. On a parent stack (the iPhone and iPad Accounts stack) its
-        /// root registers their destinations and builds them with the model in the host's slot.
+        /// root registers their destinations and builds them with the model in the host's slot. A tapped reminder's
+        /// item goes on that stack's typed path, as a row tap pushes it (S33, Tech Architect 5660914450 B1).
         init(
             feature: ScheduledFeature,
             host: ScheduledListHost<Link>,
@@ -38,12 +40,13 @@
             self.feature = feature
             self.host = host
             self.linkValue = linkValue
-            _model = State(initialValue: feature.makeList())
+            // On a parent stack, the stack's one model, shared with the screens over the list (B2).
+            _model = State(initialValue: host.model(or: feature.makeList))
         }
 
         public var body: some View {
-            if let slot = host.slot {
-                list.onAppear { slot.attach(model) }
+            if host.slot != nil {
+                list
             } else {
                 list.navigationDestination(for: ScheduledRoute.self) { route in
                     ScheduledDestination(model: model, route: route, linkValue: linkValue)
@@ -171,8 +174,8 @@
     }
 
     /// A screen the iPhone and iPad Accounts stack's root builds over the list. It shares the list's model from the
-    /// slot. A path set in one go, such as a deep link straight to an item, can build it before the list under it has
-    /// appeared, so then it makes its own model; either way the choice is made once, when the screen is first built.
+    /// slot, even when it's built first, as when a reminder tap sets Scheduled and its item in one update (S33, Tech
+    /// Architect 5661012630 B2). The list reloads that model after a change made elsewhere.
     struct ScheduledStackDestination<Link: Hashable>: View {
         @State private var model: ScheduledListViewModel
         private let route: ScheduledRoute
@@ -181,12 +184,13 @@
         init(
             feature: ScheduledFeature,
             slot: ScheduledListSlot,
+            onStack: Bool,
             route: ScheduledRoute,
             linkValue: @escaping (ScheduledRoute) -> Link,
         ) {
             self.route = route
             self.linkValue = linkValue
-            _model = State(initialValue: slot.model ?? feature.makeList())
+            _model = State(initialValue: slot.model(onStack: onStack, or: feature.makeList))
         }
 
         var body: some View {
@@ -341,6 +345,7 @@
                     NavigationStack {
                         ScheduledFormView(model: form)
                     }
+                    .openSheet(hasUnsavedEdits: { form.hasUnsavedEdits }, close: { model.form = nil })
                 }
                 .alert(
                     model.confirmation?.title ?? "",

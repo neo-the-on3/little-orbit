@@ -51,6 +51,7 @@
                 NavigationStack {
                     CategoryEditorView(model: editor, screen: model)
                 }
+                .openSheet(hasUnsavedEdits: { editor.hasUnsavedEdits }, close: { model.editor = nil })
             }
             .alert(
                 model.alert?.title ?? "",

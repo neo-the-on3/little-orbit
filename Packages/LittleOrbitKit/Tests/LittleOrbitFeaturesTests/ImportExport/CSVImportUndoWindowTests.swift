@@ -106,6 +106,17 @@ struct CSVImportUndoWindowTests {
         #expect(importedCount == rows && scene.recorded.count == 1)
     }
 
+    @Test("D382.15: the summary keeps a tapped reminder waiting only until Undo Import ends")
+    func summaryCleanOnceUndoEnds() async throws {
+        let paired = try pairedWatch()
+        let model = try await imported()
+        #expect(model.hasUnsavedEdits)
+        paired.pay()
+        await model.dataChanged()
+        #expect(model.isUndoWindowOver)
+        #expect(!model.hasUnsavedEdits)
+    }
+
     @Test("A watch Skip ends Undo Import, though it changes only the scheduled item")
     func watchSkip() async throws {
         let paired = try pairedWatch()

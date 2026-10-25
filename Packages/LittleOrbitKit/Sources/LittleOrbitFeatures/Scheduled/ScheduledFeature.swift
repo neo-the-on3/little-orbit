@@ -54,6 +54,8 @@ public final class FixedReminderTime: ScheduledReminderTimeUseCase {
 @MainActor
 public final class ScheduledFeature: PlannedItemsSource {
     public let useCases: ScheduledScreenUseCases
+    /// Reminder taps waiting for a window to open their item (S33).
+    public let reminderTaps = ScheduledReminderTaps()
     private let updates: LedgerUpdates?
     /// Keeps the pending reminders current (D340.7); `nil` where nothing posts notifications.
     private let reminders: ScheduledReminders?

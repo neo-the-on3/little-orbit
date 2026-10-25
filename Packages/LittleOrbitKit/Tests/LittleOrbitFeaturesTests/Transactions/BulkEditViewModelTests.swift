@@ -28,6 +28,19 @@ struct BulkEditViewModelTests {
         )
     }
 
+    @Test("S33, Tech Architect NB1: the sheet is clean until a field is ticked")
+    func unsavedEdits() throws {
+        let rows = mixed()
+        let model = model(try F.repository(rows), rows.map(\.id))
+        #expect(!model.hasUnsavedEdits)
+        model.editsDate = true
+        #expect(model.hasUnsavedEdits)
+        model.editsDate = false
+        #expect(!model.hasUnsavedEdits)
+        model.editsPayee = true
+        #expect(model.hasUnsavedEdits)
+    }
+
     @Test("Titles count the selection")
     func titles() throws {
         let rows = mixed()

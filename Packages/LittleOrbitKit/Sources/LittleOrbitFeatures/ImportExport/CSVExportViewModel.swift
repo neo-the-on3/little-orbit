@@ -46,6 +46,9 @@ public final class CSVExportViewModel {
     @ObservationIgnored private let calendar: Calendar
     @ObservationIgnored private let now: () -> Date
 
+    /// An export sheet always counts as unsaved, like Export Backup, so a tapped reminder leaves it open (S33).
+    public var hasUnsavedEdits: Bool { true }
+
     public init(
         exporting: any ExportTransactionsUseCase,
         locale: Locale = .current,

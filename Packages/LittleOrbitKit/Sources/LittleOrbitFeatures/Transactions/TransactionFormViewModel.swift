@@ -401,6 +401,9 @@ public final class TransactionFormViewModel {
             && note.count <= NoteLimit.limit
     }
 
+    /// The same as `hasUnsavedInput`: a tapped reminder closes the entry sheet only when it's untouched (S33).
+    public var hasUnsavedEdits: Bool { hasUnsavedInput }
+
     /// Whether closing the sheet would lose anything, for the discard warning (Figma 26:1276).
     public var hasUnsavedInput: Bool {
         guard let original else {

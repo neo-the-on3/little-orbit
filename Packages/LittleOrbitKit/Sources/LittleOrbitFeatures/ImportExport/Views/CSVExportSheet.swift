@@ -89,6 +89,8 @@
                     maxHeight: .infinity,
                 )
             #endif
+            // An export in progress stays open for a tapped reminder (S33).
+            .openSheet(hasUnsavedEdits: { model.hasUnsavedEdits }, close: { dismiss() })
             .task { model.load() }
             .fileExporter(
                 isPresented: $model.isExporterPresented,

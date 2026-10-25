@@ -9,6 +9,16 @@
         @State private var model: AccountsViewModel
         @State private var selection: AccountsRoute? = .allTransactions
         @State private var formSheet: AccountFormSheet?
+        /// The Scheduled detail's stack (S33). A tap sets it with the sidebar selection, in one update, so a stack
+        /// built for that selection starts with the item on it (Tester 6419979176).
+        @State private var scheduledPath: [ScheduledRoute] = []
+        /// A tapped reminder this window took while a sheet with unsaved edits was open over another screen. It
+        /// opens once that sheet closes, because changing the selection would take the sheet down with its screen.
+        @State private var heldReminder: ScheduledReminderTap?
+        /// This window's number, so it opens only the reminder taps brought to it (Tech Architect NB2).
+        @State private var windowID: String?
+        /// The sheets open in this window, which a tapped reminder asks before it navigates.
+        @Environment(OpenSheets.self) private var openSheets: OpenSheets?
         /// This window's own pending Delete Account prompt; never on the shared model (#87 B3).
         @State private var deleteConfirmation: AccountDeleteConfirmation
         /// This window's undo history; a new window starts with an empty one, and closing it drops it (D187.8).
@@ -72,6 +82,7 @@
                     formSheet = nil
                     deleted(change)
                 }
+                .openSheet(hasUnsavedEdits: { sheet.model.hasUnsavedEdits }, close: { formSheet = nil })
             }
             // From the sidebar's context menu; the edit sheet shows its own.
             .accountDeleteAlert(deleteConfirmation, model: model, isActive: formSheet == nil) { _, change in
@@ -82,6 +93,10 @@
             .onChange(of: transactions.updates.revision) { model.load() }
             // A screen that isn't one account shows no transactions yet, so the toast and notice say where (D165.1).
             .onChange(of: selection, initial: true) {
+                // Each visit to Scheduled starts on the list, as when the stack was rebuilt.
+                if selection != .home(.scheduled) {
+                    scheduledPath = []
+                }
                 if case .account = selection {
                     return
                 }
@@ -89,6 +104,42 @@
             }
             // This window's own history; Show on the off-screen notice selects the account (D164.3).
             .undoWindow(undoHistory) { selection = .account($0) }
+            // A tapped reminder selects Scheduled, then opens its item (S33), in the main window the App brought
+            // to the front. From a cold launch, or in a new window, the tap waits until this window is up.
+            .reportsReminderWindow(to: scheduled?.reminderTaps, id: $windowID)
+            .onChange(of: scheduled?.reminderTaps.pending, initial: true) { takeReminder() }
+            .onChange(of: windowID) { takeReminder() }
+            // A held tap is taken off hold before it's tried again, so it's applied once: now, or held anew.
+            .onChange(of: openSheets?.count) {
+                if let held = heldReminder {
+                    heldReminder = nil
+                    open(held)
+                }
+            }
+        }
+
+        private func takeReminder() {
+            if let tap = scheduled?.reminderTaps.take(for: windowID) {
+                open(tap)
+            }
+        }
+
+        /// Untouched sheets close first, then Scheduled is selected and the list opens the item. A sheet with
+        /// unsaved edits stays open (UI Designer 6402418696, Tech Architect NB1): already on Scheduled, the item
+        /// opens underneath it; over another screen, the tap waits until the sheet closes.
+        private func open(_ tap: ScheduledReminderTap) {
+            let sheets = openSheets?.prepareForReminder() ?? .afterClosing
+            guard sheets == .afterClosing || selection == .home(.scheduled) else {
+                heldReminder = tap
+                return
+            }
+            heldReminder = nil
+            scheduledPath = ScheduledReminderRouting.macPath(
+                scheduledPath,
+                item: scheduled?.itemOpened(by: tap),
+                sheets: sheets,
+            )
+            selection = .home(.scheduled)
         }
 
         // MARK: - Sidebar
@@ -215,7 +266,7 @@
             case .home(.scheduled) where scheduled != nil:
                 if let scheduled {
                     // Its own stack, so a row opens the item in the detail column.
-                    NavigationStack {
+                    NavigationStack(path: $scheduledPath) {
                         ScheduledListView(feature: scheduled)
                     }
                 }
