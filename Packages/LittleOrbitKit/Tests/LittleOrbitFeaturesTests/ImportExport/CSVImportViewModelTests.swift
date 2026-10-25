@@ -93,7 +93,7 @@ struct CSVImportViewModelTests {
         let transactions = try repository.transactions()
         let refund = try #require(transactions.first { $0.isRefund })
         #expect(refund.refundOfID == nil)
-        #expect(refund.note == "Line one\r\nline two")
+        #expect(refund.note == "Line one\nline two")
         let euros = try F.account("Travel Euros", in: repository)
         let trip = try #require(transactions.first { $0.transferAccountID == euros.id })
         #expect(trip.destinationAmount == F.dec("105.50"))

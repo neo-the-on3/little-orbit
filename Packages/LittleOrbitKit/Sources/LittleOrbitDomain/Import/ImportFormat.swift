@@ -293,13 +293,14 @@ struct RowReader {
         mapping.column(for: field)
     }
 
-    /// The field's trimmed text, or `nil` when it's unmapped, missing or blank.
+    /// The field's trimmed text, or `nil` when it's unmapped, missing or blank. Free text has its export
+    /// apostrophe removed (D323.1) and its line breaks read as LF.
     func value(_ field: ImportField) -> String? {
         guard let column = mapping.column(for: field) else {
             return nil
         }
         let text = ImportText.value(record.field(column))
-        return field.isFreeText ? text.map(TransactionCSVWriter.unprotectedText) : text
+        return field.isFreeText ? text.map { ImportText.lineBreaks(TransactionCSVWriter.unprotectedText($0)) } : text
     }
 
     /// A name field, or `nil` with a reason when it's over the 100-character limit.
