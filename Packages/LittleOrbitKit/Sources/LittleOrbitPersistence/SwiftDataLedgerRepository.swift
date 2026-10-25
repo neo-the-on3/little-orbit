@@ -82,13 +82,6 @@
             try mutate { try LedgerBook.deletingTransaction(id: id, in: $0, now: now()) }
         }
 
-        public func saveNewTransactions(_ transactions: [Transaction]) throws {
-            try mutate { try LedgerBook.savingNewTransactions(transactions, in: $0, now: now()) }
-        }
-        public func deleteTransactions(ids: [UUID]) throws {
-            try mutate { try LedgerBook.deletingTransactions(ids: ids, in: $0, now: now()) }
-        }
-
         public func categories() throws -> [TransactionCategory] {
             try load().categoriesVisible()
         }
