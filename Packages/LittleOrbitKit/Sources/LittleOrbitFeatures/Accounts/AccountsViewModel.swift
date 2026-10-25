@@ -194,7 +194,8 @@ public final class AccountsViewModel {
         do {
             let impact = try deleteAccount.deletionImpact(of: accountID)
                 .adding(scheduled: try plannedItems.scheduledItems(), accountID: accountID)
-            return AccountDeletePrompt(account: account, impact: impact)
+            let moved = plannedItems.movedOccurrenceCount(toAccount: accountID)
+            return AccountDeletePrompt(account: account, impact: impact, movedOccurrences: moved)
         } catch {
             errorMessage = Self.message(for: error)
             return nil

@@ -2,7 +2,7 @@
   "sourceLanguage": "en",
   "strings": {
     "%1$@ %2$@": {
-      "comment": "Two sentences in a row: %1$@ is the first, %2$@ the second (backup footnote and Keep footer, or newer-format note and its detail; the Undo Import confirmation’s sentences).",
+      "comment": "Two sentences in a row: %1$@ is the first, %2$@ the second (backup footnote and Keep footer, or newer-format note and its detail; the Undo Import confirmation’s sentences; or the account delete confirmation’s scheduled sentences, D288’s first, D372).",
       "extractionState": "manual",
       "generatesSymbol": false,
       "localizations": {
@@ -11005,7 +11005,7 @@
       }
     },
     "This account has no transactions. %@ You can undo this. Hide it instead to keep it; hidden accounts still count toward net wealth.": {
-      "comment": "Account delete confirmation message: the account has no transactions but has scheduled items. %@ is the sentence saying its scheduled items are deleted (D288).",
+      "comment": "Account delete confirmation message: the account has no transactions. %@ is the slot after the first sentence. The slot holds one or two sentences about the account’s scheduled items: D288’s (its scheduled items are deleted) first, then D372’s (occurrences moved to it go back to their items’ accounts).",
       "extractionState": "manual",
       "generatesSymbol": false,
       "localizations": {
@@ -11018,7 +11018,7 @@
       }
     },
     "This deletes %1$lld transactions. %2$@ Attachments are deleted too. You can undo this. Hide it instead to keep everything; hidden accounts still count toward net wealth.": {
-      "comment": "Account delete confirmation message with scheduled items: %1$lld is the number of transactions, none of them transfers; %2$@ is the sentence saying the account’s scheduled items are deleted (D288).",
+      "comment": "Account delete confirmation message: %1$lld is the number of transactions, none of them transfers; %2$@ is the slot after the first sentence. The slot holds one or two sentences about the account’s scheduled items: D288’s (its scheduled items are deleted) first, then D372’s (occurrences moved to it go back to their items’ accounts).",
       "extractionState": "manual",
       "generatesSymbol": false,
       "localizations": {
@@ -11053,7 +11053,7 @@
       }
     },
     "This deletes 1 transaction, a transfer to or from another account whose balance will change. %@ Attachments are deleted too. You can undo this. Hide it instead to keep everything; hidden accounts still count toward net wealth.": {
-      "comment": "Account delete confirmation message with scheduled items: the account’s only transaction is a transfer. %@ is the sentence saying its scheduled items are deleted (D288).",
+      "comment": "Account delete confirmation message: the account’s only transaction is a transfer. %@ is the slot after the first sentence. The slot holds one or two sentences about the account’s scheduled items: D288’s (its scheduled items are deleted) first, then D372’s (occurrences moved to it go back to their items’ accounts).",
       "extractionState": "manual",
       "generatesSymbol": false,
       "localizations": {
@@ -11066,7 +11066,7 @@
       }
     },
     "This deletes %1$lld transactions, including %2$lld transfers to or from other accounts whose balances will change. %3$@ Attachments are deleted too. You can undo this. Hide it instead to keep everything; hidden accounts still count toward net wealth.": {
-      "comment": "Account delete confirmation message with scheduled items: %1$lld is the number of transactions (2 or more); %2$lld how many of them are transfers (1 or more), whose other accounts’ balances will change; %3$@ is the sentence saying the account’s scheduled items are deleted (D288).",
+      "comment": "Account delete confirmation message: %1$lld is the number of transactions and %2$lld how many are transfers (2 or more transactions); %3$@ is the slot after the first sentence. The slot holds one or two sentences about the account’s scheduled items: D288’s (its scheduled items are deleted) first, then D372’s (occurrences moved to it go back to their items’ accounts).",
       "extractionState": "manual",
       "generatesSymbol": false,
       "localizations": {
@@ -11257,6 +11257,31 @@
           "stringUnit": {
             "state": "translated",
             "value": "All future occurrences"
+          }
+        }
+      }
+    },
+    "%lld scheduled occurrences moved to this account will go back to their items’ accounts.": {
+      "comment": "Account delete confirmation, a standalone sentence in the slot after the first, shown only when 1 or more scheduled occurrences not yet recorded were moved to this account with “This occurrence only”: %lld is how many. Deleting the account sends each back to its own scheduled item’s account (D372). Same wording on iOS and the Mac.",
+      "extractionState": "manual",
+      "generatesSymbol": false,
+      "localizations": {
+        "en": {
+          "variations": {
+            "plural": {
+              "one": {
+                "stringUnit": {
+                  "state": "translated",
+                  "value": "%lld scheduled occurrence moved to this account will go back to its item’s account."
+                }
+              },
+              "other": {
+                "stringUnit": {
+                  "state": "translated",
+                  "value": "%lld scheduled occurrences moved to this account will go back to their items’ accounts."
+                }
+              }
+            }
           }
         }
       }

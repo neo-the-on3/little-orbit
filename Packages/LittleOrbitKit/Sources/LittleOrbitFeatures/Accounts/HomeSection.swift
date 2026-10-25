@@ -35,6 +35,9 @@ public protocol PlannedItemsSource: AnyObject {
     /// The scheduled items an account delete deletes with it, for its confirmation (D288). Throws when the items
     /// can't be read, so the confirmation fails closed rather than leaving them out (n5, Tech Architect 5681779824).
     func scheduledItems() throws -> [ScheduledItem]
+    /// How many scheduled occurrences not yet recorded were moved to the account, for its delete confirmation
+    /// (D372). They go back to their items' accounts when it's deleted.
+    func movedOccurrenceCount(toAccount accountID: UUID) -> Int
 }
 
 extension PlannedItemsSource {
@@ -42,6 +45,8 @@ extension PlannedItemsSource {
     public func scheduledAccountIDs() -> Set<UUID> { [] }
     /// None, for a source with no scheduled items.
     public func scheduledItems() -> [ScheduledItem] { [] }
+    /// None, for a source with no scheduled items.
+    public func movedOccurrenceCount(toAccount _: UUID) -> Int { 0 }
 }
 
 /// Used until #25 and #26 provide real counts.

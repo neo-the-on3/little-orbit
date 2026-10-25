@@ -199,4 +199,17 @@ extension ScheduledItem {
     public func resolved(for key: CalendarDay) -> ScheduledItem {
         edit(for: key)?.applied(to: self) ?? self
     }
+
+    /// How many occurrences not yet recorded or skipped have `accountID` as their own account or To account: the
+    /// ones an account delete sends back to the item's account (#202 B1, D372).
+    public func openOccurrenceCount(movedTo accountID: UUID) -> Int {
+        occurrences.filter { record in
+            guard record.deletedAt == nil, !record.outcome.isSettled, let edit = record.edit else {
+                return false
+            }
+            return (edit.has(.account) && edit.accountID == accountID)
+                || (edit.has(.transferAccount) && edit.transferAccountID == accountID)
+        }
+        .count
+    }
 }

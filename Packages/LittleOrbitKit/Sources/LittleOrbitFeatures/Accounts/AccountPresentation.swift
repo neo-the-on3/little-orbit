@@ -208,23 +208,11 @@ public struct AccountDeletePrompt: Identifiable, Equatable, Sendable {
 
     public var id: UUID { accountID }
 
-    init(account: Account, impact: AccountDeletionImpact) {
+    /// `movedOccurrences` is how many scheduled occurrences not yet recorded were moved to the account (D372).
+    init(account: Account, impact: AccountDeletionImpact, movedOccurrences: Int = 0) {
         accountID = account.id
         title = "Delete “\(account.name)”?"
-        message = Self.message(impact)
-    }
-
-    /// The message for `impact`; with scheduled items on the account, the D288 sentence follows the first.
-    static func message(_ impact: AccountDeletionImpact) -> String {
-        guard
-            let scheduled = scheduledSentence(
-                items: impact.scheduledItemCount,
-                transfers: impact.scheduledTransferCount,
-            )
-        else {
-            return message(transactions: impact.transactionCount, transfers: impact.transferCount)
-        }
-        return message(transactions: impact.transactionCount, transfers: impact.transferCount, scheduled: scheduled)
+        message = Self.message(impact, movedOccurrences: movedOccurrences)
     }
 
     /// One whole catalog message for each case (D236.2, D236.3); nothing is joined here. A count of 0 never

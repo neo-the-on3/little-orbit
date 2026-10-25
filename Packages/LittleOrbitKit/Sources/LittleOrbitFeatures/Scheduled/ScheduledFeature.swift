@@ -161,6 +161,10 @@ public final class ScheduledFeature: PlannedItemsSource {
         try useCases.load.listing().board.items
     }
 
+    public func movedOccurrenceCount(toAccount accountID: UUID) -> Int {
+        (try? useCases.load.movedOccurrenceCount(toAccount: accountID)) ?? 0
+    }
+
     public func makeList() -> ScheduledListViewModel {
         ScheduledListViewModel(useCases: useCases, locale: locale) { [weak updates] in updates?.changed() }
     }
