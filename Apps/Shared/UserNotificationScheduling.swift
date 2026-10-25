@@ -142,8 +142,9 @@
                 return
             }
             #if os(iOS)
-                // Read on the main actor below, as UIScene is main-actor bound.
-                nonisolated(unsafe) let targetScene = response.targetScene
+                // Only the reference is taken here. UIScene is main-actor bound, so it's Sendable, and its
+                // session is read on the main actor below.
+                let targetScene = response.targetScene
             #endif
             await MainActor.run {
                 #if os(iOS)
