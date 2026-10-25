@@ -74,6 +74,20 @@ public enum LedgerValidationError: Error, Equatable, Sendable {
     /// The change would leave linked refunds pointing at something that isn't a plain expense: the expense
     /// becomes an income, or it's split while Schema V1 can't link a refund to a line.
     case originalHasRefunds
+    /// The budget isn't in the ledger.
+    case missingBudget
+    /// A budget's limit is 0 or less, or it has none (#25).
+    case budgetLimitNotPositive
+    /// A budget has no categories (#25).
+    case budgetCategoriesRequired
+    /// A custom repeat isn't every 1–99 days, weeks, months or years (#25).
+    case budgetRecurrenceOutOfRange
+    /// Another budget has the same name, trimmed and ignoring case (D307.6).
+    case duplicateBudgetName
+    /// A budget's start day or a limit's day isn't a real calendar day. Only an edited backup has one (#174 B1).
+    case invalidBudgetDay
+    /// Two budgets, or two limits, share an ID. Only an edited backup has them (#174 B1).
+    case duplicateBudgetID
 }
 
 /// Why a category merge was refused: subcategories of the category being merged have the same names as
