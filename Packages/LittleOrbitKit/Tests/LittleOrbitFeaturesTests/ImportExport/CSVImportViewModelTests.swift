@@ -46,6 +46,20 @@ struct CSVImportViewModelTests {
         #expect(try repository.transactions().filter { $0.type == .income }.count == 2)
     }
 
+    @Test("D367: Review's note says tap on iOS and click on the Mac")
+    func reviewWordingPerPlatform() async throws {
+        let repository = try F.repository()
+        let model = F.model(repository, changes: F.Changes())
+        await model.open(data: try F.data("Bank Statement Debit Credit"), fileName: "Bank Statement Debit Credit.csv")
+        await model.next()
+        model.targetAccountID = try F.account("Everyday Savings", in: repository).id
+        await model.next()
+        #expect(model.step == .review)
+        #expect(model.canImport)
+        #expect(model.reviewFooter(on: .iOS) == "Nothing is saved until you tap Import.")
+        #expect(model.reviewFooter(on: .mac) == "Nothing is saved until you click Import.")
+    }
+
     @Test("Importing the same file again: every row is Already imported and nothing is selected (D42)")
     func reimport() async throws {
         let repository = try F.repository()

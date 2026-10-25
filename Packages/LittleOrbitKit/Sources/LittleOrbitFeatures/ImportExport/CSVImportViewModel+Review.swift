@@ -53,6 +53,11 @@ extension CSVImportViewModel {
         ImportExportText.importButton(readyCount)
     }
 
+    /// The note under Review's Import button: tap on iOS, click on the Mac (D367).
+    public func reviewFooter(on platform: ImportExportPlatform) -> String {
+        platform == .mac ? ImportExportText.nothingSavedMac : ImportExportText.nothingSaved
+    }
+
     public var canImport: Bool {
         step == .review && readyCount > 0 && !isWorking
     }
