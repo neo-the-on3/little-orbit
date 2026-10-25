@@ -166,6 +166,7 @@ extension LedgerBook {
             snapshot.payees[index].defaultCategoryID = targetID
             snapshot.payees[index].updatedAt = now
         }
+        reassignScheduledItems(from: sourceIDs, to: targetID, in: &snapshot, now: now)
         for index in snapshot.splits.indices {
             guard let categoryID = snapshot.splits[index].categoryID, sourceIDs.contains(categoryID) else {
                 continue

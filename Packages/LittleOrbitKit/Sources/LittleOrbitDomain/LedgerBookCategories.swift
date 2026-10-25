@@ -89,6 +89,10 @@ extension LedgerBook {
             snapshot.transactions[index].payeeID = nil
             snapshot.transactions[index].updatedAt = now
         }
+        for index in snapshot.scheduledItems.indices where snapshot.scheduledItems[index].payeeID == id {
+            snapshot.scheduledItems[index].payeeID = nil
+            snapshot.scheduledItems[index].updatedAt = now
+        }
         snapshot.payees.removeAll { $0.id == id }
         return snapshot
     }
@@ -111,6 +115,10 @@ extension LedgerBook {
         for index in snapshot.transactions.indices where snapshot.transactions[index].payeeID == sourceID {
             snapshot.transactions[index].payeeID = survivingID
             snapshot.transactions[index].updatedAt = now
+        }
+        for index in snapshot.scheduledItems.indices where snapshot.scheduledItems[index].payeeID == sourceID {
+            snapshot.scheduledItems[index].payeeID = survivingID
+            snapshot.scheduledItems[index].updatedAt = now
         }
         surviving = mergedPayee(source, into: surviving)
         surviving.updatedAt = now
