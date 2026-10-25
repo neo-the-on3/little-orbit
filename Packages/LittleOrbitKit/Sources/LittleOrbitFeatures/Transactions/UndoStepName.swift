@@ -33,7 +33,7 @@ extension UndoActionTitle {
             (action, count) = (.edit, items.count)
             isTransfer = items.count == 1 && items[0].type == .transfer
         case .removedAccount, .addedAccount, .createdPayees, .removedPayees, .savedScheduledItem,
-            .revertedScheduledItemSave:
+            .revertedScheduledItemSave, .settledOccurrence, .unsettledOccurrence:
             return base(of: change)
         }
         if count != 1 {

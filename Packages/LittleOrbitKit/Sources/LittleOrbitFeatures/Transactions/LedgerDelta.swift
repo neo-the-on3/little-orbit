@@ -29,7 +29,7 @@ public struct LedgerDelta: Equatable, Sendable {
             }
             self.init(accountIDs: accountIDs, transactionIDs: Set(change.transactionIDs))
         case .removedAccount, .addedAccount, .createdPayees, .removedPayees, .savedScheduledItem,
-            .revertedScheduledItemSave:
+            .revertedScheduledItemSave, .settledOccurrence, .unsettledOccurrence:
             self = .everything
         }
     }

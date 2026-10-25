@@ -255,7 +255,7 @@ final class FlakyScheduleRepository: ScheduleRepository {
 
     func deleteScheduledItem(id: UUID) throws { try base.deleteScheduledItem(id: id) }
 
-    func settleScheduledOccurrence(_ settlement: ScheduledSettlement) throws -> Transaction? {
+    func settleScheduledOccurrence(_ settlement: ScheduledSettlement) throws -> ScheduledSettlementChange? {
         if failNextSettle {
             failNextSettle = false
             throw SaveFailed()
@@ -264,6 +264,14 @@ final class FlakyScheduleRepository: ScheduleRepository {
             throw refuseSettle
         }
         return try base.settleScheduledOccurrence(settlement)
+    }
+
+    func unsettleScheduledOccurrence(_ change: ScheduledSettlementChange) throws -> ScheduledSettlementRevert {
+        try base.unsettleScheduledOccurrence(change)
+    }
+
+    func resettleScheduledOccurrence(_ change: ScheduledSettlementChange) throws -> ScheduledSettlementRevert {
+        try base.resettleScheduledOccurrence(change)
     }
 
     func catchUpScheduledItems(today: CalendarDay, pruningOrphans: Bool) throws -> ScheduledCatchUp {

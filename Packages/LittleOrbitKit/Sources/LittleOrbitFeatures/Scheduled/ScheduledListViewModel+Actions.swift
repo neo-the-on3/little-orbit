@@ -9,7 +9,8 @@ extension ScheduledListViewModel {
         guard let occurrence = row.occurrence else {
             return
         }
-        run { try $0.payNow(itemID: row.itemID, occurrence: occurrence) }
+        let today = useCases.load.today()
+        settle { try useCases.manage.pay(itemID: row.itemID, occurrence: occurrence, on: today, custom: nil) }
     }
 
     /// Asks before skipping (D334.8, D339): "Skip 15 Oct Electricity?", with the next due date
@@ -58,7 +59,7 @@ extension ScheduledListViewModel {
         confirmation = nil
         switch action {
         case .skip(let itemID, let occurrence):
-            run { try $0.skip(itemID: itemID, occurrence: occurrence) }
+            settle { try useCases.manage.skip(itemID: itemID, occurrence: occurrence) }
         case .delete(let itemID):
             run { try $0.delete(id: itemID) }
         }

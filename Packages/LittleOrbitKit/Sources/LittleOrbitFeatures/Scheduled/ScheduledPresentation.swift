@@ -97,7 +97,8 @@ struct ScheduledPresenter {
             rule = ScheduledText.lastDay(rule)
         }
         var parts = [rule]
-        if item.processesAutomatically {
+        // An occurrence whose Pay was undone waits for the user, so its row reads like a manual one (D344).
+        if item.processesAutomatically, day.map({ item.occurrence(on: $0)?.waitsForUser != true }) ?? true {
             parts.append(ScheduledText.automatic)
         }
         if let account = listing.account(item.accountID) {

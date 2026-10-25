@@ -97,13 +97,15 @@ extension LedgerBook {
     }
 
     /// Pays or skips one occurrence. Settling an occurrence that's already settled changes nothing and returns
-    /// `nil`. Pay records the item's transaction dated `postedOn`; its occurrence stays the due day, so the next
-    /// due day follows the original schedule (D24, #26).
+    /// `nil`. Pay records the item's transaction dated `postedOn`, for the item's amount or the custom one; its
+    /// occurrence stays the due day, so the next due day follows the original schedule and the anchor day is kept
+    /// (D24, #26). `change` is what the Pay or Skip did, for its Undo step (D288.3); it's `nil` when nothing was
+    /// settled by this call.
     public static func settlingScheduledOccurrence(
         _ settlement: ScheduledSettlement,
         in snapshot: LedgerSnapshot,
         now: Date,
-    ) throws -> (snapshot: LedgerSnapshot, transaction: Transaction?) {
+    ) throws -> ScheduledSettlementOutcome {
         try settlingScheduledOccurrence(settlement, in: snapshot, now: now, automatically: false)
     }
 
@@ -114,24 +116,27 @@ extension LedgerBook {
         in snapshot: LedgerSnapshot,
         now: Date,
         automatically: Bool,
-    ) throws -> (snapshot: LedgerSnapshot, transaction: Transaction?) {
+    ) throws -> ScheduledSettlementOutcome {
         guard let item = activeScheduledItems(in: snapshot).first(where: { $0.id == settlement.itemID }) else {
             throw LedgerValidationError.missingScheduledItem
         }
         let day = settlement.occurrence
         // Checked first: a day settled before an edit is no longer on the rule, but settling it again is a no-op.
         if item.isSettled(day) {
-            return (snapshot, nil)
+            return ScheduledSettlementOutcome(snapshot: snapshot)
         }
         guard ScheduleCalendar.isOccurrence(day, of: item) else {
             throw LedgerValidationError.notAnOccurrence
         }
+        // A pending day kept from before an edit (D336.1) is replaced; Undo puts it back.
+        let replaced = item.occurrence(on: day)
         var snapshot = snapshot
+        var stored: Transaction?
+        var scheduleChange: (before: ScheduledItem, after: ScheduledItem)?
         switch settlement {
         case .skip:
             record(ScheduledOutcome.skipped, transactionID: nil, day: day, of: item.id, in: &snapshot, now: now)
-            return (snapshot, nil)
-        case .pay(_, _, let postedOn):
+        case .pay(_, _, let postedOn, let custom):
             if let recorded = recordedTransaction(of: item.id, on: day, in: snapshot) {
                 // The transaction is there but its record isn't (an edited backup): record it, post nothing.
                 record(
@@ -143,11 +148,20 @@ extension LedgerBook {
                     in: &snapshot,
                     now: now,
                 )
-                return (snapshot, nil)
+                return ScheduledSettlementOutcome(snapshot: snapshot)
+            }
+            var template = item
+            if let custom {
+                template = applying(custom, to: item)
+                if custom.changesFutureOccurrences {
+                    // The schedule's amount, account and category change from now on, never its dates (D114).
+                    snapshot = try savingScheduledItem(template, in: snapshot, today: postedOn, now: now)
+                    scheduleChange = (item, snapshot.scheduledItems.first { $0.id == item.id } ?? template)
+                }
             }
             // A received amount is only posted in the currency it was entered in (#207 B1).
-            try validateReceivedCurrency(of: item, in: snapshot)
-            let transaction = try scheduledTransaction(for: item, occurrence: day, postedOn: postedOn, now: now)
+            try validateReceivedCurrency(of: template, in: snapshot)
+            let transaction = try scheduledTransaction(for: template, occurrence: day, postedOn: postedOn, now: now)
             snapshot = try savingTransaction(transaction, in: snapshot, now: now)
             record(
                 .posted,
@@ -158,9 +172,35 @@ extension LedgerBook {
                 in: &snapshot,
                 now: now,
             )
-            let stored = snapshot.transactions.first { $0.id == transaction.id }
-            return (snapshot, stored)
+            stored = snapshot.transactions.first { $0.id == transaction.id }
         }
+        let change = snapshot.scheduledItems.first { $0.id == item.id }
+            .flatMap { left in
+                left.occurrence(on: day)
+                    .map { record in
+                        ScheduledSettlementChange(
+                            item: left,
+                            record: record,
+                            transaction: stored,
+                            replaced: replaced,
+                            scheduleBefore: scheduleChange?.before,
+                            scheduleAfter: scheduleChange?.after,
+                        )
+                    }
+            }
+        return ScheduledSettlementOutcome(snapshot: snapshot, transaction: stored, change: change)
+    }
+
+    /// `item` with a custom payment's amount, account and category: what this payment records, or, with "Also
+    /// change future occurrences", the schedule from now on.
+    static func applying(_ custom: ScheduledCustomPayment, to item: ScheduledItem) -> ScheduledItem {
+        var item = item
+        item.amount = custom.amount
+        item.accountID = custom.accountID
+        if item.type != .transfer {
+            item.categoryID = custom.categoryID
+        }
+        return item
     }
 
     /// Records every due occurrence of every automatic item, through `today`, each dated on its own due day
@@ -185,7 +225,9 @@ extension LedgerBook {
         // day is ever due (D336.2, D337.1), so it shows nothing until then; the App logs it (Tech Architect NB 3).
         result.createdAfterTodayItemIDs = activeScheduledItems(in: snapshot).filter { $0.creationDay > today }.map(\.id)
         for item in activeScheduledItems(in: snapshot) where item.processesAutomatically {
+            // An occurrence whose Pay was undone waits for the user: it's never recorded for them again (D344).
             let due = ScheduleCalendar.dueDays(of: item, through: today)
+                .filter { item.occurrence(on: $0)?.waitsForUser != true }
             guard !due.isEmpty else {
                 continue
             }

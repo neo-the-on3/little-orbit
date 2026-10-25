@@ -62,7 +62,9 @@ public enum ScheduledOutcome: String, Sendable, Codable {
     case posted
     case skipped
     /// An unpaid occurrence of the schedule before an edit: it stays due on its old day, until it's paid or skipped
-    /// (D59, D336.1). Paying or skipping it replaces this record with the same key.
+    /// (D59, D336.1). Paying or skipping it replaces this record with the same key. With a `transactionID`, it's an
+    /// automatic item's occurrence whose Pay was undone: due until the user pays or skips it, and never recorded by
+    /// catch-up (D344, `ScheduledOccurrence.waitsForUser`).
     case pending
 
     /// Posted or skipped: nothing is due for this occurrence any more.
@@ -82,7 +84,7 @@ public struct ScheduledOccurrence: Identifiable, Hashable, Sendable, Codable {
     public var day: CalendarDay
     public var outcome: ScheduledOutcome
     /// The transaction it recorded. It stays set after that transaction is deleted, so the occurrence isn't
-    /// recorded again.
+    /// recorded again. On a `pending` record, the transaction an undone Pay recorded (D344).
     public var transactionID: UUID?
     /// `true` only when the app recorded it, on its due day or at catch-up; unset for the user's Pay or Skip, and in
     /// backups made before it existed. Its 'Notify when due' reminder stays only when it's set (S81, D354.1). It's
@@ -135,6 +137,15 @@ public struct ScheduledOccurrence: Identifiable, Hashable, Sendable, Codable {
     /// `true` on a posted occurrence the app recorded; unset otherwise, including `false` (D354.1).
     private static func normalised(_ flag: Bool?, outcome: ScheduledOutcome) -> Bool? {
         outcome == .posted && flag == true ? true : nil
+    }
+
+    /// An occurrence whose Pay was undone on an automatic item (D344): it's due again, listed under Due Today or
+    /// Overdue like a manual item's, and catch-up never records it, because undoing a Pay says "this wasn't paid".
+    /// It stays this way until the user pays or skips it; later occurrences stay automatic. Kept in the existing V1
+    /// fields and backup format 1 as a `pending` record that keeps the undone transaction's ID, so it survives a
+    /// relaunch and a restore with no schema change.
+    public var waitsForUser: Bool {
+        outcome == .pending && transactionID != nil
     }
 }
 

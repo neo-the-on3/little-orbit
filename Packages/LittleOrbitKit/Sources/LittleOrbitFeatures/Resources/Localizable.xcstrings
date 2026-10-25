@@ -10498,6 +10498,175 @@
           }
         }
       }
+    },
+    "Pay with Custom Date or Amount": {
+      "comment": "Scheduled occurrence action: records this one payment with a date or amount the user picks.",
+      "extractionState": "manual",
+      "generatesSymbol": false,
+      "localizations": {
+        "en": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Pay with Custom Date or Amount"
+          }
+        }
+      }
+    },
+    "Pay with Custom Date or Amount…": {
+      "comment": "Mac item screen button and row menu item: opens the sheet to record this one payment with a custom date or amount.",
+      "extractionState": "manual",
+      "generatesSymbol": false,
+      "localizations": {
+        "en": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Pay with Custom Date or Amount…"
+          }
+        }
+      }
+    },
+    "Pay %@": {
+      "comment": "The custom pay sheet’s title, and the Undo and Redo name of paying a scheduled item, as in “Undo Pay Phone Plan”: %@ is the item’s name (D288.3).",
+      "extractionState": "manual",
+      "generatesSymbol": false,
+      "localizations": {
+        "en": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Pay %@"
+          }
+        }
+      }
+    },
+    "Skip %@": {
+      "comment": "The Undo and Redo name of skipping a scheduled occurrence, as in “Undo Skip Phone Plan”: %@ is the item’s name (D288.3).",
+      "extractionState": "manual",
+      "generatesSymbol": false,
+      "localizations": {
+        "en": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Skip %@"
+          }
+        }
+      }
+    },
+    "Record": {
+      "comment": "Custom pay sheet button: records the payment or income.",
+      "extractionState": "manual",
+      "generatesSymbol": false,
+      "localizations": {
+        "en": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Record"
+          }
+        }
+      }
+    },
+    "Paid on": {
+      "comment": "Custom pay sheet date picker: the day this payment is recorded on.",
+      "extractionState": "manual",
+      "generatesSymbol": false,
+      "localizations": {
+        "en": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Paid on"
+          }
+        }
+      }
+    },
+    "Scheduled amount: %@.": {
+      "comment": "Custom pay sheet footer under the amount: %@ is the scheduled amount with its currency.",
+      "extractionState": "manual",
+      "generatesSymbol": false,
+      "localizations": {
+        "en": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Scheduled amount: %@."
+          }
+        }
+      }
+    },
+    "Also change future occurrences": {
+      "comment": "Custom pay sheet toggle (a checkbox on the Mac), off by default: the amount, account and category become the schedule’s (D340).",
+      "extractionState": "manual",
+      "generatesSymbol": false,
+      "localizations": {
+        "en": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Also change future occurrences"
+          }
+        }
+      }
+    },
+    "Only this occurrence changes.": {
+      "comment": "Custom pay sheet footer under the toggle, while it’s off: the first sentence (D341).",
+      "extractionState": "manual",
+      "generatesSymbol": false,
+      "localizations": {
+        "en": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Only this occurrence changes."
+          }
+        }
+      }
+    },
+    "Later occurrences use this amount, account and category too. Recorded transactions don’t change.": {
+      "comment": "Custom pay sheet footer under the toggle, while it’s on: what changes and what doesn’t (D341).",
+      "extractionState": "manual",
+      "generatesSymbol": false,
+      "localizations": {
+        "en": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Later occurrences use this amount, account and category too. Recorded transactions don’t change."
+          }
+        }
+      }
+    },
+    "The schedule stays %1$@ on the %2$@.": {
+      "comment": "Custom pay sheet footer, a monthly item: %1$@ is the scheduled amount, %2$@ the ordinal day of the month, as in “15th”.",
+      "extractionState": "manual",
+      "generatesSymbol": false,
+      "localizations": {
+        "en": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "The schedule stays %1$@ on the %2$@."
+          }
+        }
+      }
+    },
+    "The schedule stays %@.": {
+      "comment": "Custom pay sheet footer, an item that doesn’t repeat monthly: %@ is the scheduled amount.",
+      "extractionState": "manual",
+      "generatesSymbol": false,
+      "localizations": {
+        "en": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "The schedule stays %@."
+          }
+        }
+      }
+    },
+    "Next due: %@.": {
+      "comment": "Custom pay sheet footer, last sentence: %@ is the next due date on the schedule, with its year.",
+      "extractionState": "manual",
+      "generatesSymbol": false,
+      "localizations": {
+        "en": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Next due: %@."
+          }
+        }
+      }
     }
   },
   "version": "1.0"

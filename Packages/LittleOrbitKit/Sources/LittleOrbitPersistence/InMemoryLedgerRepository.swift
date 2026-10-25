@@ -299,10 +299,22 @@ extension InMemoryLedgerRepository: ScheduleRepository {
         snapshot = try LedgerBook.deletingScheduledItem(id: id, in: snapshot)
     }
 
-    public func settleScheduledOccurrence(_ settlement: ScheduledSettlement) throws -> Transaction? {
+    public func settleScheduledOccurrence(_ settlement: ScheduledSettlement) throws -> ScheduledSettlementChange? {
         let outcome = try LedgerBook.settlingScheduledOccurrence(settlement, in: snapshot, now: now())
         snapshot = outcome.snapshot
-        return outcome.transaction
+        return outcome.change
+    }
+
+    public func unsettleScheduledOccurrence(_ change: ScheduledSettlementChange) throws -> ScheduledSettlementRevert {
+        let outcome = try LedgerBook.unsettlingScheduledOccurrence(change, in: snapshot, now: now())
+        snapshot = outcome.snapshot
+        return outcome.result
+    }
+
+    public func resettleScheduledOccurrence(_ change: ScheduledSettlementChange) throws -> ScheduledSettlementRevert {
+        let outcome = try LedgerBook.resettlingScheduledOccurrence(change, in: snapshot, now: now())
+        snapshot = outcome.snapshot
+        return outcome.result
     }
 
     public func catchUpScheduledItems(today: CalendarDay, pruningOrphans: Bool) throws -> ScheduledCatchUp {

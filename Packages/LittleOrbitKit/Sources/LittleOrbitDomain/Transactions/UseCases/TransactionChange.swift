@@ -68,6 +68,11 @@ public enum TransactionChange: Equatable, Sendable {
     case savedScheduledItem(ScheduledItemSaveChange)
     /// Revert by saving the item again as the form left it, with its payee (Redo, D351.1).
     case revertedScheduledItemSave(ScheduledItemSaveChange)
+    /// A manual Pay or Skip of a scheduled occurrence (D288.3). Revert by unsettling it: a Pay's transaction is
+    /// deleted and the occurrence is due again.
+    case settledOccurrence(ScheduledSettlementChange)
+    /// Revert by settling the occurrence again as it was, a Pay's transaction with its own ID (Redo, D288.3).
+    case unsettledOccurrence(ScheduledSettlementChange)
 
     /// `change`, plus the payees its save created, if any.
     public static func saved(_ change: TransactionChange, creating payees: [Payee]) -> TransactionChange {
@@ -103,7 +108,9 @@ public enum TransactionChange: Equatable, Sendable {
             return .createdPayees(payees, change.replacingPayee(payeeID, with: otherID))
         case .removedPayees(let payees, let change):
             return .removedPayees(payees, change.replacingPayee(payeeID, with: otherID))
-        case .added, .addedAccount, .savedScheduledItem, .revertedScheduledItemSave: return self
+        case .added, .addedAccount, .savedScheduledItem, .revertedScheduledItemSave, .settledOccurrence,
+            .unsettledOccurrence:
+            return self
         }
     }
 
@@ -112,7 +119,7 @@ public enum TransactionChange: Equatable, Sendable {
         switch self {
         case .createdPayees(_, let change), .removedPayees(_, let change): change.core
         case .removed, .added, .replaced, .removedAccount, .addedAccount, .savedScheduledItem,
-            .revertedScheduledItemSave:
+            .revertedScheduledItemSave, .settledOccurrence, .unsettledOccurrence:
             self
         }
     }
@@ -124,6 +131,7 @@ public enum TransactionChange: Equatable, Sendable {
         case .added(let ids): ids
         case .replaced(let items): items.map(\.id)
         case .removedAccount(let removed): removed.transactions.map(\.transaction.id)
+        case .settledOccurrence(let change), .unsettledOccurrence(let change): change.transaction.map { [$0.id] } ?? []
         case .addedAccount, .createdPayees, .removedPayees, .savedScheduledItem, .revertedScheduledItemSave: []
         }
     }
@@ -143,7 +151,7 @@ public enum TransactionChange: Equatable, Sendable {
         case .removedAccount(let removed): [removed.account.id]
         case .addedAccount(let id): [id]
         case .removed, .added, .replaced, .createdPayees, .removedPayees, .savedScheduledItem,
-            .revertedScheduledItemSave:
+            .revertedScheduledItemSave, .settledOccurrence, .unsettledOccurrence:
             []
         }
     }

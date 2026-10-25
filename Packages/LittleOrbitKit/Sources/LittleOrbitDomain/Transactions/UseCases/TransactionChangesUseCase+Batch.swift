@@ -183,7 +183,8 @@ extension DefaultTransactionChangesUseCase {
             return .saved(inverse, creating: PayeeCleanup.stored(restored, in: snapshot))
         case .replaced(let previous):
             return try revertingEdits(previous, expecting: outcome, in: &snapshot, now: now, progress: progress)
-        case .removed, .added, .removedAccount, .addedAccount, .savedScheduledItem, .revertedScheduledItemSave:
+        case .removed, .added, .removedAccount, .addedAccount, .savedScheduledItem, .revertedScheduledItemSave,
+            .settledOccurrence, .unsettledOccurrence:
             throw LedgerBatchUnsupported()
         }
     }

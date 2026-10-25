@@ -3,7 +3,7 @@
     import SwiftUI
 
     /// One scheduled item (#26: "tap an item for actions"): its amount and next due date, each overdue or due-today
-    /// occurrence with its own Pay Now and Skip This Occurrence (S76), what it records, then Edit and Delete. While
+    /// occurrence with its own Pay Now, Skip This Occurrence (S76) and Pay with Custom Date or Amount (D24), what it records, then Edit and Delete. While
     /// it's on top it presents the form, the confirmations and the alerts itself.
     struct ScheduledItemView: View {
         let model: ScheduledListViewModel
@@ -63,6 +63,7 @@
                                         .buttonStyle(.borderedProminent)
                                 }
                                 .buttonStyle(.bordered)
+                                Button(model.payCustomTitle) { model.openCustomPay(row) }
                             }
                         }
                     }

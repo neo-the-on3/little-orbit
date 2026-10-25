@@ -4,8 +4,9 @@ import Observation
 
 /// The Scheduled list (#26 design: Overdue, Due today, Upcoming, then Completed). Each missed occurrence has its own
 /// row with Pay Now and Skip (S76); Pay Now records today with the occurrence's own key, so paying it twice, or
-/// from two windows, records it once. Neither is an Undo step yet, and neither shows a toast (D290). It depends only
-/// on use-case protocols.
+/// from two windows, records it once. Pay with a custom date or amount records it the same way (D24). Each manual
+/// Pay or Skip is an Undo step in the window, "Pay Phone Plan" or "Skip Phone Plan", through `recordStep`; none
+/// shows a toast (D288.3, D290). It depends only on use-case protocols.
 @MainActor
 @Observable
 public final class ScheduledListViewModel {
@@ -19,6 +20,8 @@ public final class ScheduledListViewModel {
     public var form: ScheduledFormViewModel?
     /// Records a form save in this window's undo history, with its name, "New Scheduled Item Rent" or "Edit Rent",
     /// and the item's name for a stale alert (D351.1). The window sets it; without it, nothing is recorded.
+    /// The Pay with Custom Date or Amount sheet (D24).
+    public var payment: ScheduledPayViewModel?
     @ObservationIgnored public var recordStep: ScheduledStepRecorder = { _, _, _ in }
 
     /// The Scheduled screens on screen, in the order they appeared: the last one presents (see `presenter`).
@@ -39,7 +42,7 @@ public final class ScheduledListViewModel {
     @ObservationIgnored private(set) var leavingCheck: Task<Void, Never>?
     public let platform: ScheduledPlatform
 
-    @ObservationIgnored private let useCases: ScheduledScreenUseCases
+    @ObservationIgnored let useCases: ScheduledScreenUseCases
     @ObservationIgnored let locale: Locale
     /// The Mac Table's sections, built once per listing (Tech Architect NB 1), and its rows by ID.
     public internal(set) var tableSections: [ScheduledTableSection] = []
@@ -57,7 +60,7 @@ public final class ScheduledListViewModel {
             }
         }
     }
-    @ObservationIgnored private let changed: () -> Void
+    @ObservationIgnored let changed: () -> Void
 
     public init(
         useCases: ScheduledScreenUseCases,
@@ -188,6 +191,22 @@ public final class ScheduledListViewModel {
         }
         load()
         changed()
+    }
+
+    /// Runs a Pay or Skip and records it as this window's Undo step (D288.3). One another window settled first
+    /// records nothing and no step.
+    func settle(_ settlement: () throws -> ScheduledSettlementChange?) {
+        var change: ScheduledSettlementChange?
+        perform { change = try settlement() }
+        if let change {
+            recordSettlement(change)
+        }
+    }
+
+    /// "Pay Phone Plan" or "Skip Phone Plan", named as the list names the item (D288.3).
+    func recordSettlement(_ change: ScheduledSettlementChange) {
+        let name = rows.shortName(of: change.item)
+        recordStep(.settledOccurrence(change), ScheduledText.settlementStepName(change, name: name), name)
     }
 
     // MARK: Form

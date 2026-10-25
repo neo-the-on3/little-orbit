@@ -13,6 +13,11 @@ public struct ScheduledDue: Hashable, Sendable, Identifiable {
     public var id: String {
         "\(item.id.uuidString)|\(day.year)-\(day.month)-\(day.day)"
     }
+
+    /// An automatic item's occurrence whose Pay was undone: the user pays or skips it (D344).
+    public var waitsForUser: Bool {
+        item.occurrence(on: day)?.waitsForUser == true
+    }
 }
 
 /// The Scheduled screen's groups on one day (#26 design: Overdue, Due today, Upcoming, then Completed).
@@ -47,9 +52,10 @@ public struct ScheduledBoard: Equatable, Sendable {
     }
 
     /// Overdue occurrences that need the user, the badge's count (D106): automatic items are recorded at launch
-    /// before this is read, so they never count, and due today isn't overdue.
+    /// before this is read, so they never count, except an occurrence whose Pay was undone, which waits for the
+    /// user like a manual one (D344). Due today isn't overdue.
     public var overdueCount: Int {
-        overdue.filter { !$0.item.processesAutomatically }.count
+        overdue.filter { !$0.item.processesAutomatically || $0.waitsForUser }.count
     }
 
     /// Every item on the board, active or completed.
@@ -196,21 +202,42 @@ public struct ScheduledCatchUpNotice: Equatable, Sendable, Codable {
     }
 }
 
-/// Settling one occurrence by hand: Pay now records it, dated `postedOn`; Skip records nothing (#26).
+/// Pay with a custom date or amount (#26, D24): this payment's amount, account and category, and whether they also
+/// become the schedule's from now on ("Also change future occurrences", off by default). The anchor day and the due
+/// dates never change.
+public struct ScheduledCustomPayment: Hashable, Sendable {
+    public var amount: Decimal
+    /// The account the payment leaves (a transfer's From account).
+    public var accountID: UUID?
+    /// Ignored for a transfer, which has no category.
+    public var categoryID: UUID?
+    public var changesFutureOccurrences: Bool
+
+    public init(amount: Decimal, accountID: UUID?, categoryID: UUID?, changesFutureOccurrences: Bool = false) {
+        self.amount = amount
+        self.accountID = accountID
+        self.categoryID = categoryID
+        self.changesFutureOccurrences = changesFutureOccurrences
+    }
+}
+
+/// Settling one occurrence by hand: Pay records it, dated `postedOn`, from the item or with a custom payment;
+/// Skip records nothing (#26). Without "Also change future occurrences" only this payment changes: the schedule stays
+/// as it is (D24).
 public enum ScheduledSettlement: Hashable, Sendable {
-    case pay(itemID: UUID, occurrence: CalendarDay, postedOn: CalendarDay)
+    case pay(itemID: UUID, occurrence: CalendarDay, postedOn: CalendarDay, custom: ScheduledCustomPayment? = nil)
     case skip(itemID: UUID, occurrence: CalendarDay)
 
     public var itemID: UUID {
         switch self {
-        case .pay(let itemID, _, _), .skip(let itemID, _):
+        case .pay(let itemID, _, _, _), .skip(let itemID, _):
             itemID
         }
     }
 
     public var occurrence: CalendarDay {
         switch self {
-        case .pay(_, let day, _), .skip(_, let day):
+        case .pay(_, let day, _, _), .skip(_, let day):
             day
         }
     }

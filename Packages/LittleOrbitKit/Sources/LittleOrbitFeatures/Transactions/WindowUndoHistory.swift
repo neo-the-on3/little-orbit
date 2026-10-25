@@ -74,7 +74,7 @@ public final class WindowUndoHistory {
         let impact: ChangeImpact
         /// The account a whole-account step is about.
         let account: Account?
-        /// What a stale alert names when the step holds no transaction to name: a scheduled item (D351.1).
+        /// What a stale alert names when the step holds no transaction to name: a scheduled item (D351.1, D288.3).
         let subject: String?
         /// The name the `UndoManager` shows for it now.
         var title = ""
@@ -198,7 +198,8 @@ public final class WindowUndoHistory {
     /// Records a change the user just made in this window and returns its step's id. Any toast or notice
     /// closes (D164.2). Deleting an account replaces this window's steps for it with this one (D187.9). `name`
     /// replaces the name the change would get, and `subject` is what a stale alert names: a Scheduled form save
-    /// is "New Scheduled Item Rent", named for its item as the list shows it (D351.1).
+    /// is "New Scheduled Item Rent", and a scheduled Pay or Skip "Pay Phone Plan", each named for its item as the
+    /// list shows it (D351.1, D288.3).
     @discardableResult
     public func record(_ change: TransactionChange, named name: String? = nil, subject: String? = nil) -> UUID {
         let span = BatchTrace.begin("batch.record")
