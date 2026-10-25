@@ -67,7 +67,10 @@ public final class ScheduledFormViewModel: Identifiable {
         didSet { transferAccountChanged(from: oldValue) }
     }
     /// A transfer to an account in another currency: the amount that arrives, in To's currency (D17, #197 item 9).
-    public var receivedText: String
+    /// Editing it clears its old error, so an emptied required field shows the plain hint (Tech Architect NB 1 on #207).
+    public var receivedText: String {
+        didSet { receivedTextChanged(from: oldValue) }
+    }
     public var categoryID: UUID?
     /// The payee field's text. Typing an existing payee's name picks it; any other text picks none until its
     /// "Create “‹name›”" row is chosen (#197, #23).

@@ -228,6 +228,47 @@ struct ScheduledCrossCurrencyFormTests {
         #expect(try scene.repository.scheduleLedger().scheduledItems.first?.destinationAmount == 12)
     }
 
+    @Test(
+        "Tech Architect NB 1 on #207: clearing Received after a decimals error shows the plain hint, not the old error",
+        arguments: [
+            ScheduledPlatform.iOS, .macOS,
+        ],
+    )
+    func editingReceivedClearsItsError(platform: ScheduledPlatform) throws {
+        let scene = try scene()
+        let (_, form) = try newTransfer(scene, platform: platform)
+        form.transferAccountID = Self.yen.id
+        form.receivedText = "1.5"
+        #expect(form.canSave)
+        #expect(!form.save())
+        #expect(form.receivedError == "JPY amounts have no decimal places.")
+        #expect(form.receivedHint == nil)
+        // Clearing the field drops the stale error, so the hint shows and Save waits for it.
+        form.receivedText = ""
+        #expect(form.receivedError == nil)
+        #expect(form.receivedHint == "Enter the amount received in JPY.")
+        #expect(!form.canSave)
+        // Any edit clears it, not only an empty field: the next Save judges the new text.
+        form.receivedText = "1.5"
+        #expect(!form.save())
+        #expect(form.receivedError == "JPY amounts have no decimal places.")
+        form.receivedText = "1"
+        #expect(form.receivedError == nil)
+        #expect(form.receivedHint == nil)
+        // Setting the same text again isn't an edit, so it keeps the error.
+        form.receivedText = "1.5"
+        #expect(!form.save())
+        form.receivedText = "1.5"
+        #expect(form.receivedError == "JPY amounts have no decimal places.")
+        // To's currency change clears it too, and the new currency's hint shows.
+        form.transferAccountID = Self.wallet.id
+        #expect(form.receivedError == nil)
+        #expect(form.receivedHint == "Enter the amount received in USD.")
+        #expect(try scene.repository.scheduleLedger().scheduledItems.isEmpty)
+        form.receivedText = "12"
+        #expect(form.save())
+    }
+
     @Test("From and To are never the same account, in any currency")
     func fromChanges() throws {
         let scene = try scene()
