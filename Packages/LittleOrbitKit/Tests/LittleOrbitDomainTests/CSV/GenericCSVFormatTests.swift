@@ -80,6 +80,20 @@ struct GenericCSVFormatTests {
         #expect((rows[0].details?.count ?? 0) <= 100)
     }
 
+    @Test("A CRLF file's quoted line breaks read as LF, so no carriage return reaches the notes")
+    func crlfLineBreaks() throws {
+        let rows = try F.rows(
+            "Date,Amount,Description,Notes\r\n"
+                + "2026-10-20,-5,\"Tea\r\nand cake\",\"Line one\r\nline two\rline three\"\r\n"
+                + "2026-10-21,-6,Kiosk,'=Sum\r\n"
+        )
+        #expect(rows.count == 2)
+        #expect(rows[0].details == "Tea\nand cake")
+        #expect(rows[0].note == "Line one\nline two\nline three")
+        #expect(rows[0].note?.contains("\r") == false)
+        #expect(rows[1].note == "=Sum")
+    }
+
     @Test("A short row is missing columns; an unclosed quote is flagged")
     func malformed() throws {
         let rows = try F.rows("Date,Amount,Payee\n2026-10-20\n2026-10-21,-5,\"Corner\n")
