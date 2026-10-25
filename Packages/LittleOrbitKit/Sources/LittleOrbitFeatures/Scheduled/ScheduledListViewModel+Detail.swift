@@ -63,11 +63,16 @@ extension ScheduledListViewModel {
         )
     }
 
-    /// A completed item's last due date: its last occurrence, or the last one settled.
+    /// A completed item's last due date: its last occurrence, or the last one settled. When its whole run came
+    /// before it was created, so none was ever due, it's the rule's last date (Tester on #205).
     func lastDueDay(of item: ScheduledItem) -> CalendarDay? {
-        let through = item.endDay ?? (item.repeatRule.repeats ? listing.board.today : item.startDay)
-        let ruled = ScheduleCalendar.occurrences(of: item, through: max(through, item.startDay)).last
+        let through = max(
+            item.endDay ?? (item.repeatRule.repeats ? listing.board.today : item.startDay),
+            item.startDay,
+        )
+        let ruled = ScheduleCalendar.occurrences(of: item, through: through).last
         return [ruled, item.settledDays.max()].compactMap { $0 }.max()
+            ?? ScheduleCalendar.lastRuledDay(of: item, through: through)
     }
 
     private func fact(_ label: String, _ value: String?) -> ScheduledFact {

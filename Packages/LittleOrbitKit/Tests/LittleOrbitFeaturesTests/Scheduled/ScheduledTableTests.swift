@@ -149,6 +149,21 @@ struct ScheduledTableTests {
         #expect(list.tableRow(id: id)?.row.itemID == deposit.id)
     }
 
+    @Test("D355.3: a completed item whose whole run came before it was created shows its rule's last date")
+    func completedBeforeCreation() throws {
+        let scene = try ScheduledScene()
+        var pass = scene.item("Parking Pass", day: 28, month: 1)
+        pass.endDay = CalendarDay(year: 2026, month: 2, day: 28)
+        let created = CalendarDay(year: 2026, month: 7, day: 31)
+        pass.createdAt = ScheduledScene.date(created)
+        try scene.repository.saveScheduledItem(pass, today: created, now: ScheduledScene.date(created))
+        let list = macList(scene)
+        let row = try #require(list.tableSections.first { $0.kind == .completed }?.rows.first)
+        #expect(row.name == "Parking Pass")
+        #expect(row.due == "28 Feb")
+        #expect(row.status == "Ended")
+    }
+
     @Test("D365.2, D366: with notifications denied, only the notify part reads Notifications off")
     func notificationsDenied() throws {
         let scene = try ScheduledScene()

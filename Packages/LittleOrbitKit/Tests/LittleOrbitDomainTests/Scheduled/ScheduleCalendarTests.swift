@@ -97,6 +97,17 @@ struct ScheduleCalendarTests {
         #expect(ScheduleCalendar.occurrences(of: item, through: Fix.day(2030, 1, 1)) == [Fix.day(2026, 11, 1)])
     }
 
+    @Test("The rule's last day ignores the creation day, and stops at the end and at the given day")
+    func lastRuledDay() {
+        // Created 1 Jul 2026, after its whole run: no occurrence, but the rule's last date is 28 Feb.
+        let before = Fix.rent(start: Fix.day(2026, 1, 31), end: Fix.day(2026, 3, 15))
+        #expect(ScheduleCalendar.occurrences(of: before, through: Fix.day(2026, 10, 20)).isEmpty)
+        #expect(ScheduleCalendar.lastRuledDay(of: before, through: Fix.day(2026, 10, 20)) == Fix.day(2026, 2, 28))
+        #expect(ScheduleCalendar.lastRuledDay(of: before, through: Fix.day(2026, 1, 30)) == nil)
+        let once = Fix.rent(start: Fix.day(2026, 3, 1), rule: .never)
+        #expect(ScheduleCalendar.lastRuledDay(of: once, through: Fix.day(2026, 3, 1)) == Fix.day(2026, 3, 1))
+    }
+
     @Test("Occurrence keys are stable for an item and day, and differ for another day, item or record")
     func keys() {
         let id = UUID(uuidString: "5C000000-0000-4000-8000-0000000000AA")!

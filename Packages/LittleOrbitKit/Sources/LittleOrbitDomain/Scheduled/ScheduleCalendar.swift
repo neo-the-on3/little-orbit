@@ -77,6 +77,23 @@ public enum ScheduleCalendar {
         return days
     }
 
+    /// The rule's last day on or before `last` and the item's end, counting from its start with no creation floor.
+    /// A completed item whose whole run came before it was created has no occurrence, and shows this date as its
+    /// last one (Tester on #205).
+    public static func lastRuledDay(of item: ScheduledItem, through last: CalendarDay) -> CalendarDay? {
+        let limit = item.endDay.map { min($0, last) } ?? last
+        var found: CalendarDay?
+        var index = 0
+        while index < walkLimit, let day = occurrence(index, from: item.startDay, repeating: item.repeatRule) {
+            index += 1
+            guard day <= limit else {
+                break
+            }
+            found = day
+        }
+        return found
+    }
+
     /// The first occurrence on or after `first` that `isOpen` accepts, within the item's end date.
     public static func firstOccurrence(
         of item: ScheduledItem,
