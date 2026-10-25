@@ -114,7 +114,46 @@ public enum CSVText {
     }
 }
 
-/// An RFC 4180 reader. Fields are separated by the delimiter and records by CRLF, LF or CR. A field that
+/// One line break in CSV text: LF, CRLF, a lone CR, or a run of CRs before an LF. A file whose CRLF line endings
+/// were converted a second time has CR CR LF, which is still one break, so it adds no blank record, doesn't
+/// shift the row numbers after it and leaves no carriage return in a quoted cell.
+public enum CSVLineBreak {
+    /// How many scalars the line break at `index` spans, or 0 when there's none there.
+    public static func length(in scalars: [Unicode.Scalar], at index: Int) -> Int {
+        switch scalars[index] {
+        case "\n":
+            return 1
+        case "\r":
+            var end = index + 1
+            while end < scalars.count && scalars[end] == "\r" {
+                end += 1
+            }
+            return end < scalars.count && scalars[end] == "\n" ? end - index + 1 : 1
+        default:
+            return 0
+        }
+    }
+
+    /// `text` with each line break as one LF.
+    public static func normalized(_ text: String) -> String {
+        let scalars = Array(text.unicodeScalars)
+        var result = String.UnicodeScalarView()
+        var index = 0
+        while index < scalars.count {
+            let length = length(in: scalars, at: index)
+            if length > 0 {
+                result.append("\n")
+                index += length
+            } else {
+                result.append(scalars[index])
+                index += 1
+            }
+        }
+        return String(result)
+    }
+}
+
+/// An RFC 4180 reader. Fields are separated by the delimiter and records by a line break (`CSVLineBreak`). A field that
 /// starts with a double quote runs to the matching closing quote, so it may hold delimiters and line breaks,
 /// and `""` inside it is one quote. Quotes inside an unquoted field are kept as they are, and so is anything
 /// between a closing quote and the next delimiter, so a sloppy file still reads instead of failing whole.
@@ -175,8 +214,6 @@ public enum CSVReader {
         return best
     }
 
-    // One RFC 4180 state machine reads best as a single loop.
-    // swiftlint:disable:next cyclomatic_complexity
     private static func parse(_ scalars: [Unicode.Scalar], delimiter: Unicode.Scalar) -> [CSVRecord] {
         var records: [CSVRecord] = []
         var fields: [String] = []
@@ -226,9 +263,7 @@ public enum CSVReader {
                 recordHasContent = true
             case "\r", "\n":
                 endRecord()
-                if scalar == "\r" && index + 1 < scalars.count && scalars[index + 1] == "\n" {
-                    index += 1
-                }
+                index += CSVLineBreak.length(in: scalars, at: index) - 1
             default:
                 field.append(scalar)
                 atFieldStart = false

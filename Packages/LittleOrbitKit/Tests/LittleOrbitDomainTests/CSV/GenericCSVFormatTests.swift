@@ -94,6 +94,19 @@ struct GenericCSVFormatTests {
         #expect(rows[1].note == "=Sum")
     }
 
+    @Test("A CR CR LF inside a quoted cell is one LF, with no carriage return left over")
+    func doubledCarriageReturn() throws {
+        let rows = try F.rows(
+            "Date,Amount,Description,Notes\r\r\n"
+                + "2026-10-20,-5,\"a\r\r\nb\",\"Line one\r\r\nline two\r\rline four\"\r\r\n"
+        )
+        #expect(rows.count == 1)
+        #expect(rows[0].details == "a\nb")
+        #expect(rows[0].note == "Line one\nline two\n\nline four")
+        #expect(rows[0].note?.unicodeScalars.contains("\r") == false)
+        #expect(ImportText.lineBreaks("a\r\r\nb") == "a\nb")
+    }
+
     @Test("A short row is missing columns; an unclosed quote is flagged")
     func malformed() throws {
         let rows = try F.rows("Date,Amount,Payee\n2026-10-20\n2026-10-21,-5,\"Corner\n")
