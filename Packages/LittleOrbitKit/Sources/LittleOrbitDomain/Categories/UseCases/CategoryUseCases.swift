@@ -26,11 +26,24 @@ public struct CategoryDeletionImpact: Equatable, Sendable {
     public var splitLineCount: Int
     /// The category's live subcategories.
     public var subcategoryCount: Int
+    /// The names of the budgets that pick the category or one of its subcategories, sorted. Leaving their
+    /// transactions uncategorised drops it from each of them (D307.5, D295.1).
+    public var budgetNames: [String]
+    /// How many of those budgets the delete would leave with no categories (D307.5).
+    public var budgetsLeftWithoutCategories: Int
 
-    public init(transactionCount: Int, splitLineCount: Int, subcategoryCount: Int) {
+    public init(
+        transactionCount: Int,
+        splitLineCount: Int,
+        subcategoryCount: Int,
+        budgetNames: [String] = [],
+        budgetsLeftWithoutCategories: Int = 0,
+    ) {
         self.transactionCount = transactionCount
         self.splitLineCount = splitLineCount
         self.subcategoryCount = subcategoryCount
+        self.budgetNames = budgetNames
+        self.budgetsLeftWithoutCategories = budgetsLeftWithoutCategories
     }
 
     /// Nothing uses the category or its subcategories.
@@ -253,10 +266,20 @@ public struct DefaultCategoryManagementUseCase: CategoryManagementUseCase {
             .filter { split in
                 split.categoryID.map(subtree.contains) ?? false
             }
+        let categories = try repository.categories()
+        let liveIDs = Set(categories.filter { $0.deletedAt == nil }.map(\.id))
+        // Both stores serve budgets too; a repository without them has none to count.
+        let budgets = try (repository as? any BudgetRepository)?.budgets() ?? []
+        let affected = budgets.filter { $0.categoryIDs.contains(where: subtree.contains) }
+        let leftEmpty = affected.filter { budget in
+            budget.categoryIDs.allSatisfy { subtree.contains($0) || !liveIDs.contains($0) }
+        }
         return CategoryDeletionImpact(
             transactionCount: transactions.count,
             splitLineCount: splitLines.count,
             subcategoryCount: subtree.count - 1,
+            budgetNames: affected.map(\.name).sorted { $0.localizedStandardCompare($1) == .orderedAscending },
+            budgetsLeftWithoutCategories: leftEmpty.count,
         )
     }
 
