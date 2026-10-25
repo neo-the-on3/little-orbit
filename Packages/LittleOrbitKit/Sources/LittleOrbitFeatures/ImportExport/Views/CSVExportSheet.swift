@@ -78,7 +78,16 @@
                 }
             }
             #if os(macOS)
-                .frame(minWidth: 460, idealWidth: 520, minHeight: 480)
+                // No taller than a default-size window; the form scrolls when the account list runs longer
+                // (Tester's #190 Mac pass: the sheet ran past the window's bottom edge).
+                .frame(
+                    minWidth: 460,
+                    idealWidth: 520,
+                    maxWidth: .infinity,
+                    minHeight: 300,
+                    idealHeight: 400,
+                    maxHeight: .infinity,
+                )
             #endif
             .task { model.load() }
             .fileExporter(
@@ -102,7 +111,7 @@
                 isPresented: Binding(get: { model.alert != nil }, set: { if !$0 { model.alert = nil } }),
                 presenting: model.alert,
             ) { _ in
-                Button(ImportExportText.okay) {}
+                ImportAlertOKButton()
             } message: { alert in
                 Text(alert.message)
             }

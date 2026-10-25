@@ -74,10 +74,6 @@ enum ImportExportText {
         )
     }
 
-    static var importAction: String {
-        FeatureText.string("Import", comment: "CSV import Review: the toolbar button that saves the selected rows.")
-    }
-
     static var accountStep: String {
         FeatureText.string(
             "Account",

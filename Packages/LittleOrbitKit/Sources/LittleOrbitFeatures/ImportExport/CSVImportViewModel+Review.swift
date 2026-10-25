@@ -186,8 +186,13 @@ extension CSVImportViewModel {
         isUndone ? ImportExportText.undoneTitle : ImportExportText.importComplete
     }
 
+    /// “6 transactions imported”; after Undo Import, the confirmation's sentence naming the file, so the
+    /// summary no longer says anything was imported.
     public var importedText: String {
-        ImportExportText.imported(isUndone ? 0 : receipt?.importedCount ?? 0)
+        if isUndone, let receipt {
+            return ImportExportText.removedFromFile(receipt.fileName)
+        }
+        return ImportExportText.imported(receipt?.importedCount ?? 0)
     }
 
     /// The Also Created lines: “2 new accounts”, “5 new categories”, “12 new payees”.

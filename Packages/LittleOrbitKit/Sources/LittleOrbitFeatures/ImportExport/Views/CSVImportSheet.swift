@@ -42,7 +42,15 @@
                 }
             }
             #if os(macOS)
-                .frame(minWidth: 520, idealWidth: 600, minHeight: 560, idealHeight: 680)
+                // Small enough for a default-size window; the form scrolls when the steps run longer.
+                .frame(
+                    minWidth: 520,
+                    idealWidth: 600,
+                    maxWidth: .infinity,
+                    minHeight: 320,
+                    idealHeight: 420,
+                    maxHeight: .infinity,
+                )
             #endif
             // Nothing is saved before Import, but the user's column and match choices would be lost.
             .interactiveDismissDisabled(model.step != .summary)
@@ -51,7 +59,7 @@
                 isPresented: Binding(get: { model.alert != nil }, set: { if !$0 { model.alert = nil } }),
                 presenting: model.alert,
             ) { _ in
-                Button(ImportExportText.okay) {}
+                ImportAlertOKButton()
             } message: { alert in
                 Text(alert.message)
             }
@@ -87,11 +95,10 @@
                             .disabled(model.isWorking)
                     }
                 }
-                ToolbarItem(placement: .confirmationAction) {
-                    if model.step == .review {
-                        Button(ImportExportText.importAction) { Task { await model.commit() } }
-                            .disabled(!model.canImport)
-                    } else {
+                // Review saves with its own “Import N Transactions” button at the end of the page, so there's one
+                // Import button, not a second one here (Tester's #190 Mac pass).
+                if model.step != .review {
+                    ToolbarItem(placement: .confirmationAction) {
                         Button(ImportExportText.next) { Task { await model.next() } }
                             .disabled(!model.canGoNext || model.isWorking)
                     }
@@ -263,6 +270,7 @@
             rows(ImportExportText.cantImportSection, model.failedRows, selected: false)
             Section {
                 Button(model.importTitle) { Task { await model.commit() } }
+                    .keyboardShortcut(.defaultAction)
                     .disabled(!model.canImport)
             } footer: {
                 Text(ImportExportText.nothingSaved)

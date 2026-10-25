@@ -197,8 +197,13 @@ extension ImportExportText {
     /// D281 and D323.8: “Everything this import added from “bank.csv” is removed.”, then “That includes …”
     /// when the import created anything, then “Nothing else changes.” Each sentence is its own entry. D281’s
     /// “Import rules are kept.” waits for import rules (#37).
+    /// D281: names the file. The confirmation's first sentence, and the summary's line under “Import Undone”.
+    static func removedFromFile(_ fileName: String) -> String {
+        FeatureText.format("Everything this import added from “%@” is removed.", fileName)
+    }
+
     static func undoMessage(fileName: String, created: [String], locale: Locale) -> String {
-        let removed = FeatureText.format("Everything this import added from “%@” is removed.", fileName)
+        let removed = removedFromFile(fileName)
         let rest = FeatureText.string(
             "Nothing else changes.",
             comment: "Undo Import confirmation: the message’s last sentence (D281, D323.8).",
