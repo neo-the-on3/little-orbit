@@ -43,9 +43,7 @@
                                     Text(verbatim: row.dateText)
                                     Spacer()
                                     Button(model.skipTitle) { model.confirmSkip(row) }
-                                        .accessibilityLabel(Text(model.skipTitle))
                                     Button(model.payNowTitle) { model.payNow(row) }
-                                        .accessibilityLabel(Text(model.payNowTitle))
                                         .buttonStyle(.borderedProminent)
                                 }
                                 .buttonStyle(.bordered)
@@ -62,6 +60,9 @@
                         Button(model.deleteTitle, role: .destructive) { model.confirmDelete(itemID) }
                     }
                 }
+                // Grouped, like the app's other forms: on the Mac each row spans the detail column, so the date
+                // stays on the left and Skip and Pay Now sit inside its trailing edge (Tester's 8a99da5 Mac pass).
+                .formStyle(.grouped)
                 .navigationTitle(Text(verbatim: detail.title))
             } else {
                 // Deleted here or in another window.
