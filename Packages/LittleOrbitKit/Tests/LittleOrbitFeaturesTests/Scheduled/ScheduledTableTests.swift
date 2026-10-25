@@ -225,7 +225,49 @@ struct ScheduledTableTests {
         }
     }
 
-    @Test("D356.2, D357, D368: each long Repeat form, at an interval of 1 and of N")
+    @Test(
+        "D368.1, D370: every-N 29th or 30th and 29 February read “or last day” on the Mac; iOS keeps its short names",
+        arguments: [ScheduledPlatform.macOS, .iOS],
+    )
+    func orLastDayRules(platform: ScheduledPlatform) throws {
+        let scene = try ScheduledScene()
+        func item(_ name: String, _ rule: ScheduleRepeat, _ year: Int, _ month: Int, _ day: Int) -> ScheduledItem {
+            var item = scene.item(name, day: day, month: month)
+            item.startDay = CalendarDay(year: year, month: month, day: day)
+            item.repeatRule = rule
+            return item
+        }
+        try scene.add(
+            item("Rent", .every(3, .month), 2026, 11, 30),
+            item("Gym", .every(2, .month), 2026, 11, 29),
+            item("Membership", .yearly, 2028, 2, 29),
+            item("Licence", .every(4, .year), 2028, 2, 29),
+            item("Insurance", .yearly, 2027, 2, 28),
+        )
+        let list = ScheduledListViewModel(useCases: scene.useCases, locale: Self.locale, platform: platform)
+        list.load()
+        switch platform {
+        case .macOS:
+            let repeats = Dictionary(
+                uniqueKeysWithValues: list.tableSections.flatMap(\.rows).map { ($0.name, $0.repeatText) }
+            )
+            #expect(repeats["Rent"] == "Every 3 months on the 30th or last day")
+            #expect(repeats["Gym"] == "Every 2 months on the 29th or last day")
+            #expect(repeats["Membership"] == "Yearly on 29 February or last day of February")
+            #expect(repeats["Licence"] == "Every 4 years on 29 February or last day of February")
+            #expect(repeats["Insurance"] == "Yearly on 28 February")
+        case .iOS:
+            #expect(list.tableSections.isEmpty)
+            let details = Dictionary(uniqueKeysWithValues: list.upcomingRows.map { ($0.title, $0.detail) })
+            #expect(details["Rent"] == "Every 3 months · Everyday Savings")
+            #expect(details["Gym"] == "Every 2 months · Everyday Savings")
+            #expect(details["Membership"] == "Yearly · Everyday Savings")
+            #expect(details["Licence"] == "Every 4 years · Everyday Savings")
+            #expect(details["Insurance"] == "Yearly · Everyday Savings")
+        }
+    }
+
+    @Test("D356.2, D357, D368, D370: each long Repeat form, at an interval of 1 and of N")
     func longRepeat() throws {
         let scene = try ScheduledScene()
         func text(_ rule: ScheduleRepeat, _ year: Int, _ month: Int, _ day: Int) -> String {
@@ -245,12 +287,16 @@ struct ScheduledTableTests {
         #expect(text(.monthly, 2026, 10, 28) == "Monthly on the 28th")
         #expect(text(.monthly, 2026, 10, 29) == "Monthly on the 29th or last day")
         #expect(text(.monthly, 2026, 10, 30) == "Monthly on the 30th or last day")
-        #expect(text(.every(2, .month), 2026, 10, 30) == "Every 2 months on the 30th")
         #expect(text(.every(2, .month), 2026, 10, 22) == "Every 2 months on the 22nd")
         #expect(text(.monthly, 2026, 10, 31) == "Monthly on the last day")
         #expect(text(.every(3, .month), 2026, 10, 31) == "Every 3 months on the last day")
         #expect(text(.yearly, 2026, 3, 15) == "Yearly on 15 March")
-        #expect(text(.every(2, .year), 2028, 2, 29) == "Every 2 years on 29 February")
+        #expect(text(.every(2, .month), 2026, 10, 29) == "Every 2 months on the 29th or last day")
+        #expect(text(.every(2, .month), 2026, 10, 30) == "Every 2 months on the 30th or last day")
+        #expect(text(.every(3, .month), 2026, 10, 30) == "Every 3 months on the 30th or last day")
+        #expect(text(.yearly, 2028, 2, 28) == "Yearly on 28 February")
+        #expect(text(.yearly, 2028, 2, 29) == "Yearly on 29 February or last day of February")
+        #expect(text(.every(2, .year), 2028, 2, 29) == "Every 2 years on 29 February or last day of February")
     }
 
     @Test("D340.13, NB 3: the footer's counts are plurals that show their number")

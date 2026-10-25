@@ -10053,11 +10053,95 @@
     "Monthly on the %@ or last day": {
       "comment": "Mac Scheduled Table Repeat column: every month on the 29th or 30th, when a month may be shorter and the item falls on its last day instead. %@ is the day of the month as an ordinal, for example “30th” (D368).",
       "extractionState": "manual",
+      "generatesSymbol": false,
       "localizations": {
         "en": {
           "stringUnit": {
             "state": "translated",
             "value": "Monthly on the %@ or last day"
+          }
+        }
+      }
+    },
+    "Every %1$lld months on the %2$@ or last day": {
+      "comment": "Mac Scheduled Table Repeat column, used when a month may be shorter: every N months on the 29th or 30th, or the month’s last day when it’s shorter. %1$lld is the number of months between due dates, 2 or more; %2$@ is the day of the month as an ordinal, for example “30th” (D368.1).",
+      "extractionState": "manual",
+      "generatesSymbol": false,
+      "localizations": {
+        "en": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "%#@count@"
+          },
+          "substitutions": {
+            "count": {
+              "argNum": 1,
+              "formatSpecifier": "lld",
+              "variations": {
+                "plural": {
+                  "one": {
+                    "stringUnit": {
+                      "state": "translated",
+                      "value": "Every %1$lld month on the %2$@ or last day"
+                    }
+                  },
+                  "other": {
+                    "stringUnit": {
+                      "state": "translated",
+                      "value": "Every %1$lld months on the %2$@ or last day"
+                    }
+                  }
+                }
+              }
+            }
+          }
+        }
+      }
+    },
+    "Yearly on %@ or last day of February": {
+      "comment": "Mac Scheduled Table Repeat column: every year on 29 February, or 28 February in a year that isn’t a leap year. %@ is the day and month, for example “29 February”, formatted as in “Yearly on %@” (D370).",
+      "extractionState": "manual",
+      "generatesSymbol": false,
+      "localizations": {
+        "en": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Yearly on %@ or last day of February"
+          }
+        }
+      }
+    },
+    "Every %1$lld years on %2$@ or last day of February": {
+      "comment": "Mac Scheduled Table Repeat column: every N years on 29 February, or 28 February in a year that isn’t a leap year. %1$lld is the number of years between due dates, 2 or more; %2$@ is the day and month, for example “29 February” (D370).",
+      "extractionState": "manual",
+      "generatesSymbol": false,
+      "localizations": {
+        "en": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "%#@count@"
+          },
+          "substitutions": {
+            "count": {
+              "argNum": 1,
+              "formatSpecifier": "lld",
+              "variations": {
+                "plural": {
+                  "one": {
+                    "stringUnit": {
+                      "state": "translated",
+                      "value": "Every %1$lld year on %2$@ or last day of February"
+                    }
+                  },
+                  "other": {
+                    "stringUnit": {
+                      "state": "translated",
+                      "value": "Every %1$lld years on %2$@ or last day of February"
+                    }
+                  }
+                }
+              }
+            }
           }
         }
       }

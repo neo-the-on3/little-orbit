@@ -1,7 +1,7 @@
 import Foundation
 import LittleOrbitDomain
 
-/// The Mac Table's long Repeat forms (D356.2, D357). An interval of 1 has its own key and never reads "Every 1 …";
+/// The Mac Table's long Repeat forms (D356.2, D357, D368, D370). An interval of 1 has its own key and never reads "Every 1 …";
 /// every-N keys are whole-phrase plurals whose forms all show the number. iOS rows and the form's picker keep
 /// D334.4's short names.
 extension ScheduledText {
@@ -46,12 +46,39 @@ extension ScheduledText {
         )
     }
 
+    /// "Every 3 months on the 30th or last day" (D368.1).
+    static func everyMonthsOnTheOrLastDay(_ count: Int, _ ordinal: String) -> String {
+        FeatureText.pluralFormat(
+            "Every %1$lld months on the %2$@ or last day",
+            one: "Every %1$lld month on the %2$@ or last day",
+            count: count,
+            count,
+            ordinal,
+        )
+    }
+
     static func everyMonthsOnTheLastDay(_ count: Int) -> String {
         FeatureText.plural("Every %lld months on the last day", one: "Every %lld month on the last day", count)
     }
 
     static func yearlyOn(_ dayAndMonth: String) -> String {
         FeatureText.format("Yearly on %@", dayAndMonth)
+    }
+
+    /// "Yearly on 29 February or last day of February" (D370).
+    static func yearlyOnOrLastDayOfFebruary(_ dayAndMonth: String) -> String {
+        FeatureText.format("Yearly on %@ or last day of February", dayAndMonth)
+    }
+
+    /// "Every 4 years on 29 February or last day of February" (D370).
+    static func everyYearsOnOrLastDayOfFebruary(_ count: Int, _ dayAndMonth: String) -> String {
+        FeatureText.pluralFormat(
+            "Every %1$lld years on %2$@ or last day of February",
+            one: "Every %1$lld year on %2$@ or last day of February",
+            count: count,
+            count,
+            dayAndMonth,
+        )
     }
 
     static func everyYearsOn(_ count: Int, _ dayAndMonth: String) -> String {
@@ -85,16 +112,33 @@ enum ScheduledRepeatText {
                 return count == 1
                     ? ScheduledText.monthlyOnTheLastDay : ScheduledText.everyMonthsOnTheLastDay(count)
             }
-            let ordinal = ordinal(anchor.day, locale: locale)
-            if count == 1 {
-                // The 29th or 30th: some months are shorter (D368).
-                return anchor.day >= 29
-                    ? ScheduledText.monthlyOnTheOrLastDay(ordinal) : ScheduledText.monthlyOnThe(ordinal)
-            }
-            return ScheduledText.everyMonthsOnThe(count, ordinal)
+            return monthly(count, on: anchor.day, locale: locale)
         case .year:
-            let dayAndMonth = dayAndMonth(anchor, locale: locale)
-            return count == 1 ? ScheduledText.yearlyOn(dayAndMonth) : ScheduledText.everyYearsOn(count, dayAndMonth)
+            return yearly(count, on: anchor, locale: locale)
+        }
+    }
+
+    /// "Monthly on the 15th"; on the 29th or 30th, which some months are too short for, "… or last day" (D368,
+    /// D368.1).
+    private static func monthly(_ count: Int, on day: Int, locale: Locale) -> String {
+        let ordinal = ordinal(day, locale: locale)
+        switch (count == 1, day >= 29) {
+        case (true, true): return ScheduledText.monthlyOnTheOrLastDay(ordinal)
+        case (true, false): return ScheduledText.monthlyOnThe(ordinal)
+        case (false, true): return ScheduledText.everyMonthsOnTheOrLastDay(count, ordinal)
+        case (false, false): return ScheduledText.everyMonthsOnThe(count, ordinal)
+        }
+    }
+
+    /// "Yearly on 15 March"; on 29 February, "… or last day of February" (D370).
+    private static func yearly(_ count: Int, on anchor: CalendarDay, locale: Locale) -> String {
+        let dayAndMonth = dayAndMonth(anchor, locale: locale)
+        let leapDay = anchor.month == 2 && anchor.day == 29
+        switch (count == 1, leapDay) {
+        case (true, true): return ScheduledText.yearlyOnOrLastDayOfFebruary(dayAndMonth)
+        case (true, false): return ScheduledText.yearlyOn(dayAndMonth)
+        case (false, true): return ScheduledText.everyYearsOnOrLastDayOfFebruary(count, dayAndMonth)
+        case (false, false): return ScheduledText.everyYearsOn(count, dayAndMonth)
         }
     }
 
