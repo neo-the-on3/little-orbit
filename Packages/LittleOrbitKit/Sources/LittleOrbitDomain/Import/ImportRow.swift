@@ -70,6 +70,39 @@ public enum ImportRowIssue: Equatable, Hashable, Sendable {
     case currencyMismatch(accountCurrency: String)
     /// An account, category or payee name over 100 characters.
     case nameTooLong(ImportField)
+    /// Two halves of one transfer between accounts in the same currency, with different amounts (D330).
+    case transferAmountsMismatch
+    /// More than one row is equally close to be this transfer's other half, and they'd make different
+    /// transfers (D330).
+    case ambiguousTransferHalf
+}
+
+extension ImportRowIssue {
+    /// The field a reason is about, for formats that list reasons in a fixed field order (D111), or `nil` when
+    /// it's about the whole row, which comes first.
+    public var field: ImportField? {
+        switch self {
+        case .missingColumns, .unclosedQuote: nil
+        case .missingDate, .unreadableDate, .ambiguousTransferHalf: .date
+        case .unknownType: .type
+        case .missingAccount: .account
+        case .missingToAccount, .sameTransferAccount: .toAccount
+        case .missingAmount, .unreadableAmount, .zeroAmount, .conflictingAmounts, .tooManyDecimalPlaces,
+            .transferAmountsMismatch:
+            .amount
+        case .unreadableDestinationAmount, .destinationAmountRequired, .destinationAmountMismatch: .destinationAmount
+        case .unknownCurrency, .currencyMismatch: .currency
+        case .nameTooLong(let field): field
+        }
+    }
+}
+
+/// Which fields an “Already imported” match compares, besides the account, type, amount and moment.
+public enum ImportExactMatch: Equatable, Hashable, Sendable {
+    /// #30: the category, payee, description, notes and destination too (D42).
+    case everyField
+    /// #60: the category and notes too, so payee and description are left out (D324.2).
+    case categoryAndNotes
 }
 
 /// Something about a row that still imports (D105, D114).
@@ -78,6 +111,15 @@ public enum ImportRowWarning: Equatable, Hashable, Sendable {
     case descriptionShortened
     /// The notes were cut to 2,000 characters (D38.6, D114).
     case notesShortened
+}
+
+/// Which half of a transfer a file's row is, for a format that lists a transfer once under each of its accounts
+/// (#60). The planner pairs the halves once the accounts are matched (D330).
+public enum ImportTransferHalf: Equatable, Hashable, Sendable {
+    /// The row's amount left its account: a negative amount in Debit & Credit.
+    case outgoing
+    /// The row's amount came into its account: a positive amount in Debit & Credit.
+    case incoming
 }
 
 /// One data row read from a file by an `ImportFormat`, before it's matched against the ledger. Every format
@@ -101,13 +143,23 @@ public struct ImportRow: Equatable, Sendable, Identifiable {
     /// Reasons it can't be imported, found while reading. Matching can add more.
     public var issues: [ImportRowIssue]
     public var warnings: [ImportRowWarning]
-    /// Rows this one stands for besides itself, such as the other half of a transfer a format paired (#60).
+    /// Rows this one stands for besides itself, such as the other half of a transfer the planner paired (#60).
     public var mergedRowNumbers: [Int]
+    /// For a transfer half the planner should pair with its other half (#60, D330); `nil` for every other row.
+    /// `accountName` and `toAccountName` are already in the transfer's direction.
+    public var transferHalf: ImportTransferHalf?
+    /// A transfer half's Date and Amount columns, so a pairing reason can show the file's value (D323.3, D330).
+    public var transferColumns: [ImportField: Int]
     /// The column the first of `issues` is about, so Review can show its header and raw value (D323.3, D349),
     /// or `nil` when that issue is about the whole row.
     public var issueColumn: Int?
     /// The columns the checked values came from, so a reason found after reading can name its cell (D349.1).
     public var columns: ImportRowColumns
+    /// When not empty, the fixed order reasons are listed in, including those matching adds (D111). Empty keeps
+    /// the order they were found in.
+    public var issueOrder: [ImportField]
+    /// What an “Already imported” match compares for this row's format.
+    public var exactMatch: ImportExactMatch
 
     public var id: Int {
         rowNumber
@@ -129,8 +181,12 @@ public struct ImportRow: Equatable, Sendable, Identifiable {
         issues: [ImportRowIssue] = [],
         warnings: [ImportRowWarning] = [],
         mergedRowNumbers: [Int] = [],
+        transferHalf: ImportTransferHalf? = nil,
+        transferColumns: [ImportField: Int] = [:],
         issueColumn: Int? = nil,
         columns: ImportRowColumns = ImportRowColumns(),
+        issueOrder: [ImportField] = [],
+        exactMatch: ImportExactMatch = .everyField,
     ) {
         self.rowNumber = rowNumber
         self.kind = kind
@@ -147,8 +203,28 @@ public struct ImportRow: Equatable, Sendable, Identifiable {
         self.issues = issues
         self.warnings = warnings
         self.mergedRowNumbers = mergedRowNumbers
+        self.transferHalf = transferHalf
+        self.transferColumns = transferColumns
         self.issueColumn = issueColumn
         self.columns = columns
+        self.issueOrder = issueOrder
+        self.exactMatch = exactMatch
+    }
+
+    /// `issues` in `issueOrder`, reasons about the whole row first; the order found is kept within a field.
+    func issuesInFieldOrder(_ issues: [ImportRowIssue]) -> [ImportRowIssue] {
+        guard !issueOrder.isEmpty else {
+            return issues
+        }
+        func rank(_ issue: ImportRowIssue) -> Int {
+            guard let field = issue.field else {
+                return -1
+            }
+            return issueOrder.firstIndex(of: field) ?? issueOrder.count
+        }
+        return issues.enumerated()
+            .sorted { (rank($0.element), $0.offset) < (rank($1.element), $1.offset) }
+            .map(\.element)
     }
 }
 
