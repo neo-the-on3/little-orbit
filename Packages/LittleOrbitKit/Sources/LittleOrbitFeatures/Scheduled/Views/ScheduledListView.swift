@@ -49,8 +49,9 @@
                 if let hint = model.catchUpHint {
                     Section {
                         Label(hint, systemImage: "info.circle")
-                            // Shown only once it's really on screen, not when the list loads (D338.6).
-                            .onAppear { model.catchUpHintAppeared() }
+                            // Shown only once it's really on screen, not when the list loads, and again for a new
+                            // catch-up's hint that replaces it in place (D338.6, Tech Architect #198 NB2).
+                            .task(id: hint) { model.catchUpHintAppeared() }
                     }
                 }
                 if !model.overdueRows.isEmpty {

@@ -149,7 +149,8 @@ public final class ScheduledListViewModel {
         pendingCatchUp = []
     }
 
-    /// The hint row appeared on screen: only now does the hint count as shown (D338.6).
+    /// The hint row appeared on screen, or its wording changed while on screen: only now does the hint count as
+    /// shown (D338.6). The view calls it for each hint it draws, so a new catch-up's hint is marked too.
     public func catchUpHintAppeared() {
         guard loaded, catchUpHint != nil else {
             return

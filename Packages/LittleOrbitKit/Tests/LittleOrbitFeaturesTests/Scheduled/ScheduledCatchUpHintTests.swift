@@ -234,6 +234,31 @@ struct ScheduledCatchUpHintTests {
         #expect(list.catchUpHint == nil)
     }
 
+    @Test("Tech Architect #198 NB2: a new catch-up while the hint is on screen is shown once its wording is drawn")
+    func secondCatchUpWhileOnScreen() async throws {
+        let scene = try ScheduledScene()
+        try scene.add(scene.item("Rent", day: 1, automatic: true))
+        let feature = scene.feature()
+        feature.catchUp(atLaunch: true)
+        let list = Self.visit(feature)
+        let first = list.catchUpHint
+        list.catchUpHintAppeared()
+        #expect(scene.notices.notice()?.shown == true)
+        // The app becomes active on 2 Nov with the list still on screen: the hint's wording changes in place.
+        scene.now = ScheduledScene.date(CalendarDay(year: 2026, month: 11, day: 2))
+        feature.catchUp(atLaunch: false)
+        list.load()
+        #expect(list.catchUpHint != nil && list.catchUpHint != first)
+        #expect(scene.notices.notice()?.shown == false)
+        // The row's task(id: hint) reports the new wording drawn: now it counts as shown.
+        list.catchUpHintAppeared()
+        #expect(scene.notices.notice()?.shown == true)
+        // Leaving ends it, so the next visit shows nothing.
+        await Self.leave(list)
+        #expect(scene.notices.notice() == nil)
+        #expect(Self.visit(feature).catchUpHint == nil)
+    }
+
     @Test("Tech Architect NB 1: a restore clears a pending catch-up hint")
     func restoreClearsTheHint() throws {
         let scene = try ScheduledScene()
