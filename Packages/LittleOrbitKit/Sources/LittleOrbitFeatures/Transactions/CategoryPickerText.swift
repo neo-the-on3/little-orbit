@@ -19,7 +19,8 @@ enum CategoryPickerText {
     static var uncategorised: String {
         FeatureText.string(
             "Uncategorised",
-            comment: "Transaction form category picker: the row that saves the transaction without a category.",
+            comment:
+                "The row for no category: in the transaction form's category picker it saves the transaction without one; in the spending report it's the row, and its drill-down's title, for spending with no category.",
         )
     }
 

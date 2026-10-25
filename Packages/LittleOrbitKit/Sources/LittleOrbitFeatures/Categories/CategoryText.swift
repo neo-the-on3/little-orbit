@@ -13,7 +13,11 @@ enum CategoryText {
     static func kindName(_ kind: CategoryKind) -> String {
         switch kind {
         case .expense:
-            FeatureText.string("Expense", comment: "A category's kind, and the Categories screen's Expense tab.")
+            FeatureText.string(
+                "Expense",
+                comment:
+                    "A category's kind, the Categories screen's Expense tab, and the spending drill-down's title for an expense with no payee or description.",
+            )
         case .income:
             FeatureText.string("Income", comment: "A category's kind, and the Categories screen's Income tab.")
         }
