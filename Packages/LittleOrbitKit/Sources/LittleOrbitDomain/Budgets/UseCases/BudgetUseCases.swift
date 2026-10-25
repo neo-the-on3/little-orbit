@@ -64,6 +64,15 @@ public protocol BudgetChangesUseCase {
     /// budget as it was, so Undo puts it back with the same ID, categories and limit history (Delete Budget,
     /// D307.8). Throws `missingBudget` when it's already gone.
     func deletedChange(of budgetID: UUID) throws -> BudgetChange
+    /// Saves a copy of the budget and returns the change, `.added` with the copy's ID (macOS Duplicate Budget,
+    /// D307.6, D307.8). The copy has every setting and the whole limit history, under new IDs, so its periods
+    /// match the original's. Its name is `naming(original, n)` for the first n from 1 that no other budget has,
+    /// under the one name rule (`budgetNameClash`): the caller words it (“Eating out copy”, “Eating out copy 2”).
+    /// When that would be over the 100-character limit, `original` is the original's name shortened, counted in
+    /// characters as they're seen and trimmed of trailing spaces, so the caller's “ copy” or “ copy N” stays whole
+    /// and a copy is never too long (D313.2). Throws `missingBudget` when the budget is gone, and the save's errors,
+    /// such as `budgetCategoriesRequired` for a budget with no categories left (D307.5).
+    func duplicatedChange(of budgetID: UUID, naming: (String, Int) -> String) throws -> BudgetChange
     /// What `change` left in the ledger, read right after it was made or reverted, for the stale check.
     func outcome(of change: BudgetChange) throws -> BudgetChangeOutcome
     /// Reverts `change` if the ledger still holds `outcome`, by value; otherwise writes nothing and says why
@@ -187,6 +196,57 @@ public final class DefaultBudgetUseCases: BudgetUseCase {
         let previous = try budget(budgetID, in: repository.budgetLedger())
         try delete(budgetID)
         return .removed(previous)
+    }
+
+    public func duplicatedChange(of budgetID: UUID, naming: (String, Int) -> String) throws -> BudgetChange {
+        let ledger = try repository.budgetLedger()
+        let original = try budget(budgetID, in: ledger)
+        let copyID = UUID()
+        // One more number than there are budgets always finds a free name, under the one name rule.
+        var number = 1
+        var name = Self.fittedName(original.name, number: number, naming: naming)
+        while LedgerBook.budgetNameClash(name, excluding: copyID, in: ledger) != nil,
+            number <= ledger.budgetsVisible().count
+        {
+            number += 1
+            name = Self.fittedName(original.name, number: number, naming: naming)
+        }
+        // Intended: every limit of the copy is a new record created now, also those it copies for earlier periods.
+        // Periods pick a limit by its start day, never by createdAt, so the history keeps its order and the copy's
+        // figures match the original's.
+        let created = now()
+        let copy = Budget(
+            id: copyID,
+            name: name,
+            currencyCode: original.currencyCode,
+            categoryIDs: original.categoryIDs,
+            startDay: original.startDay,
+            recurrence: original.recurrence,
+            limits: original.orderedLimits.map {
+                BudgetLimit(startDay: $0.startDay, amount: $0.amount, createdAt: created)
+            },
+            carriesOverUnspent: original.carriesOverUnspent,
+            carriesOverOverspending: original.carriesOverOverspending,
+            createdAt: created,
+        )
+        try repository.saveBudget(copy)
+        return .added(copy.id)
+    }
+
+    /// `naming(name, number)`, with `name` shortened from its end until the result fits the name limit (D313.2).
+    /// It's counted in characters as they're seen, so an emoji or an accented letter is kept or dropped whole, and
+    /// trailing spaces left at the cut are trimmed. What `naming` adds, such as “ copy 2”, is never cut.
+    static func fittedName(_ name: String, number: Int, naming: (String, Int) -> String) -> String {
+        var base = Substring(LedgerText.trimmed(name))
+        var fitted = naming(String(base), number)
+        while LedgerText.trimmed(fitted).count > LedgerText.nameLimit, !base.isEmpty {
+            base = base.dropLast(max(1, LedgerText.trimmed(fitted).count - LedgerText.nameLimit))
+            while base.last?.isWhitespace == true {
+                base = base.dropLast()
+            }
+            fitted = naming(String(base), number)
+        }
+        return fitted
     }
 
     public func outcome(of change: BudgetChange) throws -> BudgetChangeOutcome {
