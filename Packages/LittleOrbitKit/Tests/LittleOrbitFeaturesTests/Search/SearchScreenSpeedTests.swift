@@ -4,7 +4,8 @@ import LittleOrbitFeatures
 import Testing
 
 /// #28's criterion, results in under 500 ms at 10,000 transactions (#187, S25), for the whole step the screen
-/// runs after a save while the list is unfiltered (Tech Architect #188 NB1). Debug builds on CI are slower
+/// runs: searching the kept copy and building its rows, day headers, summary and table. Also a save while the
+/// list is unfiltered (Tech Architect #188 NB1) and a change of the table's sort. Debug builds on CI are slower
 /// than the app's release build, so passing here leaves room; Tester's timing in the Mac app is the device check.
 /// All names and amounts are made up.
 @MainActor
@@ -76,6 +77,7 @@ struct SearchScreenSpeedTests {
     private func model(_ store: Store, updates: LedgerUpdates) -> TransactionSearchViewModel {
         TransactionSearchViewModel(
             search: store,
+            exporting: DefaultExportSearchResultsUseCase(),
             updates: updates,
             locale: F.india,
             timeZone: F.zone,
@@ -86,6 +88,22 @@ struct SearchScreenSpeedTests {
 
     private static func milliseconds(_ duration: Duration) -> Int {
         Int(Double(duration.components.seconds) * 1e3 + Double(duration.components.attoseconds) / 1e15)
+    }
+
+    @Test("S25: typing “coffee” letter by letter, each update over 10,000 transactions is under 500 ms")
+    func typing() {
+        let store = Store(Self.snapshot())
+        let model = model(store, updates: LedgerUpdates())
+        model.load()
+        #expect(model.summary?.countText == "10,000 results")
+        let clock = ContinuousClock()
+        for text in ["c", "co", "cof", "coff", "coffe", "coffee", "category:Coffee year:2025", "zzzz", ""] {
+            model.query = text
+            let elapsed = clock.measure { model.load() }
+            print("Search screen speed: “\(text)” in \(Self.milliseconds(elapsed)) ms")
+            #expect(elapsed < Self.bound, "“\(text)” took \(elapsed)")
+        }
+        #expect(store.reads == 1)
     }
 
     @Test("NB1: a save while the list of 10,000 is unfiltered updates in under 500 ms, rows matching a fresh build")
@@ -111,7 +129,26 @@ struct SearchScreenSpeedTests {
         let fresh = self.model(store, updates: updates)
         fresh.load()
         #expect(model.sections == fresh.sections, "Carried rows match a fresh build")
+        #expect(model.tableSections == fresh.tableSections, "Carried table cells match a fresh build")
         let titles = model.sections.flatMap(\.rows).map(\.title)
         #expect(titles.contains("Lantern tea"))
+    }
+
+    @Test("Changing the table's sort over 10,000 results takes under 500 ms (S63)")
+    func sorting() {
+        let model = model(Store(Self.snapshot()), updates: LedgerUpdates())
+        model.load()
+        let clock = ContinuousClock()
+        for order in [
+            KeyPathComparator(\SearchTableRow.amount, order: .forward),
+            KeyPathComparator(\SearchTableRow.descriptionText, order: .forward),
+            KeyPathComparator(\SearchTableRow.payee, order: .forward),
+            KeyPathComparator(\SearchTableRow.date, order: .forward),
+        ] {
+            let elapsed = clock.measure { model.sortOrder = [order] }
+            print("Search screen speed: sort in \(Self.milliseconds(elapsed)) ms")
+            #expect(elapsed < Self.bound)
+        }
+        #expect(model.tableSections.flatMap(\.rows).count == Self.transactionCount)
     }
 }
