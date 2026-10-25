@@ -4,11 +4,11 @@
     import SwiftUI
 
     /// The Mac Scheduled list as a Table (#26 frame "Scheduled – overdue, due today, upcoming, completed; sidebar
-    /// badge", D340.13): Due 96, Name 180, Repeat 150, Account 120, Amount 120 (trailing) and Status filling the rest,
-    /// in sections Overdue, Due Today, Upcoming and "Completed · 1", each ordered by due date. Return or a
-    /// double-click opens the item. With a row selected, ⌘↩ pays it, ⌘E edits it and ⌘⌫ asks to delete it; Skip This
-    /// Occurrence… has no shortcut. The catch-up and overdue hints sit above it, and the counts and the automatic
-    /// line below it. Columns aren't sortable.
+    /// badge", D340.13, D355): Due 96, Name 180, Repeat 150, Account 120, Amount 120 (trailing) and Status filling the
+    /// rest, in sections Overdue, Due Today, Upcoming and Completed with no counts (D334.2), each ordered by due
+    /// date. Return or a double-click opens the item. With a row selected, ⌘↩ pays it, ⌘E edits it, and ⌘⌫, the
+    /// Delete key or Edit ▸ Delete asks to delete it; Skip This Occurrence… has no shortcut. The catch-up and overdue
+    /// hints sit above it, and the counts and the automatic line below it. Columns aren't sortable.
     struct ScheduledTableView: View {
         let model: ScheduledListViewModel
         /// Opens an item's screen in the caller's stack.
@@ -90,18 +90,32 @@
                     open(row.row.itemID)
                 }
             }
-            .onKeyPress(keys: [.return, .delete, "e"], phases: .down) { press in
+            // Edit ▸ Delete and the Delete key, the standard Mac path (Tech Architect NB 2).
+            .onDeleteCommand {
+                if let row = selectedRow {
+                    model.confirmDelete(row.itemID)
+                }
+            }
+            .onKeyPress(keys: Self.shortcutKeys, phases: .down) { press in
                 handle(press)
             }
         }
 
-        /// ⌘↩ Pay Now, ⌘E Edit…, ⌘⌫ Delete Scheduled Item… on the selected row, as the context menu shows them.
+        /// Return, keypad Enter, Delete and E: with ⌘, the context menu's shortcuts.
+        private static let shortcutKeys: Set<KeyEquivalent> = [.return, KeyEquivalent("\u{3}"), .delete, "e", "E"]
+
+        private var selectedRow: ScheduledRow? {
+            selection.flatMap { model.tableRow(id: $0)?.row }
+        }
+
+        /// ⌘↩ (or ⌘ keypad Enter) Pay Now, ⌘E Edit…, ⌘⌫ Delete Scheduled Item… on the selected row, as the context
+        /// menu shows them. ⌘ must be held, with no other modifier; Caps Lock and the keypad flag don't count.
         private func handle(_ press: KeyPress) -> KeyPress.Result {
-            guard press.modifiers == .command, let id = selection, let row = model.tableRow(id: id)?.row else {
+            guard press.modifiers.subtracting([.capsLock, .numericPad]) == .command, let row = selectedRow else {
                 return .ignored
             }
             switch press.key {
-            case .return:
+            case .return, KeyEquivalent("\u{3}"):
                 guard row.canSettle else {
                     return .ignored
                 }
