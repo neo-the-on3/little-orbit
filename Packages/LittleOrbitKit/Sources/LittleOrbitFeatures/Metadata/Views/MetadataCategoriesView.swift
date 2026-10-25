@@ -10,7 +10,8 @@
     struct MetadataCategoriesView: View {
         @Bindable var model: MetadataCategoriesViewModel
         @State private var isArchivedExpanded = false
-        @FocusState private var isRenameFocused: Bool
+        /// The row whose rename field has focus.
+        @FocusState private var focusedRename: UUID?
 
         var body: some View {
             VStack(spacing: 0) {
@@ -100,10 +101,11 @@
                 }
             }
             .onDeleteCommand { model.requestDelete() }
-            // Clicking away from the rename field saves it, as Return does; a name error keeps it open.
-            .onChange(of: isRenameFocused) { _, isFocused in
-                if !isFocused {
-                    _ = model.commitRename()
+            // Clicking away from the rename field saves a valid name, as Return does, and otherwise keeps the
+            // old name, so no field or error is left behind (NB4).
+            .onChange(of: focusedRename) { previous, _ in
+                if let previous {
+                    model.endRename(of: previous)
                 }
             }
         }
@@ -115,10 +117,10 @@
                 if model.renaming?.categoryID == row.id {
                     TextField(CategoryText.name, text: $model.renameText)
                         .labelsHidden()
-                        .focused($isRenameFocused)
+                        .focused($focusedRename, equals: row.id)
                         .onSubmit { _ = model.commitRename() }
                         .onExitCommand { model.cancelRename() }
-                        .onAppear { isRenameFocused = true }
+                        .onAppear { focusedRename = row.id }
                 } else {
                     // A subcategory reads with its parent, so it can be told apart in the flat table (UI Designer).
                     Text(row.name)
