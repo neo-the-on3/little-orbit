@@ -27,6 +27,8 @@
         private let scheduled: ScheduledFeature?
         /// The pushed Scheduled list's model, for the item and Completed screens this stack's root builds over it.
         @State private var scheduledSlot = ScheduledListSlot()
+        /// Reports (#27); `nil` keeps the Reports row's placeholder.
+        private let reports: ReportsFeature?
 
         private var undoHistory: WindowUndoHistory {
             undoSlot.history(from: transactions)
@@ -38,18 +40,20 @@
             path.contains(where: \.isScheduled)
         }
 
-        /// Both features come from the composition root, which built them once with the injected use cases.
+        /// The features come from the composition root, which built them once with the injected use cases.
         /// `onShowSettings` adds the toolbar's Settings button (#40). It gets this window's undo history, which a
         /// category merge or delete in Settings clears (D287.4).
         public init(
             feature: AccountsFeature,
             transactions: TransactionsFeature,
             scheduled: ScheduledFeature? = nil,
+            reports: ReportsFeature? = nil,
             onShowSettings: ((WindowUndoHistory) -> Void)? = nil,
         ) {
             self.feature = feature
             self.transactions = transactions
             self.scheduled = scheduled
+            self.reports = reports
             self.onShowSettings = onShowSettings
             _model = State(initialValue: feature.accounts)
             _deleteConfirmation = State(initialValue: AccountDeleteConfirmation(model: feature.accounts))
@@ -377,11 +381,15 @@
                     )
                 }
             case .home(let destination):
-                UpcomingFeatureView(
-                    title: destination.title,
-                    systemImage: destination.symbolName,
-                    message: destination.emptyText,
-                )
+                if destination == .reports, let reports {
+                    ReportsView(feature: reports)
+                } else {
+                    UpcomingFeatureView(
+                        title: destination.title,
+                        systemImage: destination.symbolName,
+                        message: destination.emptyText,
+                    )
+                }
             case .account(let id):
                 if let row = model.row(id: id) {
                     AccountDetailView(
