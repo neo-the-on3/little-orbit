@@ -2,7 +2,8 @@ import Foundation
 import Testing
 
 /// Guards on the package's String Catalog: user-facing text uses curly apostrophes and quotes (D199.3, #93
-/// T14), and the failure titles are separate entries (D201.4, D204.2). Translator comments aren't checked.
+/// T14), the failure titles are separate entries (D201.4, D204.2), and every plural variation shows its number,
+/// which Xcode's CompileXCStrings requires and Linux can't run. Translator comments aren't checked.
 @Suite("String Catalog")
 struct StringCatalogTests {
     static let catalogURL = URL(fileURLWithPath: #filePath)
@@ -67,5 +68,49 @@ struct StringCatalogTests {
                 #expect(!text.lowercased().contains("window"), "\(text) names a cause")
             }
         }
+    }
+
+    /// Whether `text` has a printf placeholder such as `%lld`, `%2$lld` or `%@`, or a `%#@name@` substitution.
+    private static func hasPlaceholder(_ text: String) -> Bool {
+        text.contains(#/%(\d+\$)?[-+ 0#]*\d*(\.\d+)?(hh|h|ll|l|q|z|t|j)?[dDiuUxXoOfeEgGcCsSpaA@]|%#@\w+@/#)
+    }
+
+    /// Each top-level plural variation in `node`, as its path and its variants' values. Plurals inside a
+    /// `substitutions` entry are left out: there the `%#@name@` placeholder already takes the number, so their
+    /// variants may leave it out.
+    private static func pluralVariations(in node: Any, path: String) -> [(path: String, values: [String])] {
+        guard let dictionary = node as? [String: Any] else {
+            return []
+        }
+        return dictionary.flatMap { key, value -> [(path: String, values: [String])] in
+            if key == "substitutions" {
+                return []
+            }
+            if key == "plural", let forms = value as? [String: Any] {
+                return [(path: "\(path)/plural", values: forms.values.flatMap { values(in: $0) })]
+            }
+            return pluralVariations(in: value, path: "\(path)/\(key)")
+        }
+    }
+
+    @Test("Every plural variation shows its number in at least one variant, as CompileXCStrings requires")
+    func pluralsShowTheirNumber() throws {
+        let data = try Data(contentsOf: Self.catalogURL)
+        let root = try #require(try JSONSerialization.jsonObject(with: data) as? [String: Any])
+        let strings = try #require(root["strings"] as? [String: Any])
+        var plurals = 0
+        for (key, entry) in strings {
+            for variation in Self.pluralVariations(in: entry, path: key) {
+                plurals += 1
+                #expect(
+                    variation.values.contains(where: Self.hasPlaceholder),
+                    """
+                    \(variation.path): no variant shows the number. Xcode fails with “Plural variation requires \
+                    referencing the number in the string”; use separate entries for one and more, or a substitution.
+                    """,
+                )
+            }
+        }
+        #expect(plurals > 0)
     }
 }
