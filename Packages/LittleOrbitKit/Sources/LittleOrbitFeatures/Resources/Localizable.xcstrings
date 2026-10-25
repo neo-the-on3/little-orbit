@@ -2821,6 +2821,45 @@
         }
       }
     },
+    "history.scheduled.tag": {
+      "comment": "Account history: the tag on an Upcoming row that is a scheduled occurrence, not yet recorded.",
+      "extractionState": "manual",
+      "generatesSymbol": false,
+      "localizations": {
+        "en": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Scheduled"
+          }
+        }
+      }
+    },
+    "history.scheduled.open": {
+      "comment": "Account history: opens the scheduled item a scheduled Upcoming row comes from, to pay or skip it.",
+      "extractionState": "manual",
+      "generatesSymbol": false,
+      "localizations": {
+        "en": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Open Scheduled Item"
+          }
+        }
+      }
+    },
+    "history.scheduled.openHint": {
+      "comment": "Account history: VoiceOver hint on a scheduled Upcoming row.",
+      "extractionState": "manual",
+      "generatesSymbol": false,
+      "localizations": {
+        "en": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Opens the scheduled item to pay or skip it"
+          }
+        }
+      }
+    },
     "Currency": {
       "comment": "CSV import column field: the currency code. Spending report: the currency picker’s label, shown only with spending in 2 or more currencies. Debit & Credit import Match step: a new account’s currency picker.",
       "extractionState": "manual",

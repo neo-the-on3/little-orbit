@@ -204,7 +204,8 @@
             // The entry sheet's category picker reads and adds categories with the editor's use cases (#24).
             let editing = DefaultCategoryEditingUseCase(repository: repository)
             transactions = TransactionsFeature(
-                useCases: transactionUseCases,
+                // An account's history also shows its scheduled occurrences as Upcoming rows (S85).
+                useCases: transactionUseCases.showingScheduled(from: repository),
                 categoryPicking: CategoryPickingUseCases(load: editing, edit: editing),
             )
             // One signal for "the whole ledger was replaced" (a restore): the accounts reload, and every window's

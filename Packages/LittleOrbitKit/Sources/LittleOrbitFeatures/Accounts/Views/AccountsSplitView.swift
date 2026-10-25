@@ -204,6 +204,7 @@
                     AccountDetailView(
                         row: row,
                         transactions: transactions,
+                        scheduled: scheduled,
                         onEdit: { formSheet = AccountFormSheet(model: feature.makeForm(.edit(id))) },
                         onChange: { model.load() },
                     )

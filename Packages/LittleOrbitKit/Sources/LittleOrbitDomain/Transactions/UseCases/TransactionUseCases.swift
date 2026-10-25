@@ -119,6 +119,14 @@ public struct TransactionUseCases {
         self.seedDefaults = seedDefaults
     }
 
+    /// These use cases with an account history that also shows the account's scheduled occurrences as Upcoming
+    /// rows (S85).
+    public func showingScheduled(from schedule: some LedgerRepository & ScheduleRepository) -> TransactionUseCases {
+        var useCases = self
+        useCases.accountHistory = DefaultAccountHistoryUseCase(repository: schedule, schedule: schedule)
+        return useCases
+    }
+
     /// The default implementations over one repository. `categoryNames` names the built-in categories when
     /// they're seeded at launch (D8, D291.7).
     public init(repository: any LedgerRepository, categoryNames: any DefaultCategoryNaming) {
@@ -168,10 +176,13 @@ extension TransactionLedger {
 @MainActor
 public struct DefaultAccountHistoryUseCase: AccountHistoryUseCase {
     private let repository: any LedgerRepository
+    private let schedule: (any ScheduleRepository)?
     private let build = BuildAccountHistory()
 
-    public init(repository: any LedgerRepository) {
+    /// With `schedule`, the history also shows the account's scheduled occurrences as Upcoming rows (S85).
+    public init(repository: any LedgerRepository, schedule: (any ScheduleRepository)? = nil) {
         self.repository = repository
+        self.schedule = schedule
     }
 
     public func history(of accountID: UUID, today: CalendarDay) throws -> AccountHistoryPage? {
@@ -179,7 +190,11 @@ public struct DefaultAccountHistoryUseCase: AccountHistoryUseCase {
         guard let account = contents.accounts.first(where: { $0.id == accountID }) else {
             return nil
         }
-        let history = build(account: account, transactions: contents.transactions, today: today)
+        let projected =
+            try schedule.map {
+                ScheduledProjection.upcoming(on: accountID, in: try $0.scheduleLedger(), today: today)
+            } ?? []
+        let history = build(account: account, transactions: contents.transactions, today: today, projected: projected)
         return AccountHistoryPage(account: account, history: history, ledger: contents)
     }
 }

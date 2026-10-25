@@ -34,7 +34,7 @@
                     title.lineLimit(1)
                     subtitle.lineLimit(1)
                     if row.isUpcoming {
-                        UpcomingTag()
+                        tags
                     }
                 }
                 Spacer(minLength: Spacing.space2)
@@ -61,7 +61,7 @@
                 subtitle
                     .fixedSize(horizontal: false, vertical: true)
                 if row.isUpcoming {
-                    UpcomingTag()
+                    tags
                 }
                 amount
                     .lineLimit(1)
@@ -70,6 +70,17 @@
                     .fixedSize(horizontal: false, vertical: true)
             }
             .frame(maxWidth: .infinity, alignment: .leading)
+        }
+
+        /// "Upcoming", and "Scheduled" beside it on a scheduled occurrence; a future row the user entered has no
+        /// Scheduled tag (S85).
+        private var tags: some View {
+            HStack(spacing: Spacing.space1) {
+                UpcomingTag()
+                if row.isScheduled {
+                    ScheduledTag()
+                }
+            }
         }
 
         private var icon: some View {
@@ -119,6 +130,26 @@
             .padding(.horizontal, Spacing.space2)
             .padding(.vertical, Spacing.spaceHalf)
             .background(Color(ThemeColor.statusInfoBg), in: Capsule())
+        }
+    }
+
+    /// The "Scheduled" tag beside "Upcoming" on a scheduled occurrence that isn't recorded yet (S85), in the
+    /// secondary label colour so it reads as a note on the Upcoming tag.
+    struct ScheduledTag: View {
+        var body: some View {
+            HStack(spacing: Spacing.space1) {
+                Image(systemName: "calendar.badge.clock")
+                    .accessibilityHidden(true)
+                Text(HistoryScheduledText.tag)
+            }
+            .accessibilityElement(children: .combine)
+            .font(.theme(Typography.IOS.caption1))
+            .lineLimit(1)
+            .fixedSize()
+            .foregroundStyle(Color(ThemeColor.labelSecondary))
+            .padding(.horizontal, Spacing.space2)
+            .padding(.vertical, Spacing.spaceHalf)
+            .background(Color(ThemeColor.fillSecondary), in: Capsule())
         }
     }
 
