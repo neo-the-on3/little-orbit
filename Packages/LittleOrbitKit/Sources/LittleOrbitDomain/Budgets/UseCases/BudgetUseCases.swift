@@ -60,6 +60,10 @@ public protocol BudgetChangesUseCase {
     /// Changes the limit like `ChangeBudgetLimitUseCase.changeLimit(of:to:today:)` and returns the change,
     /// `.replaced` with the version before it (Change Budget Limit, the detail's action sheet).
     func limitChange(of budgetID: UUID, to amount: Decimal, today: CalendarDay) throws -> BudgetChange
+    /// Deletes the budget like `DeleteBudgetUseCase.delete(_:)` and returns the change, `.removed` with the
+    /// budget as it was, so Undo puts it back with the same ID, categories and limit history (Delete Budget,
+    /// D307.8). Throws `missingBudget` when it's already gone.
+    func deletedChange(of budgetID: UUID) throws -> BudgetChange
     /// What `change` left in the ledger, read right after it was made or reverted, for the stale check.
     func outcome(of change: BudgetChange) throws -> BudgetChangeOutcome
     /// Reverts `change` if the ledger still holds `outcome`, by value; otherwise writes nothing and says why
@@ -177,6 +181,12 @@ public final class DefaultBudgetUseCases: BudgetUseCase {
         let previous = try budget(budgetID, in: repository.budgetLedger())
         try changeLimit(of: budgetID, to: amount, today: today)
         return .replaced(previous)
+    }
+
+    public func deletedChange(of budgetID: UUID) throws -> BudgetChange {
+        let previous = try budget(budgetID, in: repository.budgetLedger())
+        try delete(budgetID)
+        return .removed(previous)
     }
 
     public func outcome(of change: BudgetChange) throws -> BudgetChangeOutcome {
