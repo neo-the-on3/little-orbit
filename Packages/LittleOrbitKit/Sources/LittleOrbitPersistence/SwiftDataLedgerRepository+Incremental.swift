@@ -140,7 +140,7 @@
                     .apply(item, sourceCurrency: source, destinationCurrency: destination)
             }
             for occurrence in changes.occurrences.upserted {
-                record(occurrence.id, in: &index.occurrences) { LittleOrbitSchemaV1.ScheduledOccurrenceRecord() }
+                try record(occurrence.id, in: &index.occurrences) { LittleOrbitSchemaV1.ScheduledOccurrenceRecord() }
                     .apply(occurrence.value)
             }
         }
