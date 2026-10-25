@@ -1,4 +1,4 @@
-#if canImport(SwiftUI) && os(iOS)
+#if canImport(SwiftUI) && (os(iOS) || os(macOS))
     import LittleOrbitTheme
     import SwiftUI
 

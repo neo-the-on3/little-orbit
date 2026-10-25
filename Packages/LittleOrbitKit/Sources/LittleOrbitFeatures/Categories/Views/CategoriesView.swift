@@ -218,8 +218,4 @@
             )
         }
     }
-
-    extension CategoryEditorViewModel: Identifiable {
-        public nonisolated var id: ObjectIdentifier { ObjectIdentifier(self) }
-    }
 #endif
