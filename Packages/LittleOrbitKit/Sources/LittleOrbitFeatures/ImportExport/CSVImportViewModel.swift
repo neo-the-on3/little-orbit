@@ -52,6 +52,8 @@ public final class CSVImportViewModel {
     var matchSections = ImportMatchSections()
     /// Counts plans, so only the latest one lands.
     @ObservationIgnored var planGeneration = 0
+    /// Whether the latest plan is still running, so dropping it also clears `isWorking`.
+    @ObservationIgnored private var isPlanning = false
     public private(set) var receipt: ImportReceipt?
     public internal(set) var isUndone = false
     /// D327.1: “Your data changed, so this preview was updated.”, shown inline at the top of the current step
@@ -81,6 +83,9 @@ public final class CSVImportViewModel {
     /// What Import awaits after showing “Importing…” so the overlay draws before the save holds the main actor
     /// (Tech Architect NB4 on #190): 32 ms by default, as a `Task.yield()` alone can resume before the next frame.
     @ObservationIgnored let overlayPause: @MainActor () async -> Void
+    /// What a plan awaits on the main actor after its background work, before it lands; nothing by default. Tests
+    /// hold a plan here to change a setting while it's in flight, without blocking a thread.
+    @ObservationIgnored let planPause: @MainActor (ImportReadSettings, ImportChoices) async -> Void
 
     public init(
         useCases: ImportUseCases,
@@ -89,8 +94,10 @@ public final class CSVImportViewModel {
         timeZone: TimeZone = .current,
         changed: @escaping () -> Void = {},
         overlayPause: @escaping @MainActor () async -> Void = { try? await Task.sleep(for: .milliseconds(32)) },
+        planPause: @escaping @MainActor (ImportReadSettings, ImportChoices) async -> Void = { _, _ in },
     ) {
         self.overlayPause = overlayPause
+        self.planPause = planPause
         self.useCases = useCases
         self.defaultCurrency = defaultCurrency
         self.locale = locale
@@ -338,12 +345,19 @@ public final class CSVImportViewModel {
     }
 
     private func planAndContinue() async {
-        await plan()
-        guard preview != nil else { return }
+        // A plan dropped because a setting changed while it ran doesn't move the sheet on (B3).
+        guard await plan(), preview != nil else { return }
         step = hasMatchStep ? .match : .review
     }
 
+    /// Drops the preview, and any plan still running with the old settings: it won't land or move the sheet on,
+    /// and Next is back on for the new settings (Tech Architect B3 on #190).
     func invalidatePreview() {
+        planGeneration += 1
+        if isPlanning {
+            isPlanning = false
+            isWorking = false
+        }
         preview = nil
         reviewState = ImportReviewState()
         matchSections = ImportMatchSections()
@@ -352,10 +366,13 @@ public final class CSVImportViewModel {
     /// Plans the preview off the main actor, with the Review and Match rows, behind “Reading…”. Only the latest
     /// plan lands: one that a newer plan overtook, such as two quick Match changes, is dropped, and the newest one
     /// clears `isWorking`, so Next and Import stay off until it's in (Tech Architect B2 on #190).
-    func plan() async {
-        guard let file else { return }
+    /// Returns whether this plan landed.
+    @discardableResult
+    func plan() async -> Bool {
+        guard let file else { return false }
         planGeneration += 1
         let generation = planGeneration
+        isPlanning = true
         startWork(ImportExportText.reading)
         let pipeline = useCases.pipeline
         let settings = settings
@@ -384,9 +401,11 @@ public final class CSVImportViewModel {
                 )
             }
             .value
-        guard generation == planGeneration else { return }
+        await planPause(settings, choices)
+        guard generation == planGeneration else { return false }
+        isPlanning = false
         isWorking = false
-        guard !isClosed else { return }
+        guard !isClosed else { return false }
         // Ticks changed during the wait count: the new plan is re-selected against the ticks as they are now
         // (Tech Architect B1 on #190).
         let ticks = Self.reselect(planned.preview, previous: preview, selection: selection)
@@ -400,6 +419,7 @@ public final class CSVImportViewModel {
             isDataChangePending = false
             await refreshLedger()
         }
+        return true
     }
 
     private func startWork(_ text: String) {
