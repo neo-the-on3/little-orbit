@@ -113,4 +113,23 @@ struct StringCatalogTests {
         }
         #expect(plurals > 0)
     }
+
+    @Test("D313.4: the Mac list's “%lld budgets” and “%lld overspent” are one/other plurals, each showing the number")
+    func budgetCountPlurals() throws {
+        let data = try Data(contentsOf: Self.catalogURL)
+        let root = try #require(try JSONSerialization.jsonObject(with: data) as? [String: Any])
+        let strings = try #require(root["strings"] as? [String: Any])
+        for key in ["%lld budgets", "%lld overspent"] {
+            let entry = try #require(strings[key])
+            let variations = Self.pluralVariations(in: entry, path: key)
+            #expect(variations.count == 1, "\(key) has one plural variation")
+            for variation in variations {
+                #expect(variation.values.count >= 2, "\(variation.path) has one and other")
+                for value in variation.values {
+                    #expect(value.contains("%lld"), "\(variation.path): “\(value)” doesn’t show the number")
+                }
+            }
+        }
+        #expect(strings["1 budget"] == nil, "The singular is the plural’s one variant, not its own entry")
+    }
 }

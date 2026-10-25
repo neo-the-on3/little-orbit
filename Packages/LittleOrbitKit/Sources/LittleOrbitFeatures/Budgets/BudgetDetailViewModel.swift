@@ -74,6 +74,8 @@ public final class BudgetDetailViewModel {
     /// The deleted-elsewhere screen's title (D311.7).
     public var missingTitle: String { BudgetText.deletedTitle }
     public var categoriesHeader: String { BudgetText.categoriesSection }
+    /// The Mac's one line: “Categories: Shopping trips › Clothes”.
+    public var categoriesLine: String { BudgetText.categoriesLine(categoriesText) }
     public var transactionsHeader: String { BudgetText.transactionsSection(transactions.count) }
     public var deleteTitle: String { BudgetText.deleteTitle(name) }
     public var deleteMessage: String { BudgetText.deleteMessage }
@@ -110,6 +112,21 @@ public final class BudgetDetailViewModel {
         }
         let next = detail.selected.period.index + 1
         periodIndex = next >= detail.currentIndex ? nil : next
+        load()
+    }
+
+    /// Whether Today has somewhere to go: a past period is on show (the Mac's Today button and Show Current
+    /// Period).
+    public var canShowCurrentPeriod: Bool {
+        header.map { !$0.isCurrentPeriod } ?? false
+    }
+
+    /// Back to the current period, which then follows the days as they pass.
+    public func showCurrentPeriod() {
+        guard canShowCurrentPeriod else {
+            return
+        }
+        periodIndex = nil
         load()
     }
 
@@ -369,20 +386,29 @@ public final class BudgetDetailViewModel {
                 ?? BudgetText.refundOriginalDeleted
         }
         let category = names.categoryName(line.categoryID)
-        var parts = [category, names.accountName(transaction.accountID)].compactMap(\.self)
+        let account = names.accountName(transaction.accountID)
+        var parts = [category, account].compactMap(\.self)
         if line.isSplitLine {
             parts.insert(BudgetText.split, at: 0)
         }
         let subtitle = parts.joined(separator: " · ")
+        // The Mac table's own Category column keeps the split marker (D240, D241.1).
+        let categoryText =
+            line.isSplitLine
+            ? [BudgetText.split, category].compactMap(\.self).joined(separator: " · ")
+            : category ?? ""
         let amount = money.string(-line.amount, currencyCode: code, showsPlus: true)
         let date = dates.short.string(line.day, today: today())
         return BudgetTransactionRow(
             id: line.id,
             title: title,
             subtitle: subtitle,
+            categoryText: categoryText,
+            accountText: account ?? "",
             amountText: amount,
             tone: line.amount < 0 ? .positive : line.amount > 0 ? .negative : .neutral,
             dateText: date,
+            fullDateText: dates.full(line.day),
             symbolName: names.symbol(line.categoryID),
             accessibilityLabel: [title, subtitle, amount, date].joined(separator: ", "),
         )

@@ -1,8 +1,8 @@
 import Foundation
 import LittleOrbitDomain
 
-/// Change Budget Limit and Delete Budget, each one Undo step in the window that made it (D307.8). A budget
-/// deleted elsewhere while either is open shows “Couldn’t Save Changes” with “This budget no longer exists.”
+/// Change Budget Limit, Delete Budget and, on the Mac, Duplicate Budget, each one Undo step in the window that made
+/// it (D307.8). A budget deleted elsewhere while one is open shows “Couldn’t Save Changes” with “This budget no longer exists.”
 /// (D309).
 extension BudgetDetailViewModel {
     /// What Save in Change Budget Limit did.
@@ -106,6 +106,34 @@ extension BudgetDetailViewModel {
         return true
     }
 
+    // MARK: Duplicate Budget (macOS)
+
+    /// Whether Duplicate can be used. A budget with no categories left can't be saved, so it can't be copied
+    /// (D307.5): its menu items are shown dimmed (D313.3).
+    public var canDuplicate: Bool {
+        state == .figures
+    }
+
+    /// Saves a copy straight away, named “Eating out copy”, then “Eating out copy 2” and so on (D307.6), with the
+    /// original's part shortened when the copy's name wouldn't fit (D313.2). It's one Undo step named after the
+    /// original, “Duplicate Budget Eating out” (D307.8, D313.1). The detail stays on the original. Returns the
+    /// copy's ID, or `nil` when nothing was saved and an alert says why.
+    @discardableResult
+    public func duplicate() -> UUID? {
+        guard let detail, canDuplicate else {
+            return nil
+        }
+        let change: BudgetChange
+        do {
+            change = try useCases.changes.duplicatedChange(of: budgetID) { BudgetText.copyName($0, number: $1) }
+        } catch {
+            show(error)
+            return nil
+        }
+        record(change, action: .duplicate, detail: detail)
+        return change.budgetID
+    }
+
     // MARK: Helpers
 
     private func record(_ change: BudgetChange, action: BudgetUndoStep.Action, detail: BudgetDetail) {
@@ -178,4 +206,9 @@ extension BudgetDetailViewModel {
         }
         return (value, nil)
     }
+}
+
+/// Each open sheet is its own view model, so a sheet can be shown for one (`sheet(item:)`).
+extension BudgetDetailViewModel: Identifiable {
+    public nonisolated var id: ObjectIdentifier { ObjectIdentifier(self) }
 }
