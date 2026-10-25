@@ -190,27 +190,42 @@ struct ScheduledTableTests {
         #expect(allowed["Gym"] == "")
     }
 
-    @Test("D356.2, D357: an occurrence on a short month's last day keeps the last-day note; the 31st says it already")
-    func shortMonthLastDay() throws {
+    @Test(
+        "D368, D334.3: the 29th or 30th reads “or last day” on the Mac; iOS keeps “, last day” on the short month",
+        arguments: [ScheduledPlatform.macOS, .iOS],
+    )
+    func shortMonthLastDay(platform: ScheduledPlatform) throws {
         let scene = try ScheduledScene()
         var thirtieth = scene.item("Rent", day: 30, month: 1)
         thirtieth.startDay = CalendarDay(year: 2027, month: 1, day: 30)
+        var twentyNinth = scene.item("Gym", day: 29, month: 1)
+        twentyNinth.startDay = CalendarDay(year: 2027, month: 1, day: 29)
         var last = scene.item("Card Bill", day: 31, month: 1)
         last.startDay = CalendarDay(year: 2027, month: 1, day: 31)
-        try scene.add(thirtieth, last)
+        try scene.add(thirtieth, twentyNinth, last)
         // Today is 2 Mar 2027: January's and February's occurrences are overdue, and February's is on the 28th.
         scene.now = ScheduledScene.date(CalendarDay(year: 2027, month: 3, day: 2))
-        let rows = macList(scene).tableSections.flatMap(\.rows)
-        let rent = rows.filter { $0.name == "Rent" }
-        #expect(rent.map(\.due) == ["30 Jan", "28 Feb"])
-        #expect(rent.first { $0.due == "30 Jan" }?.repeatText == "Monthly on the 30th")
-        #expect(rent.first { $0.due == "28 Feb" }?.repeatText == "Monthly on the 30th, last day")
-        let card = rows.filter { $0.name == "Card Bill" }
-        #expect(card.map(\.due) == ["31 Jan", "28 Feb"])
-        #expect(card.allSatisfy { $0.repeatText == "Monthly on the last day" }, "Never “on the last day, last day”")
+        let list = ScheduledListViewModel(useCases: scene.useCases, locale: Self.locale, platform: platform)
+        list.load()
+        switch platform {
+        case .macOS:
+            let rows = list.tableSections.flatMap(\.rows)
+            func repeats(_ name: String) -> [String] { rows.filter { $0.name == name }.map(\.repeatText) }
+            #expect(rows.filter { $0.name == "Rent" }.map(\.due) == ["30 Jan", "28 Feb"])
+            #expect(repeats("Rent") == ["Monthly on the 30th or last day", "Monthly on the 30th or last day"])
+            #expect(repeats("Gym") == ["Monthly on the 29th or last day", "Monthly on the 29th or last day"])
+            #expect(repeats("Card Bill") == ["Monthly on the last day", "Monthly on the last day"])
+            #expect(!rows.contains { $0.repeatText.contains(", last day") }, "No “, last day” on the Mac (D368)")
+        case .iOS:
+            #expect(list.tableSections.isEmpty)
+            let rent = list.overdueRows.filter { $0.title == "Rent" }.map(\.detail)
+            #expect(rent == ["Monthly · Everyday Savings", "Monthly, last day · Everyday Savings"])
+            let gym = list.overdueRows.filter { $0.title == "Gym" }.map(\.detail)
+            #expect(gym == ["Monthly · Everyday Savings", "Monthly, last day · Everyday Savings"])
+        }
     }
 
-    @Test("D356.2, D357: each long Repeat form, at an interval of 1 and of N")
+    @Test("D356.2, D357, D368: each long Repeat form, at an interval of 1 and of N")
     func longRepeat() throws {
         let scene = try ScheduledScene()
         func text(_ rule: ScheduleRepeat, _ year: Int, _ month: Int, _ day: Int) -> String {
@@ -227,7 +242,10 @@ struct ScheduledTableTests {
         #expect(text(.every(2, .week), 2026, 10, 24) == "Every 2 weeks on Saturday")
         #expect(text(.monthly, 2026, 10, 15) == "Monthly on the 15th")
         #expect(text(.monthly, 2026, 10, 1) == "Monthly on the 1st")
-        #expect(text(.monthly, 2026, 10, 30) == "Monthly on the 30th")
+        #expect(text(.monthly, 2026, 10, 28) == "Monthly on the 28th")
+        #expect(text(.monthly, 2026, 10, 29) == "Monthly on the 29th or last day")
+        #expect(text(.monthly, 2026, 10, 30) == "Monthly on the 30th or last day")
+        #expect(text(.every(2, .month), 2026, 10, 30) == "Every 2 months on the 30th")
         #expect(text(.every(2, .month), 2026, 10, 22) == "Every 2 months on the 22nd")
         #expect(text(.monthly, 2026, 10, 31) == "Monthly on the last day")
         #expect(text(.every(3, .month), 2026, 10, 31) == "Every 3 months on the last day")
