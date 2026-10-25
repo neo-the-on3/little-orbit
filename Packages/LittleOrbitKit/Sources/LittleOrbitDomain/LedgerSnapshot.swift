@@ -9,6 +9,8 @@ public struct LedgerSnapshot: Equatable, Sendable {
     public var tags: [Tag]
     public var splits: [TransactionSplit]
     public var attachments: [Attachment]
+    /// Budgets (#25), each with its limit history.
+    public var budgets: [Budget]
 
     public init(
         accounts: [Account] = [],
@@ -18,6 +20,7 @@ public struct LedgerSnapshot: Equatable, Sendable {
         tags: [Tag] = [],
         splits: [TransactionSplit] = [],
         attachments: [Attachment] = [],
+        budgets: [Budget] = [],
     ) {
         self.accounts = accounts
         self.transactions = transactions
@@ -26,6 +29,7 @@ public struct LedgerSnapshot: Equatable, Sendable {
         self.tags = tags
         self.splits = splits
         self.attachments = attachments
+        self.budgets = budgets
     }
 
     public func accountsVisible() -> [Account] {
@@ -63,5 +67,9 @@ public struct LedgerSnapshot: Equatable, Sendable {
         attachments.filter { attachment in
             attachment.deletedAt == nil && (transactionID == nil || attachment.transactionID == transactionID)
         }
+    }
+
+    public func budgetsVisible() -> [Budget] {
+        budgets.filter { $0.deletedAt == nil }
     }
 }
