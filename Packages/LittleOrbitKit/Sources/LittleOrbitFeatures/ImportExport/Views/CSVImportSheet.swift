@@ -77,6 +77,17 @@
             .onDisappear { model.close() }
         }
 
+        #if os(iOS)
+            /// iOS Cancel in `.topBarLeading`, after Back: it keeps the cancel role and Escape that
+            /// `.cancellationAction` gave it. Off while “Importing…” shows, so the sheet can't close mid-save (NB2
+            /// on #190).
+            private var cancelButton: some View {
+                Button(ImportExportText.cancel, role: .cancel) { dismiss() }
+                    .keyboardShortcut(.cancelAction)
+                    .disabled(model.isWorking)
+            }
+        #endif
+
         @ToolbarContentBuilder
         private var toolbar: some ToolbarContent {
             if model.step == .summary {
@@ -84,17 +95,39 @@
                     Button(ImportExportText.done) { dismiss() }
                 }
             } else {
-                ToolbarItem(placement: .cancellationAction) {
-                    // Off while “Importing…” shows, so the sheet can't close mid-save (NB2 on #190).
-                    Button(ImportExportText.cancel) { dismiss() }
-                        .disabled(model.isWorking)
-                }
-                if model.canGoBack {
-                    ToolbarItem(placement: .navigation) {
-                        Button(ImportExportText.back) { model.back() }
+                #if os(iOS)
+                    // Leading, in this order: ‹ Back, then Cancel (UI Designer, 26 Oct). Back is a plain button with
+                    // the system chevron, since the steps swap in one view rather than being pushed (a
+                    // NavigationStack push is #217). Both are .topBarLeading so the order is the declaration order;
+                    // Cancel keeps its cancel role and Escape. They fit beside the title and Next or Import on a
+                    // 375 pt iPhone SE or mini.
+                    if model.canGoBack {
+                        ToolbarItem(placement: .topBarLeading) {
+                            Button {
+                                model.back()
+                            } label: {
+                                Label(ImportExportText.back, systemImage: "chevron.left")
+                                    .labelStyle(.titleAndIcon)
+                            }
+                            .disabled(model.isWorking)
+                        }
+                    }
+                    ToolbarItem(placement: .topBarLeading) {
+                        cancelButton
+                    }
+                #else
+                    ToolbarItem(placement: .cancellationAction) {
+                        // Off while “Importing…” shows, so the sheet can't close mid-save (NB2 on #190).
+                        Button(ImportExportText.cancel) { dismiss() }
                             .disabled(model.isWorking)
                     }
-                }
+                    if model.canGoBack {
+                        ToolbarItem(placement: .navigation) {
+                            Button(ImportExportText.back) { model.back() }
+                                .disabled(model.isWorking)
+                        }
+                    }
+                #endif
                 // Review's one Import is here, so it's reachable however long the page is and Return imports on
                 // the Mac: “Import” on iOS, “Import N Transactions” as the Mac sheet's default (UI Designer, 26 Oct).
                 ToolbarItem(placement: .confirmationAction) {
