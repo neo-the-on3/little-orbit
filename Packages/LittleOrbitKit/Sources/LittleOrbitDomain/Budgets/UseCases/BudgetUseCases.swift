@@ -64,6 +64,13 @@ public protocol BudgetChangesUseCase {
     /// budget as it was, so Undo puts it back with the same ID, categories and limit history (Delete Budget,
     /// D307.8). Throws `missingBudget` when it's already gone.
     func deletedChange(of budgetID: UUID) throws -> BudgetChange
+    /// Saves a copy of the budget and returns the change, `.added` with the copy's ID (macOS Duplicate Budget,
+    /// D307.6, D307.8). The copy has every setting and the whole limit history, under new IDs, so its periods
+    /// match the original's. Its name is `naming(n)` for the first n from 1 that no other budget has, trimmed and
+    /// ignoring case: the caller words it (“Eating out copy”, “Eating out copy 2”). Throws `missingBudget` when the
+    /// budget is gone, and the save's errors, such as `budgetCategoriesRequired` for a budget with no categories
+    /// left (D307.5).
+    func duplicatedChange(of budgetID: UUID, naming: (Int) -> String) throws -> BudgetChange
     /// What `change` left in the ledger, read right after it was made or reverted, for the stale check.
     func outcome(of change: BudgetChange) throws -> BudgetChangeOutcome
     /// Reverts `change` if the ledger still holds `outcome`, by value; otherwise writes nothing and says why
@@ -187,6 +194,30 @@ public final class DefaultBudgetUseCases: BudgetUseCase {
         let previous = try budget(budgetID, in: repository.budgetLedger())
         try delete(budgetID)
         return .removed(previous)
+    }
+
+    public func duplicatedChange(of budgetID: UUID, naming: (Int) -> String) throws -> BudgetChange {
+        let ledger = try repository.budgetLedger()
+        let original = try budget(budgetID, in: ledger)
+        let taken = Set(ledger.budgetsVisible().map { LedgerText.nameKey($0.name) })
+        // One more number than there are budgets always finds a free name.
+        let number = (1...(taken.count + 1)).first { !taken.contains(LedgerText.nameKey(naming($0))) } ?? 1
+        let created = now()
+        let copy = Budget(
+            name: naming(number),
+            currencyCode: original.currencyCode,
+            categoryIDs: original.categoryIDs,
+            startDay: original.startDay,
+            recurrence: original.recurrence,
+            limits: original.orderedLimits.map {
+                BudgetLimit(startDay: $0.startDay, amount: $0.amount, createdAt: created)
+            },
+            carriesOverUnspent: original.carriesOverUnspent,
+            carriesOverOverspending: original.carriesOverOverspending,
+            createdAt: created,
+        )
+        try repository.saveBudget(copy)
+        return .added(copy.id)
     }
 
     public func outcome(of change: BudgetChange) throws -> BudgetChangeOutcome {
