@@ -19,6 +19,8 @@ struct LittleOrbitMacApp: App {
         }
         .commands {
             RestoreFromBackupCommand(isPickingFile: $isPickingBackupFile)
+            // The Budget menu, for the Budgets screen in the front window (#25 part 5).
+            BudgetCommands()
         }
 
         // The standard Settings window, opened with Cmd-, from the app menu (D179.5). It's the shared home for
