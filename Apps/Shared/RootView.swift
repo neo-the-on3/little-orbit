@@ -60,6 +60,7 @@ import SwiftUI
         let categories: CategoriesFeature
         let payees: PayeesFeature
         let scheduled: ScheduledFeature
+        let importExport: ImportExportFeature
 
         init(
             repository: some LedgerRepository & ScheduleRepository & LedgerBackupSource,
@@ -153,6 +154,14 @@ import SwiftUI
                 ),
                 updates: transactions.updates,
             )
+            // CSV import and export (#30). An import or Undo Import reloads every window, like a transaction change.
+            importExport = ImportExportFeature(
+                useCases: ImportExportUseCases(
+                    importing: ImportUseCases(repository: repository),
+                    exporting: DefaultExportTransactionsUseCase(repository: repository),
+                ),
+                updates: transactions.updates,
+            )
         }
     }
 
@@ -203,6 +212,8 @@ import SwiftUI
                     transactions: features.transactions,
                     scheduled: features.scheduled,
                 )
+                // File › Import CSV from Files… and Export Transactions to CSV… open here, in the front window.
+                .importExport(features.importExport)
             #else
                 AccountsHomeView(
                     feature: features.accounts,
@@ -218,6 +229,7 @@ import SwiftUI
                         backups: features.backups,
                         categories: features.categories,
                         payees: features.payees,
+                        importExport: features.importExport,
                         onCategoryRemoval: { settingsUndoHistory?.clearAfterRemoval() },
                     )
                 }
