@@ -190,14 +190,6 @@ public final class ScheduledListViewModel {
         }
     }
 
-    /// The Scheduled screens were left: a catch-up hint they showed goes; one they haven't shown yet stays (D338.6).
-    public func dismissCatchUpHint() {
-        useCases.notices.dismissIfShown()
-        pendingCatchUp = useCases.notices.pending()
-        catchUpHintAppearedHere = false
-        keepsHintAfterLeaving = false
-    }
-
     public var title: String { ScheduledText.title }
     public var overdueHeader: String { ScheduledText.overdue }
     public var dueTodayHeader: String { ScheduledText.dueToday }
