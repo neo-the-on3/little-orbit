@@ -84,6 +84,63 @@
             )
         }
 
+        /// The 'Notify when due' reminder use cases (#26, D340.7) over `notifications`, worded in the privacy version,
+        /// at the Reminder Time kept in app settings.
+        static func makeReminderUseCases(
+            repository: any ScheduleRepository,
+            notifications: any ScheduledNotificationScheduling,
+            now: @escaping @MainActor () -> Date,
+            timeZone: @escaping @MainActor () -> TimeZone,
+        ) -> DefaultScheduledReminderUseCases {
+            var notifications = notifications
+            #if DEBUG
+                // `-LittleOrbitNotificationsAuthorized YES` treats notification permission as granted, with no
+                // system prompt, so reminders schedule on a simulator. Adds and removals still reach the system
+                // center. Not in release builds.
+                notifications = NotificationsAuthorizedOverride.applying(
+                    to: notifications,
+                    arguments: ProcessInfo.processInfo.arguments,
+                )
+            #endif
+            return DefaultScheduledReminderUseCases(
+                repository: repository,
+                notifications: notifications,
+                times: UserDefaultsScheduledReminderTime(),
+                wording: ScheduledReminderComposer(),
+                now: now,
+                timeZone: timeZone,
+            )
+        }
+
+        /// Keeps the pending reminders current (D340.7). A failed reschedule is logged with no user data. A reminder
+        /// arriving while the app is open refills the shared budget, since the nearest one has gone.
+        static func makeReminders(
+            useCases: DefaultScheduledReminderUseCases,
+            notifications: UserNotificationScheduling,
+        ) -> ScheduledReminders {
+            let reminders = ScheduledReminders(useCase: useCases) { error in
+                StoreLog.failure(.scheduledRemindersNotUpdated, error)
+            }
+            notifications.onReminderDelivered = { [weak reminders] in reminders?.refresh() }
+            return reminders
+        }
+
+        /// The clock scheduled items read: the device's. In Debug builds, `-LittleOrbitScheduledToday 2026-11-20` moves
+        /// today, and new items' creation day, for scheduled items only (D337.2). Not in release builds.
+        static func makeScheduledClock(timeZone: @escaping @MainActor () -> TimeZone) -> @MainActor () -> Date {
+            #if DEBUG
+                if let day = ScheduledDebugClock.overriddenDay(in: ProcessInfo.processInfo.arguments) {
+                    return ScheduledDebugClock.clock(
+                        today: day,
+                        launchedAt: Date(),
+                        timeZone: timeZone,
+                        now: { Date() },
+                    )
+                }
+            #endif
+            return { Date() }
+        }
+
         /// Local backups (#40): one folder per backup in Application Support/<bundle id>/Backups on this device
         /// only, never in the App Group container (D195). Exports are Apple Archive files, and N and M are app
         /// settings in UserDefaults. App Lock (#29) replaces `AppLockOff` here when it lands.
@@ -159,19 +216,7 @@
             // QA), and again whenever the app becomes active.
             // The zone is the auto-updating one, so a zone change while the app runs is picked up (D21).
             let timeZone: @MainActor () -> TimeZone = { TimeZone.autoupdatingCurrent }
-            var scheduledNow: @MainActor () -> Date = { Date() }
-            #if DEBUG
-                // D337.2: `-LittleOrbitScheduledToday 2026-11-20` moves today, and new items' creation day, for
-                // scheduled items only. Not in release builds.
-                if let day = ScheduledDebugClock.overriddenDay(in: ProcessInfo.processInfo.arguments) {
-                    scheduledNow = ScheduledDebugClock.clock(
-                        today: day,
-                        launchedAt: Date(),
-                        timeZone: timeZone,
-                        now: { Date() },
-                    )
-                }
-            #endif
+            let scheduledNow = AppComposition.makeScheduledClock(timeZone: timeZone)
             let scheduledUseCases = DefaultScheduledUseCases(
                 repository: repository,
                 now: scheduledNow,
@@ -186,6 +231,17 @@
                 today: { scheduledUseCases.today() },
             )
             let watchNotices = watchUseCases.map { WatchRequestNoticeViewModel(useCases: $0) }
+            // 'Notify when due' reminders (#26, D340.7): local notifications through the system center, worded in
+            // the privacy version, at the Reminder Time kept in app settings. Rescheduled after catch-up, at launch
+            // and on activation, and after every change.
+            let notifications = UserNotificationScheduling()
+            let reminderUseCases = AppComposition.makeReminderUseCases(
+                repository: repository,
+                notifications: notifications,
+                now: scheduledNow,
+                timeZone: timeZone,
+            )
+            let reminders = AppComposition.makeReminders(useCases: reminderUseCases, notifications: notifications)
             scheduled = ScheduledFeature(
                 useCases: ScheduledScreenUseCases(
                     load: scheduledUseCases,
@@ -193,8 +249,11 @@
                     catchUp: scheduledUseCases,
                     // The catch-up hint stays pending in app settings until Scheduled has shown it (D338.6).
                     notices: ScheduledCatchUpNotices(store: UserDefaultsScheduledCatchUpNotices()),
+                    permission: reminderUseCases,
+                    reminderTime: reminderUseCases,
                 ),
                 updates: transactions.updates,
+                reminders: reminders,
                 watchNotices: watchNotices,
                 onCatchUpProblem: { problem in
                     switch problem {
@@ -323,6 +382,7 @@
                         categories: features.categories,
                         payees: features.payees,
                         importExport: features.importExport,
+                        scheduled: features.scheduled,
                         onCategoryRemoval: { settingsUndoHistory?.clearAfterRemoval() },
                     )
                 }
