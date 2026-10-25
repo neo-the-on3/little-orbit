@@ -12,7 +12,6 @@ public protocol LedgerRepository: AnyObject {
     func transactions() throws -> [Transaction]
     func saveTransaction(_ transaction: Transaction) throws
     func deleteTransaction(id: UUID) throws
-    func recordScheduledOccurrence(_ transaction: Transaction) throws -> Transaction
 
     func categories() throws -> [TransactionCategory]
     func saveCategory(_ category: TransactionCategory) throws

@@ -30,9 +30,6 @@ final class SeedFailingRepository: LedgerRepository {
     func transactions() throws -> [Transaction] { try base.transactions() }
     func saveTransaction(_ transaction: Transaction) throws { try base.saveTransaction(transaction) }
     func deleteTransaction(id: UUID) throws { try base.deleteTransaction(id: id) }
-    func recordScheduledOccurrence(_ transaction: Transaction) throws -> Transaction {
-        try base.recordScheduledOccurrence(transaction)
-    }
     func categories() throws -> [TransactionCategory] { try base.categories() }
     func saveCategory(_ category: TransactionCategory) throws { try base.saveCategory(category) }
     func deleteCategory(id: UUID, reassigningTo categoryID: UUID?) throws {

@@ -152,27 +152,6 @@ public enum LedgerBook {
         return snapshot
     }
 
-    public static func recordScheduledOccurrence(
-        _ transaction: Transaction,
-        in snapshot: LedgerSnapshot,
-        now: Date,
-    ) throws -> (snapshot: LedgerSnapshot, transaction: Transaction) {
-        guard transaction.scheduledTemplateID != nil, transaction.scheduledOccurrenceDate != nil else {
-            throw LedgerValidationError.missingScheduleKey
-        }
-        if let existing = snapshot.transactions.first(where: { candidate in
-            candidate.scheduledTemplateID == transaction.scheduledTemplateID
-                && sameInstant(candidate.scheduledOccurrenceDate, transaction.scheduledOccurrenceDate)
-        }) {
-            return (snapshot, existing)
-        }
-        let saved = try savingTransaction(transaction, in: snapshot, now: now)
-        guard let stored = saved.transactions.first(where: { $0.id == transaction.id }) else {
-            throw LedgerValidationError.missingTransaction
-        }
-        return (saved, stored)
-    }
-
     private static func touchPayee(
         for transaction: Transaction,
         in snapshot: inout LedgerSnapshot,
@@ -189,17 +168,6 @@ public enum LedgerBook {
             snapshot.payees[index].defaultCategoryID = transaction.categoryID
         }
         snapshot.payees[index].updatedAt = now
-    }
-
-    private static func sameInstant(_ lhs: Date?, _ rhs: Date?) -> Bool {
-        switch (lhs, rhs) {
-        case (let left?, let right?):
-            abs(left.timeIntervalSinceReferenceDate - right.timeIntervalSinceReferenceDate) < 1
-        case (nil, nil):
-            true
-        default:
-            false
-        }
     }
 
     static func replace<T: Identifiable>(_ items: inout [T], with item: T) {

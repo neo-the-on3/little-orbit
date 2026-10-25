@@ -82,13 +82,6 @@
             try mutate { try LedgerBook.deletingTransaction(id: id, in: $0, now: now()) }
         }
 
-        public func recordScheduledOccurrence(_ transaction: Transaction) throws -> Transaction {
-            let current = try load()
-            let result = try LedgerBook.recordScheduledOccurrence(transaction, in: current, now: now())
-            try persist(result.snapshot)
-            return result.transaction
-        }
-
         public func categories() throws -> [TransactionCategory] {
             try load().categoriesVisible()
         }

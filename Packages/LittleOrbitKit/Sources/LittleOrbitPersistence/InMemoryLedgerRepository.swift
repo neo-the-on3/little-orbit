@@ -43,12 +43,6 @@ public final class InMemoryLedgerRepository: LedgerRepository {
         snapshot = try LedgerBook.deletingTransaction(id: id, in: snapshot, now: now())
     }
 
-    public func recordScheduledOccurrence(_ transaction: Transaction) throws -> Transaction {
-        let result = try LedgerBook.recordScheduledOccurrence(transaction, in: snapshot, now: now())
-        snapshot = result.snapshot
-        return result.transaction
-    }
-
     public func categories() throws -> [TransactionCategory] {
         snapshot.categoriesVisible()
     }

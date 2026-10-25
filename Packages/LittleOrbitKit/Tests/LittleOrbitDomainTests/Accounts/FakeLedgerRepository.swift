@@ -102,7 +102,6 @@ final class FakeLedgerRepository: LedgerRepository {
         snapshot = try LedgerBook.deletingTransaction(id: id, in: snapshot, now: now())
     }
 
-    func recordScheduledOccurrence(_ transaction: Transaction) throws -> Transaction { throw Unsupported() }
     func categories() throws -> [TransactionCategory] { snapshot.categoriesVisible() }
     func saveCategory(_ category: TransactionCategory) throws {
         try write()
