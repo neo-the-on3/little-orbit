@@ -97,6 +97,37 @@ extension LedgerBook {
         return snapshot
     }
 
+    /// The same as `deletingPayee` for each of `ids`, but in one pass over the transactions and scheduled items
+    /// instead of one per payee (#250): references to them are cleared, even on deleted records, and the payees
+    /// go. It throws `unknownPayee`, changing nothing, if any of them isn't there.
+    public static func deletingPayees(ids: [UUID], in snapshot: LedgerSnapshot, now: Date) throws -> LedgerSnapshot {
+        let doomed = Set(ids)
+        let found = snapshot.payees.reduce(into: Set<UUID>()) { found, payee in
+            if doomed.contains(payee.id) { found.insert(payee.id) }
+        }
+        guard found.count == doomed.count else {
+            throw LedgerValidationError.unknownPayee
+        }
+        guard !doomed.isEmpty else {
+            return snapshot
+        }
+        var snapshot = snapshot
+        for index in snapshot.transactions.indices {
+            if let payeeID = snapshot.transactions[index].payeeID, doomed.contains(payeeID) {
+                snapshot.transactions[index].payeeID = nil
+                snapshot.transactions[index].updatedAt = now
+            }
+        }
+        for index in snapshot.scheduledItems.indices {
+            if let payeeID = snapshot.scheduledItems[index].payeeID, doomed.contains(payeeID) {
+                snapshot.scheduledItems[index].payeeID = nil
+                snapshot.scheduledItems[index].updatedAt = now
+            }
+        }
+        snapshot.payees.removeAll { doomed.contains($0.id) }
+        return snapshot
+    }
+
     public static func mergingPayees(
         _ sourceID: UUID,
         into survivingID: UUID,

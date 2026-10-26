@@ -46,9 +46,18 @@ public protocol LedgerRepository: AnyObject {
     func deletePayee(id: UUID) throws
     func mergePayees(_ sourceID: UUID, into survivingID: UUID) throws
     /// How many live records use this payee, so Undo can tell whether a payee its save created may go
-    /// (D191.4). Today only transactions can: a scheduled occurrence is a transaction, and there is no
-    /// scheduled-transaction template, rule or split payee yet. A model that gets a payee must join the count.
+    /// (D191.4): live transactions and live scheduled items. Deleted records don't count, and there is no rule or
+    /// split payee yet. A model that gets a payee must join the count.
     func payeeReferenceCount(_ payeeID: UUID) throws -> Int
+    /// Which of `ids` live records use: the payees `payeeReferenceCount` counts above zero, found in one pass
+    /// (`LedgerSnapshot.payeesInUse`). Undo Import uses it (#250).
+    ///
+    /// Call it inside `atomically`, where it reads the change's own snapshot. Outside one, a store may load the
+    /// whole ledger for it (SwiftData does, attachments included), where `payeeReferenceCount` is a count query.
+    func payeesInUse(among ids: Set<UUID>) throws -> Set<UUID>
+    /// Deletes payees as one batch, the same as `deletePayee` for each (`LedgerBook.deletingPayees`). A repeated id
+    /// counts once. Undo Import uses it (#250).
+    func deletePayees(ids: [UUID]) throws
 
     func tags() throws -> [Tag]
     func saveTag(_ tag: Tag) throws
@@ -87,6 +96,23 @@ extension LedgerRepository {
         try atomically {
             for id in ids {
                 try deleteTransaction(id: id)
+            }
+        }
+    }
+
+    /// One count per payee, for a repository without a one-pass path.
+    public func payeesInUse(among ids: Set<UUID>) throws -> Set<UUID> {
+        try ids.filter { try payeeReferenceCount($0) > 0 }
+    }
+
+    /// One by one, for a repository without a batch path. A repeated id is dropped, keeping the first in order, so
+    /// it counts once as in the batch paths instead of failing as an unknown payee on its second delete.
+    public func deletePayees(ids: [UUID]) throws {
+        var seen: Set<UUID> = []
+        let unique = ids.filter { seen.insert($0).inserted }
+        try atomically {
+            for id in unique {
+                try deletePayee(id: id)
             }
         }
     }

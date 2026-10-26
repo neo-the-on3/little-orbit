@@ -95,6 +95,14 @@ public final class InMemoryLedgerRepository: LedgerRepository {
         snapshot = try LedgerBook.deletingPayee(id: id, in: snapshot, now: now())
     }
 
+    public func payeesInUse(among ids: Set<UUID>) throws -> Set<UUID> {
+        snapshot.payeesInUse(among: ids)
+    }
+
+    public func deletePayees(ids: [UUID]) throws {
+        snapshot = try LedgerBook.deletingPayees(ids: ids, in: snapshot, now: now())
+    }
+
     public func mergePayees(_ sourceID: UUID, into survivingID: UUID) throws {
         snapshot = try LedgerBook.mergingPayees(sourceID, into: survivingID, in: snapshot, now: now())
     }
