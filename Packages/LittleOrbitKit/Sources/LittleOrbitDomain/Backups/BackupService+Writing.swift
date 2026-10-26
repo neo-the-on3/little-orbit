@@ -19,8 +19,10 @@ extension BackupService {
         of ledger: LedgerSnapshot,
         bytes source: any BackupAttachmentReading,
         entries known: [UUID: BackupFileEntry]? = nil,
+        shared: BackupSharedSettings? = nil,
         requiringCheck: Bool = false,
     ) async throws -> BackupRecord {
+        let shared = shared ?? currentSharedSettings()
         let catalog = try await loadCatalog()
         let createdAt = now()
         let nameIndex = BackupNaming.nameIndex(for: createdAt, existing: catalog.records)
@@ -50,7 +52,8 @@ extension BackupService {
         do {
             written = try await Self.detached(priority: .utility) {
                 let entries = try known ?? codec.attachmentEntries(of: ledger, reading: bytes)
-                let files = try codec.encode(BackupContents(manifest: manifest, ledger: ledger), attachments: entries)
+                let contents = BackupContents(manifest: manifest, ledger: ledger, sharedSettings: shared)
+                let files = try codec.encode(contents, attachments: entries)
                 let writes = try Self.attachmentWrites(
                     ledger,
                     entries: entries,

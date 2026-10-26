@@ -6412,7 +6412,7 @@
       }
     },
     "Scheduled Items": {
-      "comment": "Settings section, and the Mac Settings tab, for scheduled items’ reminders (D341.4).",
+      "comment": "Settings: the Scheduled Items section on iOS and the Scheduled Items tab on the Mac, with Show upcoming and Reminder Time (D341.4, D348).",
       "extractionState": "manual",
       "generatesSymbol": false,
       "localizations": {
@@ -6425,7 +6425,7 @@
       }
     },
     "Scheduled items set to “Notify when due” remind you at this time.": {
-      "comment": "Settings › Scheduled Items footer under Reminder Time (D341.4).",
+      "comment": "Settings › Scheduled Items footer under both rows; it's about reminders only (D341.4, D348).",
       "extractionState": "manual",
       "generatesSymbol": false,
       "localizations": {
@@ -9091,6 +9091,19 @@
           "stringUnit": {
             "state": "translated",
             "value": "Type"
+          }
+        }
+      }
+    },
+    "Show upcoming": {
+      "comment": "Settings › Scheduled Items: the switch that shows scheduled occurrences as Upcoming rows in account history.",
+      "extractionState": "manual",
+      "generatesSymbol": false,
+      "localizations": {
+        "en": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Show upcoming"
           }
         }
       }

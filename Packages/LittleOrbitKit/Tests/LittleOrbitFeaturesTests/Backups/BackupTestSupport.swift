@@ -31,6 +31,7 @@ final class BackupHarness {
         hashing: (any BackupHashing)? = nil,
         source: ((InMemoryLedgerRepository) -> any LedgerBackupSource)? = nil,
         zone: TimeZone = TimeZone(identifier: "Asia/Kolkata") ?? .gmt,
+        sharedSettings: (any BackupSharedSettingsStore)? = nil,
     ) throws {
         self.zone = zone
         self.archiving = archiving ?? FakeBackupArchiving()
@@ -54,6 +55,7 @@ final class BackupHarness {
             schemaVersion: "1.0.0",
             now: { clock.now },
             timeZone: { zones.current },
+            sharedSettings: sharedSettings,
         )
     }
 

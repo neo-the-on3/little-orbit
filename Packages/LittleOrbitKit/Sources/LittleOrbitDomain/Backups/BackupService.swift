@@ -17,6 +17,8 @@ public final class BackupService: AllBackupUseCases {
     let storage: any BackupStorage
     let archiving: any BackupArchiving
     let settings: any BackupSettingsStore
+    /// The shared settings written into each backup and put back by a restore (D96.1, D348).
+    let sharedSettings: (any BackupSharedSettingsStore)?
     let codec: BackupCodec
     private let changes: LedgerChanges
     let schemaVersion: String
@@ -33,11 +35,13 @@ public final class BackupService: AllBackupUseCases {
         schemaVersion: String,
         now: @escaping @MainActor () -> Date = { Date() },
         timeZone: @escaping @MainActor () -> TimeZone = { .current },
+        sharedSettings: (any BackupSharedSettingsStore)? = nil,
     ) {
         self.source = source
         self.storage = storage
         self.archiving = archiving
         self.settings = settings
+        self.sharedSettings = sharedSettings
         self.codec = BackupCodec(hashing: hashing)
         self.changes = changes
         self.schemaVersion = schemaVersion
@@ -78,13 +82,15 @@ public final class BackupService: AllBackupUseCases {
             }
             let ledger = try source.backupSnapshot()
             let bytes = try source.attachmentBytes()
+            let shared = currentSharedSettings()
             let codec = self.codec
             let cancellable = BackupCancellableBytes(bytes)
             // Each attachment hashed in chunks, one at a time; the backup below reuses the entries (B1). Cancelling
             // the task, as the background expiry does, stops it between chunks.
             let (entries, fingerprint) = try await Self.detached(priority: .utility) {
                 let entries = try codec.attachmentEntries(of: ledger, reading: cancellable)
-                return (entries, try codec.fingerprint(of: ledger, attachments: entries))
+                // The shared settings count, as in the backup itself, so changing Show upcoming is a change.
+                return (entries, try codec.fingerprint(of: ledger, attachments: entries, settings: shared))
             }
             let needed = BackupPolicy.needsAutomaticBackup(
                 now: moment,
@@ -93,7 +99,8 @@ public final class BackupService: AllBackupUseCases {
                 currentFingerprint: fingerprint,
                 ledgerIsEmpty: BackupPolicy.isEmpty(ledger),
             )
-            return needed ? try await makeBackup(.automatic, of: ledger, bytes: bytes, entries: entries) : nil
+            return needed
+                ? try await makeBackup(.automatic, of: ledger, bytes: bytes, entries: entries, shared: shared) : nil
         }
     }
 
@@ -268,6 +275,8 @@ public final class BackupService: AllBackupUseCases {
             try await Self.mapping(to: .restoreFailed) {
                 try self.source.replaceLedger(with: opened.contents.ledger, attachments: opened.attachments)
             }
+            // The backup's shared settings come back with its data, before anything reloads (D96.1, D348).
+            sharedSettings?.restoreSharedSettings(opened.contents.sharedSettings)
             changes.ledgerReplaced()
             // The backup read is released by now, before the restored data is read back for the marker.
             try? await markRestored()
@@ -300,6 +309,11 @@ public final class BackupService: AllBackupUseCases {
 
     public func retention() -> BackupRetention {
         settings.retention()
+    }
+
+    /// The shared settings as they are now, for the next backup; empty when the app keeps none.
+    func currentSharedSettings() -> BackupSharedSettings {
+        sharedSettings?.backupSharedSettings() ?? BackupSharedSettings()
     }
 
     public func cleanupPlan(for retention: BackupRetention) async throws -> BackupCleanupPlan {
@@ -336,12 +350,16 @@ public final class BackupService: AllBackupUseCases {
     private func markRestored() async throws {
         let restored = try source.backupSnapshot()
         let bytes = try source.attachmentBytes()
+        // With the shared settings the restore just put back, as the automatic backup's check counts them, so the
+        // day after a restore makes no backup until something changes (S53, Tech Architect B1 on #203).
+        let shared = currentSharedSettings()
         let codec = self.codec
         let fingerprint =
             try await Task.detached(executorPreference: BackupWorkExecutor.shared, priority: .userInitiated) {
                 try codec.fingerprint(
                     of: restored,
                     attachments: codec.attachmentEntries(of: restored, reading: bytes),
+                    settings: shared,
                 )
             }
             .value

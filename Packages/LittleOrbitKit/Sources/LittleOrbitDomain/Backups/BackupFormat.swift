@@ -168,9 +168,9 @@ public struct BackupReservedRecord: Equatable, Sendable, Codable {
     public init() {}
 }
 
-/// Shared (synced) settings that go in every backup (D96.1). None of them exist yet, so format 1 leaves every
-/// field empty. Per-device settings (app lock, hide amounts, report exclusions, theme, reconciliation drafts) are
-/// never part of a backup (D23, D62), so there's no field for them.
+/// Shared (synced) settings that go in every backup (D96.1). Only "Show upcoming" exists yet (D348), so format 1
+/// leaves every other field empty. Per-device settings (app lock, hide amounts, report exclusions, theme,
+/// reconciliation drafts) are never part of a backup (D23, D62), so there's no field for them.
 public struct BackupSharedSettings: Equatable, Sendable, Codable {
     public var newTransactionsDefaultToPending: Bool?
     public var tagsEnabled: Bool?
@@ -190,6 +190,28 @@ public struct BackupSharedSettings: Equatable, Sendable, Codable {
         self.defaultTagID = defaultTagID
         self.defaultCurrencyCode = defaultCurrencyCode
         self.showUpcoming = showUpcoming
+    }
+
+    private enum CodingKeys: String, CodingKey {
+        case newTransactionsDefaultToPending, tagsEnabled, defaultTagID, defaultCurrencyCode, showUpcoming
+    }
+
+    /// `showUpcoming` is read as D348.4 says: Off stays Off, and an older Next month, Next quarter or Next year
+    /// range, stored as text, is On. No value is left empty, which a restore takes as On.
+    public init(from decoder: any Decoder) throws {
+        let container = try decoder.container(keyedBy: CodingKeys.self)
+        newTransactionsDefaultToPending = try container.decodeIfPresent(
+            Bool.self,
+            forKey: .newTransactionsDefaultToPending,
+        )
+        tagsEnabled = try container.decodeIfPresent(Bool.self, forKey: .tagsEnabled)
+        defaultTagID = try container.decodeIfPresent(UUID.self, forKey: .defaultTagID)
+        defaultCurrencyCode = try container.decodeIfPresent(String.self, forKey: .defaultCurrencyCode)
+        if let range = try? container.decodeIfPresent(String.self, forKey: .showUpcoming) {
+            showUpcoming = range.lowercased() != "off"
+        } else {
+            showUpcoming = try container.decodeIfPresent(Bool.self, forKey: .showUpcoming)
+        }
     }
 }
 

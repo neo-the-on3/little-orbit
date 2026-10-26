@@ -23,13 +23,13 @@ struct LittleOrbitMacApp: App {
         }
 
         // The standard Settings window, opened with Cmd-, from the app menu (D179.5). It's the shared home for
-        // app settings: Scheduled Items › Reminder Time (#26, D341.4), then Backups (#40). Later tabs (Security
-        // with App Lock, #29) go before Backups.
+        // app settings: Scheduled Items, with Show upcoming (D348) and Reminder Time (#26, D341.4), then Backups
+        // (#40). Later tabs (Security with App Lock, #29) go before Backups.
         Settings {
             if case .success(let features) = features {
                 TabView {
-                    Tab(ScheduledReminderSettingsTab.title, systemImage: "bell") {
-                        ScheduledReminderSettingsTab(feature: features.scheduled)
+                    Tab(ScheduledReminderSettingsTab.title, systemImage: "calendar.badge.clock") {
+                        ScheduledReminderSettingsTab(feature: features.scheduled, upcoming: features.scheduledUpcoming)
                     }
                     Tab("Backups", systemImage: "clock.arrow.circlepath") {
                         BackupsSettingsTab(model: features.backups, isPickingFile: $isPickingBackupFile)
