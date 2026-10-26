@@ -37,8 +37,10 @@
                     if !detail.due.isEmpty {
                         Section {
                             ForEach(detail.due) { row in
-                                // The status is the row's own text; each button is named by its title alone, not
-                                // by the row's label (Tester's #198 Mac pass).
+                                // The status is the row's own text, so each button is named by its visible title
+                                // alone, not by the row's label (Tester's #198 Mac pass). The row is a container
+                                // named by its date, so a button reached directly still says which occurrence
+                                // it settles (UI Designer's #213 review).
                                 HStack {
                                     Text(verbatim: row.dateText)
                                     Spacer()
@@ -47,6 +49,8 @@
                                         .buttonStyle(.borderedProminent)
                                 }
                                 .buttonStyle(.bordered)
+                                .accessibilityElement(children: .contain)
+                                .accessibilityLabel(Text(verbatim: row.dateText))
                             }
                         }
                     }

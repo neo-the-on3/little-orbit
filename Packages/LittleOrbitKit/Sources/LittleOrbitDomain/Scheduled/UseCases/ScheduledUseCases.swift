@@ -82,8 +82,11 @@ public protocol ScheduledCatchUpNoticeUseCase: AnyObject {
     func markShown()
     /// The Scheduled screen was left: forget what it showed. What it hasn't shown stays.
     func dismissIfShown()
-    /// Forget what's pending, for a hint with nothing left to show (its items were deleted).
+    /// Forget what's pending, for a hint with nothing left to show (its items were deleted) or after a restore.
     func clear()
+    /// How many times `clear()` ran this launch, so a list still showing a hint it already reported can tell that
+    /// a restore forgot it.
+    var clearCount: Int { get }
 }
 
 /// Where the pending catch-up notice is kept between launches: app settings, not the ledger, so no backup holds it.
@@ -115,6 +118,7 @@ public final class InMemoryScheduledCatchUpNoticeStore: ScheduledCatchUpNoticeSt
 @MainActor
 public final class ScheduledCatchUpNotices: ScheduledCatchUpNoticeUseCase {
     private let store: any ScheduledCatchUpNoticeStore
+    public private(set) var clearCount = 0
 
     /// A notice the previous run showed went when the app quit on the Scheduled screen: it was seen.
     public init(store: any ScheduledCatchUpNoticeStore = InMemoryScheduledCatchUpNoticeStore()) {
@@ -153,6 +157,7 @@ public final class ScheduledCatchUpNotices: ScheduledCatchUpNoticeUseCase {
 
     public func clear() {
         store.setNotice(nil)
+        clearCount += 1
     }
 }
 
