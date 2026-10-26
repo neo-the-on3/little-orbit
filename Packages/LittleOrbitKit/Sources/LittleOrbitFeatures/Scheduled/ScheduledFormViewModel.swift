@@ -77,6 +77,10 @@ public final class ScheduledFormViewModel: Identifiable {
     /// An account, transfer or date error, after a save attempt.
     public private(set) var formError: String?
     public var alert: CategoryAlert?
+    /// Dismissing the alert also closes the form: its item was deleted elsewhere, so there's nothing left to edit (#258).
+    public private(set) var alertClosesForm = false
+    /// Set once the deleted-item alert has been dismissed by any route, for the view to close the form (#258).
+    public private(set) var closeRequested = false
 
     @ObservationIgnored private let useCases: ScheduledScreenUseCases
     @ObservationIgnored private let listing: ScheduledListing
@@ -329,6 +333,8 @@ public final class ScheduledFormViewModel: Identifiable {
     public func save() -> Bool {
         amountError = nil
         formError = nil
+        // Only this save's deleted-item alert closes the form: the item may be back (an Undo elsewhere) (#258).
+        alertClosesForm = false
         let amount: Decimal
         do {
             amount = try AmountInput.parse(amountText, currencyCode: currencyCode, locale: locale)
@@ -363,12 +369,35 @@ public final class ScheduledFormViewModel: Identifiable {
         } catch LedgerValidationError.scheduleEndsBeforeStart {
             formError = ScheduledText.endBeforeStart
             return false
+        } catch LedgerValidationError.missingScheduledItem where !isNew {
+            // Deleted elsewhere while the form was open: nothing was saved, and OK closes the form (#258).
+            alert = ScheduledText.deletedNothingSaved(itemName)
+            alertClosesForm = true
+            return false
         } catch {
             alert = ScheduledText.saveFailed
             return false
         }
         saved()
         return true
+    }
+
+    /// The alert's `isPresented`. Every way the alert goes away (its OK, or Esc on the Mac) sets it to false, which
+    /// also asks the form to close after its item was deleted elsewhere (#258). Any other alert leaves the form open.
+    public var isAlertPresented: Bool {
+        get { alert != nil }
+        set {
+            guard !newValue, alert != nil else { return }
+            alert = nil
+            if alertClosesForm {
+                closeRequested = true
+            }
+        }
+    }
+
+    /// The edited item's short name, as the Delete confirmation names it.
+    private var itemName: String {
+        original.map { ScheduledPresenter(listing: listing, locale: locale).shortName(of: $0) } ?? ""
     }
 
     /// The account form's messages (D334.12).

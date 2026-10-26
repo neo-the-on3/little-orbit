@@ -443,7 +443,7 @@
       }
     },
     "%@ has been deleted. Nothing was changed.": {
-      "comment": "Alert message: an Undo or Redo that can't run because the record or account was deleted after the step was recorded, so nothing was changed. %@ is the transaction's payee or description, or the account name. Don't name a cause: the same check catches a change from anywhere.",
+      "comment": "Alert message: an Undo or Redo that can't run because the record or account was deleted after the step was recorded, or Save on a transaction’s or scheduled item’s Edit form after it was deleted (under “Couldn’t Save Changes”; OK closes the form), so nothing was changed. %@ is the transaction's payee or description, the account name, or the scheduled item’s name. Don't name a cause: the same check catches a change from anywhere.",
       "extractionState": "manual",
       "localizations": {
         "en": {
