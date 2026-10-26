@@ -5,13 +5,15 @@ import Testing
 
 /// #30 S35: a 5,000-row import stays responsive. Commit and Undo Import run on the main actor, so they save
 /// and remove the batch in one pass instead of once per row. Made-up rows; the bounds are loose so a slow CI
-/// machine still passes, and the timings are printed for the PR.
+/// machine still passes, and the timings are printed for the PR. Commit and Undo run `attempts` times, each on
+/// a fresh repository, and the fastest of each is checked, so one slow moment on a shared runner doesn't fail it.
 @Suite("Import commit and Undo timing (#30 S35)")
 @MainActor
 struct ImportTimingTests {
     static let zone = TimeZone(identifier: "Asia/Kolkata") ?? .gmt
     static let rows = 5000
     static let bound: Duration = .seconds(2)
+    static let attempts = 3
 
     /// `count` made-up rows in `year` over 200 payees, with lakh-grouped incomes and quoted notes.
     static func csv(_ count: Int, year: Int) -> String {
@@ -66,7 +68,25 @@ struct ImportTimingTests {
         return (preview, useCases.ledger)
     }
 
+    /// Commit and Undo `attempts` times, each on a fresh repository; returns the fastest of each.
     static func run(existing: Int) throws -> (commit: Duration, undo: Duration) {
+        var commits: [Duration] = []
+        var undos: [Duration] = []
+        for _ in 0..<attempts {
+            let timing = try once(existing: existing)
+            commits.append(timing.commit)
+            undos.append(timing.undo)
+        }
+        let commit = try #require(commits.min())
+        let undo = try #require(undos.min())
+        print(
+            "Import timing: \(rows) rows into \(existing) existing, fastest of \(attempts): commit \(commit) "
+                + "of \(commits), undo \(undo) of \(undos)"
+        )
+        return (commit, undo)
+    }
+
+    static func once(existing: Int) throws -> (commit: Duration, undo: Duration) {
         let repository = try repository(existing: existing)
         let (preview, ledger) = try preview(repository)
         #expect(preview.failedCount == 0)
