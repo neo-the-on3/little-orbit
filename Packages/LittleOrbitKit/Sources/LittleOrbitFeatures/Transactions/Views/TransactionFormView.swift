@@ -38,6 +38,7 @@
         var body: some View {
             NavigationStack {
                 content
+                    .modifier(TransactionDeletedAlert(model: model) { dismiss() })
                     .navigationTitle(model.title)
                     #if os(iOS)
                         .navigationBarTitleDisplayMode(.inline)

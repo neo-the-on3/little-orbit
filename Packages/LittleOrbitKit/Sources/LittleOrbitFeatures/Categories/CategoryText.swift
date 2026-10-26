@@ -205,7 +205,8 @@ enum CategoryText {
     static var couldntSaveTitle: String {
         FeatureText.string(
             "Couldn’t Save Changes",
-            comment: "Alert title: a category change couldn’t be saved and nothing changed. Its only button is OK.",
+            comment:
+                "Alert title: a category, payee, scheduled item or transaction change couldn’t be saved and nothing changed. Its only button is OK.",
         )
     }
 

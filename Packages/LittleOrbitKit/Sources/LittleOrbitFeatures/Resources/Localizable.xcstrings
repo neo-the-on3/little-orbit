@@ -2670,7 +2670,7 @@
       }
     },
     "Couldn’t Save Changes": {
-      "comment": "Alert title: a category or payee change couldn’t be saved and nothing changed. Its only button is OK.",
+      "comment": "Alert title: a category, payee, scheduled item or transaction change couldn’t be saved and nothing changed, including Save on a scheduled item’s or transaction’s Edit form after it was deleted, where OK also closes the form. Its only button is OK.",
       "extractionState": "manual",
       "generatesSymbol": false,
       "localizations": {
@@ -5622,7 +5622,7 @@
       }
     },
     "OK": {
-      "comment": "Closes a category or payee alert or a CSV import or export alert, or dismisses the Scheduled list’s card about watch actions for good.",
+      "comment": "Closes a category, payee, scheduled item or transaction alert, such as “Couldn’t Save Changes” after an edited item was deleted (there OK also closes the Edit form), or a CSV import or export alert, or dismisses the Scheduled list’s card about watch actions for good.",
       "extractionState": "manual",
       "generatesSymbol": false,
       "localizations": {
@@ -6649,6 +6649,18 @@
           "stringUnit": {
             "state": "translated",
             "value": "This file isn’t encrypted and contains all your financial data."
+          }
+        }
+      }
+    },
+    "This transaction has been deleted. Nothing was changed.": {
+      "comment": "Alert message under “Couldn’t Save Changes”: Save on a transaction’s Edit form after the transaction was deleted, when it has no payee and no description, so nothing was saved and OK closes the form. With either, “%@ has been deleted. Nothing was changed.” names it instead. Don’t name a cause: the same check catches a delete from anywhere.",
+      "extractionState": "manual",
+      "localizations": {
+        "en": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "This transaction has been deleted. Nothing was changed."
           }
         }
       }
