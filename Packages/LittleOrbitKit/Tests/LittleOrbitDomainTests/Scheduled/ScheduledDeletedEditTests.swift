@@ -55,6 +55,28 @@ struct ScheduledDeletedEditTests {
         #expect(repository.snapshot.transactions.count == 1)
     }
 
+    @Test("Deleted, then Pay Now or Skip from a detail screen still showing it: both throw and write nothing")
+    func payAndSkipAfterDeleteWriteNothing() throws {
+        let (repository, rent) = try rentScene()
+        let useCases = repository.useCases()
+        // 1 Sep and 1 Oct are overdue, so the detail screen loaded before the delete offers Pay Now and Skip on both.
+        try useCases.delete(id: rent.id)
+        let afterDelete = repository.snapshot
+        let saves = repository.saves
+        #expect(throws: LedgerValidationError.missingScheduledItem) {
+            try useCases.payNow(itemID: rent.id, occurrence: Fix.day(2026, 9, 1))
+        }
+        #expect(throws: LedgerValidationError.missingScheduledItem) {
+            try useCases.skip(itemID: rent.id, occurrence: Fix.day(2026, 10, 1))
+        }
+        #expect(repository.snapshot == afterDelete)
+        #expect(repository.saves == saves)
+        // No item is brought back and no payment is recorded: only the August one from before the delete remains.
+        #expect(repository.snapshot.scheduledItems.isEmpty)
+        #expect(try useCases.listing().item(rent.id) == nil)
+        #expect(repository.snapshot.transactions.count == 1)
+    }
+
     @Test("An update of a stored item saves the change and keeps its settled occurrences")
     func editOfAStoredItemSaves() throws {
         let (repository, rent) = try rentScene()
