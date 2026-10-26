@@ -8,9 +8,10 @@
 LITTLEORBIT_DEVELOPMENT_TEAM =
 
 // Leave empty to keep app.littleorbit.ios, app.littleorbit.macos, and
-// app.littleorbit.watchos. If a free personal team cannot register those
-// IDs, set a unique suffix that includes the leading dot, for example
-// .yourname. Profiles from a free personal team expire after 7 days.
+// app.littleorbit.ios.watchkitapp. If a free personal team cannot register
+// those IDs, set a unique suffix that includes the leading dot, for example
+// .yourname; the watch app becomes app.littleorbit.ios.yourname.watchkitapp.
+// Profiles from a free personal team expire after 7 days.
 LITTLEORBIT_BUNDLE_ID_SUFFIX =
 
 // After LITTLEORBIT_DEVELOPMENT_TEAM is a real team, uncomment the next

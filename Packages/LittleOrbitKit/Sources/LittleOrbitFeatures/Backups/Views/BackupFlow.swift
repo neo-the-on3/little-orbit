@@ -1,4 +1,4 @@
-#if canImport(SwiftUI)
+#if canImport(SwiftUI) && !os(watchOS)
     import LittleOrbitDomain
     import LittleOrbitTheme
     import SwiftUI
@@ -331,7 +331,7 @@
     }
 #endif
 
-#if canImport(SwiftUI)
+#if canImport(SwiftUI) && !os(watchOS)
     /// The two Keep steppers (D195.4, L11): standard Stepper rows, as UI Designer approved. Off while a backup or
     /// restore runs (L14), and while this window's 'Delete N Backups?' waits. That prompt belongs to the
     /// window, not the shared view model, so the steppers show its proposed values only here (Tech Architect).

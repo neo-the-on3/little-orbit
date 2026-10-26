@@ -6,10 +6,10 @@
 //   Target              SDK        Deployment   Bundle ID                  Product
 //   LittleOrbit iOS     iphoneos   27.0         app.littleorbit.ios        LittleOrbit.app
 //   LittleOrbit macOS   macosx     27.0         app.littleorbit.macos      LittleOrbitMac.app
-//   LittleOrbit watchOS watchos    27.0         app.littleorbit.watchos    LittleOrbitWatch.app
+//   LittleOrbit watchOS watchos    27.0         app.littleorbit.ios.watchkitapp  LittleOrbitWatch.app
 //
 // Display name on every platform: Little Orbit
-// The watchOS app is standalone. It is not embedded in the iOS app.
+// The watchOS app is embedded in the iOS app (#17) and runs independently of it.
 //
 // Signing is automatic. The committed Team ID is empty.
 // Local team and optional bundle ID suffix: Config/Signing.local.xcconfig
