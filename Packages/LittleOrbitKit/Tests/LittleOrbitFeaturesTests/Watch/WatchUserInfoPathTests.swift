@@ -108,9 +108,11 @@ struct WatchUserInfoPathTests {
         let notice = try #require(inbox.notices().first)
         #expect(inbox.notices().count == 1)
         #expect(notice == WatchRequestNotice(id: request.id, reason: .itemChanged, action: .pay, itemID: plan.id))
-        // IDs only: the name and amount aren't stored.
-        let stored = try #require(String(bytes: try JSONEncoder().encode(inbox.notices()), encoding: .utf8))
-        #expect(!stored.contains("Phone Plan") && !stored.contains("1500"))
+        // IDs only: exactly the request ID, reason, action and item ID, so the name and amount aren't stored. The
+        // IDs are random, so the stored text is compared whole rather than searched for "1500", which the two random
+        // UUIDs contain about once in 2,200 runs (#253).
+        let stored = try JSONDecoder().decode([[String: String]].self, from: try JSONEncoder().encode(inbox.notices()))
+        #expect(stored == [["q": request.id.uuidString, "r": "itemChanged", "a": "pay", "i": plan.id.uuidString]])
         #expect(watch.conflict == nil)
     }
 
