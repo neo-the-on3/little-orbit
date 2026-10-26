@@ -163,6 +163,14 @@
             }
         }
 
+        #if DEBUG
+            /// `-LittleOrbitScheduledReminderTap` (`ScheduledReminderTapLaunch`): a tap on the item's reminder that
+            /// names no scene, through the same path as a real response. Debug builds only.
+            func openItemFromLaunchArgument(_ itemID: UUID) {
+                openItem(itemID, scene: nil)
+            }
+        #endif
+
         /// A reminder that arrives while the app is in front still shows as a banner, and refills the budget.
         nonisolated func userNotificationCenter(
             _ center: UNUserNotificationCenter,

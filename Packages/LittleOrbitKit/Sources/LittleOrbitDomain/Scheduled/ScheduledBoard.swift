@@ -57,6 +57,13 @@ public struct ScheduledBoard: Equatable, Sendable {
         Set(overdue.map(\.item.id) + dueToday.map(\.item.id) + upcoming.map(\.item.id)).count + completed.count
     }
 
+    /// Every item on the board once, in the list's order: Overdue, Due today, Upcoming, then Completed.
+    public var items: [ScheduledItem] {
+        var seen = Set<UUID>()
+        let active = (overdue + dueToday + upcoming).map(\.item).filter { seen.insert($0.id).inserted }
+        return active + completed
+    }
+
     public var isEmpty: Bool {
         itemCount == 0
     }
