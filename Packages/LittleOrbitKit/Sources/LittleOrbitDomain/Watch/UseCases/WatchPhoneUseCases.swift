@@ -232,18 +232,19 @@ public struct DefaultWatchPhoneUseCases: MakeWatchSnapshotUseCase, ApplyWatchReq
 public protocol WatchCompanionLink: AnyObject {
     /// Called with each request the watch sends.
     func onRequest(_ handler: @escaping @MainActor (Data) -> Void)
-    /// Replaces the snapshot the watch reads. `.waiting` when there's no one to give it to yet (the session isn't
-    /// active, no watch is paired or the watch app isn't installed): the link keeps it and sends it itself once it
-    /// can. Throws when the session refuses it.
+    /// Replaces the snapshot the watch reads, stamped so it's never identical to the last one (Tester F1).
+    /// `.waiting` when there's no one to give it to yet (activation hasn't completed, no watch is paired or the
+    /// watch app isn't installed); `onWatchChanged` says when to publish again. Throws when the session refuses it.
     func publish(_ snapshot: Data) throws -> WatchPublishResult
-    /// Called when the session activates and when the paired watch or its app changes: the watch may not have the
-    /// last snapshot, even one already delivered (Tech Architect 5646901449, NB1).
+    /// Called when activation completes with the watch app installed, and when pairing or the install changes and
+    /// leaves it installed: the watch may not have the last snapshot, even one already delivered (Tech Architect
+    /// 5646901449 NB1, 5647974743).
     func onWatchChanged(_ handler: @escaping @MainActor () -> Void)
 }
 
 /// Whether a published snapshot reached WatchConnectivity (Tech Architect 5646845418, B1).
 public enum WatchPublishResult: Sendable {
     case delivered
-    /// Kept by the link until a watch is paired with the app installed.
+    /// Not sent: the feature publishes again when the link says the watch changed.
     case waiting
 }

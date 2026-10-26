@@ -17,9 +17,7 @@
                 let repository = try LittleOrbitStore.makeRepository(configuration: .appLocal())
                 // The iPhone end of the watch link (#197 item 10). The Mac has no watch.
                 #if os(iOS)
-                    let watchLink: (any WatchCompanionLink)? = PhoneWatchSession { error in
-                        StoreLog.failure(.watchPublishFailed, error)
-                    }
+                    let watchLink: (any WatchCompanionLink)? = PhoneWatchSession.makeLink()
                 #else
                     let watchLink: (any WatchCompanionLink)? = nil
                 #endif
