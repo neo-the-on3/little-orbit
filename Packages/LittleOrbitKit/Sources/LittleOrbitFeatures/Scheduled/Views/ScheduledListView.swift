@@ -7,7 +7,8 @@
     /// was closed, an info hint comes first. Overdue starts with its hint row, then lists each missed occurrence on
     /// its own row; then Due Today, Upcoming and a Completed row with its count. Rows are standard navigation links
     /// to the item; the context menu has Pay Now, Skip This Occurrence, Edit and Delete. It sits inside the caller's
-    /// NavigationStack. Whichever Scheduled screen is on top presents the form, confirmations and alerts.
+    /// NavigationStack. Whichever Scheduled screen is on top presents the form, confirmations and alerts. A watch Pay
+    /// or Skip the iPhone didn't apply shows as a card above everything else until OK (D374, D376).
     ///
     /// The Mac gives the list its own stack, and the list registers the item and Completed destinations. On iPhone
     /// and iPad it's pushed onto the Accounts stack, whose typed path only takes `AccountsRoute` and only honours
@@ -46,6 +47,9 @@
 
         private var list: some View {
             List {
+                if let notices = feature.watchNotices, let card = notices.card {
+                    WatchRequestNoticeCardView(card: card, model: notices, linkValue: linkValue)
+                }
                 if let hint = model.catchUpHint {
                     Section {
                         Label(hint, systemImage: "info.circle")
@@ -116,9 +120,14 @@
             .onAppear {
                 model.screenAppeared(.list)
                 model.load()
+                feature.watchNotices?.reload()
             }
             .onDisappear { model.screenDisappeared(.list) }
-            .onChange(of: feature.revision) { model.load() }
+            .onChange(of: feature.revision) {
+                model.load()
+                // An item-changed card names the item as it's called now, or goes if it was deleted.
+                feature.watchNotices?.reload()
+            }
         }
 
         private func link(_ row: ScheduledRow) -> some View {
@@ -356,6 +365,38 @@
                 } message: { alert in
                     Text(alert.message)
                 }
+        }
+    }
+
+    /// The card for a watch Pay or Skip the iPhone didn't apply (D374, D375, D376; UI Designer 6406964245): its
+    /// title and message, then View Item when it names one item, and OK, the default, which dismisses it for good.
+    /// Standard List row pieces only.
+    struct WatchRequestNoticeCardView<Link: Hashable>: View {
+        let card: WatchRequestNoticeCard
+        let model: WatchRequestNoticeViewModel
+        /// The list's own route mapping, so View Item opens the item on the iPhone and iPad Accounts stack too.
+        let linkValue: (ScheduledRoute) -> Link
+
+        var body: some View {
+            Section {
+                VStack(alignment: .leading, spacing: 4) {
+                    Text(verbatim: card.title)
+                        .font(.headline)
+                    Text(verbatim: card.message)
+                }
+                HStack {
+                    if let itemID = card.itemID {
+                        NavigationLink(value: linkValue(.item(itemID))) {
+                            Text(verbatim: model.viewItemTitle)
+                        }
+                        .buttonStyle(.bordered)
+                    }
+                    Spacer()
+                    Button(model.okTitle) { model.dismiss() }
+                        .buttonStyle(.borderedProminent)
+                        .keyboardShortcut(.defaultAction)
+                }
+            }
         }
     }
 #endif

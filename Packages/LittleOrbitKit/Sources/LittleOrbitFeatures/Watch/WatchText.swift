@@ -3,7 +3,7 @@ import Foundation
 /// The wording of the watch's Scheduled screens (#32, #197 item 10), from the package's String Catalog. The list
 /// title, Skip and the empty state are the iPhone's entries.
 enum WatchText {
-    /// The watch's Pay button (#32 frame 137:734).
+    /// The watch's Pay button (#32 Watch Pay frame).
     static var pay: String {
         FeatureText.string(
             "Pay",
@@ -11,7 +11,7 @@ enum WatchText {
         )
     }
 
-    /// The list row of an occurrence due today (#32 frame 137:693).
+    /// The list row of an occurrence due today (#32 Watch Scheduled list frame).
     static var today: String {
         FeatureText.string(
             "Today",
@@ -19,7 +19,7 @@ enum WatchText {
         )
     }
 
-    /// The row of an occurrence paid on the watch, until the iPhone confirms it (#32 frame 137:753).
+    /// The row of an occurrence paid on the watch, until the iPhone confirms it (#32 Watch syncing frame).
     static var paidSyncing: String {
         FeatureText.string(
             "Paid · syncing",
@@ -27,12 +27,30 @@ enum WatchText {
         )
     }
 
-    /// The row of an occurrence skipped on the watch, until the iPhone confirms it. Pending Product Manager: only
-    /// “Paid · syncing” is drawn.
+    /// The row of an occurrence skipped on the watch, until the iPhone confirms it. Approved by UI Designer
+    /// (6406964245).
     static var skippedSyncing: String {
         FeatureText.string(
             "Skipped · syncing",
             comment: "Apple Watch, Scheduled list row: skipped on the watch, waiting for the iPhone to apply it.",
+        )
+    }
+
+    // MARK: Before the first snapshot (UI Designer 6406964245)
+
+    static var notSyncedTitle: String {
+        FeatureText.string(
+            "Not Synced Yet",
+            comment:
+                "Apple Watch, Scheduled screen title before the iPhone has sent anything: the watch hasn't received the scheduled list yet.",
+        )
+    }
+
+    static var notSyncedMessage: String {
+        FeatureText.string(
+            "Open little-orbit on your iPhone.",
+            comment:
+                "Apple Watch, under “Not Synced Yet”: opening the iPhone app sends the watch its scheduled list. little-orbit is the app's name.",
         )
     }
 

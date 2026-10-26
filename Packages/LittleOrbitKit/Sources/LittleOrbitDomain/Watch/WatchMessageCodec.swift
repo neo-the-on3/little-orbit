@@ -66,6 +66,18 @@ public enum WatchMessageCodec {
         try decode(WatchScheduledRequest.self, from: data)
     }
 
+    /// What can be read of a request from a newer watch build (D376): its ID, so the iPhone can answer it, and
+    /// whether it was a Pay or a Skip, when that much still reads. `nil` unless `data` carries a newer version.
+    public static func newerRequest(_ data: Data) -> WatchNewerRequest? {
+        guard let probe = try? JSONDecoder().decode(WatchNewerRequestProbe.self, from: data),
+            probe.version > WatchSnapshot.currentVersion,
+            let id = probe.id
+        else {
+            return nil
+        }
+        return WatchNewerRequest(id: id, action: probe.action.flatMap(WatchScheduledRequest.Action.init(rawValue:)))
+    }
+
     // MARK: Private
 
     private static func makeEncoder() -> JSONEncoder {
@@ -95,5 +107,25 @@ private struct WatchMessageVersionProbe: Decodable {
 
     private enum CodingKeys: String, CodingKey {
         case version = "v"
+    }
+}
+
+/// The fields of a newer request this build still tries to read, each optional.
+private struct WatchNewerRequestProbe: Decodable {
+    let version: Int
+    let id: UUID?
+    let action: String?
+
+    private enum CodingKeys: String, CodingKey {
+        case version = "v"
+        case id = "q"
+        case action = "a"
+    }
+
+    init(from decoder: any Decoder) throws {
+        let container = try decoder.container(keyedBy: CodingKeys.self)
+        version = try container.decode(Int.self, forKey: .version)
+        id = try? container.decodeIfPresent(UUID.self, forKey: .id)
+        action = try? container.decodeIfPresent(String.self, forKey: .action)
     }
 }

@@ -26,6 +26,9 @@ public final class WatchScheduledViewModel {
 
     public var title: String { ScheduledText.title }
     public var emptyTitle: String { ScheduledText.emptyTitle }
+    /// Before the first snapshot (UI Designer 6406964245); after it, an empty list shows `emptyTitle`.
+    public var notSyncedTitle: String { WatchText.notSyncedTitle }
+    public var notSyncedMessage: String { WatchText.notSyncedMessage }
     public var payTitle: String { WatchText.pay }
     public var skipTitle: String { ScheduledText.skip }
     public var isEmpty: Bool { rows.isEmpty }

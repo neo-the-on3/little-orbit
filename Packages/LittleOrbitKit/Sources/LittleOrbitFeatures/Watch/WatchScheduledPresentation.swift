@@ -1,7 +1,7 @@
 import Foundation
 import LittleOrbitDomain
 
-/// One row of the watch's Scheduled list (#32 frame 137:693): an occurrence from the iPhone's snapshot.
+/// One row of the watch's Scheduled list (#32 Watch Scheduled list frame): an occurrence from the iPhone's snapshot.
 public struct WatchScheduledRow: Identifiable, Equatable, Sendable {
     /// The occurrence key (`ScheduledKey.occurrenceID`).
     public let id: UUID

@@ -4,8 +4,8 @@ import Testing
 
 @testable import LittleOrbitFeatures
 
-/// The watch's Scheduled list, Pay screen, syncing marks and messages (#32 frames 137:693, 137:734, 137:753,
-/// 137:794; D342, D343), mapped from the use case's state.
+/// The watch's Scheduled list, Pay screen, syncing marks and messages (#32 Watch Scheduled
+/// frames; D342, D343), mapped from the use case's state.
 @MainActor
 @Suite("Watch Scheduled view model")
 struct WatchScheduledViewModelTests {
@@ -95,15 +95,19 @@ struct WatchScheduledViewModelTests {
         )
     }
 
-    @Test("Before the first snapshot: waiting, and the empty state")
+    @Test("Before the first snapshot: Not Synced Yet; after an empty one, the normal empty state (6406964245)")
     func waitingForIPhone() {
         let model = model()
         #expect(model.isWaitingForIPhone && model.isEmpty)
-        #expect(model.emptyTitle == "Nothing Scheduled")
+        #expect(model.notSyncedTitle == "Not Synced Yet")
+        #expect(model.notSyncedMessage == "Open little-orbit on your iPhone.")
         #expect(model.title == "Scheduled")
+        fake.set(WatchScheduledState(snapshot: WatchSnapshot(today: Self.today)))
+        #expect(!model.isWaitingForIPhone && model.isEmpty)
+        #expect(model.emptyTitle == "Nothing Scheduled")
     }
 
-    @Test("Rows: overdue, Today, then the next date, named as on the iPhone (frame 137:693)")
+    @Test("Rows: overdue, Today, then the next date, named as on the iPhone (Watch Scheduled list frame)")
     func rows() throws {
         fake.current = WatchScheduledState(snapshot: WatchSnapshot(today: Self.today, scheduled: Self.rows))
         let model = model()
@@ -114,13 +118,13 @@ struct WatchScheduledViewModelTests {
         #expect(model.rows[2].dateText.contains("Sun") && model.rows[2].dateText.contains("1 Nov"))
         #expect(model.rows.allSatisfy { $0.symbolName == "calendar" && !$0.isPending })
         #expect(model.rows[1].amount.contains("649.00") && !model.rows[1].amount.contains("-"))
-        // The Pay screen's line (frame 137:734).
+        // The Pay screen's line (Watch Pay frame).
         #expect(model.rows[1].detail == "Due today · Everyday Savings · Entertainment")
         #expect(model.payTitle == "Pay" && model.skipTitle == "Skip")
         #expect(model.rows.map(\.id) == Self.rows.map(\.id))
     }
 
-    @Test("Pay and Skip go to the use case; a syncing row reads Paid · syncing and can’t be tapped again (137:753)")
+    @Test("Pay and Skip go to the use case; a syncing row reads Paid · syncing and can’t be tapped again")
     func paySkipAndSyncing() throws {
         fake.current = WatchScheduledState(snapshot: WatchSnapshot(today: Self.today, scheduled: Self.rows))
         let model = model()
