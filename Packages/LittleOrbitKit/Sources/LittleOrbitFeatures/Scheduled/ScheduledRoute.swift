@@ -23,3 +23,32 @@ final class ScheduledListSlot {
         self.model = model
     }
 }
+
+/// Who builds the screens a Scheduled list opens. A list on someone else's stack always gets both the slot and the
+/// way to push onto that stack, so no button there can fall back to a navigation link (which adds a row chevron on
+/// iPhone; Tech Architect 5647157983).
+@MainActor
+enum ScheduledListHost<Link: Hashable> {
+    /// The list registers its own destinations (the Mac's detail column stack).
+    case ownStack
+    /// A stack whose root registers the destinations for the list's link values and builds them with the model in
+    /// `slot`; `open` pushes a link value onto it, for buttons such as the watch card's View Item (the iPhone and
+    /// iPad Accounts stack).
+    case parentStack(slot: ScheduledListSlot, open: (Link) -> Void)
+
+    /// The slot the pushed screens read the list's model from; `nil` on the list's own stack.
+    var slot: ScheduledListSlot? {
+        switch self {
+        case .ownStack: nil
+        case .parentStack(let slot, _): slot
+        }
+    }
+
+    /// Pushes onto the parent stack; `nil` exactly when there's no slot.
+    var openLink: ((Link) -> Void)? {
+        switch self {
+        case .ownStack: nil
+        case .parentStack(_, let open): open
+        }
+    }
+}
