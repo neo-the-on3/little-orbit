@@ -111,4 +111,36 @@ struct CSVImportLateSettingTests {
         #expect(model.readyCount == 5)
         #expect(model.selectedRows.allSatisfy { $0.detail.hasSuffix("Corner Wallet") })
     }
+
+    @Test("A late step-back shows the D327.1 notice once, and Next clears it (UI Designer 6408001553)")
+    func lateStepBackShowsNotice() async throws {
+        let notice = "Your data changed, so this preview was updated."
+        let model = try await Self.onMatch()
+        var heard: [String] = []
+        model.announce = { heard.append($0) }
+        #expect(model.dataChangedNotice == nil)
+        model.decimalSeparator = .comma
+        #expect(model.step == .columns)
+        #expect(model.dataChangedNotice == notice)
+        #expect(heard == [notice])
+        // A further change on Columns keeps the notice, and VoiceOver doesn't hear it again.
+        model.decimalSeparator = .period
+        #expect(model.dataChangedNotice == notice)
+        #expect(heard == [notice])
+        await model.next()
+        #expect(model.step == .match)
+        #expect(model.dataChangedNotice == nil)
+    }
+
+    @Test("A change on the owning step shows no notice")
+    func earlyChangeShowsNoNotice() async throws {
+        let repository = try F.repository()
+        let (model, _) = try await CSVImportPlanOrderTests.onAccount(repository)
+        var heard: [String] = []
+        model.announce = { heard.append($0) }
+        model.targetAccountID = try F.account("Corner Wallet", in: repository).id
+        #expect(model.step == .account)
+        #expect(model.dataChangedNotice == nil)
+        #expect(heard.isEmpty)
+    }
 }

@@ -376,11 +376,18 @@ public final class CSVImportViewModel {
 
     /// A read setting or the target account changed: drops the preview and any running plan (B3). A change that
     /// arrives once the sheet has moved on, such as a menu pick applied just after the plan landed, goes back to
-    /// the step that owns the setting, so Match or Review is never left empty with Next off (#232).
+    /// the step that owns the setting, so Match or Review is never left empty with Next off (#232), and says so
+    /// with the D327.1 notice (UI Designer 6408001553). It's set after the step changes, because a step change
+    /// clears it. Review unticks reset to their defaults after a step-back, the same as Back plus a change.
     private func settingChanged(owner: Step) {
         invalidatePreview()
         if step == .match || step == .review {
             step = owner
+            let wasShowing = dataChangedNotice != nil
+            dataChangedNotice = ImportExportText.dataChanged
+            if !wasShowing {
+                announce(ImportExportText.dataChanged)
+            }
         }
     }
 
