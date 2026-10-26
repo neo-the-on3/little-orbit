@@ -170,7 +170,7 @@ The first install builds `xcprojformatter` from that commit, so it needs network
 | `format-check` | Linux and macOS | Linux: `swift-format lint --strict --recursive .`. macOS: `xcrun swift-format lint --strict --recursive .` |
 | `test` | Linux and macOS | Linux: `swift test --package-path --parallel --xunit-output test-results/<package>.xml` for each `Package.swift`, using Swift 6.4.1. macOS: `xcrun swift test --package-path` for each `Package.swift` |
 | `build` | macOS only | `xcodebuild -version`, then `xcodebuild` for each shared scheme in `LittleOrbit.xcodeproj` |
-| `validate-project` | Linux and macOS | `xcprojformatter` on each `project.xcproj` |
+| `validate-project` | Linux and macOS | `xcprojformatter` on each `project.xcproj`; fails if app code uses `mainContext`, `@Query` or `modelContext` |
 
 `lint` prints a note and succeeds when the tree has no Swift sources. `build` runs `xcodebuild -version` first and stops unless it reports Xcode 27.2 or newer. On Linux that check fails and the message points at `swift build` for shared package code. `test` stops when the tree has no `Package.swift`. On macOS, `test`, `format`, and `format-check` stop if `xcrun` cannot find the tool. `validate-project` succeeds and prints a short note when no `project.xcproj` exists yet.
 

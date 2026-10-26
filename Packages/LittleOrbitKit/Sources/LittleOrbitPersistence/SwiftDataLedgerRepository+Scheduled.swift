@@ -61,22 +61,23 @@
         }
 
         /// The accounts, categories, payees and scheduled items, without transactions, splits, tags or attachments:
-        /// what the Scheduled screens, the badge and a catch-up with nothing due read (#26). Inside `atomically`
-        /// it's the batch's snapshot, so the writes so far are seen.
+        /// what the Scheduled screens, the badge and a catch-up with nothing due read (#26), from the ledger in
+        /// memory (#235). Inside `atomically` it's the batch's snapshot, so the writes so far are seen.
         func loadScheduleRecords() throws -> LedgerSnapshot {
             if let batch {
                 return batch.withoutAttachmentBytes
             }
+            let ledger = try storedLedger().snapshot
             return LedgerSnapshot(
-                accounts: try fetch(LittleOrbitSchemaV1.AccountRecord.self).map { $0.makeAccount() },
-                categories: try fetch(LittleOrbitSchemaV1.CategoryRecord.self).map { $0.makeCategory() },
-                payees: try fetch(LittleOrbitSchemaV1.PayeeRecord.self).map { $0.makePayee() },
-                scheduledItems: try fetch(LittleOrbitSchemaV1.ScheduledItemRecord.self).map { $0.makeScheduledItem() },
+                accounts: ledger.accounts,
+                categories: ledger.categories,
+                payees: ledger.payees,
+                scheduledItems: ledger.scheduledItems,
             )
         }
 
         /// Writes the snapshot's scheduled items and their occurrences, links each occurrence to its item, and
-        /// deletes the ones that are gone. Part of the one save in `write`.
+        /// deletes the ones that are gone. Part of the one save in `writeWholeStore`.
         func applyScheduledItems(_ snapshot: LedgerSnapshot, currencies: [UUID: String]) throws {
             let items = try fetch(LittleOrbitSchemaV1.ScheduledItemRecord.self)
             let occurrences = try fetch(LittleOrbitSchemaV1.ScheduledOccurrenceRecord.self)

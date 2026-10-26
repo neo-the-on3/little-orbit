@@ -5,6 +5,10 @@ import XCTest
 
 let posix = Locale(identifier: "en_US_POSIX")
 
+/// The ledger's `Attachment`, which Swift Testing's own `Attachment` hides in a test file (Xcode 27.2: "ambiguous
+/// for type lookup"). The module name doesn't qualify it: `LittleOrbitDomain` is also an enum in that module.
+typealias LedgerAttachment = Attachment
+
 /// A day after every transaction these tests create, so balances count all of them as current (D21).
 let ledgerToday = CalendarDay(year: 2100, month: 1, day: 1)
 
