@@ -39,6 +39,10 @@ public final class InMemoryLedgerRepository: LedgerRepository {
         snapshot = try LedgerBook.savingTransaction(transaction, in: snapshot, now: now())
     }
 
+    public func updateTransaction(_ transaction: Transaction) throws {
+        snapshot = try LedgerBook.updatingTransaction(transaction, in: snapshot, now: now())
+    }
+
     public func deleteTransaction(id: UUID) throws {
         snapshot = try LedgerBook.deletingTransaction(id: id, in: snapshot, now: now())
     }

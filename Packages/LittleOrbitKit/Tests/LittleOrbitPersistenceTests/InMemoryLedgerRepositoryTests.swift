@@ -97,4 +97,13 @@ final class InMemoryLedgerRepositoryTests: XCTestCase {
             }
         }
     }
+
+    /// #264: an edit of a transaction deleted elsewhere writes nothing.
+    func testAnEditOfADeletedTransactionWritesNothing() throws {
+        try onMain {
+            try assertEditOfADeletedTransactionWritesNothing {
+                InMemoryLedgerRepository()
+            }
+        }
+    }
 }

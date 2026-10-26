@@ -11,6 +11,9 @@ public protocol LedgerRepository: AnyObject {
 
     func transactions() throws -> [Transaction]
     func saveTransaction(_ transaction: Transaction) throws
+    /// See `LedgerBook.updatingTransaction(_:in:now:)`: an edit of a transaction that's no longer stored throws
+    /// `missingTransaction` and saves nothing (#264).
+    func updateTransaction(_ transaction: Transaction) throws
     func deleteTransaction(id: UUID) throws
     /// Saves new transactions as one batch, with the same rules as `saveTransaction` for each
     /// (`LedgerBook.savingNewTransactions`). An import uses it so 5,000 rows don't save one by one (#30 S35).
@@ -82,6 +85,16 @@ public protocol LedgerRepository: AnyObject {
 }
 
 extension LedgerRepository {
+    /// The existence check, then `saveTransaction`, in one change, for a repository without its own update path.
+    public func updateTransaction(_ transaction: Transaction) throws {
+        try atomically {
+            guard try transactions().contains(where: { $0.id == transaction.id }) else {
+                throw LedgerValidationError.missingTransaction
+            }
+            try saveTransaction(transaction)
+        }
+    }
+
     /// One by one, for a repository without a batch path.
     public func saveNewTransactions(_ transactions: [Transaction]) throws {
         try atomically {

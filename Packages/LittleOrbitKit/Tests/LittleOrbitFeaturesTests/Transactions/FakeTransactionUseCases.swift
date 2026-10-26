@@ -41,6 +41,15 @@ final class FakeTransactionUseCases {
         .saved(try save(transactions), creating: payees)
     }
 
+    func update(_ transaction: Transaction) throws -> TransactionChange {
+        saved.append([transaction])
+        return .replaced([transaction])
+    }
+
+    func update(_ transaction: Transaction, payeeNamed name: String, createdAt: Date) throws -> TransactionChange {
+        try update(transaction)
+    }
+
     func resolvePayee(named name: String, createdAt: Date) throws -> ResolvedPayee? { nil }
 
     func remove(ids: [UUID]) throws -> TransactionChange {

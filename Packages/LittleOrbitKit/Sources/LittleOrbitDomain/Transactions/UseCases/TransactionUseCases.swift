@@ -59,6 +59,12 @@ public protocol SaveTransactionsUseCase {
     /// `save(_:)` for a save that used these payees `resolvePayee` just created. The change carries them as
     /// stored after the save, which sets their default category, so Undo can tell later edits (D191.4a.1).
     func save(_ transactions: [Transaction], creating payees: [Payee]) throws -> TransactionChange
+    /// Saves an edit of a stored transaction, all or none, and returns its `.replaced` change. One deleted elsewhere
+    /// while its form was open throws `LedgerValidationError.missingTransaction` and writes nothing (#264).
+    func update(_ transaction: Transaction) throws -> TransactionChange
+    /// `update(_:)` with a typed payee name resolved in the same all-or-nothing write, as `resolvePayee` does, so a
+    /// refused update creates no payee (D391.1). A payee it creates goes with the change, as in `save(_:creating:)`.
+    func update(_ transaction: Transaction, payeeNamed name: String, createdAt: Date) throws -> TransactionChange
     /// The payee with this name (case-insensitive), saving a new one if there is none. `nil` for a blank name.
     /// A new one comes back with `isNew` set, so the caller can record it with its change
     /// (`TransactionChange.saved(_:creating:)`) and Undo can remove it again (D191.4).

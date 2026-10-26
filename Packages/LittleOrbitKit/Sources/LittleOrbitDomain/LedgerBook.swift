@@ -138,6 +138,21 @@ public enum LedgerBook {
         return snapshot
     }
 
+    /// Changes a transaction that's already stored, as `savingTransaction(_:in:now:)` does. One that isn't stored,
+    /// because it was deleted while an Edit form was open, say in another window, throws `missingTransaction` and
+    /// changes nothing: an edit never adds the transaction back as a new one (#264). A transfer is one record for
+    /// both accounts, so deleting either side, or either account, deletes it, and its edit is refused too.
+    public static func updatingTransaction(
+        _ transaction: Transaction,
+        in snapshot: LedgerSnapshot,
+        now: Date,
+    ) throws -> LedgerSnapshot {
+        guard snapshot.transactions.contains(where: { $0.id == transaction.id && $0.deletedAt == nil }) else {
+            throw LedgerValidationError.missingTransaction
+        }
+        return try savingTransaction(transaction, in: snapshot, now: now)
+    }
+
     /// Deletes the transaction with its splits and attachments. Its refunds stay, unlinked, with `isRefund`
     /// and their category: 'Refund (original deleted)' (D19).
     public static func deletingTransaction(id: UUID, in snapshot: LedgerSnapshot, now: Date) throws -> LedgerSnapshot {
