@@ -57,6 +57,8 @@ public protocol WatchPhoneLink: AnyObject {
     func onSnapshot(_ handler: @escaping @MainActor (Data) -> Void)
     /// Queues a request for the iPhone.
     func send(_ request: Data)
+    /// Called each time the session finishes activating.
+    func onActivated(_ handler: @escaping @MainActor () -> Void)
 }
 
 /// A disposable cache on the watch: the last snapshot and the sent requests. Losing it loses no ledger data, since
@@ -104,6 +106,9 @@ public final class DefaultWatchScheduledUseCases: WatchScheduledUseCase {
         let cached = cache.snapshotData().flatMap { try? WatchMessageCodec.decodeSnapshot($0) }
         current = WatchScheduledState(snapshot: cached, sent: cache.sentRequests())
         link.onSnapshot { [weak self] data in self?.received(data) }
+        // A request tapped just before the app quit may never have been queued: send every pending one again. The
+        // iPhone applies each request ID once (Tech Architect 5646845418, NB1).
+        link.onActivated { [weak self] in self?.resendPending() }
         if let latest = link.latestSnapshotData() {
             received(latest, notify: false)
         }
@@ -111,6 +116,15 @@ public final class DefaultWatchScheduledUseCases: WatchScheduledUseCase {
 
     public func state() -> WatchScheduledState {
         current
+    }
+
+    /// Sends every request still waiting for the iPhone's answer again.
+    func resendPending() {
+        for sent in current.sent where sent.isPending {
+            if let data = try? WatchMessageCodec.encode(sent.request) {
+                link.send(data)
+            }
+        }
     }
 
     public func pay(_ occurrence: WatchScheduledOccurrence) {

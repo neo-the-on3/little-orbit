@@ -232,6 +232,15 @@ public struct DefaultWatchPhoneUseCases: MakeWatchSnapshotUseCase, ApplyWatchReq
 public protocol WatchCompanionLink: AnyObject {
     /// Called with each request the watch sends.
     func onRequest(_ handler: @escaping @MainActor (Data) -> Void)
-    /// Replaces the snapshot the watch reads. Throws when the session can't take it (no paired watch, say).
-    func publish(_ snapshot: Data) throws
+    /// Replaces the snapshot the watch reads. `.waiting` when there's no one to give it to yet (the session isn't
+    /// active, no watch is paired or the watch app isn't installed): the link keeps it and sends it itself once it
+    /// can. Throws when the session refuses it.
+    func publish(_ snapshot: Data) throws -> WatchPublishResult
+}
+
+/// Whether a published snapshot reached WatchConnectivity (Tech Architect 5646845418, B1).
+public enum WatchPublishResult: Sendable {
+    case delivered
+    /// Kept by the link until a watch is paired with the app installed.
+    case waiting
 }

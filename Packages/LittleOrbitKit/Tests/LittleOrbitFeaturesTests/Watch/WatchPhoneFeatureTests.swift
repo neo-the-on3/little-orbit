@@ -20,13 +20,20 @@ struct WatchPhoneFeatureTests {
         private var phoneHandler: (@MainActor (Data) -> Void)?
         private var watchHandler: (@MainActor (Data) -> Void)?
         var publishes = 0
+        /// No paired watch or no watch app yet: the next publish is held, not delivered.
+        var holdsNext = false
 
         // iPhone side
         func onRequest(_ handler: @escaping @MainActor (Data) -> Void) { phoneHandler = handler }
-        func publish(_ snapshot: Data) throws {
+        func publish(_ snapshot: Data) throws -> WatchPublishResult {
+            if holdsNext {
+                holdsNext = false
+                return .waiting
+            }
             publishes += 1
             context = snapshot
             watchHandler?(snapshot)
+            return .delivered
         }
 
         // Watch side
@@ -36,6 +43,8 @@ struct WatchPhoneFeatureTests {
             queued.append(request)
             deliver()
         }
+
+        func onActivated(_ handler: @escaping @MainActor () -> Void) {}
 
         func deliver() {
             guard phoneIsReachable else {
@@ -141,6 +150,21 @@ struct WatchPhoneFeatureTests {
         try scene.add(scene.item("Gym", day: 5, month: 11))
         phone.publish()
         #expect(pair.publishes == 2)
+    }
+
+    @Test("A snapshot the link held (no watch yet) isn’t taken as sent: the next start publishes it (5646845418 B1)")
+    func heldSnapshotIsPublishedAgain() throws {
+        try scene.add(scene.item("Rent", day: 1, month: 11))
+        pair.holdsNext = true
+        let phone = phone()
+        phone.start()
+        #expect(pair.publishes == 0)
+        // Nothing changed in the ledger, but the watch has nothing yet.
+        phone.start()
+        #expect(pair.publishes == 1)
+        #expect(pair.latestSnapshotData() != nil)
+        phone.start()
+        #expect(pair.publishes == 1)
     }
 
     @Test("A request the iPhone can’t read is reported with no user data, and changes nothing")

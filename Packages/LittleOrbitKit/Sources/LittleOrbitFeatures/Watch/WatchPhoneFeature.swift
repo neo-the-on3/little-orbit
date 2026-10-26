@@ -51,8 +51,11 @@ public final class WatchPhoneFeature {
             return
         }
         do {
-            try link.publish(data)
-            lastPublished = data
+            // Only a delivered snapshot counts: one the link is holding is published again next time, so a watch
+            // paired or installed later still gets the list (Tech Architect 5646845418, B1).
+            if try link.publish(data) == .delivered {
+                lastPublished = data
+            }
         } catch {
             onProblem(.publishFailed(error))
         }
