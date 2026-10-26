@@ -87,6 +87,9 @@ public struct WatchScheduledOccurrence: Codable, Hashable, Sendable, Identifiabl
     public var accountName: String
     /// A transfer's To account.
     public var transferAccountName: String?
+    /// The item as the iPhone had it (`WatchItemRevision`), sent back with Pay and Skip so a request made against
+    /// an item changed since records nothing (D374). Absent from an older iPhone build.
+    public var revision: UInt32?
 
     public init(
         itemID: UUID,
@@ -100,6 +103,7 @@ public struct WatchScheduledOccurrence: Codable, Hashable, Sendable, Identifiabl
         categoryName: String? = nil,
         accountName: String,
         transferAccountName: String? = nil,
+        revision: UInt32? = nil,
     ) {
         self.itemID = itemID
         self.day = day
@@ -112,6 +116,7 @@ public struct WatchScheduledOccurrence: Codable, Hashable, Sendable, Identifiabl
         self.categoryName = categoryName
         self.accountName = accountName
         self.transferAccountName = transferAccountName
+        self.revision = revision
     }
 
     /// The same key the iPhone settles the occurrence under (`ScheduledKey`), so a repeated request is harmless.
@@ -131,5 +136,6 @@ public struct WatchScheduledOccurrence: Codable, Hashable, Sendable, Identifiabl
         case categoryName = "g"
         case accountName = "f"
         case transferAccountName = "r"
+        case revision = "h"
     }
 }

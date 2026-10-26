@@ -37,15 +37,20 @@ public final class ScheduledFeature: PlannedItemsSource {
     private var reportedCreatedAfterToday = false
     /// Removes the restore handler if this feature is ever replaced while `updates` lives on.
     private var ledgerReplacedHandler: LedgerUpdates.ReplacedHandler?
+    /// The card for watch Pay and Skip requests the iPhone didn't apply (D374, D376), shared by every window's
+    /// list; `nil` with no watch link (the Mac).
+    public let watchNotices: WatchRequestNoticeViewModel?
 
     /// `updates` tells every window to reload after a scheduled change, as a transaction change does.
     public init(
         useCases: ScheduledScreenUseCases,
         updates: LedgerUpdates? = nil,
         locale: Locale = .current,
+        watchNotices: WatchRequestNoticeViewModel? = nil,
         onCatchUpProblem: @escaping (ScheduledCatchUpProblem) -> Void = { _ in },
     ) {
         self.useCases = useCases
+        self.watchNotices = watchNotices
         self.updates = updates
         self.locale = locale
         self.onCatchUpProblem = onCatchUpProblem

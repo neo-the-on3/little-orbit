@@ -1,14 +1,15 @@
 import Foundation
 import LittleOrbitDomain
 
-/// The watch requests the iPhone hasn't applied yet, and the outcomes it reports back, in this device's app
-/// settings (#197 item 10). A request whose save failed is tried again at the next launch or activation. Only IDs,
-/// days and results: never names or amounts. It isn't ledger data, so no backup holds it and the store's schema
-/// doesn't change.
+/// The watch requests the iPhone hasn't applied yet, the outcomes it reports back and the notices not dismissed
+/// yet (D374, D376), in this device's app settings (#197 item 10). A request whose save failed is tried again at
+/// the next launch or activation. Only IDs, days and results: never names or amounts. It isn't ledger data, so no
+/// backup holds it and the store's schema doesn't change.
 @MainActor
 public final class UserDefaultsWatchRequestInbox: WatchRequestInboxStore {
     static let requestsKey = "watch.scheduled.keptRequests"
     static let outcomesKey = "watch.scheduled.outcomes"
+    static let noticesKey = "watch.scheduled.notices"
 
     private let defaults: UserDefaults
 
@@ -30,6 +31,14 @@ public final class UserDefaultsWatchRequestInbox: WatchRequestInboxStore {
 
     public func setOutcomes(_ outcomes: [WatchRequestOutcome]) {
         write(outcomes, Self.outcomesKey)
+    }
+
+    public func notices() -> [WatchRequestNotice] {
+        read([WatchRequestNotice].self, Self.noticesKey) ?? []
+    }
+
+    public func setNotices(_ notices: [WatchRequestNotice]) {
+        write(notices, Self.noticesKey)
     }
 
     private func read<Value: Decodable>(_ type: Value.Type, _ key: String) -> Value? {

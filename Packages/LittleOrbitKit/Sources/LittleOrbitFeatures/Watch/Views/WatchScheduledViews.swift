@@ -2,10 +2,11 @@
     import LittleOrbitDomain
     import SwiftUI
 
-    /// The watch's Scheduled list (#32 frame 137:693): each overdue occurrence on its own row (D340.6), then due
-    /// today, then each item's next date. A row opens Pay and Skip (137:734); a syncing row shows a clock (137:753).
-    /// A Pay or Skip the iPhone turned down shows as a system alert with OK (137:794, D342, D343). System controls
-    /// throughout.
+    /// The watch's Scheduled list (#32 Watch Scheduled list frame): each overdue occurrence on its own row (D340.6),
+    /// then due today, then each item's next date. A row opens Pay and Skip (the Watch Pay frame); a syncing row
+    /// shows a clock (the Watch syncing frame). A Pay or Skip the iPhone turned down shows as a system alert with OK
+    /// (the Watch conflict frame, D342, D343). Before the first snapshot it says it isn't synced yet (UI Designer
+    /// 6406964245). System controls throughout.
     public struct WatchScheduledListView: View {
         let model: WatchScheduledViewModel
 
@@ -16,7 +17,13 @@
         public var body: some View {
             NavigationStack {
                 Group {
-                    if model.isEmpty {
+                    if model.isWaitingForIPhone {
+                        ContentUnavailableView {
+                            Text(model.notSyncedTitle)
+                        } description: {
+                            Text(model.notSyncedMessage)
+                        }
+                    } else if model.isEmpty {
                         ContentUnavailableView(model.emptyTitle, systemImage: "clock")
                     } else {
                         List(model.rows) { row in
@@ -77,7 +84,7 @@
         }
     }
 
-    /// Pay or Skip one occurrence (#32 frame 137:734): its name, amount and due line, then Pay and Skip. Both
+    /// Pay or Skip one occurrence (#32 Watch Pay frame): its name, amount and due line, then Pay and Skip. Both
     /// go back to the list, where the row shows it's syncing until the iPhone confirms.
     struct WatchScheduledPayView: View {
         let model: WatchScheduledViewModel

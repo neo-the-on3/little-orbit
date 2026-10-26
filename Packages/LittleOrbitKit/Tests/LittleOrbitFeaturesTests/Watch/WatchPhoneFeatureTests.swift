@@ -158,4 +158,73 @@ struct WatchPhoneFeatureTests {
         phone.received(Data("nonsense".utf8))
         #expect(problems == ["newerRequest", "unreadableRequest"])
     }
+
+    @Test("Paid on the watch, then the item edited on the iPhone: nothing recorded, one card that survives a relaunch")
+    func staleCardSurvivesRelaunch() throws {
+        let name = "watch-feature-\(UUID().uuidString)"
+        let defaults = try #require(UserDefaults(suiteName: name))
+        defer { defaults.removePersistentDomain(forName: name) }
+        func launch() -> (WatchPhoneFeature, WatchRequestNoticeViewModel) {
+            let useCases = DefaultWatchPhoneUseCases(
+                repository: scene.repository,
+                inbox: UserDefaultsWatchRequestInbox(defaults: defaults),
+                today: { CalendarDay(year: 2026, month: 10, day: 20) },
+            )
+            let notices = WatchRequestNoticeViewModel(useCases: useCases)
+            let phone = WatchPhoneFeature(
+                snapshots: useCases,
+                requests: useCases,
+                link: pair,
+                updates: scene.updates,
+                notices: notices,
+            )
+            return (phone, notices)
+        }
+        var plan = scene.item("Phone Plan", day: 20, month: 10)
+        try scene.add(plan)
+        let (phone, notices) = launch()
+        phone.start()
+        let watch = watch(today: CalendarDay(year: 2026, month: 10, day: 20))
+        pair.phoneIsReachable = false
+        watch.pay(try #require(watch.rows.first).id)
+        plan.amount = 1_500
+        try scene.add(plan)
+        #expect(notices.card == nil)
+        pair.phoneIsReachable = true
+        pair.deliver()
+        #expect(try scene.repository.scheduleLedger().transactions.isEmpty)
+        // The watch just clears its syncing mark (D374).
+        #expect(watch.conflict == nil)
+        #expect(watch.rows.map(\.dateText).allSatisfy { $0 != "Paid · syncing" })
+        #expect(notices.card?.title == "Couldn’t Record Watch Payment")
+        #expect(notices.card?.itemID == plan.id)
+
+        let (_, relaunched) = launch()
+        #expect(relaunched.card?.title == "Couldn’t Record Watch Payment")
+        relaunched.dismiss()
+        #expect(launch().1.card == nil)
+    }
+
+    @Test("A request from a newer watch app: nothing recorded, the watch clears its mark, an update card (D376)")
+    func newerWatchAppCard() throws {
+        try scene.add(scene.item("Phone Plan", day: 20, month: 10))
+        let useCases = DefaultWatchPhoneUseCases(
+            repository: scene.repository,
+            inbox: inbox,
+            today: { CalendarDay(year: 2026, month: 10, day: 20) },
+        )
+        let notices = WatchRequestNoticeViewModel(useCases: useCases)
+        let phone = WatchPhoneFeature(snapshots: useCases, requests: useCases, link: pair, notices: notices)
+        phone.start()
+        let id = UUID()
+        phone.received(Data("{\"v\":2,\"q\":\"\(id.uuidString)\",\"a\":\"skip\"}".utf8))
+        #expect(try scene.repository.scheduleLedger().transactions.isEmpty)
+        #expect(inbox.keptRequests().isEmpty)
+        #expect(inbox.outcomes() == [WatchRequestOutcome(requestID: id, result: .unsupported)])
+        #expect(notices.card?.title == "Update little-orbit on iPhone")
+        #expect(
+            notices.card?.message.hasPrefix("Your Apple Watch has a newer version of little-orbit, so this skip")
+                == true
+        )
+    }
 }

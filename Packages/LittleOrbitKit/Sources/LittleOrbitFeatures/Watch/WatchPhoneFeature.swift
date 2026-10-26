@@ -12,12 +12,15 @@ public final class WatchPhoneFeature {
     private let updates: LedgerUpdates?
     private let onProblem: (WatchLinkProblem) -> Void
     private var lastPublished: Data?
+    /// The Scheduled list's card for requests it didn't apply (D374, D376), shared with `ScheduledFeature`.
+    private let notices: WatchRequestNoticeViewModel?
 
     public init(
         snapshots: any MakeWatchSnapshotUseCase,
         requests: any ApplyWatchRequestsUseCase,
         link: any WatchCompanionLink,
         updates: LedgerUpdates? = nil,
+        notices: WatchRequestNoticeViewModel? = nil,
         onProblem: @escaping (WatchLinkProblem) -> Void = { _ in },
     ) {
         self.snapshots = snapshots
@@ -25,6 +28,7 @@ public final class WatchPhoneFeature {
         self.link = link
         self.updates = updates
         self.onProblem = onProblem
+        self.notices = notices
         link.onRequest { [weak self] data in self?.received(data) }
     }
 
@@ -59,7 +63,11 @@ public final class WatchPhoneFeature {
         do {
             request = try WatchMessageCodec.decodeRequest(data)
         } catch .newerVersion {
+            // Not applied or kept; answered so the watch clears its mark, with a card to update (D376).
             onProblem(.newerRequest)
+            if let newer = WatchMessageCodec.newerRequest(data) {
+                finish(requests.receiveNewer(newer))
+            }
             return
         } catch {
             onProblem(.unreadableRequest)
@@ -75,6 +83,9 @@ public final class WatchPhoneFeature {
         if run.changedLedger {
             // Every window reloads, and the revision change publishes; publish now as well, in case none is open.
             updates?.changed()
+        }
+        if run.queuedNotices > 0 {
+            notices?.reload()
         }
         publish()
     }

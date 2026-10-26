@@ -170,6 +170,7 @@ public final class DefaultWatchScheduledUseCases: WatchScheduledUseCase {
             itemID: occurrence.itemID,
             occurrence: occurrence.day,
             tappedOn: today(),
+            revision: occurrence.revision,
         )
         guard let data = try? WatchMessageCodec.encode(request) else {
             return

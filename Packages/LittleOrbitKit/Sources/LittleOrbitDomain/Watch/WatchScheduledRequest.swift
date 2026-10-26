@@ -18,6 +18,9 @@ public struct WatchScheduledRequest: Codable, Hashable, Sendable, Identifiable {
     public var occurrence: CalendarDay
     /// The day it was tapped on the watch: a Pay is dated that day, however late it arrives (D345, #48).
     public var tappedOn: CalendarDay
+    /// The item's revision in the snapshot the watch showed (`WatchItemRevision`). When it no longer matches, the
+    /// item changed on the iPhone first and the request is stale: nothing is recorded or skipped (D374).
+    public var revision: UInt32?
 
     public init(
         version: Int = WatchSnapshot.currentVersion,
@@ -26,6 +29,7 @@ public struct WatchScheduledRequest: Codable, Hashable, Sendable, Identifiable {
         itemID: UUID,
         occurrence: CalendarDay,
         tappedOn: CalendarDay,
+        revision: UInt32? = nil,
     ) {
         self.version = version
         self.id = id
@@ -33,6 +37,7 @@ public struct WatchScheduledRequest: Codable, Hashable, Sendable, Identifiable {
         self.itemID = itemID
         self.occurrence = occurrence
         self.tappedOn = tappedOn
+        self.revision = revision
     }
 
     /// The settled-occurrence key on the iPhone (`ScheduledKey`): the idempotency key.
@@ -55,6 +60,7 @@ public struct WatchScheduledRequest: Codable, Hashable, Sendable, Identifiable {
         case itemID = "i"
         case occurrence = "d"
         case tappedOn = "t"
+        case revision = "h"
     }
 }
 
@@ -68,10 +74,12 @@ public enum WatchRequestResult: String, Codable, Sendable {
     case alreadySkipped
     /// The item is gone from the iPhone (deleted, or its account was): nothing was recorded.
     case deleted
-    /// The day is no longer one of the item's occurrences (its schedule was changed on the iPhone): nothing was
-    /// recorded.
+    /// The item was changed on the iPhone before the request arrived (its schedule, amount, accounts or names), or
+    /// the day is no longer one of its occurrences: nothing was recorded or skipped, on that day or any other. The
+    /// iPhone tells the user on its Scheduled list (D374); the watch just clears its syncing mark.
     case stale
-    /// The request's version is newer than this iPhone build reads: nothing was recorded.
+    /// The request's version is newer than this iPhone build reads: nothing was recorded, and the iPhone says to
+    /// update it (D376).
     case unsupported
 
     /// The watch tells the user nothing was done, with a title naming what happened on the iPhone.

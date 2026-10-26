@@ -34,6 +34,7 @@
         static func makeWatch(
             link: (any WatchCompanionLink)?,
             useCases: DefaultWatchPhoneUseCases?,
+            notices: WatchRequestNoticeViewModel?,
             updates: LedgerUpdates,
         ) -> WatchPhoneFeature? {
             guard let link, let useCases else {
@@ -44,6 +45,7 @@
                 requests: useCases,
                 link: link,
                 updates: updates,
+                notices: notices,
                 onProblem: { problem in
                     switch problem {
                     case .snapshotFailed(let error): StoreLog.failure(.watchSnapshotFailed, error)
@@ -151,7 +153,7 @@
             )
             // The watch reads a snapshot of the Scheduled list and sends Pay and Skip back; the iPhone applies them
             // through the same exactly-once path as its own Pay Now and Skip, outside undo history. No ledger or App
-            // Group on the watch (D345).
+            // Group on the watch (D345). A request it can't apply leaves a card on the Scheduled list (D374, D376).
             let watchUseCases = watchLink.map { _ in
                 DefaultWatchPhoneUseCases(
                     repository: repository,
@@ -159,6 +161,7 @@
                     today: { scheduledUseCases.today() },
                 )
             }
+            let watchNotices = watchUseCases.map { WatchRequestNoticeViewModel(useCases: $0) }
             scheduled = ScheduledFeature(
                 useCases: ScheduledScreenUseCases(
                     load: scheduledUseCases,
@@ -168,6 +171,7 @@
                     notices: ScheduledCatchUpNotices(store: UserDefaultsScheduledCatchUpNotices()),
                 ),
                 updates: transactions.updates,
+                watchNotices: watchNotices,
                 onCatchUpProblem: { problem in
                     switch problem {
                     case .failed(let error): StoreLog.failure(.scheduledCatchUpFailed, error)
@@ -177,7 +181,12 @@
                 },
             )
             scheduled.catchUp(atLaunch: true)
-            watch = AppComposition.makeWatch(link: watchLink, useCases: watchUseCases, updates: transactions.updates)
+            watch = AppComposition.makeWatch(
+                link: watchLink,
+                useCases: watchUseCases,
+                notices: watchNotices,
+                updates: transactions.updates,
+            )
             watch?.start()
             // Account delete returns its change; the screens record it in the transactions' history (#93). Every
             // account change moves the shared store-change signal, so an open import re-plans (D327.1).

@@ -18,6 +18,9 @@ public protocol ApplyWatchRequestsUseCase {
     /// again then.
     @discardableResult
     func applyKept() -> WatchApplyRun
+    /// A request from a newer watch build, which this build can't apply (D376).
+    @discardableResult
+    func receiveNewer(_ request: WatchNewerRequest) -> WatchApplyRun
 }
 
 /// What one run of the kept requests did.
@@ -28,22 +31,33 @@ public struct WatchApplyRun: Equatable, Sendable {
     public var failedCount: Int
     /// Whether this run recorded or skipped something, so the screens reload and a new snapshot goes out.
     public var changedLedger: Bool
+    /// How many requests this run queued a notice for (D374, D376), so the Scheduled list shows it.
+    public var queuedNotices: Int
 
-    public init(outcomes: [WatchRequestOutcome] = [], failedCount: Int = 0, changedLedger: Bool = false) {
+    public init(
+        outcomes: [WatchRequestOutcome] = [],
+        failedCount: Int = 0,
+        changedLedger: Bool = false,
+        queuedNotices: Int = 0,
+    ) {
         self.outcomes = outcomes
         self.failedCount = failedCount
         self.changedLedger = changedLedger
+        self.queuedNotices = queuedNotices
     }
 }
 
-/// Where the iPhone keeps the watch requests it hasn't applied yet and the outcomes it reports back: app settings,
-/// not the ledger, so no backup holds them and the store's schema doesn't change. IDs and days only.
+/// Where the iPhone keeps the watch requests it hasn't applied yet, the outcomes it reports back and the notices
+/// not dismissed yet (D374, D376): app settings, not the ledger, so no backup holds them and the store's schema
+/// doesn't change. IDs and days only.
 @MainActor
 public protocol WatchRequestInboxStore: AnyObject {
     func keptRequests() -> [WatchScheduledRequest]
     func setKeptRequests(_ requests: [WatchScheduledRequest])
     func outcomes() -> [WatchRequestOutcome]
     func setOutcomes(_ outcomes: [WatchRequestOutcome])
+    func notices() -> [WatchRequestNotice]
+    func setNotices(_ notices: [WatchRequestNotice])
 }
 
 /// An inbox for one run only: tests and previews.
@@ -51,6 +65,7 @@ public protocol WatchRequestInboxStore: AnyObject {
 public final class InMemoryWatchRequestInboxStore: WatchRequestInboxStore {
     private var requests: [WatchScheduledRequest] = []
     private var answered: [WatchRequestOutcome] = []
+    private var pending: [WatchRequestNotice] = []
 
     public init() {}
 
@@ -58,6 +73,8 @@ public final class InMemoryWatchRequestInboxStore: WatchRequestInboxStore {
     public func setKeptRequests(_ requests: [WatchScheduledRequest]) { self.requests = requests }
     public func outcomes() -> [WatchRequestOutcome] { answered }
     public func setOutcomes(_ outcomes: [WatchRequestOutcome]) { answered = outcomes }
+    public func notices() -> [WatchRequestNotice] { pending }
+    public func setNotices(_ notices: [WatchRequestNotice]) { pending = notices }
 }
 
 /// The iPhone side of the watch link over the scheduled repository. `today` is the Scheduled screens' today.
@@ -67,8 +84,8 @@ public struct DefaultWatchPhoneUseCases: MakeWatchSnapshotUseCase, ApplyWatchReq
     /// ledger's occurrence key already stops a second recording; this keeps the watch's message right.
     public static let rememberedOutcomes = 200
 
-    private let repository: any ScheduleRepository
-    private let inbox: any WatchRequestInboxStore
+    let repository: any ScheduleRepository
+    let inbox: any WatchRequestInboxStore
     private let today: @MainActor () -> CalendarDay
 
     public init(
@@ -118,6 +135,7 @@ public struct DefaultWatchPhoneUseCases: MakeWatchSnapshotUseCase, ApplyWatchReq
             categoryName: ledger.categories.first { $0.id == item.categoryID }?.name,
             accountName: account?.name ?? "",
             transferAccountName: ledger.accounts.first { $0.id == item.transferAccountID }?.name,
+            revision: WatchItemRevision.of(item),
         )
     }
 
@@ -138,6 +156,7 @@ public struct DefaultWatchPhoneUseCases: MakeWatchSnapshotUseCase, ApplyWatchReq
         var run = WatchApplyRun()
         var stillKept: [WatchScheduledRequest] = []
         var answered = inbox.outcomes()
+        var notices: [WatchRequestNotice] = []
         for request in inbox.keptRequests() {
             let result: WatchRequestResult
             if let earlier = answered.first(where: { $0.requestID == request.id }) {
@@ -154,16 +173,34 @@ public struct DefaultWatchPhoneUseCases: MakeWatchSnapshotUseCase, ApplyWatchReq
             }
             let outcome = WatchRequestOutcome(requestID: request.id, result: result)
             run.changedLedger = run.changedLedger || result == .applied
+            // Shown on the Scheduled list until dismissed (D374, D376).
+            if let reason = Self.noticeReason(result) {
+                notices.append(
+                    WatchRequestNotice(id: request.id, reason: reason, action: request.action, itemID: request.itemID)
+                )
+            }
             answered.append(outcome)
             run.outcomes.append(outcome)
         }
         inbox.setKeptRequests(stillKept)
         inbox.setOutcomes(Array(answered.suffix(Self.rememberedOutcomes)))
+        notices.forEach(queue)
+        run.queuedNotices = notices.count
         return run
     }
 
+    private static func noticeReason(_ result: WatchRequestResult) -> WatchRequestNotice.Reason? {
+        switch result {
+        case .stale: .itemChanged
+        case .unsupported: .newerWatchApp
+        case .applied, .alreadyPaid, .alreadySkipped, .deleted: nil
+        }
+    }
+
     /// One request, through `ScheduleRepository.settleScheduledOccurrence`, the path Pay Now and Skip use. What the
-    /// iPhone already did to the occurrence wins: a paid or skipped one stays as it is (#32 QA, D342, D343).
+    /// iPhone already did to the occurrence wins: a paid or skipped one stays as it is (#32 QA, D342, D343). A
+    /// request made against an item changed on the iPhone since is stale and settles nothing, on its own day or
+    /// any other (D374).
     private func apply(_ request: WatchScheduledRequest) throws -> WatchRequestResult {
         guard request.version <= WatchSnapshot.currentVersion else {
             return .unsupported
@@ -174,6 +211,9 @@ public struct DefaultWatchPhoneUseCases: MakeWatchSnapshotUseCase, ApplyWatchReq
         }
         if let settled = item.occurrence(on: request.occurrence), settled.outcome.isSettled {
             return settled.outcome == .posted ? .alreadyPaid : .alreadySkipped
+        }
+        if let revision = request.revision, revision != WatchItemRevision.of(item) {
+            return .stale
         }
         do {
             _ = try repository.settleScheduledOccurrence(request.settlement)
