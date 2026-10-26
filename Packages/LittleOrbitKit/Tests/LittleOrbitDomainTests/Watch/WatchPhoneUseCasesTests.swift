@@ -210,11 +210,13 @@ struct WatchPhoneUseCasesTests {
     }
 }
 
-/// The fake repository, with a settle that can fail once, as a full disk or a store error would.
+/// The fake repository, with a settle that can fail once, as a full disk or a store error would, or be refused
+/// for good, as the ledger's own validation would (D378).
 @MainActor
 final class FlakyScheduleRepository: ScheduleRepository {
     let base: FakeScheduleRepository
     var failNextSettle = false
+    var refuseSettle: LedgerValidationError?
 
     struct SaveFailed: Error {}
 
@@ -234,6 +236,9 @@ final class FlakyScheduleRepository: ScheduleRepository {
         if failNextSettle {
             failNextSettle = false
             throw SaveFailed()
+        }
+        if let refuseSettle {
+            throw refuseSettle
         }
         return try base.settleScheduledOccurrence(settlement)
     }

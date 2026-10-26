@@ -22,6 +22,7 @@ public enum StoreLog {
         case watchRequestNewer = "A request from a newer Apple Watch app couldn't be read; nothing was changed."
         case watchRequestsNotApplied =
             "Some Apple Watch requests couldn't be applied; they're tried again at the next activation."
+        case watchRequestsRefused = "Some Apple Watch requests were refused; nothing was recorded for them."
     }
 
     #if canImport(OSLog)

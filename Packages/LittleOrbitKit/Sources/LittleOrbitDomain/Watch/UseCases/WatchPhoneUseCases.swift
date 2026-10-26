@@ -27,8 +27,10 @@ public protocol ApplyWatchRequestsUseCase {
 public struct WatchApplyRun: Equatable, Sendable {
     /// The answer to each request in the run, including ones answered before and delivered again.
     public var outcomes: [WatchRequestOutcome]
-    /// Requests whose save failed; they're kept and tried again at the next run.
+    /// Requests whose save failed for now (a temporary failure, D378); they're kept and tried again at the next run.
     public var failedCount: Int
+    /// Requests the iPhone refused for good (D378): answered `refused`, not kept, and each has a notice.
+    public var refusedCount: Int
     /// Whether this run recorded or skipped something, so the screens reload and a new snapshot goes out.
     public var changedLedger: Bool
     /// How many requests this run queued a notice for (D374, D376), so the Scheduled list shows it.
@@ -37,11 +39,13 @@ public struct WatchApplyRun: Equatable, Sendable {
     public init(
         outcomes: [WatchRequestOutcome] = [],
         failedCount: Int = 0,
+        refusedCount: Int = 0,
         changedLedger: Bool = false,
         queuedNotices: Int = 0,
     ) {
         self.outcomes = outcomes
         self.failedCount = failedCount
+        self.refusedCount = refusedCount
         self.changedLedger = changedLedger
         self.queuedNotices = queuedNotices
     }
@@ -167,9 +171,15 @@ public struct DefaultWatchPhoneUseCases: MakeWatchSnapshotUseCase, ApplyWatchReq
             do {
                 result = try apply(request)
             } catch {
-                run.failedCount += 1
-                stillKept.append(request)
-                continue
+                // A refusal no retry can change is final (D378); anything else, such as the store failing to
+                // save, is kept and tried again.
+                guard WatchRequestFailure(error) == .permanent else {
+                    run.failedCount += 1
+                    stillKept.append(request)
+                    continue
+                }
+                run.refusedCount += 1
+                result = .refused
             }
             let outcome = WatchRequestOutcome(requestID: request.id, result: result)
             run.changedLedger = run.changedLedger || result == .applied
@@ -193,6 +203,7 @@ public struct DefaultWatchPhoneUseCases: MakeWatchSnapshotUseCase, ApplyWatchReq
         switch result {
         case .stale: .itemChanged
         case .unsupported: .newerWatchApp
+        case .refused: .refusedOnSave
         case .applied, .alreadyPaid, .alreadySkipped, .deleted: nil
         }
     }
@@ -200,7 +211,7 @@ public struct DefaultWatchPhoneUseCases: MakeWatchSnapshotUseCase, ApplyWatchReq
     /// One request, through `ScheduleRepository.settleScheduledOccurrence`, the path Pay Now and Skip use. What the
     /// iPhone already did to the occurrence wins: a paid or skipped one stays as it is (#32 QA, D342, D343). A
     /// request made against an item changed on the iPhone since is stale and settles nothing, on its own day or
-    /// any other (D374).
+    /// any other (D374). Any other error is thrown, for `WatchRequestFailure` to sort (D378).
     private func apply(_ request: WatchScheduledRequest) throws -> WatchRequestResult {
         guard request.version <= WatchSnapshot.currentVersion else {
             return .unsupported

@@ -73,7 +73,7 @@ struct WatchScheduledPresenter {
         case .alreadyPaid: WatchText.alreadyPaidOnIPhone
         case .alreadySkipped: WatchText.alreadySkippedOnIPhone
         case .deleted: WatchText.deletedOnIPhone
-        case .applied, .stale, .unsupported: nil
+        case .applied, .stale, .unsupported, .refused: nil
         }
     }
 

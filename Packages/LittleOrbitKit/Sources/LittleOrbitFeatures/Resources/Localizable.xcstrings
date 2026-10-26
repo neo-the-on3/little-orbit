@@ -8759,7 +8759,7 @@
       }
     },
     "Couldn’t Record Watch Payment": {
-      "comment": "iPhone Scheduled list, card title: a Pay tapped on the Apple Watch recorded nothing, because the scheduled item was changed on the iPhone before the Pay arrived.",
+      "comment": "iPhone Scheduled list, card title: a Pay tapped on the Apple Watch recorded nothing, because the scheduled item was changed on the iPhone before the Pay arrived, or the iPhone couldn’t save it.",
       "extractionState": "manual",
       "generatesSymbol": false,
       "localizations": {
@@ -8772,7 +8772,7 @@
       }
     },
     "Couldn’t Skip From Watch": {
-      "comment": "iPhone Scheduled list, card title: a Skip tapped on the Apple Watch skipped nothing, because the scheduled item was changed on the iPhone before the Skip arrived.",
+      "comment": "iPhone Scheduled list, card title: a Skip tapped on the Apple Watch skipped nothing, because the scheduled item was changed on the iPhone before the Skip arrived, or the iPhone couldn’t save it.",
       "extractionState": "manual",
       "generatesSymbol": false,
       "localizations": {
@@ -8811,7 +8811,7 @@
       }
     },
     "Couldn’t Apply Watch Actions": {
-      "comment": "iPhone Scheduled list, card title: several Pay or Skip actions tapped on the Apple Watch did nothing, because their scheduled items were changed on the iPhone first.",
+      "comment": "iPhone Scheduled list, card title: several Pay or Skip actions tapped on the Apple Watch did nothing, because their scheduled items were changed on the iPhone first or the iPhone couldn’t save them.",
       "extractionState": "manual",
       "generatesSymbol": false,
       "localizations": {
@@ -8824,7 +8824,7 @@
       }
     },
     "Check those items and try again if you need to.": {
-      "comment": "iPhone Scheduled list, card message, second sentence, after several (two or more) Pay or Skip actions from the Apple Watch did nothing because their scheduled items changed on the iPhone: the user can check those items on the iPhone.",
+      "comment": "iPhone Scheduled list, card message, second sentence, after several (two or more) Pay or Skip actions from the Apple Watch did nothing (their scheduled items changed on the iPhone, or the iPhone couldn’t save them): the user can check those items on the iPhone.",
       "extractionState": "manual",
       "generatesSymbol": false,
       "localizations": {
@@ -9030,7 +9030,7 @@
       }
     },
     "Check that item and try again if you need to.": {
-      "comment": "iPhone Scheduled list, card message, second sentence, after one Pay or Skip action from the Apple Watch did nothing because its scheduled item changed on the iPhone: the user can check that item on the iPhone. Follows “1 watch action couldn’t be applied…”.",
+      "comment": "iPhone Scheduled list, card message, second sentence, after one Pay or Skip action from the Apple Watch did nothing (its scheduled item changed on the iPhone, or the iPhone couldn’t save it): the user can check that item on the iPhone. Follows “1 watch action couldn’t be applied…” or “1 watch action couldn’t be saved…”.",
       "extractionState": "manual",
       "generatesSymbol": false,
       "localizations": {
@@ -9038,6 +9038,108 @@
           "stringUnit": {
             "state": "translated",
             "value": "Check that item and try again if you need to."
+          }
+        }
+      }
+    },
+    "The payment for %@ from your Apple Watch couldn’t be saved, so nothing was recorded.": {
+      "comment": "iPhone Scheduled list, card message, first sentence: the iPhone couldn’t save a Pay tapped on the Apple Watch, so no transaction was recorded (D378). %@ is the scheduled item’s name, such as “Rent”.",
+      "extractionState": "manual",
+      "generatesSymbol": false,
+      "localizations": {
+        "en": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "The payment for %@ from your Apple Watch couldn’t be saved, so nothing was recorded."
+          }
+        }
+      }
+    },
+    "The skip for %@ from your Apple Watch couldn’t be saved, so nothing was skipped.": {
+      "comment": "iPhone Scheduled list, card message, first sentence: the iPhone couldn’t save a Skip tapped on the Apple Watch, so nothing was skipped (D378). %@ is the scheduled item’s name, such as “Rent”.",
+      "extractionState": "manual",
+      "generatesSymbol": false,
+      "localizations": {
+        "en": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "The skip for %@ from your Apple Watch couldn’t be saved, so nothing was skipped."
+          }
+        }
+      }
+    },
+    "Open the item and pay again if you need to.": {
+      "comment": "iPhone Scheduled list, card message, second sentence, after the iPhone couldn’t save a Pay from the Apple Watch: the user can open the scheduled item and pay it on the iPhone.",
+      "extractionState": "manual",
+      "generatesSymbol": false,
+      "localizations": {
+        "en": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Open the item and pay again if you need to."
+          }
+        }
+      }
+    },
+    "Open the item and skip again if you need to.": {
+      "comment": "iPhone Scheduled list, card message, second sentence, after the iPhone couldn’t save a Skip from the Apple Watch: the user can open the scheduled item and skip it on the iPhone.",
+      "extractionState": "manual",
+      "generatesSymbol": false,
+      "localizations": {
+        "en": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Open the item and skip again if you need to."
+          }
+        }
+      }
+    },
+    "%lld watch actions couldn’t be saved, so nothing was recorded for them.": {
+      "comment": "iPhone Scheduled list, card message, first sentence: the iPhone couldn’t save any of several Pay or Skip actions tapped on the Apple Watch, so nothing was recorded for them (D378). %lld is how many; the one form is a whole sentence for exactly one.",
+      "extractionState": "manual",
+      "generatesSymbol": false,
+      "localizations": {
+        "en": {
+          "variations": {
+            "plural": {
+              "one": {
+                "stringUnit": {
+                  "state": "translated",
+                  "value": "%lld watch action couldn’t be saved, so nothing was recorded for it."
+                }
+              },
+              "other": {
+                "stringUnit": {
+                  "state": "translated",
+                  "value": "%lld watch actions couldn’t be saved, so nothing was recorded for them."
+                }
+              }
+            }
+          }
+        }
+      }
+    },
+    "%lld watch actions couldn’t be applied, so nothing was recorded for them.": {
+      "comment": "iPhone Scheduled list, card message, first sentence: several Pay or Skip actions tapped on the Apple Watch did nothing, some because their items changed on the iPhone first and some because the iPhone couldn’t save them (D379). %lld is how many; the one form is a whole sentence for exactly one.",
+      "extractionState": "manual",
+      "generatesSymbol": false,
+      "localizations": {
+        "en": {
+          "variations": {
+            "plural": {
+              "one": {
+                "stringUnit": {
+                  "state": "translated",
+                  "value": "%lld watch action couldn’t be applied, so nothing was recorded for it."
+                }
+              },
+              "other": {
+                "stringUnit": {
+                  "state": "translated",
+                  "value": "%lld watch actions couldn’t be applied, so nothing was recorded for them."
+                }
+              }
+            }
           }
         }
       }

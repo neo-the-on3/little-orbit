@@ -4,8 +4,8 @@ import Testing
 
 @testable import LittleOrbitFeatures
 
-/// The Scheduled list's card for watch requests the iPhone didn't apply (D374, D375, D376; UI Designer 6406964245):
-/// one card at a time, its wording, and OK dismissing it for good.
+/// The Scheduled list's card for watch requests the iPhone didn't apply (D374–D376, D378, D379; UI Designer
+/// 6406964245): one card at a time, its wording, and OK dismissing it for good.
 @MainActor
 @Suite("Watch request notice card")
 struct WatchRequestNoticeViewModelTests {
@@ -26,6 +26,13 @@ struct WatchRequestNoticeViewModelTests {
     static func changed(_ action: WatchScheduledRequest.Action) -> WatchRequestNoticeEntry {
         WatchRequestNoticeEntry(
             notice: WatchRequestNotice(id: UUID(), reason: .itemChanged, action: action, itemID: rent),
+            item: .init(type: .expense, details: "Rent", categoryName: "Housing"),
+        )
+    }
+
+    static func refused(_ action: WatchScheduledRequest.Action) -> WatchRequestNoticeEntry {
+        WatchRequestNoticeEntry(
+            notice: WatchRequestNotice(id: UUID(), reason: .refusedOnSave, action: action, itemID: rent),
             item: .init(type: .expense, details: "Rent", categoryName: "Housing"),
         )
     }
@@ -159,5 +166,87 @@ struct WatchRequestNoticeViewModelTests {
         #expect(model.card?.title == "Couldn’t Record Watch Payment")
         model.dismiss()
         #expect(model.card == nil)
+    }
+
+    // MARK: Refused on save (D378, D379)
+
+    @Test("A refused Pay: its title, the item’s name, View Item and OK (D378)")
+    func refusedPay() throws {
+        fake.pending = [Self.refused(.pay)]
+        let card = try #require(WatchRequestNoticeViewModel(useCases: fake).card)
+        #expect(card.title == "Couldn’t Record Watch Payment")
+        #expect(
+            card.message
+                == "The payment for Rent from your Apple Watch couldn’t be saved, so nothing was recorded. Open the item and pay again if you need to."
+        )
+        #expect(card.itemID == Self.rent)
+    }
+
+    @Test("A refused Skip (D378)")
+    func refusedSkip() throws {
+        fake.pending = [Self.refused(.skip)]
+        let card = try #require(WatchRequestNoticeViewModel(useCases: fake).card)
+        #expect(card.title == "Couldn’t Skip From Watch")
+        #expect(
+            card.message
+                == "The skip for Rent from your Apple Watch couldn’t be saved, so nothing was skipped. Open the item and skip again if you need to."
+        )
+        #expect(card.itemID == Self.rent)
+    }
+
+    @Test("All refused on save: one card with the D378 grouped body, OK only; one says “it” and “that item”")
+    func allRefusedGroup() throws {
+        fake.pending = [Self.refused(.pay), Self.refused(.skip)]
+        let card = try #require(WatchRequestNoticeViewModel(useCases: fake).card)
+        #expect(card.title == "Couldn’t Apply Watch Actions")
+        #expect(
+            card.message
+                == "2 watch actions couldn’t be saved, so nothing was recorded for them. Check those items and try again if you need to."
+        )
+        #expect(card.itemID == nil && card.noticeIDs.count == 2)
+        let one = WatchRequestNoticeViewModel.grouped([Self.refused(.pay)])
+        #expect(
+            one.message
+                == "1 watch action couldn’t be saved, so nothing was recorded for it. Check that item and try again if you need to."
+        )
+    }
+
+    @Test("All item-changed keeps the D375 body (D379)")
+    func allChangedKeepsD375() throws {
+        fake.pending = [Self.changed(.pay), Self.changed(.skip)]
+        let card = try #require(WatchRequestNoticeViewModel(useCases: fake).card)
+        #expect(
+            card.message
+                == "2 watch actions couldn’t be applied because their items changed on iPhone. Check those items and try again if you need to."
+        )
+    }
+
+    @Test("Item-changed and refused in one group: the neutral D379 body, OK only, and its singular")
+    func mixedGroup() throws {
+        fake.pending = [Self.changed(.pay), Self.refused(.skip), Self.refused(.pay)]
+        let model = WatchRequestNoticeViewModel(useCases: fake)
+        let card = try #require(model.card)
+        #expect(card.title == "Couldn’t Apply Watch Actions")
+        #expect(
+            card.message
+                == "3 watch actions couldn’t be applied, so nothing was recorded for them. Check those items and try again if you need to."
+        )
+        #expect(card.itemID == nil)
+        model.dismiss()
+        #expect(fake.dismissed.first?.count == 3 && model.card == nil)
+        #expect(
+            WatchRequestNoticeText.severalMixed(1)
+                == "1 watch action couldn’t be applied, so nothing was recorded for it."
+        )
+    }
+
+    @Test("Newer-watch notices don’t join an item-changed or refused group")
+    func newerGroupsOnItsOwn() throws {
+        fake.pending = [Self.refused(.pay), Self.newer(.pay), Self.changed(.skip)]
+        let model = WatchRequestNoticeViewModel(useCases: fake)
+        #expect(model.card?.title == "Couldn’t Apply Watch Actions")
+        #expect(model.card?.noticeIDs.count == 2)
+        model.dismiss()
+        #expect(model.card?.title == "Update little-orbit on iPhone")
     }
 }
