@@ -13,7 +13,10 @@
         var body: some View {
             ScheduledItemContent(model: model, itemID: itemID, settling: settling)
                 .scheduledSheets(model, on: .item(itemID))
-                .onAppear { model.screenAppeared(.item(itemID)) }
+                .onAppear {
+                    model.screenAppeared(.item(itemID))
+                    model.loadIfNeeded()
+                }
                 .onDisappear { model.screenDisappeared(.item(itemID)) }
         }
     }
@@ -67,10 +70,14 @@
                 // stays on the left and Skip and Pay Now sit inside its trailing edge (Tester's 8a99da5 Mac pass).
                 .formStyle(.grouped)
                 .navigationTitle(Text(verbatim: detail.title))
-            } else {
+            } else if model.isGone(itemID) {
                 // Deleted here or in another window.
                 ContentUnavailableView(ScheduledText.emptyTitle, systemImage: "clock")
                     .onAppear { dismiss() }
+            } else {
+                // Not read yet: a new model, like the history row's sheet's, loads as the screen appears. Closing
+                // here would close the sheet as soon as it opens (Tester's #203 iOS FAIL).
+                ProgressView()
             }
         }
     }

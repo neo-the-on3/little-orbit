@@ -2,21 +2,6 @@ import Foundation
 import LittleOrbitDomain
 import Observation
 
-/// The platform the wording follows: iOS rows are links, so its hint says how to reach Pay and Skip; Mac menus
-/// take an ellipsis on items that ask first (D334.1, D334.10).
-public enum ScheduledPlatform: Sendable {
-    case iOS
-    case macOS
-
-    public static var current: ScheduledPlatform {
-        #if os(macOS)
-            .macOS
-        #else
-            .iOS
-        #endif
-    }
-}
-
 /// A screen of the Scheduled stack that presents the form, the confirmations and the alerts while it's on top.
 public enum ScheduledScreen: Hashable, Sendable {
     case list
@@ -86,8 +71,9 @@ public final class ScheduledListViewModel {
 
     /// The Scheduled screens on screen, in the order they appeared: the last one presents (see `presenter`).
     public private(set) var visibleScreens: [ScheduledScreen] = []
-    /// Whether a load has read the listing, so a hint is never judged against the placeholder board.
-    @ObservationIgnored private var loaded = false
+    /// Whether a load has read the listing, so a hint is never judged against the placeholder board, and an item
+    /// that isn't read yet never counts as deleted. Observed, so a screen waiting for the first load redraws.
+    private var loaded = false
     /// What catch-up recorded that the catch-up hint hasn't reported yet, read at each load (D338.6).
     public private(set) var pendingCatchUp: [ScheduledCatchUpGroup] = []
     /// Whether this list's hint row has actually appeared on screen. Only that marks the hint shown, never a load.
@@ -136,6 +122,18 @@ public final class ScheduledListViewModel {
             keepsHintAfterLeaving = false
         }
         forgetCatchUpHintWithNothingToName()
+    }
+
+    /// Reads the listing unless a load has: a history row's item sheet opens on a new model (Tester's #203 FAIL).
+    public func loadIfNeeded() {
+        if !loaded {
+            load()
+        }
+    }
+
+    /// Deleted here or in another window. Before the first load nothing is gone, as the listing is a placeholder.
+    public func isGone(_ itemID: UUID) -> Bool {
+        loaded && listing.item(itemID) == nil
     }
 
     /// While the list is on screen, a pending catch-up hint with nothing left to name (its items were deleted) is
