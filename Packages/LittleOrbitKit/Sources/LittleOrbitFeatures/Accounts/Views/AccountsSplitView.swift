@@ -224,6 +224,9 @@
                     systemImage: destination.symbolName,
                     message: destination.emptyText,
                 )
+            case .scheduled:
+                // Only the iPhone and iPad stack pushes it; here the list has its own stack.
+                noSelection
             case .allTransactions:
                 if model.isFirstRun {
                     UpcomingFeatureView(
