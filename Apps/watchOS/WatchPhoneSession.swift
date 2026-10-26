@@ -19,7 +19,7 @@ final class WatchPhoneSession: NSObject, WatchPhoneLink {
     }
 
     func latestSnapshotData() -> Data? {
-        session.receivedApplicationContext[WatchLinkKeys.snapshot] as? Data
+        WatchLinkKeys.snapshot(in: session.receivedApplicationContext)
     }
 
     func onSnapshot(_ handler: @escaping @MainActor (Data) -> Void) {
@@ -41,10 +41,10 @@ final class WatchPhoneSession: NSObject, WatchPhoneLink {
             return .unavailable
         }
         let queued = session.outstandingUserInfoTransfers.contains { transfer in
-            (transfer.userInfo[WatchLinkKeys.requestID] as? String) == id.uuidString
+            WatchLinkKeys.requestID(in: transfer.userInfo) == id
         }
         if !queued {
-            session.transferUserInfo([WatchLinkKeys.request: request, WatchLinkKeys.requestID: id.uuidString])
+            session.transferUserInfo(WatchLinkKeys.userInfo(request: request, id: id))
         }
         return .inFlight
     }
@@ -82,7 +82,8 @@ extension WatchPhoneSession: WCSessionDelegate {
     }
 
     nonisolated func session(_ session: WCSession, didReceiveApplicationContext applicationContext: [String: Any]) {
-        guard let snapshot = applicationContext[WatchLinkKeys.snapshot] as? Data else {
+        // The publish stamp beside the snapshot is ignored (Tester F1).
+        guard let snapshot = WatchLinkKeys.snapshot(in: applicationContext) else {
             return
         }
         Task { @MainActor in self.received(snapshot) }
@@ -94,8 +95,7 @@ extension WatchPhoneSession: WCSessionDelegate {
         didFinish userInfoTransfer: WCSessionUserInfoTransfer,
         error: (any Error)?,
     ) {
-        guard let text = userInfoTransfer.userInfo[WatchLinkKeys.requestID] as? String, let id = UUID(uuidString: text)
-        else {
+        guard let id = WatchLinkKeys.requestID(in: userInfoTransfer.userInfo) else {
             return
         }
         let delivered = error == nil

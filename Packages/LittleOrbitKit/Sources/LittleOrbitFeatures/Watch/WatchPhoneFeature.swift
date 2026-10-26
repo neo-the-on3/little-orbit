@@ -44,7 +44,8 @@ public final class WatchPhoneFeature {
     public func publish() {
         let data: Data
         do {
-            data = try WatchMessageCodec.encode(snapshots.snapshot())
+            // The stamp and the dictionary around it count in the cap (Tech Architect 5647974743).
+            data = try WatchMessageCodec.encode(snapshots.snapshot(), limit: WatchApplicationContext.snapshotLimit)
         } catch {
             onProblem(.snapshotFailed(error))
             return
@@ -63,7 +64,8 @@ public final class WatchPhoneFeature {
         }
     }
 
-    /// Sends the current snapshot even if it's the one last delivered.
+    /// Sends the current snapshot even if it's the one last delivered: the link stamps each publish, so the session
+    /// doesn't drop it as unchanged (Tester F1).
     func republish() {
         lastPublished = nil
         publish()
