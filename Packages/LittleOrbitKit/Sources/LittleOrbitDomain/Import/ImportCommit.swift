@@ -141,11 +141,12 @@ struct ImportCommitter {
             }
             try repository.deleteTransactions(ids: receipt.transactions.map(\.id))
             let remaining = try repository.transactions()
-            let usedPayees = Set(remaining.compactMap(\.payeeID))
-            for payee in receipt.createdPayees where !usedPayees.contains(payee.id) {
-                if try repository.payeeReferenceCount(payee.id) == 0 {
-                    try repository.deletePayee(id: payee.id)
-                }
+            // One pass for what still uses the created payees, then one batch delete, instead of a count and a
+            // delete per payee that each read the whole ledger (#250).
+            let inUse = try repository.payeesInUse(among: Set(receipt.createdPayees.map(\.id)))
+            let unused = receipt.createdPayees.map(\.id).filter { !inUse.contains($0) }
+            if !unused.isEmpty {
+                try repository.deletePayees(ids: unused)
             }
             let usedCategories = Set(remaining.compactMap(\.categoryID))
             let categories = try repository.categories()

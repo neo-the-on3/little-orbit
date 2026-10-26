@@ -25,6 +25,15 @@
             }
         }
 
+        /// #250: Undo Import's batch payee cleanup keeps the payees still in use.
+        func testImportUndoPayeeCleanup() throws {
+            try onMain {
+                try assertImportUndoPayeeCleanup {
+                    try LittleOrbitStore.makeRepository(configuration: .inMemory)
+                }
+            }
+        }
+
         func testScheduledItemsStoreAndPostOnce() throws {
             try onMain {
                 try assertScheduledStorage {
