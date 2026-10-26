@@ -231,6 +231,20 @@ struct ScheduledViewModelTests {
         #expect(row.tone == .negative)
     }
 
+    @Test("VoiceOver reads a row's name, date and amount with commas and no \"and\" (Tester's #198 polish)")
+    func rowSpokenLabel() throws {
+        let scene = try ScheduledScene()
+        try scene.add(scene.item("Electricity", day: 15, month: 10), scene.item("Phone Plan", day: 20, month: 10))
+        try scene.add(scene.item("Gym", day: 1, month: 11))
+        let list = scene.feature().makeList()
+        list.load()
+        let overdue = try #require(list.overdueRows.first)
+        #expect(overdue.spokenLabel == "Electricity, Overdue · 15 Oct, \u{2212}₹1,200.00")
+        #expect(list.dueTodayRows.first?.spokenLabel == "Phone Plan, Due today, \u{2212}₹1,200.00")
+        #expect(list.upcomingRows.map(\.spokenLabel).contains("Gym, 1 Nov, \u{2212}₹1,200.00"))
+        #expect(list.overdueRows.allSatisfy { !$0.spokenLabel.contains(" and ") })
+    }
+
     @Test("D24: the form previews 31 Jan, 28 Feb (last day), 31 Mar, 30 Apr (last day) and 31 May")
     func monthEndPreview() throws {
         let scene = try ScheduledScene()
