@@ -20,6 +20,17 @@ enum StaleText {
         )
     }
 
+    /// "This transaction has been deleted. Nothing was changed.": Save on the Edit form of a transaction with no
+    /// payee and no description, after it was deleted (#264, D391.2, D392). A whole entry of its own, not a
+    /// subject in `deleted(_:)`.
+    static var thisTransactionDeleted: String {
+        FeatureText.string(
+            "This transaction has been deleted. Nothing was changed.",
+            comment:
+                "Alert message: a transaction's Edit form saved after it was deleted, with no payee or description. Name no cause.",
+        )
+    }
+
     static func deleted(_ name: String) -> String {
         FeatureText.string(
             "\(name) has been deleted. Nothing was changed.",
@@ -46,15 +57,21 @@ enum StaleText {
 
     /// The row's title: the payee, else the description, else the type.
     static func name(of transaction: Transaction, payees: [Payee]) -> String {
-        if let payee = payees.first(where: { $0.id == transaction.payeeID }) {
-            return payee.name
-        }
-        if let details = TransactionText.trimmed(transaction.details) {
-            return details
+        if let label = label(of: transaction, payees: payees) {
+            return label
         }
         return switch transaction.type {
         case .transfer: FeatureText.string("The transfer", comment: "Alert message subject: an unnamed transfer.")
         default: theTransaction
         }
+    }
+
+    /// The row's own name, if it has one: the payee, else the description. The Edit form's deleted alert uses it
+    /// too, with its own sentence when there's neither (D392).
+    static func label(of transaction: Transaction, payees: [Payee]) -> String? {
+        if let payee = payees.first(where: { $0.id == transaction.payeeID }) {
+            return payee.name
+        }
+        return TransactionText.trimmed(transaction.details)
     }
 }

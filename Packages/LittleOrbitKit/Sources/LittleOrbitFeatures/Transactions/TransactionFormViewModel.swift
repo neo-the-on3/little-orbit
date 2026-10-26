@@ -53,10 +53,16 @@ public final class TransactionFormViewModel {
     public var note = ""
     public var showsMoreOptions = false
     public var errorMessage: String?
+    /// “Couldn’t Save Changes”, when an edit's transaction was deleted elsewhere while the form was open (#264).
+    public var alert: CategoryAlert?
+    /// The alert's OK also closes the form: its transaction is gone, so there's nothing left to edit (#264).
+    public internal(set) var alertClosesForm = false
+    /// Set once the alert is dismissed in any way while `alertClosesForm`: the sheet closes (#264).
+    public internal(set) var closeRequested = false
     public private(set) var accountOptions: [TransactionAccountOption] = []
 
     @ObservationIgnored private let loadLedger: any LoadTransactionLedgerUseCase
-    @ObservationIgnored private let saveTransactions: any SaveTransactionsUseCase
+    @ObservationIgnored let saveTransactions: any SaveTransactionsUseCase
     @ObservationIgnored let dates: any TransactionDateUseCase
     @ObservationIgnored let locale: Locale
     @ObservationIgnored private let formatter: MoneyFormatter
@@ -69,7 +75,7 @@ public final class TransactionFormViewModel {
     @ObservationIgnored let categoriesChanged: () -> Void
     @ObservationIgnored private(set) var original: Transaction?
     @ObservationIgnored private var originalPayeeName = ""
-    @ObservationIgnored private var accounts: [Account] = []
+    @ObservationIgnored private(set) var accounts: [Account] = []
     @ObservationIgnored var categories: [TransactionCategory] = []
     @ObservationIgnored var payees: [Payee] = []
     @ObservationIgnored var transactions: [Transaction] = []
@@ -411,12 +417,18 @@ public final class TransactionFormViewModel {
     /// Saves and returns the change to register for Undo; `nil` when nothing changed (`isUnchanged`).
     @discardableResult
     public func save() -> TransactionChange? {
+        // Only this save's deleted-transaction alert closes the form: it may be back (an Undo elsewhere) (#264).
+        alertClosesForm = false
         guard !isUnchanged else {
             return nil
         }
         guard canSave else {
             keypad.reportError(currencyCode: currencyCode, locale: locale)
             return nil
+        }
+        if original != nil {
+            // An edit never saves a transaction deleted while the form was open, nor a payee for it (#264).
+            return saveEdit(draft)
         }
         do {
             var draft = draft
