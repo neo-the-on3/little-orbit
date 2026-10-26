@@ -104,6 +104,11 @@ final class FakeScheduleRepository: ScheduleRepository {
         saves += 1
     }
 
+    func updateScheduledItem(_ item: ScheduledItem, today: CalendarDay, now: Date) throws {
+        snapshot = try LedgerBook.updatingScheduledItem(item, in: snapshot, today: today, now: now)
+        saves += 1
+    }
+
     func deleteScheduledItem(id: UUID) throws {
         snapshot = try LedgerBook.deletingScheduledItem(id: id, in: snapshot)
         saves += 1

@@ -230,6 +230,10 @@ final class FlakyScheduleRepository: ScheduleRepository {
         try base.saveScheduledItem(item, today: today, now: now)
     }
 
+    func updateScheduledItem(_ item: ScheduledItem, today: CalendarDay, now: Date) throws {
+        try base.updateScheduledItem(item, today: today, now: now)
+    }
+
     func deleteScheduledItem(id: UUID) throws { try base.deleteScheduledItem(id: id) }
 
     func settleScheduledOccurrence(_ settlement: ScheduledSettlement) throws -> Transaction? {

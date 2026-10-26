@@ -220,6 +220,10 @@ extension InMemoryLedgerRepository: ScheduleRepository {
         snapshot = try LedgerBook.savingScheduledItem(item, in: snapshot, today: today, now: now)
     }
 
+    public func updateScheduledItem(_ item: ScheduledItem, today: CalendarDay, now: Date) throws {
+        snapshot = try LedgerBook.updatingScheduledItem(item, in: snapshot, today: today, now: now)
+    }
+
     public func deleteScheduledItem(id: UUID) throws {
         snapshot = try LedgerBook.deletingScheduledItem(id: id, in: snapshot)
     }

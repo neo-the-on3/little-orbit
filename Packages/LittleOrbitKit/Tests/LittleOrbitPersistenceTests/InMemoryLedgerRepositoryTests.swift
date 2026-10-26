@@ -45,6 +45,14 @@ final class InMemoryLedgerRepositoryTests: XCTestCase {
         }
     }
 
+    func testAnEditOfADeletedScheduledItemWritesNothing() throws {
+        try onMain {
+            try assertEditOfADeletedScheduledItemWritesNothing {
+                InMemoryLedgerRepository()
+            }
+        }
+    }
+
     func testAFailedCatchUpPostingWritesNothing() throws {
         try onMain {
             try assertFailedCatchUpPostingWritesNothing {
