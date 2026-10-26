@@ -14,6 +14,8 @@
         /// The store's pending-seed marker file (D293, `StoreLocation.pendingSeedMarkerURL`), or `nil` for a store
         /// with none, which counts as seeded. An in-memory container keeps the marker as `pendingInMemory`.
         private let seedMarkerURL: URL?
+        /// PROBE ONLY (#265, not for merge): runs just before the one `save()`; a throw is a failed save.
+        var beforeSave: (() throws -> Void)?
         private var pendingInMemory: Bool
 
         public init(context: ModelContext, now: @escaping @MainActor () -> Date = { Date() }) {
@@ -255,6 +257,7 @@
         private func write(_ snapshot: LedgerSnapshot, attachmentBytes: (any BackupAttachmentReading)? = nil) throws {
             do {
                 try apply(snapshot, attachmentBytes: attachmentBytes)
+                try beforeSave?()
                 try context.save()
             } catch {
                 context.rollback()
