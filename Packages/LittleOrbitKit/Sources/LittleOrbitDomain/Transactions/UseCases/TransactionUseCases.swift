@@ -43,6 +43,10 @@ public protocol LoadTransactionLedgerUseCase {
     /// The same, for entering transactions. It never seeds: the default categories are seeded once at launch
     /// (`SeedDefaultCategoriesUseCase`, D291.7), so a form opened later finds what the store holds.
     func ledgerForEntry() throws -> TransactionLedger
+    /// The names of these live categories and payees, by id, without the rest of the ledger: what an Undo step
+    /// keeps so a stale alert can name one deleted or merged away since (D306.1). An id with no live record is
+    /// left out.
+    func recordNames(categoryIDs: Set<UUID>, payeeIDs: Set<UUID>) throws -> [UUID: String]
 }
 
 @MainActor
@@ -138,6 +142,10 @@ public struct DefaultLoadTransactionLedgerUseCase: LoadTransactionLedgerUseCase 
 
     public func ledgerForEntry() throws -> TransactionLedger {
         try ledger()
+    }
+
+    public func recordNames(categoryIDs: Set<UUID>, payeeIDs: Set<UUID>) throws -> [UUID: String] {
+        try repository.recordNames(categoryIDs: categoryIDs, payeeIDs: payeeIDs)
     }
 }
 

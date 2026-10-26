@@ -43,6 +43,9 @@ public protocol LedgerRepository: AnyObject {
     /// (D191.4). Today only transactions can: a scheduled occurrence is a transaction, and there is no
     /// scheduled-transaction template, rule or split payee yet. A model that gets a payee must join the count.
     func payeeReferenceCount(_ payeeID: UUID) throws -> Int
+    /// The names of the live categories and payees with these ids, by id, read without the transactions, for an
+    /// Undo step to keep (D306.1). An id with no live record is left out. The names are the user's own.
+    func recordNames(categoryIDs: Set<UUID>, payeeIDs: Set<UUID>) throws -> [UUID: String]
 
     func tags() throws -> [Tag]
     func saveTag(_ tag: Tag) throws
@@ -64,4 +67,18 @@ public protocol LedgerRepository: AnyObject {
     /// throws, none is. Reads inside `body` see its earlier writes. A nested call joins the outer one; if
     /// it throws, its own writes are undone, and the outer change keeps going only if its caller catches the error.
     func atomically<T>(_ body: () throws -> T) throws -> T
+}
+
+extension LedgerRepository {
+    /// From `categories()` and `payees()`, for a store with no narrower read.
+    public func recordNames(categoryIDs: Set<UUID>, payeeIDs: Set<UUID>) throws -> [UUID: String] {
+        guard !categoryIDs.isEmpty || !payeeIDs.isEmpty else {
+            return [:]
+        }
+        return LedgerSnapshot(
+            categories: categoryIDs.isEmpty ? [] : try categories(),
+            payees: payeeIDs.isEmpty ? [] : try payees(),
+        )
+        .recordNames(categoryIDs: categoryIDs, payeeIDs: payeeIDs)
+    }
 }

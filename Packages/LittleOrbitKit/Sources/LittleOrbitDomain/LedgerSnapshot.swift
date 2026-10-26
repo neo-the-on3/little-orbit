@@ -58,6 +58,18 @@ public struct LedgerSnapshot: Equatable, Sendable {
         payees.filter { $0.deletedAt == nil }
     }
 
+    /// See `LedgerRepository.recordNames(categoryIDs:payeeIDs:)`.
+    public func recordNames(categoryIDs: Set<UUID>, payeeIDs: Set<UUID>) -> [UUID: String] {
+        var names: [UUID: String] = [:]
+        for category in categoriesVisible() where categoryIDs.contains(category.id) {
+            names[category.id] = category.name
+        }
+        for payee in payeesVisible() where payeeIDs.contains(payee.id) {
+            names[payee.id] = payee.name
+        }
+        return names
+    }
+
     public func tagsVisible() -> [Tag] {
         tags.filter { $0.deletedAt == nil }
     }

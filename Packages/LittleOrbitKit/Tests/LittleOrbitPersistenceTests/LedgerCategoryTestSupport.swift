@@ -7,6 +7,39 @@ import XCTest
 func assertCategoryManagement(make: MakeRepository) throws {
     try assertCategoriesMerge(make: make)
     try assertCategoryArchiveAndReorder(make: make)
+    try assertRecordNames(make: make)
+}
+
+/// The names of the categories and payees asked for, by id, for an Undo step to keep (D306.1). An id that isn't
+/// stored, or whose record was merged away, is left out; an archived record is still named.
+@MainActor
+private func assertRecordNames(make: MakeRepository) throws {
+    let repository = try make()
+    let food = TransactionCategory(name: "Food", kind: .expense)
+    let groceries = TransactionCategory(name: "Groceries", kind: .expense)
+    let travel = TransactionCategory(name: "Travel", kind: .expense)
+    let market = Payee(name: "Market")
+    let corner = Payee(name: "Corner Shop")
+    for category in [food, groceries, travel] {
+        try repository.saveCategory(category)
+    }
+    try repository.savePayee(market)
+    try repository.savePayee(corner)
+    try repository.archiveCategory(id: travel.id, archived: true)
+    let unknown = UUID()
+    XCTAssertEqual(
+        try repository.recordNames(categoryIDs: [groceries.id, travel.id, unknown], payeeIDs: [market.id]),
+        [groceries.id: "Groceries", travel.id: "Travel", market.id: "Market"],
+    )
+    try repository.mergeCategories(groceries.id, into: food.id)
+    try repository.mergePayees(market.id, into: corner.id)
+    XCTAssertEqual(
+        try repository.recordNames(categoryIDs: [groceries.id, food.id], payeeIDs: [market.id]),
+        [
+            food.id: "Food"
+        ],
+    )
+    XCTAssertEqual(try repository.recordNames(categoryIDs: [], payeeIDs: []), [:])
 }
 
 @MainActor

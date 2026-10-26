@@ -9,11 +9,13 @@
         @State private var model: PayeesViewModel
         @State private var editMode: EditMode = .inactive
         @State private var isMerging = false
+        private let feature: PayeesFeature
         private let onRemoval: () -> Void
 
         /// `onRemoval` clears this window's Undo and Redo history after a merge (D287.4).
         public init(feature: PayeesFeature, onRemoval: @escaping () -> Void = {}) {
             _model = State(initialValue: feature.makeScreen())
+            self.feature = feature
             self.onRemoval = onRemoval
         }
 
@@ -75,6 +77,9 @@
                 model.onRemoval = onRemoval
                 model.load()
             }
+            // The list follows changes from any window or a restore, as the account screens do (D187.4). A
+            // payee merged away drops out of the selection on reload.
+            .onChange(of: feature.revision) { model.load() }
         }
 
         /// A plain button that opens the row's editor sheet: no chevron, in the primary colour.

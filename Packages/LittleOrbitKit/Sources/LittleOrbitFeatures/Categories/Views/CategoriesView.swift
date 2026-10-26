@@ -13,11 +13,13 @@
         @State private var isArchivedExpanded = false
         @Environment(\.dynamicTypeSize) private var dynamicTypeSize
         @ScaledMetric private var subcategoryIndent: CGFloat = 24
+        private let feature: CategoriesFeature
         private let onRemoval: () -> Void
 
         /// `onRemoval` clears this window's Undo and Redo history after a merge or delete (D287.4).
         public init(feature: CategoriesFeature, onRemoval: @escaping () -> Void = {}) {
             _model = State(initialValue: feature.makeScreen())
+            self.feature = feature
             self.onRemoval = onRemoval
         }
 
@@ -80,6 +82,8 @@
                 model.onRemoval = onRemoval
                 model.load()
             }
+            // The tree follows changes from any window or a restore, as the account screens do (D187.4).
+            .onChange(of: feature.revision) { model.load() }
         }
 
         private var treeSection: some View {

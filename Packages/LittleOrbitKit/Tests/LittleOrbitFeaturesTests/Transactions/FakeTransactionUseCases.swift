@@ -24,6 +24,10 @@ final class FakeTransactionUseCases {
 
     func ledger() throws -> TransactionLedger { contents }
     func ledgerForEntry() throws -> TransactionLedger { contents }
+    func recordNames(categoryIDs: Set<UUID>, payeeIDs: Set<UUID>) throws -> [UUID: String] {
+        LedgerSnapshot(categories: contents.categories, payees: contents.payees)
+            .recordNames(categoryIDs: categoryIDs, payeeIDs: payeeIDs)
+    }
 
     func history(of accountID: UUID, today: CalendarDay) throws -> AccountHistoryPage? {
         if let historyError {

@@ -5,9 +5,10 @@ import LittleOrbitPersistence
 import Testing
 
 /// A transaction's category and payee are fields like any other in the stale check (D187.5): if window B
-/// changes one that window A's step changed, A's Undo is stale and writes nothing. The category and payee
-/// records themselves (their names, a merge) aren't checked: no undo step edits them, and a payee a step
-/// created goes on Undo only if nothing uses it and no one renamed it, silently otherwise (D191.4).
+/// changes one that window A's step changed, A's Undo is stale and writes nothing. No undo step edits the
+/// category and payee records themselves, so a rename doesn't make a step stale; a merge or delete does when
+/// the step would put a transaction back in the removed record (`WindowUndoRemovedReferenceTests`, D287.4). A
+/// payee a step created goes on Undo only if nothing uses it and no one renamed it, silently otherwise (D191.4).
 @MainActor
 @Suite("Stale undo steps: a transaction's category and payee")
 struct WindowUndoCategoryPayeeTests {
