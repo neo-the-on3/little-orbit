@@ -28,6 +28,15 @@ final class InMemoryLedgerRepositoryTests: XCTestCase {
         }
     }
 
+    /// #250: Undo Import's batch payee cleanup keeps the payees still in use.
+    func testImportUndoPayeeCleanup() throws {
+        try onMain {
+            try assertImportUndoPayeeCleanup {
+                InMemoryLedgerRepository()
+            }
+        }
+    }
+
     func testScheduledItemsStoreAndPostOnce() throws {
         try onMain {
             try assertScheduledStorage {
