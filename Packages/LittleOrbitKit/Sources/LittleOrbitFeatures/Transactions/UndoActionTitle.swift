@@ -56,6 +56,13 @@ public enum UndoActionTitle {
             )
         case .addedAccount, .createdPayees, .removedPayees:
             FeatureText.string("New Account", comment: "Undo name: an account added.")
+        // The Scheduled screens record these with the item's name as the list shows it (D351.1); this is the same
+        // name without the payee lookup.
+        case .savedScheduledItem(let save), .revertedScheduledItemSave(let save):
+            ScheduledText.saveStepName(
+                save,
+                name: TransactionText.trimmed(save.after.details) ?? ScheduledText.scheduledItem,
+            )
         }
     }
 

@@ -121,20 +121,32 @@ public struct TransactionUseCases {
 
     /// These use cases with an account history that also shows the account's scheduled occurrences as Upcoming
     /// rows (S85).
-    public func showingScheduled(from schedule: some LedgerRepository & ScheduleRepository) -> TransactionUseCases {
+    public func showingScheduled(
+        from schedule: some LedgerRepository & ScheduleRepository,
+        while showsScheduled: @escaping @MainActor () -> Bool = { true },
+    ) -> TransactionUseCases {
         var useCases = self
-        useCases.accountHistory = DefaultAccountHistoryUseCase(repository: schedule, schedule: schedule)
+        useCases.accountHistory = DefaultAccountHistoryUseCase(
+            repository: schedule,
+            schedule: schedule,
+            showsScheduled: showsScheduled,
+        )
         return useCases
     }
 
     /// The default implementations over one repository. `categoryNames` names the built-in categories when
-    /// they're seeded at launch (D8, D291.7).
-    public init(repository: any LedgerRepository, categoryNames: any DefaultCategoryNaming) {
+    /// they're seeded at launch (D8, D291.7). `schedule`, the same store's scheduled side, lets a window undo and
+    /// redo a save of the Scheduled form (D351.1).
+    public init(
+        repository: any LedgerRepository,
+        categoryNames: any DefaultCategoryNaming,
+        schedule: (any ScheduleRepository)? = nil,
+    ) {
         self.init(
             loadLedger: DefaultLoadTransactionLedgerUseCase(repository: repository),
             accountHistory: DefaultAccountHistoryUseCase(repository: repository),
             saveTransactions: DefaultSaveTransactionsUseCase(repository: repository),
-            changes: DefaultTransactionChangesUseCase(repository: repository),
+            changes: DefaultTransactionChangesUseCase(repository: repository, schedule: schedule),
             bulkEdit: DefaultApplyBulkEditUseCase(repository: repository),
             seedDefaults: DefaultSeedDefaultCategoriesUseCase(repository: repository, names: categoryNames),
         )
@@ -177,12 +189,19 @@ extension TransactionLedger {
 public struct DefaultAccountHistoryUseCase: AccountHistoryUseCase {
     private let repository: any LedgerRepository
     private let schedule: (any ScheduleRepository)?
+    private let showsScheduled: @MainActor () -> Bool
     private let build = BuildAccountHistory()
 
-    /// With `schedule`, the history also shows the account's scheduled occurrences as Upcoming rows (S85).
-    public init(repository: any LedgerRepository, schedule: (any ScheduleRepository)? = nil) {
+    /// With `schedule`, the history also shows the account's scheduled occurrences as Upcoming rows (S85), while
+    /// `showsScheduled` says so: Settings › Scheduled Items › Show upcoming (D348).
+    public init(
+        repository: any LedgerRepository,
+        schedule: (any ScheduleRepository)? = nil,
+        showsScheduled: @escaping @MainActor () -> Bool = { true },
+    ) {
         self.repository = repository
         self.schedule = schedule
+        self.showsScheduled = showsScheduled
     }
 
     public func history(of accountID: UUID, today: CalendarDay) throws -> AccountHistoryPage? {
@@ -190,21 +209,30 @@ public struct DefaultAccountHistoryUseCase: AccountHistoryUseCase {
         guard let account = contents.accounts.first(where: { $0.id == accountID }) else {
             return nil
         }
-        let projected =
-            try schedule.map {
-                ScheduledProjection.upcoming(on: accountID, in: try $0.scheduleLedger(), today: today)
-            } ?? []
+        let projected = scheduledRows(on: accountID, today: today)
         let history = build(account: account, transactions: contents.transactions, today: today, projected: projected)
         return AccountHistoryPage(account: account, history: history, ledger: contents)
+    }
+
+    /// The account's scheduled occurrences. A schedule that can't be read shows none, and the stored rows still
+    /// show (Tech Architect, #203 NB 5).
+    private func scheduledRows(on accountID: UUID, today: CalendarDay) -> [Transaction] {
+        guard let schedule, showsScheduled(), let ledger = try? schedule.scheduleLedger() else {
+            return []
+        }
+        return ScheduledProjection.upcoming(on: accountID, in: ledger, today: today)
     }
 }
 
 @MainActor
 public struct DefaultTransactionChangesUseCase: TransactionChangesUseCase {
     private let repository: any LedgerRepository
+    /// Undoes and redoes a save of the Scheduled form (D351.1). Without it, such a step can't be reverted.
+    private let schedule: (any ScheduleRepository)?
 
-    public init(repository: any LedgerRepository) {
+    public init(repository: any LedgerRepository, schedule: (any ScheduleRepository)? = nil) {
         self.repository = repository
+        self.schedule = schedule
     }
 
     public func remove(ids: [UUID]) throws -> TransactionChange {
@@ -216,11 +244,37 @@ public struct DefaultTransactionChangesUseCase: TransactionChangesUseCase {
     }
 
     public func check(_ change: TransactionChange, expecting outcome: ChangeOutcome) throws -> ChangeCheck {
-        try ChangeChecker(repository: repository).check(change, expecting: outcome)
+        if let (save, undone) = Self.itemSave(in: change) {
+            // A form save step carries what it left; its check is the scheduled rule's (D351.1).
+            let snapshot = try requireSchedule().scheduleLedger()
+            return LedgerBook.staleness(ofSave: save, undone: undone, in: snapshot).map(ChangeCheck.stale) ?? .current
+        }
+        return try ChangeChecker(repository: repository).check(change, expecting: outcome)
     }
 
     public func revert(_ change: TransactionChange, expecting outcome: ChangeOutcome) throws -> RevertResult {
-        try repository.atomically {
+        if let (save, undone) = Self.itemSave(in: change) {
+            // One save in the scheduled store, which checks first and writes nothing for a stale step.
+            let schedule = try requireSchedule()
+            let result: ScheduledItemSaveRevert
+            do {
+                result = try schedule.revertScheduledItemSave(save, undone: undone)
+            } catch LedgerValidationError.missingScheduledItem {
+                // Deleted since: refused with nothing written, and the step is dropped with "‹name› has been
+                // deleted. Nothing was changed.", as any stale step is (D187.5, #258).
+                return .stale(.scheduledItemDeleted(save.itemID))
+            }
+            switch result {
+            case .reverted(let left):
+                return .reverted(
+                    undone ? .savedScheduledItem(left) : .revertedScheduledItemSave(left),
+                    ChangeOutcome(),
+                )
+            case .stale(let reason):
+                return .stale(reason)
+            }
+        }
+        return try repository.atomically {
             let checker = ChangeChecker(repository: repository)
             if case .stale(let reason) = try checker.check(change, expecting: outcome) {
                 // Nothing is written, so a payee the step's save created stays too, which is harmless (D191.4a.2).
@@ -242,6 +296,9 @@ public struct DefaultTransactionChangesUseCase: TransactionChangesUseCase {
             case .added(let ids): current.filter { ids.contains($0.id) }
             // Whole-account changes carry their account in the change itself.
             case .removedAccount, .addedAccount, .createdPayees, .removedPayees: []
+            // A form save step has no accounts: it's named for its item, shows no notice, and an account delete
+            // doesn't replace it (D187.9). Its own check makes it stale if an account it needs is gone.
+            case .savedScheduledItem, .revertedScheduledItemSave: []
             }
         let ids = Set(versions.flatMap { [$0.accountID, $0.transferAccountID].compactMap(\.self) })
         let transfers = versions.compactMap { version -> TransferImpact? in
@@ -262,6 +319,22 @@ public struct DefaultTransactionChangesUseCase: TransactionChangesUseCase {
             transactionIDs: change.transactionIDs,
             transfers: transfers,
         )
+    }
+
+    /// The form save a step holds, and whether the step undid it; `nil` for other changes.
+    private static func itemSave(in change: TransactionChange) -> (ScheduledItemSaveChange, Bool)? {
+        switch change {
+        case .savedScheduledItem(let save): (save, false)
+        case .revertedScheduledItemSave(let save): (save, true)
+        default: nil
+        }
+    }
+
+    private func requireSchedule() throws -> any ScheduleRepository {
+        guard let schedule else {
+            throw LedgerValidationError.missingScheduledItem
+        }
+        return schedule
     }
 
     private func removeAll(ids: [UUID]) throws -> TransactionChange {
@@ -342,6 +415,9 @@ public struct DefaultTransactionChangesUseCase: TransactionChangesUseCase {
             return try removeAll(ids: ids)
         case .replaced(let previous):
             return try revertEdits(previous, expecting: outcome)
+        case .savedScheduledItem, .revertedScheduledItemSave:
+            // Reverted by `revert` in the scheduled store, never inside this batch.
+            throw LedgerValidationError.missingScheduledItem
         }
     }
 

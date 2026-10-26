@@ -16,6 +16,7 @@
     /// model from the host's slot, and buttons push through the host (Tester's #198 iOS FAIL).
     public struct ScheduledListView<Link: Hashable>: View {
         @State private var model: ScheduledListViewModel
+        @Environment(WindowUndoHistory.self) private var undoHistory
         private let feature: ScheduledFeature
         /// Whether the list registers its own destinations or a parent stack builds them (with the slot and a way to
         /// push, always together).
@@ -128,6 +129,10 @@
             }
             .scheduledSheets(model, on: .list)
             .onAppear {
+                // A form save is this window's Undo step (D351.1).
+                model.recordStep = { [undoHistory] change, name, subject in
+                    undoHistory.record(change, named: name, subject: subject)
+                }
                 model.screenAppeared(.list)
                 model.load()
                 feature.watchNotices?.reload()

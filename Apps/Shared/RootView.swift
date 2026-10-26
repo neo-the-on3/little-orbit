@@ -192,6 +192,8 @@
             let transactionUseCases = TransactionUseCases(
                 repository: repository,
                 categoryNames: CatalogDefaultCategoryNames(),
+                // Undo and Redo of a Scheduled form save go through the schedule (D351.1).
+                schedule: repository,
             )
             // The default categories are seeded here, at launch, before any screen can write (D291.7, D293.4), and
             // nowhere else. A failed seed is only logged (D293.3): the app opens as normal and the next launch

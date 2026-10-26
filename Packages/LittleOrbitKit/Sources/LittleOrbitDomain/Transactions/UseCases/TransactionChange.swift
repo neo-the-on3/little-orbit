@@ -63,6 +63,11 @@ public enum TransactionChange: Equatable, Sendable {
     indirect case createdPayees([Payee], TransactionChange)
     /// Revert by putting these payees back, with the same IDs, then reverting the change (Redo, D191.4a.3).
     indirect case removedPayees([Payee], TransactionChange)
+    /// A save of the Scheduled form: "New Scheduled Item Rent" or "Edit Rent" (D351.1). Revert by putting the item
+    /// back as it was, or removing a new one, with the payee the save created or unarchived.
+    case savedScheduledItem(ScheduledItemSaveChange)
+    /// Revert by saving the item again as the form left it, with its payee (Redo, D351.1).
+    case revertedScheduledItemSave(ScheduledItemSaveChange)
 
     /// `change`, plus the payees its save created, if any.
     public static func saved(_ change: TransactionChange, creating payees: [Payee]) -> TransactionChange {
@@ -98,7 +103,7 @@ public enum TransactionChange: Equatable, Sendable {
             return .createdPayees(payees, change.replacingPayee(payeeID, with: otherID))
         case .removedPayees(let payees, let change):
             return .removedPayees(payees, change.replacingPayee(payeeID, with: otherID))
-        case .added, .addedAccount: return self
+        case .added, .addedAccount, .savedScheduledItem, .revertedScheduledItemSave: return self
         }
     }
 
@@ -106,7 +111,9 @@ public enum TransactionChange: Equatable, Sendable {
     public var core: TransactionChange {
         switch self {
         case .createdPayees(_, let change), .removedPayees(_, let change): change.core
-        case .removed, .added, .replaced, .removedAccount, .addedAccount: self
+        case .removed, .added, .replaced, .removedAccount, .addedAccount, .savedScheduledItem,
+            .revertedScheduledItemSave:
+            self
         }
     }
 
@@ -117,7 +124,7 @@ public enum TransactionChange: Equatable, Sendable {
         case .added(let ids): ids
         case .replaced(let items): items.map(\.id)
         case .removedAccount(let removed): removed.transactions.map(\.transaction.id)
-        case .addedAccount, .createdPayees, .removedPayees: []
+        case .addedAccount, .createdPayees, .removedPayees, .savedScheduledItem, .revertedScheduledItemSave: []
         }
     }
 
@@ -126,7 +133,9 @@ public enum TransactionChange: Equatable, Sendable {
         switch core {
         case .removedAccount(let removed): [removed.account.id]
         case .addedAccount(let id): [id]
-        case .removed, .added, .replaced, .createdPayees, .removedPayees: []
+        case .removed, .added, .replaced, .createdPayees, .removedPayees, .savedScheduledItem,
+            .revertedScheduledItemSave:
+            []
         }
     }
 }

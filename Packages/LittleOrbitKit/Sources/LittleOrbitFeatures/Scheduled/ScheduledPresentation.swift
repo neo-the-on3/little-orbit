@@ -20,6 +20,22 @@ public struct ScheduledRow: Identifiable, Equatable, Sendable {
     public let spokenLabel: String
 
     public var canSettle: Bool { occurrence != nil }
+
+    /// This row with Pay Now and Skip acting on `day`.
+    func settling(_ day: CalendarDay) -> ScheduledRow {
+        ScheduledRow(
+            id: id,
+            itemID: itemID,
+            occurrence: day,
+            title: title,
+            detail: detail,
+            amount: amount,
+            tone: tone,
+            dateText: dateText,
+            symbolName: symbolName,
+            spokenLabel: spokenLabel,
+        )
+    }
 }
 
 /// Builds rows from a listing, with dates and money through formatters in the device's locale.
@@ -180,4 +196,12 @@ extension String {
     fileprivate var nilIfEmpty: String? {
         isEmpty ? nil : self
     }
+}
+
+/// Which occurrences the item screen offers Pay and Skip on (D350.2).
+public enum ScheduledSettling: Hashable, Sendable {
+    /// On the Scheduled screens: each overdue or due-today occurrence (S76).
+    case dueOccurrences
+    /// From an account history row: that row's occurrence, only when it's the item's next one.
+    case historyRow(CalendarDay?)
 }

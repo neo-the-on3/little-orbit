@@ -39,33 +39,11 @@
                     }
                     TextField(model.descriptionLabel, text: $model.details)
                 }
+                if model.showsCategory {
+                    payeeSection
+                }
                 Section {
                     if model.showsCategory {
-                        // The #23 payee autocomplete: matching payees, then Create for a new name (#197).
-                        TextField(model.payeeLabel, text: $model.payeeText, prompt: Text(model.payeePrompt))
-                        ForEach(model.payeeSuggestions) { suggestion in
-                            Button {
-                                model.choosePayee(suggestion)
-                            } label: {
-                                Label(suggestion.text, systemImage: "person")
-                            }
-                        }
-                        if let create = model.createPayeeTitle {
-                            Button {
-                                model.createPayee()
-                            } label: {
-                                Label {
-                                    VStack(alignment: .leading) {
-                                        Text(verbatim: create)
-                                        Text(model.createPayeeSubtitle)
-                                            .font(.subheadline)
-                                            .foregroundStyle(.secondary)
-                                    }
-                                } icon: {
-                                    Image(systemName: "plus.circle")
-                                }
-                            }
-                        }
                         Picker(model.categoryLabel, selection: $model.categoryID) {
                             ForEach(model.categoryChoices) { Text(verbatim: $0.name).tag($0.id) }
                         }
@@ -153,6 +131,8 @@
                             dismiss()
                         }
                     }
+                    // Until the payee field's text is resolved (D347.2).
+                    .disabled(!model.canSave)
                 }
             }
             .alert(
@@ -180,6 +160,63 @@
             #else
                 URL(string: "x-apple.systempreferences:com.apple.Notifications-Settings.extension")
             #endif
+        }
+    }
+
+    extension ScheduledFormView {
+        /// The #23 payee autocomplete in its own section (#197): matching payees drawn as on the entry sheet, then
+        /// Create, or Use archived for an archived payee's name (D351.2). While the text isn't resolved, the
+        /// section's footer says how, in secondary text (D347.2, D352.1).
+        var payeeSection: some View {
+            Section {
+                TextField(model.payeeLabel, text: $model.payeeText, prompt: Text(model.payeePrompt))
+                    .autocorrectionDisabled()
+                ForEach(model.payeeSuggestions) { suggestion in
+                    Button {
+                        model.choosePayee(suggestion)
+                    } label: {
+                        TransactionSuggestionLabel(suggestion: suggestion)
+                    }
+                    .buttonStyle(.plain)
+                }
+                if let create = model.createPayeeTitle {
+                    Button {
+                        model.createPayee()
+                    } label: {
+                        Label {
+                            VStack(alignment: .leading) {
+                                Text(verbatim: create)
+                                Text(model.createPayeeSubtitle)
+                                    .font(.subheadline)
+                                    .foregroundStyle(.secondary)
+                            }
+                        } icon: {
+                            Image(systemName: "plus.circle")
+                        }
+                    }
+                }
+                if let useArchived = model.useArchivedPayeeTitle {
+                    Button {
+                        model.useArchivedPayee()
+                    } label: {
+                        Label {
+                            VStack(alignment: .leading) {
+                                Text(verbatim: useArchived)
+                                Text(model.useArchivedPayeeSubtitle)
+                                    .font(.subheadline)
+                                    .foregroundStyle(.secondary)
+                            }
+                        } icon: {
+                            Image(systemName: "archivebox")
+                        }
+                    }
+                }
+            } footer: {
+                if let hint = model.payeeHint {
+                    Text(verbatim: hint)
+                        .foregroundStyle(.secondary)
+                }
+            }
         }
     }
 #endif

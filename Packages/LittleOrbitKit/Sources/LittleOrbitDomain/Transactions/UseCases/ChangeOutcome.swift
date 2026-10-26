@@ -101,6 +101,11 @@ public enum StaleReason: Equatable, Sendable {
     case changed([UUID])
     /// Some of these transactions were changed and others deleted (a bulk step, D189.2).
     case changedAndDeleted(changed: [UUID], deleted: [UUID])
+    /// The scheduled item a step saved was edited, or one of its occurrences recorded or skipped, since
+    /// (D351.1, D352.2).
+    case scheduledItemChanged(UUID)
+    /// The scheduled item a step saved was deleted since (D351.1).
+    case scheduledItemDeleted(UUID)
 }
 
 /// The stale check's result: the ledger still holds what the change left, or it doesn't, and why.

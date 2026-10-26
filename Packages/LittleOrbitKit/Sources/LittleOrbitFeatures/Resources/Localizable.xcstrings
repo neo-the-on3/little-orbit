@@ -2808,6 +2808,45 @@
         }
       }
     },
+    "scheduled.payee.archivedHint": {
+      "comment": "Scheduled form, the footer under the payee field while the typed text is an archived payee’s name; Save is disabled until it’s resolved. %@ is the archived payee’s own name.",
+      "extractionState": "manual",
+      "generatesSymbol": false,
+      "localizations": {
+        "en": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Choose “Use archived %@” to use this payee, or clear the field."
+          }
+        }
+      }
+    },
+    "scheduled.payee.createHint": {
+      "comment": "Scheduled form, the footer under the payee field while the typed text names no payee; Save is disabled until it’s resolved. %@ is the text typed, trimmed.",
+      "extractionState": "manual",
+      "generatesSymbol": false,
+      "localizations": {
+        "en": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Choose “Create %@” to add this payee, or clear the field."
+          }
+        }
+      }
+    },
+    "scheduled.payee.useArchived": {
+      "comment": "Scheduled form payee field: the row that uses an archived payee with the typed name, unarchiving it when the item is saved. %@ is the archived payee’s own name.",
+      "extractionState": "manual",
+      "generatesSymbol": false,
+      "localizations": {
+        "en": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Use archived “%@”"
+          }
+        }
+      }
+    },
     "New payee": {
       "comment": "Scheduled form payee field: the subtitle of the Create row.",
       "extractionState": "manual",
@@ -2817,6 +2856,19 @@
           "stringUnit": {
             "state": "translated",
             "value": "New payee"
+          }
+        }
+      }
+    },
+    "Archived payee": {
+      "comment": "Scheduled form payee field: the subtitle of the Use archived row.",
+      "extractionState": "manual",
+      "generatesSymbol": false,
+      "localizations": {
+        "en": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Archived payee"
           }
         }
       }
@@ -8874,6 +8926,32 @@
           "stringUnit": {
             "state": "translated",
             "value": "New Scheduled Item"
+          }
+        }
+      }
+    },
+    "Edit %@": {
+      "comment": "Undo name: a scheduled item changed with the form (D340.9). The item’s name as the list shows it.",
+      "extractionState": "manual",
+      "generatesSymbol": false,
+      "localizations": {
+        "en": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Edit %@"
+          }
+        }
+      }
+    },
+    "New Scheduled Item %@": {
+      "comment": "Undo name: a scheduled item added with the form (D351.1). The item’s name as the list shows it.",
+      "extractionState": "manual",
+      "generatesSymbol": false,
+      "localizations": {
+        "en": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "New Scheduled Item %@"
           }
         }
       }

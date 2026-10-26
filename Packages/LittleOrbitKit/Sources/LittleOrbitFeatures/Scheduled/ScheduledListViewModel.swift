@@ -64,6 +64,9 @@ public struct ScheduledFact: Identifiable, Equatable, Sendable {
     public var id: String { label }
 }
 
+/// Records a Scheduled step as the window's Undo step: the change, its name and the item's name.
+public typealias ScheduledStepRecorder = (_ change: TransactionChange, _ name: String, _ subject: String) -> Void
+
 /// The Scheduled list (#26 design: Overdue, Due today, Upcoming, then Completed). Each missed occurrence has its own
 /// row with Pay Now and Skip (S76); Pay Now records today with the occurrence's own key, so paying it twice, or
 /// from two windows, records it once. Neither is an Undo step yet, and neither shows a toast (D290). It depends only
@@ -77,6 +80,9 @@ public final class ScheduledListViewModel {
     public var alert: CategoryAlert?
     public var confirmation: ScheduledConfirmation?
     public var form: ScheduledFormViewModel?
+    /// Records a form save in this window's undo history, with its name, "New Scheduled Item Rent" or "Edit Rent",
+    /// and the item's name for a stale alert (D351.1). The window sets it; without it, nothing is recorded.
+    @ObservationIgnored public var recordStep: ScheduledStepRecorder = { _, _, _ in }
 
     /// The Scheduled screens on screen, in the order they appeared: the last one presents (see `presenter`).
     public private(set) var visibleScreens: [ScheduledScreen] = []
@@ -295,6 +301,22 @@ public final class ScheduledListViewModel {
         listing.board.completed.count.formatted(.number.locale(locale))
     }
 
+    /// The rows the item screen offers Pay and Skip on: the item's due occurrences on the Scheduled screens, or,
+    /// opened from an account history row, that row's occurrence when it's the item's next one (D350.2).
+    public func settleableRows(of itemID: UUID, _ settling: ScheduledSettling) -> [ScheduledRow] {
+        switch settling {
+        case .dueOccurrences:
+            return detail(itemID)?.due ?? []
+        case .historyRow(let occurrence):
+            guard let occurrence,
+                let next = listing.board.upcoming.first(where: { $0.item.id == itemID }), next.day == occurrence
+            else {
+                return []
+            }
+            return [rows.row(next.item, day: next.day, kind: .upcoming).settling(next.day)]
+        }
+    }
+
     public func detail(_ itemID: UUID) -> ScheduledItemDetail? {
         guard let item = listing.item(itemID) else {
             return nil
@@ -439,6 +461,13 @@ public final class ScheduledListViewModel {
 
     // MARK: Form
 
+    /// "New Scheduled Item Rent" or "Edit Rent", named as the list names the item (D351.1). Delete is never an
+    /// Undo step (D334.9).
+    func recordSave(_ change: ScheduledItemSaveChange) {
+        let name = rows.shortName(of: change.after)
+        recordStep(.savedScheduledItem(change), ScheduledText.saveStepName(change, name: name), name)
+    }
+
     public func openNew() {
         form = makeForm(nil)
     }
@@ -458,7 +487,9 @@ public final class ScheduledListViewModel {
             locale: locale,
             platform: platform,
         ) { [weak self] in
+            let change = $0
             self?.load()
+            self?.recordSave(change)
             self?.changed()
         }
     }

@@ -178,8 +178,9 @@ func assertAccountDeleteKeepsAThreeDecimalItem(make: MakeScheduleRepository) thr
     XCTAssertEqual(items.first { $0.id == sweep.id }?.amount, decimal("2.345"))
 }
 
-/// #258: an edit saved after its item was deleted elsewhere throws `missingScheduledItem` and writes nothing; the
-/// item stays deleted and a new item still saves. Shared by the in-memory and SwiftData stores.
+/// #258: an edit saved through the form's save after its item was deleted elsewhere throws `missingScheduledItem`
+/// and writes nothing, its pending payee included; the item stays deleted and a new item still saves. Shared by
+/// the in-memory and SwiftData stores.
 @MainActor
 func assertEditOfADeletedScheduledItemWritesNothing(make: MakeScheduleRepository) throws {
     typealias Fix = ScheduledStorageFixture
@@ -201,12 +202,18 @@ func assertEditOfADeletedScheduledItemWritesNothing(make: MakeScheduleRepository
     let afterDelete = try repository.scheduleLedger()
     gym.amount = decimal("1800")
     XCTAssertThrowsError(
-        try repository.updateScheduledItem(gym, today: Fix.day(2026, 8, 2), now: created.addingTimeInterval(86_400))
+        try repository.updateScheduledItem(
+            gym,
+            payee: .create("Fit Club"),
+            today: Fix.day(2026, 8, 2),
+            now: created.addingTimeInterval(86_400),
+        )
     ) { error in
         XCTAssertEqual(error as? LedgerValidationError, .missingScheduledItem)
     }
     XCTAssertEqual(try repository.scheduleLedger(), afterDelete)
     XCTAssertTrue(try repository.scheduleLedger().scheduledItems.isEmpty)
+    XCTAssertTrue(try repository.scheduleLedger().payees.isEmpty)
 
     let rent = ScheduledItem(
         type: .expense,
@@ -217,6 +224,170 @@ func assertEditOfADeletedScheduledItemWritesNothing(make: MakeScheduleRepository
         timeZoneID: Fix.zone,
         createdAt: created,
     )
-    try repository.saveScheduledItem(rent, today: Fix.day(2026, 8, 2), now: created)
+    _ = try repository.saveScheduledItem(rent, payee: nil, today: Fix.day(2026, 8, 2), now: created)
     XCTAssertEqual(try repository.scheduleLedger().scheduledItems.map(\.id), [rent.id])
+}
+
+/// Tech Architect B2 (#197): a form save's Edit, Undo and Redo each leave the store as they should, so Redo puts
+/// the edited values back rather than doing nothing. Shared by the in-memory and SwiftData stores.
+@MainActor
+func assertFormSaveEditUndoRedo(make: MakeScheduleRepository) throws {
+    let repository = try make()
+    let account = Account(name: "Everyday Savings", currencyCode: "INR")
+    try repository.saveAccount(account)
+    let today = CalendarDay(year: 2026, month: 10, day: 20)
+    let now = Date(timeIntervalSince1970: 1_792_000_000)
+    let rent = ScheduledItem(
+        amount: decimal("1200"),
+        accountID: account.id,
+        details: "Rent",
+        startDay: CalendarDay(year: 2026, month: 11, day: 1),
+        timeZoneID: "Asia/Kolkata",
+        createdAt: now,
+    )
+    let saved = try repository.saveScheduledItem(rent, payee: nil, today: today, now: now)
+    var edited = saved.after
+    edited.amount = decimal("1500.25")
+    edited.note = "Flat 4"
+    let edit = try repository.updateScheduledItem(
+        edited,
+        payee: .create("Gym Co"),
+        today: today,
+        now: now.addingTimeInterval(60),
+    )
+    let stored = { try XCTUnwrap(try repository.scheduleLedger().scheduledItems.first) }
+
+    guard case .reverted(let undone) = try repository.revertScheduledItemSave(edit, undone: false) else {
+        return XCTFail("Undo was stale")
+    }
+    XCTAssertEqual(try stored().amount, decimal("1200"))
+    XCTAssertNil(try stored().note)
+    XCTAssertNil(try stored().payeeID)
+
+    guard case .reverted(let redone) = try repository.revertScheduledItemSave(undone, undone: true) else {
+        return XCTFail("Redo was stale")
+    }
+    XCTAssertEqual(try stored().amount, decimal("1500.25"))
+    XCTAssertEqual(try stored().note, "Flat 4")
+    let gym = try XCTUnwrap(try repository.scheduleLedger().payees.first { $0.name == "Gym Co" })
+    XCTAssertEqual(try stored().payeeID, gym.id)
+
+    // And again: the second Undo and Redo work from what the first ones stored.
+    guard case .reverted(let undoneAgain) = try repository.revertScheduledItemSave(redone, undone: false) else {
+        return XCTFail("Second Undo was stale")
+    }
+    XCTAssertEqual(try stored().amount, decimal("1200"))
+    guard case .reverted(let redoneAgain) = try repository.revertScheduledItemSave(undoneAgain, undone: true) else {
+        return XCTFail("Second Redo was stale")
+    }
+    XCTAssertEqual(try stored().amount, decimal("1500.25"))
+    try assertFormSaveUndoRedoAfterADelete(repository, undoing: redoneAgain, account: account, now: now)
+}
+
+/// #258: Undo and Redo of a form save never bring back an item deleted elsewhere since. Each throws
+/// `missingScheduledItem`, writes nothing and leaves the payee the save created as it is.
+@MainActor
+private func assertFormSaveUndoRedoAfterADelete(
+    _ repository: any LedgerRepository & ScheduleRepository,
+    undoing edit: ScheduledItemSaveChange,
+    account: Account,
+    now: Date,
+) throws {
+    let today = CalendarDay(year: 2026, month: 10, day: 20)
+    // Undo after a delete: the edited item is gone.
+    try repository.deleteScheduledItem(id: edit.itemID)
+    let afterDelete = try repository.scheduleLedger()
+    XCTAssertNotNil(afterDelete.payees.first { $0.name == "Gym Co" })
+    XCTAssertThrowsError(try repository.revertScheduledItemSave(edit, undone: false)) { error in
+        XCTAssertEqual(error as? LedgerValidationError, .missingScheduledItem)
+    }
+    XCTAssertEqual(try repository.scheduleLedger(), afterDelete)
+
+    // Redo after a delete: an edit is undone, then its item is deleted.
+    let phone = ScheduledItem(
+        amount: decimal("799"),
+        accountID: account.id,
+        details: "Phone",
+        startDay: CalendarDay(year: 2026, month: 11, day: 3),
+        timeZoneID: "Asia/Kolkata",
+        createdAt: now,
+    )
+    var raised = try repository.saveScheduledItem(phone, payee: nil, today: today, now: now).after
+    raised.amount = decimal("899")
+    let raise = try repository.updateScheduledItem(raised, payee: nil, today: today, now: now.addingTimeInterval(60))
+    guard case .reverted(let undone) = try repository.revertScheduledItemSave(raise, undone: false) else {
+        return XCTFail("Undo was stale")
+    }
+    try repository.deleteScheduledItem(id: phone.id)
+    let afterSecondDelete = try repository.scheduleLedger()
+    XCTAssertThrowsError(try repository.revertScheduledItemSave(undone, undone: true)) { error in
+        XCTAssertEqual(error as? LedgerValidationError, .missingScheduledItem)
+    }
+    XCTAssertEqual(try repository.scheduleLedger(), afterSecondDelete)
+    XCTAssertFalse(try repository.scheduleLedger().scheduledItems.contains { $0.id == phone.id })
+}
+
+/// D351, D362: Undo of a new item's save leaves the payee it created when another row uses it by then. Shared by
+/// the in-memory and SwiftData stores.
+@MainActor
+func assertFormSaveUndoKeepsACreatedPayeeInUse(make: MakeScheduleRepository) throws {
+    let repository = try make()
+    let account = Account(name: "Everyday Savings", currencyCode: "INR")
+    try repository.saveAccount(account)
+    let today = CalendarDay(year: 2026, month: 10, day: 20)
+    let now = Date(timeIntervalSince1970: 1_792_000_000)
+    let gym = ScheduledItem(
+        amount: decimal("1500"),
+        accountID: account.id,
+        details: "Gym",
+        startDay: CalendarDay(year: 2026, month: 11, day: 5),
+        timeZoneID: "Asia/Kolkata",
+        createdAt: now,
+    )
+    let save = try repository.saveScheduledItem(gym, payee: .create("Fit Club"), today: today, now: now)
+    let club = try XCTUnwrap(save.createdPayee)
+    // Another row, a transaction, uses the new payee before the Undo.
+    try repository.saveTransaction(
+        Transaction(type: .expense, amount: decimal("200"), accountID: account.id, payeeID: club.id)
+    )
+    guard case .reverted = try repository.revertScheduledItemSave(save, undone: false) else {
+        return XCTFail("Undo was stale")
+    }
+    XCTAssertTrue(try repository.scheduleLedger().scheduledItems.isEmpty)
+    let kept = try XCTUnwrap(try repository.scheduleLedger().payees.first { $0.id == club.id })
+    XCTAssertNil(kept.deletedAt)
+    XCTAssertEqual(try repository.transactions().map(\.payeeID), [club.id])
+}
+
+/// D350.1: a new item's save whose pending payee can't be created stores neither the item nor the payee. Shared by
+/// the in-memory and SwiftData stores.
+@MainActor
+func assertFailedPayeeCreateSavesNoNewItem(make: MakeScheduleRepository) throws {
+    let repository = try make()
+    let account = Account(name: "Everyday Savings", currencyCode: "INR")
+    try repository.saveAccount(account)
+    let now = Date(timeIntervalSince1970: 1_792_000_000)
+    let gym = ScheduledItem(
+        amount: decimal("1500"),
+        accountID: account.id,
+        details: "Gym",
+        startDay: CalendarDay(year: 2026, month: 11, day: 5),
+        timeZoneID: "Asia/Kolkata",
+        createdAt: now,
+    )
+    let before = try repository.scheduleLedger()
+    let tooLong = String(repeating: "Fit Club ", count: 12)
+    XCTAssertThrowsError(
+        try repository.saveScheduledItem(
+            gym,
+            payee: .create(tooLong),
+            today: CalendarDay(year: 2026, month: 10, day: 20),
+            now: now,
+        )
+    ) { error in
+        XCTAssertEqual(error as? LedgerValidationError, .nameTooLong)
+    }
+    XCTAssertEqual(try repository.scheduleLedger(), before)
+    XCTAssertTrue(try repository.scheduleLedger().scheduledItems.isEmpty)
+    XCTAssertTrue(try repository.scheduleLedger().payees.isEmpty)
 }

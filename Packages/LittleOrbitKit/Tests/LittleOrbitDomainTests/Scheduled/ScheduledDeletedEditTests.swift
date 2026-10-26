@@ -26,6 +26,7 @@ struct ScheduledDeletedEditTests {
         #expect(throws: LedgerValidationError.missingScheduledItem) {
             try LedgerBook.updatingScheduledItem(
                 Fix.rent(),
+                payee: .create("Rent Co"),
                 in: snapshot,
                 today: Fix.day(2026, 10, 20),
                 now: Fix.date(2026, 10, 20),
@@ -44,8 +45,9 @@ struct ScheduledDeletedEditTests {
         let saves = repository.saves
         edited.amount = 26_000
         edited.details = "Rent, new flat"
+        // A pending new payee is refused with it: no payee is created (#258).
         #expect(throws: LedgerValidationError.missingScheduledItem) {
-            try useCases.update(edited)
+            try useCases.update(edited, payee: .create("Rent Co"))
         }
         #expect(repository.snapshot == afterDelete)
         #expect(repository.saves == saves)
@@ -83,7 +85,7 @@ struct ScheduledDeletedEditTests {
         var edited = try #require(repository.snapshot.scheduledItems.first { $0.id == rent.id })
         edited.occurrences = []
         edited.amount = 26_000
-        try repository.useCases().update(edited)
+        _ = try repository.useCases().update(edited, payee: nil)
         let stored = try #require(repository.snapshot.scheduledItems.first { $0.id == rent.id })
         #expect(stored.amount == 26_000)
         #expect(stored.occurrences.map(\.day) == [Fix.day(2026, 8, 1)])

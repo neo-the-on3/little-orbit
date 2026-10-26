@@ -71,6 +71,8 @@ public final class ScheduledFormViewModel: Identifiable {
         didSet { payeeTextChanged() }
     }
     public internal(set) var payeeID: UUID?
+    /// The payee the field's Create or Use archived row picked, stored only when the item is saved (D350.1, D351.2).
+    public internal(set) var pendingPayee: ScheduledPendingPayee?
     public var startDay: CalendarDay
     public var frequency: ScheduledFrequency
     public var interval: Int
@@ -105,7 +107,8 @@ public final class ScheduledFormViewModel: Identifiable {
     /// The Mac says System Settings where iOS says Settings (D359).
     @ObservationIgnored private let platform: ScheduledPlatform
     @ObservationIgnored private let today: CalendarDay
-    @ObservationIgnored private let saved: () -> Void
+    /// After a save, with what the window's Undo step needs (D351.1).
+    @ObservationIgnored private let saved: (ScheduledItemSaveChange) -> Void
     /// The latest permission check, for tests to wait on.
     @ObservationIgnored private(set) var permissionCheck: Task<Void, Never>?
     /// The listing's payees and any the payee field created.
@@ -117,7 +120,7 @@ public final class ScheduledFormViewModel: Identifiable {
         editing item: ScheduledItem?,
         locale: Locale,
         platform: ScheduledPlatform = .current,
-        saved: @escaping () -> Void,
+        saved: @escaping (ScheduledItemSaveChange) -> Void,
     ) {
         self.useCases = useCases
         self.listing = listing
@@ -362,6 +365,7 @@ public final class ScheduledFormViewModel: Identifiable {
         if type == .transfer {
             categoryID = nil
             payeeID = nil
+            pendingPayee = nil
             payeeText = ""
             if transferAccountID == nil || transferAccountID == accountID {
                 transferAccountID = toChoices.first?.id
@@ -404,6 +408,10 @@ public final class ScheduledFormViewModel: Identifiable {
         formError = nil
         // Only this save's deleted-item alert closes the form: the item may be back (an Undo elsewhere) (#258).
         alertClosesForm = false
+        // Save is disabled until the payee field is resolved; this covers Return on the Mac too (D347.2).
+        guard canSave else {
+            return false
+        }
         let amount: Decimal
         do {
             amount = try AmountInput.parse(amountText, currencyCode: currencyCode, locale: locale)
@@ -428,13 +436,11 @@ public final class ScheduledFormViewModel: Identifiable {
             formError = ScheduledText.endBeforeStart
             return false
         }
+        let change: ScheduledItemSaveChange
         do {
-            // An edit never saves an item that was deleted while the form was open (#258).
-            if isNew {
-                try useCases.manage.save(item)
-            } else {
-                try useCases.manage.update(item)
-            }
+            // An edit never saves an item that was deleted while the form was open, nor its pending payee (#258).
+            let payee = type == .transfer ? nil : pendingPayee
+            change = try isNew ? useCases.manage.save(item, payee: payee) : useCases.manage.update(item, payee: payee)
         } catch LedgerValidationError.scheduleEndsBeforeStart {
             formError = ScheduledText.endBeforeStart
             return false
@@ -444,10 +450,10 @@ public final class ScheduledFormViewModel: Identifiable {
             alertClosesForm = true
             return false
         } catch {
-            alert = ScheduledText.saveFailed
+            alert = saveFailedAlert(error)
             return false
         }
-        saved()
+        saved(change)
         return true
     }
 
