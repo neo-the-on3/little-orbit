@@ -83,13 +83,6 @@
         }
     }
 
-    /// Where a list or sidebar row leads.
-    enum AccountsRoute: Hashable {
-        case allTransactions
-        case home(HomeDestination)
-        case account(UUID)
-    }
-
     /// The state for the account form sheet. The view model is made once, when the sheet is requested
     /// (`AccountsFeature.makeForm`), rather than each time SwiftUI evaluates the sheet's content.
     struct AccountFormSheet: Identifiable {

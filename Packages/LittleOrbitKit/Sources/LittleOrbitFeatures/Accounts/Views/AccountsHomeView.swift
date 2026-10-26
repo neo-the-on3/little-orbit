@@ -21,6 +21,8 @@
         private let onShowSettings: ((WindowUndoHistory) -> Void)?
         /// The Scheduled screens (#26); without them the row shows its placeholder.
         private let scheduled: ScheduledFeature?
+        /// The pushed Scheduled list's model, for the item and Completed screens this stack's root builds over it.
+        @State private var scheduledSlot = ScheduledListSlot()
 
         private var undoHistory: WindowUndoHistory {
             undoSlot.history(from: transactions)
@@ -320,7 +322,18 @@
                 )
             case .home(.scheduled) where scheduled != nil:
                 if let scheduled {
-                    ScheduledListView(feature: scheduled)
+                    // The typed path only honours this root's destinations, so the list's links push
+                    // `.scheduled(_)` and the case below builds them (Tester's #198 iOS FAIL).
+                    ScheduledListView(feature: scheduled, slot: scheduledSlot, linkValue: AccountsRoute.scheduled)
+                }
+            case .scheduled(let route):
+                if let scheduled {
+                    ScheduledStackDestination(
+                        feature: scheduled,
+                        slot: scheduledSlot,
+                        route: route,
+                        linkValue: AccountsRoute.scheduled,
+                    )
                 }
             case .home(let destination):
                 UpcomingFeatureView(

@@ -2,28 +2,49 @@
     import LittleOrbitDomain
     import SwiftUI
 
-    /// Where a Scheduled row goes: an item's own screen, or the Completed list.
-    public enum ScheduledRoute: Hashable, Sendable {
-        case item(UUID)
-        case completed
-    }
-
     /// The Scheduled list (#26 frames "Scheduled – overdue, due today, upcoming" on iOS and "Scheduled – overdue,
     /// due today, upcoming, completed; sidebar badge" on macOS). After a catch-up recorded something while the app
     /// was closed, an info hint comes first. Overdue starts with its hint row, then lists each missed occurrence on
     /// its own row; then Due Today, Upcoming and a Completed row with its count. Rows are standard navigation links
     /// to the item; the context menu has Pay Now, Skip This Occurrence, Edit and Delete. It sits inside the caller's
     /// NavigationStack. Whichever Scheduled screen is on top presents the form, confirmations and alerts.
-    public struct ScheduledListView: View {
+    ///
+    /// The Mac gives the list its own stack, and the list registers the item and Completed destinations. On iPhone
+    /// and iPad it's pushed onto the Accounts stack, whose typed path only takes `AccountsRoute` and only honours
+    /// its root's destinations, so the links push `linkValue(route)` and the root builds the pushed screens with the
+    /// model from `slot` (Tester's #198 iOS FAIL).
+    public struct ScheduledListView<Link: Hashable>: View {
         @State private var model: ScheduledListViewModel
         private let feature: ScheduledFeature
+        /// `nil` when the list registers its own destinations.
+        private let slot: ScheduledListSlot?
+        private let linkValue: (ScheduledRoute) -> Link
 
-        public init(feature: ScheduledFeature) {
+        /// A list that registers its own destinations (the Mac's detail column stack).
+        public init(feature: ScheduledFeature) where Link == ScheduledRoute {
+            self.init(feature: feature, slot: nil) { $0 }
+        }
+
+        /// A list on a stack whose root registers the destinations for `linkValue`'s values and builds them with the
+        /// model in `slot` (the iPhone and iPad Accounts stack).
+        init(feature: ScheduledFeature, slot: ScheduledListSlot?, linkValue: @escaping (ScheduledRoute) -> Link) {
             self.feature = feature
+            self.slot = slot
+            self.linkValue = linkValue
             _model = State(initialValue: feature.makeList())
         }
 
         public var body: some View {
+            if let slot {
+                list.onAppear { slot.attach(model) }
+            } else {
+                list.navigationDestination(for: ScheduledRoute.self) { route in
+                    ScheduledDestination(model: model, route: route, linkValue: linkValue)
+                }
+            }
+        }
+
+        private var list: some View {
             List {
                 if let hint = model.catchUpHint {
                     Section {
@@ -66,7 +87,7 @@
                 }
                 if !model.completedRows.isEmpty {
                     Section {
-                        NavigationLink(value: ScheduledRoute.completed) {
+                        NavigationLink(value: linkValue(.completed)) {
                             LabeledContent(model.completedTitle, value: model.completedCount)
                         }
                     }
@@ -91,14 +112,6 @@
                         .help(model.addTitle)
                 }
             }
-            .navigationDestination(for: ScheduledRoute.self) { route in
-                switch route {
-                case .item(let id):
-                    ScheduledItemView(model: model, itemID: id)
-                case .completed:
-                    ScheduledCompletedView(model: model)
-                }
-            }
             .scheduledSheets(model, on: .list)
             .onAppear {
                 model.screenAppeared(.list)
@@ -109,20 +122,62 @@
         }
 
         private func link(_ row: ScheduledRow) -> some View {
-            NavigationLink(value: ScheduledRoute.item(row.itemID)) {
+            NavigationLink(value: linkValue(.item(row.itemID))) {
                 ScheduledRowView(row: row)
             }
             .contextMenu { ScheduledRowActions(model: model, row: row) }
         }
     }
 
-    /// The completed items, each a link to its screen.
-    struct ScheduledCompletedView: View {
+    /// A screen pushed over the list, sharing the list's model. The Mac's list registers it; on iPhone and iPad the
+    /// Accounts stack's root does.
+    struct ScheduledDestination<Link: Hashable>: View {
         let model: ScheduledListViewModel
+        let route: ScheduledRoute
+        let linkValue: (ScheduledRoute) -> Link
+
+        var body: some View {
+            switch route {
+            case .item(let id):
+                ScheduledItemView(model: model, itemID: id)
+            case .completed:
+                ScheduledCompletedView(model: model, linkValue: linkValue)
+            }
+        }
+    }
+
+    /// A screen the iPhone and iPad Accounts stack's root builds over the list. It shares the list's model from the
+    /// slot. A path set in one go, such as a deep link straight to an item, can build it before the list under it has
+    /// appeared, so then it makes its own model; either way the choice is made once, when the screen is first built.
+    struct ScheduledStackDestination<Link: Hashable>: View {
+        @State private var model: ScheduledListViewModel
+        private let route: ScheduledRoute
+        private let linkValue: (ScheduledRoute) -> Link
+
+        init(
+            feature: ScheduledFeature,
+            slot: ScheduledListSlot,
+            route: ScheduledRoute,
+            linkValue: @escaping (ScheduledRoute) -> Link,
+        ) {
+            self.route = route
+            self.linkValue = linkValue
+            _model = State(initialValue: slot.model ?? feature.makeList())
+        }
+
+        var body: some View {
+            ScheduledDestination(model: model, route: route, linkValue: linkValue)
+        }
+    }
+
+    /// The completed items, each a link to its screen.
+    struct ScheduledCompletedView<Link: Hashable>: View {
+        let model: ScheduledListViewModel
+        let linkValue: (ScheduledRoute) -> Link
 
         var body: some View {
             List(model.completedRows) { row in
-                NavigationLink(value: ScheduledRoute.item(row.itemID)) {
+                NavigationLink(value: linkValue(.item(row.itemID))) {
                     ScheduledRowView(row: row)
                 }
                 .contextMenu { ScheduledRowActions(model: model, row: row) }
