@@ -143,4 +143,84 @@ struct CSVImportLateSettingTests {
         #expect(model.dataChangedNotice == nil)
         #expect(heard.isEmpty)
     }
+
+    // MARK: Tester2's possible Next race (no fix needed)
+
+    /// A Mac menu pick is written to the model a moment after the click. Until then the model still has the old
+    /// settings, and its preview matches them. A setting change drops the preview and steps back in the same
+    /// main-actor turn, so no state has the new setting with the old preview.
+    @Test(
+        "Next on Match before a late pick lands reaches a Review that matches the settings, and the pick then steps back"
+    )
+    func nextBeforeLatePickLands() async throws {
+        let model = try await Self.onMatch()
+        let planned = try #require(model.preview)
+        await model.next()
+        #expect(model.step == .review)
+        #expect(model.preview == planned)
+        #expect(model.decimalSeparator == .period)
+        // The pick lands on Review: nothing from the old plan is left to import.
+        model.decimalSeparator = .comma
+        #expect(model.step == .columns)
+        #expect(model.preview == nil)
+        #expect(!model.canImport)
+        #expect(model.dataChangedNotice != nil)
+    }
+
+    @Test("A pick that lands while Import's overlay is drawing saves nothing and steps back")
+    func latePickDuringImportSavesNothing() async throws {
+        let repository = try F.repository()
+        let before = try repository.transactions().count
+        let gate = PauseGate()
+        let model = CSVImportViewModel(
+            useCases: ImportUseCases(repository: repository),
+            defaultCurrency: "INR",
+            locale: F.india,
+            timeZone: F.zone,
+            overlayPause: gate.pause,
+        )
+        await model.open(data: try F.data("Bank Statement Debit Credit"), fileName: "statement.csv")
+        await model.next()
+        model.targetAccountID = try F.account("Everyday Savings", in: repository).id
+        await model.next()
+        #expect(model.step == .review)
+        #expect(model.canImport)
+        let saving = Task { await model.commit() }
+        await gate.waitUntilPaused()
+        model.decimalSeparator = .comma
+        gate.open()
+        await saving.value
+        #expect(try repository.transactions().count == before)
+        #expect(model.receipt == nil)
+        #expect(model.step == .columns)
+        #expect(!model.isWorking)
+    }
+
+    /// Bounded: if Next stopped checking `isWorking`, the second Next would wait on the held plan forever. The
+    /// watchdog then records a failure and opens the gate, so the test fails instead of hanging; the time limit
+    /// is a backstop.
+    @Test(
+        "Next does nothing while a plan is in flight, and a plan a pick dropped doesn't move the sheet on",
+        .timeLimit(.minutes(1)),
+    )
+    func nextWhilePlanInFlight() async throws {
+        let repository = try F.repository()
+        let (model, gate) = try await CSVImportPlanOrderTests.onAccount(repository)
+        let next = Task { await model.next() }
+        await gate.waitForPlan("period Everyday Savings")
+        #expect(model.isWorking)
+        let watchdog = Task {
+            try await Task.sleep(for: .seconds(10))
+            Issue.record("Next waited on the in-flight plan instead of doing nothing")
+            gate.open("period Everyday Savings")
+        }
+        await model.next()
+        watchdog.cancel()
+        #expect(model.step == .account)
+        model.decimalSeparator = .comma
+        gate.open("period Everyday Savings")
+        await next.value
+        #expect(model.step == .account)
+        #expect(model.preview == nil)
+    }
 }
