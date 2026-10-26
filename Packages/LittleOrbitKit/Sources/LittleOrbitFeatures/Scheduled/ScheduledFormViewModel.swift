@@ -354,7 +354,12 @@ public final class ScheduledFormViewModel: Identifiable {
             return false
         }
         do {
-            try useCases.manage.save(item)
+            // An edit never saves an item that was deleted while the form was open (#258).
+            if isNew {
+                try useCases.manage.save(item)
+            } else {
+                try useCases.manage.update(item)
+            }
         } catch LedgerValidationError.scheduleEndsBeforeStart {
             formError = ScheduledText.endBeforeStart
             return false

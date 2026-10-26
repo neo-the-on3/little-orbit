@@ -11,6 +11,9 @@ public protocol ScheduleRepository: AnyObject {
     /// See `LedgerBook.savingScheduledItem(_:in:today:now:)`. `now` is the use cases' clock, so a new item's
     /// creation day is the same "today" the screens use (D336.2, D337).
     func saveScheduledItem(_ item: ScheduledItem, today: CalendarDay, now: Date) throws
+    /// See `LedgerBook.updatingScheduledItem(_:in:today:now:)`: an edit of an item that's no longer stored throws
+    /// `missingScheduledItem` and saves nothing (#258).
+    func updateScheduledItem(_ item: ScheduledItem, today: CalendarDay, now: Date) throws
     /// See `LedgerBook.deletingScheduledItem(id:in:)`.
     func deleteScheduledItem(id: UUID) throws
     /// See `LedgerBook.settlingScheduledOccurrence(_:in:now:)`. Returns the recorded transaction, or `nil` for a

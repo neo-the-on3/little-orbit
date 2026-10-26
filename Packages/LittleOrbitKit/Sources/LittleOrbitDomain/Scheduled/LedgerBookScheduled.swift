@@ -71,6 +71,21 @@ extension LedgerBook {
         return snapshot
     }
 
+    /// Changes an item that's already stored, as `savingScheduledItem(_:in:today:now:)` does. An item that isn't
+    /// stored, because it was deleted while an Edit form was open, say in another window, throws
+    /// `missingScheduledItem` and changes nothing: an edit never adds the item back as a new one (#258).
+    public static func updatingScheduledItem(
+        _ item: ScheduledItem,
+        in snapshot: LedgerSnapshot,
+        today: CalendarDay,
+        now: Date,
+    ) throws -> LedgerSnapshot {
+        guard snapshot.scheduledItems.contains(where: { $0.id == item.id }) else {
+            throw LedgerValidationError.missingScheduledItem
+        }
+        return try savingScheduledItem(item, in: snapshot, today: today, now: now)
+    }
+
     /// Deletes the item. The transactions it recorded stay as they are (D114).
     public static func deletingScheduledItem(id: UUID, in snapshot: LedgerSnapshot) throws -> LedgerSnapshot {
         guard snapshot.scheduledItems.contains(where: { $0.id == id }) else {

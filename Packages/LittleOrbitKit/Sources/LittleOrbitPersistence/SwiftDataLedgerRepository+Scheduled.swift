@@ -17,6 +17,10 @@
             try mutate { try LedgerBook.savingScheduledItem(item, in: $0, today: today, now: now) }
         }
 
+        public func updateScheduledItem(_ item: ScheduledItem, today: CalendarDay, now: Date) throws {
+            try mutate { try LedgerBook.updatingScheduledItem(item, in: $0, today: today, now: now) }
+        }
+
         public func deleteScheduledItem(id: UUID) throws {
             try mutate { try LedgerBook.deletingScheduledItem(id: id, in: $0) }
         }

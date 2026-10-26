@@ -177,3 +177,46 @@ func assertAccountDeleteKeepsAThreeDecimalItem(make: MakeScheduleRepository) thr
     XCTAssertEqual(items.first { $0.id == fee.id }?.amount, decimal("1.234"))
     XCTAssertEqual(items.first { $0.id == sweep.id }?.amount, decimal("2.345"))
 }
+
+/// #258: an edit saved after its item was deleted elsewhere throws `missingScheduledItem` and writes nothing; the
+/// item stays deleted and a new item still saves. Shared by the in-memory and SwiftData stores.
+@MainActor
+func assertEditOfADeletedScheduledItemWritesNothing(make: MakeScheduleRepository) throws {
+    typealias Fix = ScheduledStorageFixture
+    let repository = try make()
+    let account = Account(name: "Everyday Savings", currencyCode: "INR", openingBalance: decimal("100000"))
+    try repository.saveAccount(account)
+    let created = Date(timeIntervalSince1970: 1_785_565_800)
+    var gym = ScheduledItem(
+        type: .expense,
+        amount: decimal("1500"),
+        accountID: account.id,
+        details: "Gym",
+        startDay: Fix.day(2026, 8, 5),
+        timeZoneID: Fix.zone,
+        createdAt: created,
+    )
+    try repository.saveScheduledItem(gym, today: Fix.day(2026, 8, 1), now: created)
+    try repository.deleteScheduledItem(id: gym.id)
+    let afterDelete = try repository.scheduleLedger()
+    gym.amount = decimal("1800")
+    XCTAssertThrowsError(
+        try repository.updateScheduledItem(gym, today: Fix.day(2026, 8, 2), now: created.addingTimeInterval(86_400))
+    ) { error in
+        XCTAssertEqual(error as? LedgerValidationError, .missingScheduledItem)
+    }
+    XCTAssertEqual(try repository.scheduleLedger(), afterDelete)
+    XCTAssertTrue(try repository.scheduleLedger().scheduledItems.isEmpty)
+
+    let rent = ScheduledItem(
+        type: .expense,
+        amount: decimal("25000"),
+        accountID: account.id,
+        details: "Rent",
+        startDay: Fix.day(2026, 9, 1),
+        timeZoneID: Fix.zone,
+        createdAt: created,
+    )
+    try repository.saveScheduledItem(rent, today: Fix.day(2026, 8, 2), now: created)
+    XCTAssertEqual(try repository.scheduleLedger().scheduledItems.map(\.id), [rent.id])
+}

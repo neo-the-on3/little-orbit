@@ -42,6 +42,14 @@
             }
         }
 
+        func testAnEditOfADeletedScheduledItemWritesNothing() throws {
+            try onMain {
+                try assertEditOfADeletedScheduledItemWritesNothing {
+                    try LittleOrbitStore.makeRepository(configuration: .inMemory)
+                }
+            }
+        }
+
         func testAFailedCatchUpPostingWritesNothing() throws {
             try onMain {
                 try assertFailedCatchUpPostingWritesNothing {

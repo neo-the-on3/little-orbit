@@ -53,6 +53,9 @@ public protocol LoadScheduledUseCase {
 public protocol ManageScheduledUseCase {
     /// Saves `item`. A new item carries the zone it was made in, `currentTimeZoneID()`, and keeps it.
     func save(_ item: ScheduledItem) throws
+    /// Saves an edit of a stored item. When it's no longer stored (deleted elsewhere while the form was open), it
+    /// throws `LedgerValidationError.missingScheduledItem` and saves nothing; an edit never adds it back (#258).
+    func update(_ item: ScheduledItem) throws
     func delete(id: UUID) throws
     /// Pay now: records the occurrence on `occurrence`, dated today. `nil` when it was already settled.
     @discardableResult
@@ -197,6 +200,10 @@ public struct DefaultScheduledUseCases: LoadScheduledUseCase, ManageScheduledUse
 
     public func save(_ item: ScheduledItem) throws {
         try repository.saveScheduledItem(item, today: today(), now: now())
+    }
+
+    public func update(_ item: ScheduledItem) throws {
+        try repository.updateScheduledItem(item, today: today(), now: now())
     }
 
     public func delete(id: UUID) throws {
