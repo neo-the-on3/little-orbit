@@ -29,8 +29,25 @@ struct ScheduledPresenter {
     private var money: MoneyFormatter { MoneyFormatter(locale: locale) }
 
     func name(of item: ScheduledItem) -> String {
-        let details = item.details?.trimmingCharacters(in: .whitespacesAndNewlines).nilIfEmpty
-        let payee = listing.payee(item.payeeID)?.name
+        Self.name(
+            details: item.details,
+            payee: listing.payee(item.payeeID)?.name,
+            type: item.type,
+            transferTarget: listing.account(item.transferAccountID)?.name,
+            category: listing.category(item.categoryID)?.name,
+        )
+    }
+
+    /// The row's name: the description and payee, else a transfer's To account, else the category. The watch
+    /// names its rows with the same rule (#197 item 10).
+    static func name(
+        details: String?,
+        payee: String?,
+        type: TransactionType,
+        transferTarget: String?,
+        category: String?,
+    ) -> String {
+        let details = details?.trimmingCharacters(in: .whitespacesAndNewlines).nilIfEmpty
         switch (details, payee) {
         case (let details?, let payee?):
             return ScheduledText.pair(details, payee)
@@ -39,10 +56,10 @@ struct ScheduledPresenter {
         case (nil, let payee?):
             return payee
         case (nil, nil):
-            if item.type == .transfer, let target = listing.account(item.transferAccountID) {
-                return ScheduledText.toAccount(target.name)
+            if type == .transfer, let transferTarget {
+                return ScheduledText.toAccount(transferTarget)
             }
-            return listing.category(item.categoryID)?.name ?? ScheduledText.scheduledItem
+            return category ?? ScheduledText.scheduledItem
         }
     }
 
