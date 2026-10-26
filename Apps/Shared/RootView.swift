@@ -29,6 +29,22 @@
             }
         }
 
+        /// The watch's Pay and Skip use cases over the iPhone's ledger and its request inbox in app settings
+        /// (#197 item 10), or `nil` with no watch link (the Mac).
+        static func makeWatchUseCases(
+            link: (any WatchCompanionLink)?,
+            repository: some LedgerRepository & ScheduleRepository & LedgerBackupSource,
+            today: @escaping @MainActor () -> CalendarDay,
+        ) -> DefaultWatchPhoneUseCases? {
+            link.map { _ in
+                DefaultWatchPhoneUseCases(
+                    repository: repository,
+                    inbox: UserDefaultsWatchRequestInbox(),
+                    today: today,
+                )
+            }
+        }
+
         /// The iPhone side of the watch link (#197 item 10), or `nil` with no link (the Mac). Problems are logged with
         /// no user data.
         static func makeWatch(
@@ -155,13 +171,11 @@
             // The watch reads a snapshot of the Scheduled list and sends Pay and Skip back; the iPhone applies them
             // through the same exactly-once path as its own Pay Now and Skip, outside undo history. No ledger or App
             // Group on the watch (D345). A request it can't apply leaves a card on the Scheduled list (D374, D376).
-            let watchUseCases = watchLink.map { _ in
-                DefaultWatchPhoneUseCases(
-                    repository: repository,
-                    inbox: UserDefaultsWatchRequestInbox(),
-                    today: { scheduledUseCases.today() },
-                )
-            }
+            let watchUseCases = AppComposition.makeWatchUseCases(
+                link: watchLink,
+                repository: repository,
+                today: { scheduledUseCases.today() },
+            )
             let watchNotices = watchUseCases.map { WatchRequestNoticeViewModel(useCases: $0) }
             scheduled = ScheduledFeature(
                 useCases: ScheduledScreenUseCases(
