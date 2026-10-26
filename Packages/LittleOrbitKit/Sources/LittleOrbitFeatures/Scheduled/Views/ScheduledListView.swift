@@ -20,18 +20,27 @@
         /// `nil` when the list registers its own destinations.
         private let slot: ScheduledListSlot?
         private let linkValue: (ScheduledRoute) -> Link
+        /// Pushes a link value onto the caller's stack, for buttons that open a screen (the watch notice card's View
+        /// Item); `nil` when the list registers its own destinations.
+        private let openLink: ((Link) -> Void)?
 
         /// A list that registers its own destinations (the Mac's detail column stack).
         public init(feature: ScheduledFeature) where Link == ScheduledRoute {
-            self.init(feature: feature, slot: nil) { $0 }
+            self.init(feature: feature, slot: nil, linkValue: { $0 })
         }
 
         /// A list on a stack whose root registers the destinations for `linkValue`'s values and builds them with the
         /// model in `slot` (the iPhone and iPad Accounts stack).
-        init(feature: ScheduledFeature, slot: ScheduledListSlot?, linkValue: @escaping (ScheduledRoute) -> Link) {
+        init(
+            feature: ScheduledFeature,
+            slot: ScheduledListSlot?,
+            linkValue: @escaping (ScheduledRoute) -> Link,
+            openLink: ((Link) -> Void)? = nil,
+        ) {
             self.feature = feature
             self.slot = slot
             self.linkValue = linkValue
+            self.openLink = openLink
             _model = State(initialValue: feature.makeList())
         }
 
@@ -48,7 +57,7 @@
         private var list: some View {
             List {
                 if let notices = feature.watchNotices, let card = notices.card {
-                    WatchRequestNoticeCardView(card: card, model: notices, linkValue: linkValue)
+                    WatchRequestNoticeCardView(card: card, model: notices, linkValue: linkValue, openLink: openLink)
                 }
                 if let hint = model.catchUpHint {
                     Section {
@@ -368,34 +377,61 @@
         }
     }
 
-    /// The card for a watch Pay or Skip the iPhone didn't apply (D374, D375, D376; UI Designer 6406964245): its
-    /// title and message, then View Item when it names one item, and OK, the default, which dismisses it for good.
-    /// Standard List row pieces only.
+    /// The card for a watch Pay or Skip the iPhone didn't apply (D374, D375, D376; UI Designer 6406964245,
+    /// 6407229087): one list row with the title, a header for VoiceOver, the message, then View Item when it names
+    /// one item, and OK, the default, which dismisses it for good. Standard List row pieces only. Both are buttons,
+    /// so the row has no chevron and its text isn't a tap target; at accessibility text sizes they stack, so
+    /// neither truncates.
     struct WatchRequestNoticeCardView<Link: Hashable>: View {
         let card: WatchRequestNoticeCard
         let model: WatchRequestNoticeViewModel
-        /// The list's own route mapping, so View Item opens the item on the iPhone and iPad Accounts stack too.
+        /// The list's own route mapping: View Item opens the item the way the list's rows do (`AccountsRoute` on
+        /// the iPhone and iPad Accounts stack, #198).
         let linkValue: (ScheduledRoute) -> Link
+        /// Pushes onto the stack that owns the path; `nil` where the list registers its own destinations (the Mac).
+        let openLink: ((Link) -> Void)?
+        @Environment(\.dynamicTypeSize) private var dynamicTypeSize
 
         var body: some View {
             Section {
-                VStack(alignment: .leading, spacing: 4) {
+                VStack(alignment: .leading, spacing: 8) {
                     Text(verbatim: card.title)
                         .font(.headline)
+                        .accessibilityAddTraits(.isHeader)
                     Text(verbatim: card.message)
-                }
-                HStack {
-                    if let itemID = card.itemID {
-                        NavigationLink(value: linkValue(.item(itemID))) {
-                            Text(verbatim: model.viewItemTitle)
+                    buttonLayout {
+                        if let route = model.viewItemRoute {
+                            viewItem(linkValue(route))
                         }
-                        .buttonStyle(.bordered)
+                        if !dynamicTypeSize.isAccessibilitySize {
+                            Spacer()
+                        }
+                        Button(model.okTitle) { model.dismiss() }
+                            .buttonStyle(.borderedProminent)
+                            .keyboardShortcut(.defaultAction)
                     }
-                    Spacer()
-                    Button(model.okTitle) { model.dismiss() }
-                        .buttonStyle(.borderedProminent)
-                        .keyboardShortcut(.defaultAction)
                 }
+            }
+        }
+
+        private var buttonLayout: AnyLayout {
+            dynamicTypeSize.isAccessibilitySize
+                ? AnyLayout(VStackLayout(alignment: .leading, spacing: 8))
+                : AnyLayout(HStackLayout())
+        }
+
+        /// A button that pushes the list's own link value. Only where the list owns its stack (no `openLink`) is it
+        /// a navigation link, styled as a button.
+        @ViewBuilder
+        private func viewItem(_ value: Link) -> some View {
+            if let openLink {
+                Button(model.viewItemTitle) { openLink(value) }
+                    .buttonStyle(.bordered)
+            } else {
+                NavigationLink(value: value) {
+                    Text(verbatim: model.viewItemTitle)
+                }
+                .buttonStyle(.bordered)
             }
         }
     }

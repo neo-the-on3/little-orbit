@@ -14,14 +14,27 @@ struct WatchScheduledUseCasesTests {
     final class FakeLink: WatchPhoneLink {
         var latest: Data?
         var sent: [Data] = []
+        /// The session is active; before that, nothing is queued.
+        var isActive = true
         private var handler: (@MainActor (Data) -> Void)?
-        private var activated: (@MainActor () -> Void)?
+        private var retry: (@MainActor () -> Void)?
+        private var finished: (@MainActor (UUID, Bool) -> Void)?
 
         func latestSnapshotData() -> Data? { latest }
         func onSnapshot(_ handler: @escaping @MainActor (Data) -> Void) { self.handler = handler }
-        func send(_ request: Data) { sent.append(request) }
-        func onActivated(_ handler: @escaping @MainActor () -> Void) { activated = handler }
-        func activate() { activated?() }
+        func send(_ request: Data, id: UUID) -> WatchSendResult {
+            guard isActive else {
+                return .unavailable
+            }
+            sent.append(request)
+            return .inFlight
+        }
+        func onSendFinished(_ handler: @escaping @MainActor (UUID, Bool) -> Void) { finished = handler }
+        func onCanRetry(_ handler: @escaping @MainActor () -> Void) { retry = handler }
+
+        /// Activation, or the iPhone becoming reachable.
+        func canRetry() { retry?() }
+        func finish(_ id: UUID, delivered: Bool) { finished?(id, delivered) }
 
         func deliver(_ snapshot: WatchSnapshot) throws {
             let data = try WatchMessageCodec.encode(snapshot)
@@ -65,21 +78,25 @@ struct WatchScheduledUseCasesTests {
         #expect(changes == 1)
     }
 
-    @Test("On activation every request still waiting for an answer is sent again, and only those (5646845418 NB1)")
-    func resendsPendingOnActivation() throws {
+    @Test("Tapped before activation: kept, then sent once on activation, and only the unanswered ones (D377)")
+    func sentOnActivation() throws {
         try link.deliver(Codec.snapshot)
+        link.isActive = false
         let watch = useCases()
         watch.pay(Codec.snapshot.scheduled[0])
         watch.skip(Codec.snapshot.scheduled[1])
-        let first = try #require(try link.sentRequests().first)
+        #expect(link.sent.isEmpty)
+        #expect(cache.sentRequests().count == 2)
+        let payID = try #require(watch.state().sent.first?.id)
         var next = Codec.snapshot
-        next.outcomes = [WatchRequestOutcome(requestID: first.id, result: .applied)]
+        next.outcomes = [WatchRequestOutcome(requestID: payID, result: .applied)]
         try link.deliver(next)
-        link.sent = []
-        link.activate()
-        let resent = try link.sentRequests()
-        #expect(resent.map(\.action) == [.skip])
-        #expect(resent.first?.occurrence == Codec.snapshot.scheduled[1].day)
+        link.isActive = true
+        link.canRetry()
+        link.canRetry()
+        let sent = try link.sentRequests()
+        #expect(sent.map(\.action) == [.skip])
+        #expect(sent.first?.occurrence == Codec.snapshot.scheduled[1].day)
     }
 
     @Test("The iPhone applied it: the next snapshot clears the pending mark")

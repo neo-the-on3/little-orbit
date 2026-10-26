@@ -6,7 +6,7 @@
     /// then due today, then each item's next date. A row opens Pay and Skip (the Watch Pay frame); a syncing row
     /// shows a clock (the Watch syncing frame). A Pay or Skip the iPhone turned down shows as a system alert with OK
     /// (the Watch conflict frame, D342, D343). Before the first snapshot it says it isn't synced yet (UI Designer
-    /// 6406964245). System controls throughout.
+    /// 6406964245, 6407229087). System controls throughout.
     public struct WatchScheduledListView: View {
         let model: WatchScheduledViewModel
 
@@ -19,7 +19,7 @@
                 Group {
                     if model.isWaitingForIPhone {
                         ContentUnavailableView {
-                            Text(model.notSyncedTitle)
+                            Label(model.notSyncedTitle, systemImage: "iphone")
                         } description: {
                             Text(model.notSyncedMessage)
                         }

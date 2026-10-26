@@ -9,9 +9,8 @@ import WatchConnectivity
 final class WatchPhoneSession: NSObject, WatchPhoneLink {
     private let session = WCSession.default
     private var snapshotHandler: (@MainActor (Data) -> Void)?
-    private var activationHandler: (@MainActor () -> Void)?
-    /// Requests tapped before the session finished activating; they're queued on activation.
-    private var waitingRequests: [Data] = []
+    private var finishedHandler: (@MainActor (UUID, Bool) -> Void)?
+    private var retryHandler: (@MainActor () -> Void)?
 
     override init() {
         super.init()
@@ -27,31 +26,31 @@ final class WatchPhoneSession: NSObject, WatchPhoneLink {
         snapshotHandler = handler
     }
 
-    func onActivated(_ handler: @escaping @MainActor () -> Void) {
-        activationHandler = handler
+    func onSendFinished(_ handler: @escaping @MainActor (UUID, Bool) -> Void) {
+        finishedHandler = handler
     }
 
-    /// A request the system is still delivering isn't queued twice.
-    func send(_ request: Data) {
+    func onCanRetry(_ handler: @escaping @MainActor () -> Void) {
+        retryHandler = handler
+    }
+
+    /// Before activation nothing is queued: the use cases keep the request and send it again on activation. One the
+    /// system is still delivering, from this launch or an earlier one, isn't queued twice (D377).
+    func send(_ request: Data, id: UUID) -> WatchSendResult {
         guard session.activationState == .activated else {
-            waitingRequests.append(request)
-            return
+            return .unavailable
         }
         let queued = session.outstandingUserInfoTransfers.contains { transfer in
-            (transfer.userInfo[WatchLinkKeys.request] as? Data) == request
+            (transfer.userInfo[WatchLinkKeys.requestID] as? String) == id.uuidString
         }
-        guard !queued else {
-            return
+        if !queued {
+            session.transferUserInfo([WatchLinkKeys.request: request, WatchLinkKeys.requestID: id.uuidString])
         }
-        session.transferUserInfo([WatchLinkKeys.request: request])
+        return .inFlight
     }
 
     private func activated() {
-        let waiting = waitingRequests
-        waitingRequests = []
-        waiting.forEach(send)
-        // The use cases send their pending requests again (Tech Architect 5646845418, NB1).
-        activationHandler?()
+        retryHandler?()
         if let latest = latestSnapshotData() {
             snapshotHandler?(latest)
         }
@@ -59,6 +58,14 @@ final class WatchPhoneSession: NSObject, WatchPhoneLink {
 
     private func received(_ snapshot: Data) {
         snapshotHandler?(snapshot)
+    }
+
+    private func finished(_ id: UUID, delivered: Bool) {
+        finishedHandler?(id, delivered)
+    }
+
+    private func reachable() {
+        retryHandler?()
     }
 }
 
@@ -79,5 +86,26 @@ extension WatchPhoneSession: WCSessionDelegate {
             return
         }
         Task { @MainActor in self.received(snapshot) }
+    }
+
+    /// The system finished a queued request: delivered, or failed with `error` (D377).
+    nonisolated func session(
+        _ session: WCSession,
+        didFinish userInfoTransfer: WCSessionUserInfoTransfer,
+        error: (any Error)?,
+    ) {
+        guard let text = userInfoTransfer.userInfo[WatchLinkKeys.requestID] as? String, let id = UUID(uuidString: text)
+        else {
+            return
+        }
+        let delivered = error == nil
+        Task { @MainActor in self.finished(id, delivered: delivered) }
+    }
+
+    nonisolated func sessionReachabilityDidChange(_ session: WCSession) {
+        guard session.isReachable else {
+            return
+        }
+        Task { @MainActor in self.reachable() }
     }
 }

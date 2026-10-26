@@ -60,6 +60,12 @@ public final class WatchScheduledViewModel {
         useCases.skip(row.occurrence)
     }
 
+    /// The watch app opened or became active: a Pay or Skip not delivered yet goes out again once its wait is
+    /// over. Its row stays syncing meanwhile (D377).
+    public func appBecameActive() {
+        useCases.retryPending()
+    }
+
     /// OK on the message.
     public func closeConflict() {
         guard let conflict else {

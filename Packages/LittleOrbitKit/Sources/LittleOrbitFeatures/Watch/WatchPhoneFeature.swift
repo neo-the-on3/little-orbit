@@ -30,6 +30,8 @@ public final class WatchPhoneFeature {
         self.onProblem = onProblem
         self.notices = notices
         link.onRequest { [weak self] data in self?.received(data) }
+        // Another watch, or a reinstalled watch app, has none of what was delivered: send the snapshot again.
+        link.onWatchChanged { [weak self] in self?.republish() }
     }
 
     /// At launch and whenever the app becomes active: applies requests kept from a failed save, then publishes.
@@ -59,6 +61,12 @@ public final class WatchPhoneFeature {
         } catch {
             onProblem(.publishFailed(error))
         }
+    }
+
+    /// Sends the current snapshot even if it's the one last delivered.
+    func republish() {
+        lastPublished = nil
+        publish()
     }
 
     func received(_ data: Data) {

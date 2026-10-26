@@ -50,6 +50,26 @@ struct WatchRequestNoticeViewModelTests {
         #expect(card.itemID == Self.rent)
     }
 
+    @Test("View Item opens the item through the list’s link value: AccountsRoute on iPhone and iPad (#198)")
+    func viewItemUsesTheListsLinkValue() throws {
+        fake.pending = [Self.changed(.pay)]
+        let model = WatchRequestNoticeViewModel(useCases: fake)
+        let route = try #require(model.viewItemRoute)
+        let link: (ScheduledRoute) -> AccountsRoute = AccountsRoute.scheduled
+        #expect(link(route) == .scheduled(.item(Self.rent)))
+        // The same value a Scheduled row for that item pushes, on top of Home › Scheduled.
+        let path: [AccountsRoute] = [.home(.scheduled), link(route)]
+        #expect(path.last == link(.item(Self.rent)))
+        // A grouped card and an update card have no View Item.
+        fake.pending = [Self.changed(.pay), Self.changed(.skip)]
+        model.dismiss()
+        model.reload()
+        #expect(model.card != nil && model.viewItemRoute == nil)
+        fake.pending = [Self.newer(.pay)]
+        model.reload()
+        #expect(model.viewItemRoute == nil)
+    }
+
     @Test("A stale Skip (D374)")
     func staleSkip() throws {
         fake.pending = [Self.changed(.skip)]
@@ -77,6 +97,15 @@ struct WatchRequestNoticeViewModelTests {
         model.dismiss()
         #expect(fake.dismissed.first?.count == 3)
         #expect(model.card == nil)
+    }
+
+    @Test("The grouped wording for one says “that item” (D377)")
+    func groupedOneSaysThatItem() {
+        let card = WatchRequestNoticeViewModel.grouped([Self.changed(.pay)])
+        #expect(
+            card.message
+                == "1 watch action couldn’t be applied because its item changed on iPhone. Check that item and try again if you need to."
+        )
     }
 
     @Test("A Pay from a newer watch app: update, OK only (D376)")

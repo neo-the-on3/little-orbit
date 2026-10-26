@@ -9,6 +9,7 @@ import WatchConnectivity
 final class PhoneWatchSession: NSObject, WatchCompanionLink {
     private let session: WCSession?
     private var requestHandler: (@MainActor (Data) -> Void)?
+    private var watchChangedHandler: (@MainActor () -> Void)?
     /// The latest snapshot no watch could take yet: it goes out on activation, or when a watch is paired or the
     /// watch app is installed (Tech Architect 5646845418, B1).
     private var waitingSnapshot: Data?
@@ -27,6 +28,10 @@ final class PhoneWatchSession: NSObject, WatchCompanionLink {
         requestHandler = handler
     }
 
+    func onWatchChanged(_ handler: @escaping @MainActor () -> Void) {
+        watchChangedHandler = handler
+    }
+
     /// Until the session is active, a watch is paired and the watch app is installed, the snapshot waits here and
     /// the feature is told it wasn't delivered.
     func publish(_ snapshot: Data) throws -> WatchPublishResult {
@@ -40,16 +45,18 @@ final class PhoneWatchSession: NSObject, WatchCompanionLink {
         return .delivered
     }
 
-    /// Activation finished, or the paired watch or its app changed: sends the held snapshot if it can go now.
-    private func sendWaiting() {
-        guard let snapshot = waitingSnapshot else {
-            return
+    /// Activation finished, or the paired watch or its app changed: sends the held snapshot if it can go now, then
+    /// lets the feature send the current one again, in case this is a watch that never got it (Tech Architect
+    /// 5646901449, NB1).
+    private func watchChanged() {
+        if let snapshot = waitingSnapshot {
+            do {
+                _ = try publish(snapshot)
+            } catch {
+                onPublishFailed(error)
+            }
         }
-        do {
-            _ = try publish(snapshot)
-        } catch {
-            onPublishFailed(error)
-        }
+        watchChangedHandler?()
     }
 
     private func received(_ request: Data) {
@@ -66,12 +73,12 @@ extension PhoneWatchSession: WCSessionDelegate {
         guard activationState == .activated else {
             return
         }
-        Task { @MainActor in self.sendWaiting() }
+        Task { @MainActor in self.watchChanged() }
     }
 
     /// A watch was paired or unpaired, or the watch app installed or removed.
     nonisolated func sessionWatchStateDidChange(_ session: WCSession) {
-        Task { @MainActor in self.sendWaiting() }
+        Task { @MainActor in self.watchChanged() }
     }
 
     nonisolated func sessionDidBecomeInactive(_ session: WCSession) {}

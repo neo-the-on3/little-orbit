@@ -21,6 +21,8 @@ struct WatchScheduledViewModelTests {
         func pay(_ occurrence: WatchScheduledOccurrence) { paid.append(occurrence) }
         func skip(_ occurrence: WatchScheduledOccurrence) { skipped.append(occurrence) }
         func acknowledge(requestID: UUID) { acknowledged.append(requestID) }
+        var retries = 0
+        func retryPending() { retries += 1 }
         func onChange(_ handler: @escaping @MainActor () -> Void) { handlers.append(handler) }
 
         func set(_ state: WatchScheduledState) {
@@ -105,6 +107,13 @@ struct WatchScheduledViewModelTests {
         fake.set(WatchScheduledState(snapshot: WatchSnapshot(today: Self.today)))
         #expect(!model.isWaitingForIPhone && model.isEmpty)
         #expect(model.emptyTitle == "Nothing Scheduled")
+    }
+
+    @Test("Opening or returning to the watch app retries what isn’t delivered yet (D377)")
+    func appActiveRetries() {
+        let model = model()
+        model.appBecameActive()
+        #expect(fake.retries == 1)
     }
 
     @Test("Rows: overdue, Today, then the next date, named as on the iPhone (Watch Scheduled list frame)")

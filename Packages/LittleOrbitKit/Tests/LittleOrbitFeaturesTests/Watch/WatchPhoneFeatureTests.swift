@@ -19,12 +19,20 @@ struct WatchPhoneFeatureTests {
         private var queued: [Data] = []
         private var phoneHandler: (@MainActor (Data) -> Void)?
         private var watchHandler: (@MainActor (Data) -> Void)?
+        private var watchChanged: (@MainActor () -> Void)?
+        private var finished: (@MainActor (UUID, Bool) -> Void)?
         var publishes = 0
         /// No paired watch or no watch app yet: the next publish is held, not delivered.
         var holdsNext = false
 
         // iPhone side
         func onRequest(_ handler: @escaping @MainActor (Data) -> Void) { phoneHandler = handler }
+        func onWatchChanged(_ handler: @escaping @MainActor () -> Void) { watchChanged = handler }
+        /// Another watch was paired, or the session activated again.
+        func switchWatch() {
+            context = nil
+            watchChanged?()
+        }
         func publish(_ snapshot: Data) throws -> WatchPublishResult {
             if holdsNext {
                 holdsNext = false
@@ -39,12 +47,14 @@ struct WatchPhoneFeatureTests {
         // Watch side
         func latestSnapshotData() -> Data? { context }
         func onSnapshot(_ handler: @escaping @MainActor (Data) -> Void) { watchHandler = handler }
-        func send(_ request: Data) {
+        func send(_ request: Data, id: UUID) -> WatchSendResult {
             queued.append(request)
             deliver()
+            return .inFlight
         }
 
-        func onActivated(_ handler: @escaping @MainActor () -> Void) {}
+        func onSendFinished(_ handler: @escaping @MainActor (UUID, Bool) -> Void) { finished = handler }
+        func onCanRetry(_ handler: @escaping @MainActor () -> Void) {}
 
         func deliver() {
             guard phoneIsReachable else {
@@ -54,6 +64,9 @@ struct WatchPhoneFeatureTests {
             queued = []
             for request in batch {
                 phoneHandler?(request)
+                if let id = try? WatchMessageCodec.decodeRequest(request).id {
+                    finished?(id, true)
+                }
             }
         }
     }
@@ -165,6 +178,19 @@ struct WatchPhoneFeatureTests {
         #expect(pair.latestSnapshotData() != nil)
         phone.start()
         #expect(pair.publishes == 1)
+    }
+
+    @Test("Another watch after delivery gets the snapshot again, with no ledger change (5646901449 NB1)")
+    func switchedWatchGetsSnapshot() throws {
+        try scene.add(scene.item("Rent", day: 1, month: 11))
+        let phone = phone()
+        phone.start()
+        #expect(pair.publishes == 1)
+        pair.switchWatch()
+        #expect(pair.publishes == 2)
+        #expect(pair.latestSnapshotData() != nil)
+        phone.start()
+        #expect(pair.publishes == 2)
     }
 
     @Test("A request the iPhone can’t read is reported with no user data, and changes nothing")

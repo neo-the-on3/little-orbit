@@ -5,4 +5,7 @@ enum WatchLinkKeys {
     static let snapshot = "scheduled.snapshot"
     /// A queued user-info transfer's Pay or Skip request.
     static let request = "scheduled.request"
+    /// The request's ID as a string, beside it, so the watch can tell which transfer finished (D377). The iPhone
+    /// doesn't read it.
+    static let requestID = "scheduled.requestID"
 }
