@@ -37,9 +37,18 @@
             today: @escaping @MainActor () -> CalendarDay,
         ) -> DefaultWatchPhoneUseCases? {
             link.map { _ in
-                DefaultWatchPhoneUseCases(
+                let inbox = UserDefaultsWatchRequestInbox()
+                #if DEBUG
+                    // Testing hook: `-LittleOrbitWatchNotices refused-pay|refused-skip|mixed|refused-group` seeds
+                    // notices against existing items, so the real card shows (UI Designer 6407485986).
+                    // Seeding must run here, before `WatchRequestNoticeViewModel` is created in `AppFeatures.init`:
+                    // the model reads the store when it's made, so seeding later would leave the card empty until
+                    // the next reload.
+                    WatchNoticesLaunchPreset.seed(repository: repository, inbox: inbox)
+                #endif
+                return DefaultWatchPhoneUseCases(
                     repository: repository,
-                    inbox: UserDefaultsWatchRequestInbox(),
+                    inbox: inbox,
                     today: today,
                 )
             }
