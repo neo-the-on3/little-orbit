@@ -259,8 +259,8 @@ public final class DefaultWatchScheduledUseCases: WatchScheduledUseCase {
                 return sent
             }
             guard result.isConflict else {
-                // Applied: the new snapshot shows the result. Stale or unsupported: nothing happened, and the
-                // snapshot shows the occurrence as the iPhone has it.
+                // Applied: the new snapshot shows the result. Stale, unsupported or refused (D378): nothing
+                // happened, and the snapshot shows the occurrence as the iPhone has it.
                 return nil
             }
             var answered = sent

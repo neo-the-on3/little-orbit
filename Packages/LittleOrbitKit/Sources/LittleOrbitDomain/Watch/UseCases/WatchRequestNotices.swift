@@ -13,7 +13,7 @@ public struct WatchNewerRequest: Hashable, Sendable {
 }
 
 /// A watch Pay or Skip the iPhone didn't apply, which it tells the user about once on the Scheduled list (D374,
-/// D376). It waits in the inbox until OK dismisses it. IDs only: the item's name is read when it's shown. The
+/// D376, D378). It waits in the inbox until OK dismisses it. IDs only: the item's name is read when it's shown. The
 /// request itself isn't kept, so nothing replays it later.
 public struct WatchRequestNotice: Codable, Hashable, Sendable, Identifiable {
     public enum Reason: String, Codable, Sendable {
@@ -21,6 +21,8 @@ public struct WatchRequestNotice: Codable, Hashable, Sendable, Identifiable {
         case itemChanged
         /// The request came from a newer watch build than this iPhone build reads (D376).
         case newerWatchApp
+        /// The iPhone refused to save it for good, so nothing was recorded or skipped (D378).
+        case refusedOnSave
     }
 
     /// The request's ID.
@@ -44,7 +46,7 @@ public struct WatchRequestNotice: Codable, Hashable, Sendable, Identifiable {
     }
 }
 
-/// A notice to show, with what its item is called on the iPhone now (an item-changed notice only). Features words
+/// A notice to show, with what its item is called on the iPhone now (an item-changed or refused notice). Features words
 /// it.
 public struct WatchRequestNoticeEntry: Equatable, Sendable, Identifiable {
     public struct ItemNames: Equatable, Sendable {
@@ -80,12 +82,22 @@ public struct WatchRequestNoticeEntry: Equatable, Sendable, Identifiable {
     public var id: UUID { notice.id }
 }
 
-/// The iPhone's notices for watch requests it didn't apply (D374, D376): each waits, across relaunches, until the
+extension WatchRequestNotice.Reason {
+    /// Whether the notice names its item and offers View Item: the item is still there to check.
+    public var namesItem: Bool {
+        switch self {
+        case .itemChanged, .refusedOnSave: true
+        case .newerWatchApp: false
+        }
+    }
+}
+
+/// The iPhone's notices for watch requests it didn't apply (D374, D376, D378): each waits, across relaunches, until the
 /// user dismisses it on the Scheduled list.
 @MainActor
 public protocol WatchRequestNoticesUseCase {
-    /// The notices not dismissed yet, oldest first. An item-changed one whose item has since been deleted is
-    /// dropped: there's nothing left to check.
+    /// The notices not dismissed yet, oldest first. An item-changed or refused one whose item has since been
+    /// deleted is dropped: there's nothing left to check.
     func pendingNotices() -> [WatchRequestNoticeEntry]
     /// OK: they never show again.
     func dismissNotices(_ ids: Set<UUID>)
@@ -99,7 +111,7 @@ extension DefaultWatchPhoneUseCases: WatchRequestNoticesUseCase {
         }
         let items = LedgerBook.activeScheduledItems(in: ledger)
         let entries = notices.compactMap { notice -> WatchRequestNoticeEntry? in
-            guard notice.reason == .itemChanged else {
+            guard notice.reason.namesItem else {
                 return WatchRequestNoticeEntry(notice: notice)
             }
             guard let item = items.first(where: { $0.id == notice.itemID }) else {

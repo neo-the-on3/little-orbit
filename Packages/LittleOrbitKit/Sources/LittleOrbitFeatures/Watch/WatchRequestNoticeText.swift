@@ -1,6 +1,6 @@
 import Foundation
 
-/// The Scheduled list's card for watch Pay and Skip requests the iPhone didn't apply (D374, D375, D376), from the
+/// The Scheduled list's card for watch Pay and Skip requests the iPhone didn't apply (D374–D376, D378, D379), from the
 /// package's String Catalog. Each sentence is its own entry; the counts are whole-phrase plurals.
 enum WatchRequestNoticeText {
     // MARK: The item changed on the iPhone first (D374, D375)
@@ -9,7 +9,7 @@ enum WatchRequestNoticeText {
         FeatureText.string(
             "Couldn’t Record Watch Payment",
             comment:
-                "iPhone Scheduled list, card title: a Pay tapped on the Apple Watch recorded nothing, because the scheduled item was changed on the iPhone before the Pay arrived.",
+                "iPhone Scheduled list, card title: a Pay tapped on the Apple Watch recorded nothing, because the scheduled item was changed on the iPhone before the Pay arrived, or the iPhone couldn’t save it.",
         )
     }
 
@@ -17,7 +17,7 @@ enum WatchRequestNoticeText {
         FeatureText.string(
             "Couldn’t Skip From Watch",
             comment:
-                "iPhone Scheduled list, card title: a Skip tapped on the Apple Watch skipped nothing, because the scheduled item was changed on the iPhone before the Skip arrived.",
+                "iPhone Scheduled list, card title: a Skip tapped on the Apple Watch skipped nothing, because the scheduled item was changed on the iPhone before the Skip arrived, or the iPhone couldn’t save it.",
         )
     }
 
@@ -57,7 +57,7 @@ enum WatchRequestNoticeText {
         FeatureText.string(
             "Couldn’t Apply Watch Actions",
             comment:
-                "iPhone Scheduled list, card title: several Pay or Skip actions tapped on the Apple Watch did nothing, because their scheduled items were changed on the iPhone first.",
+                "iPhone Scheduled list, card title: several Pay or Skip actions tapped on the Apple Watch did nothing, because their scheduled items were changed on the iPhone first or the iPhone couldn’t save them.",
         )
     }
 
@@ -70,19 +70,69 @@ enum WatchRequestNoticeText {
         )
     }
 
-    /// The second sentence after `severalChanged(count)`: "that item" for one (D377), "those items" otherwise.
+    /// The second sentence after `severalChanged(count)`, `severalRefused(count)` or `severalMixed(count)`: "that
+    /// item" for one (D377), "those items" otherwise.
     static func severalChangedAgain(_ count: Int) -> String {
         if count == 1 {
             return FeatureText.string(
                 "Check that item and try again if you need to.",
                 comment:
-                    "iPhone Scheduled list, card message, second sentence, after one Pay or Skip action from the Apple Watch did nothing because its scheduled item changed on the iPhone: the user can check that item on the iPhone. Follows “1 watch action couldn’t be applied…”.",
+                    "iPhone Scheduled list, card message, second sentence, after one Pay or Skip action from the Apple Watch did nothing (its scheduled item changed on the iPhone, or the iPhone couldn’t save it): the user can check that item on the iPhone. Follows “1 watch action couldn’t be applied…” or “1 watch action couldn’t be saved…”.",
             )
         }
         return FeatureText.string(
             "Check those items and try again if you need to.",
             comment:
-                "iPhone Scheduled list, card message, second sentence, after several (two or more) Pay or Skip actions from the Apple Watch did nothing because their scheduled items changed on the iPhone: the user can check those items on the iPhone.",
+                "iPhone Scheduled list, card message, second sentence, after several (two or more) Pay or Skip actions from the Apple Watch did nothing (their scheduled items changed on the iPhone, or the iPhone couldn’t save them): the user can check those items on the iPhone.",
+        )
+    }
+
+    // MARK: The iPhone couldn't save it (D378)
+
+    /// "The payment for Rent from your Apple Watch couldn’t be saved, so nothing was recorded."
+    static func payRefused(_ item: String) -> String {
+        FeatureText.format(
+            "The payment for %@ from your Apple Watch couldn’t be saved, so nothing was recorded.",
+            item,
+        )
+    }
+
+    static func skipRefused(_ item: String) -> String {
+        FeatureText.format("The skip for %@ from your Apple Watch couldn’t be saved, so nothing was skipped.", item)
+    }
+
+    static var payRefusedAgain: String {
+        FeatureText.string(
+            "Open the item and pay again if you need to.",
+            comment:
+                "iPhone Scheduled list, card message, second sentence, after the iPhone couldn’t save a Pay from the Apple Watch: the user can open the scheduled item and pay it on the iPhone.",
+        )
+    }
+
+    static var skipRefusedAgain: String {
+        FeatureText.string(
+            "Open the item and skip again if you need to.",
+            comment:
+                "iPhone Scheduled list, card message, second sentence, after the iPhone couldn’t save a Skip from the Apple Watch: the user can open the scheduled item and skip it on the iPhone.",
+        )
+    }
+
+    /// All of a group couldn't be saved (D378): "3 watch actions couldn’t be saved, so nothing was recorded for
+    /// them."
+    static func severalRefused(_ count: Int) -> String {
+        FeatureText.plural(
+            "%lld watch actions couldn’t be saved, so nothing was recorded for them.",
+            one: "%lld watch action couldn’t be saved, so nothing was recorded for it.",
+            count,
+        )
+    }
+
+    /// A group with some items changed on the iPhone and some that couldn't be saved (D379).
+    static func severalMixed(_ count: Int) -> String {
+        FeatureText.plural(
+            "%lld watch actions couldn’t be applied, so nothing was recorded for them.",
+            one: "%lld watch action couldn’t be applied, so nothing was recorded for it.",
+            count,
         )
     }
 

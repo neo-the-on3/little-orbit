@@ -53,6 +53,7 @@
                     case .unreadableRequest: StoreLog.notice(.watchRequestUnreadable)
                     case .newerRequest: StoreLog.notice(.watchRequestNewer)
                     case .someNotApplied: StoreLog.notice(.watchRequestsNotApplied)
+                    case .someRefused: StoreLog.notice(.watchRequestsRefused)
                     }
                 },
             )

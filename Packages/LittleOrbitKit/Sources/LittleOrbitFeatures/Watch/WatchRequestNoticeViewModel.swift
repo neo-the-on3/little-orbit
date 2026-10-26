@@ -2,8 +2,8 @@ import Foundation
 import LittleOrbitDomain
 import Observation
 
-/// The card at the top of the iPhone's Scheduled list for watch Pay and Skip requests it didn't apply (D374, D375,
-/// D376; UI Designer 6406964245).
+/// The card at the top of the iPhone's Scheduled list for watch Pay and Skip requests it didn't apply (D374–D376,
+/// D378, D379; UI Designer 6406964245).
 public struct WatchRequestNoticeCard: Equatable, Identifiable, Sendable {
     public let id: UUID
     public let title: String
@@ -14,8 +14,9 @@ public struct WatchRequestNoticeCard: Equatable, Identifiable, Sendable {
     let noticeIDs: Set<UUID>
 }
 
-/// One card at a time, oldest first: one request's notice names its item, and several with the same reason share
-/// one card with their count. OK dismisses it for good, then the next one shows. It reads and dismisses only through
+/// One card at a time, oldest first: one request's notice names its item, and several share one card with their
+/// count. Item-changed and refused notices group together, with the body picked by what's in the group (D379);
+/// newer-watch ones group on their own. OK dismisses it for good, then the next one shows. It reads and dismisses only through
 /// `WatchRequestNoticesUseCase`. One instance is shared by every window's Scheduled list.
 @MainActor
 @Observable
@@ -39,7 +40,8 @@ public final class WatchRequestNoticeViewModel {
             card = nil
             return
         }
-        let group = entries.filter { $0.notice.reason == first.notice.reason }
+        let isNewer = first.notice.reason == .newerWatchApp
+        let group = entries.filter { ($0.notice.reason == .newerWatchApp) == isNewer }
         card = group.count == 1 ? Self.single(first) : Self.grouped(group)
     }
 
@@ -61,7 +63,7 @@ public final class WatchRequestNoticeViewModel {
     static func single(_ entry: WatchRequestNoticeEntry) -> WatchRequestNoticeCard {
         let notice = entry.notice
         switch (notice.reason, notice.action, entry.item) {
-        case (.itemChanged, let action?, let item?):
+        case (.itemChanged, let action?, let item?), (.refusedOnSave, let action?, let item?):
             let name = ScheduledPresenter.name(
                 details: item.details,
                 payee: item.payeeName,
@@ -73,10 +75,15 @@ public final class WatchRequestNoticeViewModel {
             return WatchRequestNoticeCard(
                 id: notice.id,
                 title: isPay ? WatchRequestNoticeText.payTitle : WatchRequestNoticeText.skipTitle,
-                message: WatchText.sentences(
-                    isPay ? WatchRequestNoticeText.payChanged(name) : WatchRequestNoticeText.skipChanged(name),
-                    isPay ? WatchRequestNoticeText.payAgain : WatchRequestNoticeText.skipAgain,
-                ),
+                message: notice.reason == .refusedOnSave
+                    ? WatchText.sentences(
+                        isPay ? WatchRequestNoticeText.payRefused(name) : WatchRequestNoticeText.skipRefused(name),
+                        isPay ? WatchRequestNoticeText.payRefusedAgain : WatchRequestNoticeText.skipRefusedAgain,
+                    )
+                    : WatchText.sentences(
+                        isPay ? WatchRequestNoticeText.payChanged(name) : WatchRequestNoticeText.skipChanged(name),
+                        isPay ? WatchRequestNoticeText.payAgain : WatchRequestNoticeText.skipAgain,
+                    ),
                 itemID: notice.itemID,
                 noticeIDs: [notice.id],
             )
@@ -100,14 +107,30 @@ public final class WatchRequestNoticeViewModel {
 
     static func grouped(_ entries: [WatchRequestNoticeEntry]) -> WatchRequestNoticeCard {
         let count = entries.count
-        let isNewer = entries.first?.notice.reason == .newerWatchApp
+        let reasons = Set(entries.map(\.notice.reason))
+        let title: String
+        let message: String
+        if reasons == [.newerWatchApp] {
+            title = WatchRequestNoticeText.updateTitle
+            message = WatchText.sentences(
+                WatchRequestNoticeText.severalNewer(count),
+                WatchRequestNoticeText.severalNewerAgain,
+            )
+        } else {
+            // D379: all item-changed keeps D375, all refused on save is D378's, and a mix is worded neutrally.
+            let first =
+                switch reasons {
+                case [.itemChanged]: WatchRequestNoticeText.severalChanged(count)
+                case [.refusedOnSave]: WatchRequestNoticeText.severalRefused(count)
+                default: WatchRequestNoticeText.severalMixed(count)
+                }
+            title = WatchRequestNoticeText.severalChangedTitle
+            message = WatchText.sentences(first, WatchRequestNoticeText.severalChangedAgain(count))
+        }
         return WatchRequestNoticeCard(
             id: entries.first?.id ?? UUID(),
-            title: isNewer ? WatchRequestNoticeText.updateTitle : WatchRequestNoticeText.severalChangedTitle,
-            message: WatchText.sentences(
-                isNewer ? WatchRequestNoticeText.severalNewer(count) : WatchRequestNoticeText.severalChanged(count),
-                isNewer ? WatchRequestNoticeText.severalNewerAgain : WatchRequestNoticeText.severalChangedAgain(count),
-            ),
+            title: title,
+            message: message,
             itemID: nil,
             noticeIDs: Set(entries.map(\.id)),
         )

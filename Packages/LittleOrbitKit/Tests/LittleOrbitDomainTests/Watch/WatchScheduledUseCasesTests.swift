@@ -152,6 +152,19 @@ struct WatchScheduledUseCasesTests {
         #expect(watch.state().sent.isEmpty)
     }
 
+    @Test("Refused for good on the iPhone (D378): the request leaves the watch’s queue, with no message")
+    func refusedLeavesTheQueue() throws {
+        try link.deliver(Codec.snapshot)
+        let watch = useCases()
+        watch.pay(Codec.snapshot.scheduled[0])
+        let request = try #require(try link.sentRequests().first)
+        var next = Codec.snapshot
+        next.outcomes = [WatchRequestOutcome(requestID: request.id, result: .refused)]
+        try link.deliver(next)
+        #expect(watch.state().sent.isEmpty)
+        #expect(cache.sentRequests().isEmpty)
+    }
+
     @Test("A snapshot with no answer yet keeps the request pending")
     func noAnswerKeepsPending() throws {
         try link.deliver(Codec.snapshot)

@@ -81,12 +81,16 @@ public enum WatchRequestResult: String, Codable, Sendable {
     /// The request's version is newer than this iPhone build reads: nothing was recorded, and the iPhone says to
     /// update it (D376).
     case unsupported
+    /// The iPhone refused to save it for good, as its own Pay Now or Skip would have been refused (a validation
+    /// error, such as a category it can't record to any more): nothing was recorded or skipped, it isn't tried
+    /// again, and the iPhone tells the user on its Scheduled list. The watch just clears its syncing mark (D378).
+    case refused
 
     /// The watch tells the user nothing was done, with a title naming what happened on the iPhone.
     public var isConflict: Bool {
         switch self {
         case .alreadyPaid, .alreadySkipped, .deleted: true
-        case .applied, .stale, .unsupported: false
+        case .applied, .stale, .unsupported, .refused: false
         }
     }
 }

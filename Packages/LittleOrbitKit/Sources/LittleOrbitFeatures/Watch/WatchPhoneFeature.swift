@@ -93,6 +93,9 @@ public final class WatchPhoneFeature {
         if run.failedCount > 0 {
             onProblem(.someNotApplied)
         }
+        if run.refusedCount > 0 {
+            onProblem(.someRefused)
+        }
         if run.changedLedger {
             // Every window reloads, and the revision change publishes; publish now as well, in case none is open.
             updates?.changed()
@@ -114,4 +117,6 @@ public enum WatchLinkProblem {
     case newerRequest
     /// Some requests' saves failed; they're kept and tried again at the next activation.
     case someNotApplied
+    /// Some requests were refused for good (D378); nothing was recorded for them and they aren't tried again.
+    case someRefused
 }
