@@ -94,6 +94,8 @@ public struct TransactionUseCases {
     public var accountHistory: any AccountHistoryUseCase
     public var saveTransactions: any SaveTransactionsUseCase
     public var changes: any TransactionChangesUseCase
+    /// The macOS Bulk Edit sheet's Apply (D393).
+    public var bulkEdit: any ApplyBulkEditUseCase
     public var dates: any TransactionDateUseCase
     /// Seeds the default categories on the first launch of an empty store. The composition root calls it once
     /// at launch, before anything else writes (D291.7).
@@ -104,6 +106,7 @@ public struct TransactionUseCases {
         accountHistory: any AccountHistoryUseCase,
         saveTransactions: any SaveTransactionsUseCase,
         changes: any TransactionChangesUseCase,
+        bulkEdit: any ApplyBulkEditUseCase,
         dates: any TransactionDateUseCase = DefaultTransactionDateUseCase(),
         seedDefaults: (any SeedDefaultCategoriesUseCase)? = nil,
     ) {
@@ -111,6 +114,7 @@ public struct TransactionUseCases {
         self.accountHistory = accountHistory
         self.saveTransactions = saveTransactions
         self.changes = changes
+        self.bulkEdit = bulkEdit
         self.dates = dates
         self.seedDefaults = seedDefaults
     }
@@ -123,6 +127,7 @@ public struct TransactionUseCases {
             accountHistory: DefaultAccountHistoryUseCase(repository: repository),
             saveTransactions: DefaultSaveTransactionsUseCase(repository: repository),
             changes: DefaultTransactionChangesUseCase(repository: repository),
+            bulkEdit: DefaultApplyBulkEditUseCase(repository: repository),
             seedDefaults: DefaultSeedDefaultCategoriesUseCase(repository: repository, names: categoryNames),
         )
     }
