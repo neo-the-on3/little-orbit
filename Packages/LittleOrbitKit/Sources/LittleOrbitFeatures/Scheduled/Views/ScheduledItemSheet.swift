@@ -42,7 +42,7 @@
                 model.recordStep = { [undoHistory] change, name, subject in
                     undoHistory.record(change, named: name, subject: subject)
                 }
-                model.load()
+                model.loadIfNeeded()
             }
             .onChange(of: feature.revision) { model.load() }
         }
