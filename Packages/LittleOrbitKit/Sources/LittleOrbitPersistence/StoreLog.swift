@@ -5,7 +5,7 @@ import Foundation
 #endif
 
 /// The app's log for store problems that don't stop it (D293.3). Each event is a fixed message with the error's
-/// domain and code only: never a path, a name or any other user data.
+/// domain and code, or its type, only: never a path, a name or any other user data.
 public enum StoreLog {
     public enum Event: String, Sendable {
         case defaultSeedFailed = "The default categories couldn't be seeded; the next launch tries again."
@@ -25,6 +25,7 @@ public enum StoreLog {
         case watchRequestsNotApplied =
             "Some Apple Watch requests couldn't be applied; they're tried again at the next activation."
         case watchRequestsRefused = "Some Apple Watch requests were refused; nothing was recorded for them."
+        case writeDiscarded = "A ledger write failed; its unsaved changes were dropped and the store is read again."
     }
 
     #if canImport(OSLog)
@@ -45,5 +46,21 @@ public enum StoreLog {
                 "\(event.rawValue, privacy: .public) (\(error.domain, privacy: .public) \(error.code, privacy: .public))"
             )
         #endif
+    }
+
+    /// An event and the error's type, nothing from the error itself: its values or description could hold an
+    /// amount, a payee or a note (#265).
+    public static func failureType(_ event: Event, _ error: any Error) {
+        let type = typeName(of: error)
+        #if canImport(OSLog)
+            logger.error("\(event.rawValue, privacy: .public) (\(type, privacy: .public))")
+        #else
+            _ = type
+        #endif
+    }
+
+    /// The error's type name, such as `LedgerValidationError` or `NSError`.
+    static func typeName(of error: any Error) -> String {
+        String(describing: type(of: error))
     }
 }

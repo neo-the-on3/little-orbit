@@ -26,6 +26,10 @@ The container lookup is injectable (`AppGroupContainerLookup`), so both branches
 
 No App Group is configured yet, so every build uses the Application Support fallback. Turning the group on needs the App Group entitlement and a provisioning profile (D154), plus the Info.plist key; the targets generate their Info.plist, so the key goes in an `INFOPLIST_FILE` merged with it. Moving an existing store into the group container is out of scope until then; nothing has shipped. On macOS, `containerURL(forSecurityApplicationGroupIdentifier:)` returns a URL even when the group isn't valid for the app (unlike iOS, which returns `nil`), so that change must also check on macOS that the container is accessible before choosing it.
 
+## Writes
+
+`SwiftDataLedgerRepository` is the store's single writer, on the main actor. It owns its `ModelContext`, with autosave off, and never calls `rollback()`, which traps in SwiftData on a to-many link that was never read (#265). A write first checks everything it could refuse (`LedgerWriteValidation`, with the same amount rule the record mapping calls), and on any later failure the repository drops the context for a new one and reads the store again. Nothing else in the apps may use a context of the store: no `mainContext`, `@Query` or SwiftUI `modelContext`. `mise run validate-project` fails on any of them in `Apps/` or the package sources.
+
 ## What V1 already contains
 
 Phase 2 fields are columns and relationships on day one, with defaults, so using them later is not a migration:

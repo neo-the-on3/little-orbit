@@ -41,7 +41,7 @@
         }
 
         /// Writes the snapshot's budgets and limits, links each budget to its categories and each limit to its
-        /// budget, and deletes the ones that are gone. Part of the one save in `write`.
+        /// budget, and deletes the ones that are gone. Part of the one save in `writeWholeStore`.
         func applyBudgets(
             _ snapshot: LedgerSnapshot,
             categories: [UUID: LittleOrbitSchemaV1.CategoryRecord],

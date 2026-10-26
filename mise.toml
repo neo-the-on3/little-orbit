@@ -228,10 +228,32 @@ done
 '''
 
 [tasks."validate-project"]
-description = "Check project.xcproj files with xcprojformatter (Linux and macOS)."
+description = "Check project.xcproj files with xcprojformatter, and that app code never uses a SwiftData context of its own (Linux and macOS)."
 run = '''
 #!/usr/bin/env bash
 set -euo pipefail
+
+# #265: SwiftDataLedgerRepository owns its ModelContext, with autosave off, and drops it after a failed write.
+# Nothing else in the apps may use a context of the store: no mainContext, @Query or SwiftUI modelContext. The
+# repository's own file may name mainContext only in its /// documentation lines. Tests may read a record's
+# modelContext.
+status=0
+context_paths=()
+for path in Apps Packages/LittleOrbitKit/Sources; do
+  if [ -d "$path" ]; then
+    context_paths+=("$path")
+  fi
+done
+if [ -n "${context_paths[*]:-}" ]; then
+  context_uses="$(grep -rnE --include='*.swift' '(\bmainContext\b|@Query\b|\bmodelContext\b)' "${context_paths[@]}" \
+    | grep -vE '^Packages/LittleOrbitKit/Sources/LittleOrbitPersistence/SwiftDataLedgerRepository\.swift:[0-9]+:[[:space:]]*///' \
+    || true)"
+  if [ -n "$context_uses" ]; then
+    echo "error: app code uses a SwiftData context; only SwiftDataLedgerRepository may (docs/persistence-migration.md, Writes):" >&2
+    echo "$context_uses" >&2
+    status=1
+  fi
+fi
 
 files=()
 while IFS= read -r file; do
@@ -240,10 +262,9 @@ done < <(find . -name project.xcproj -not -path '*/.*' | sort)
 
 if [ -z "${files[*]:-}" ]; then
   echo "validate-project: no project.xcproj files found."
-  exit 0
+  exit "$status"
 fi
 
-status=0
 for file in "${files[@]}"; do
   canonical="$(mktemp)"
   if ! xcprojformatter "$file" >"$canonical"; then

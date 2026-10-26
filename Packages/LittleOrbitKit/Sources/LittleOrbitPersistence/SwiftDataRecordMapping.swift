@@ -14,7 +14,7 @@
             name = account.name
             accountType = account.type.rawValue
             currencyCode = account.currencyCode
-            let opening = try stored(account.openingBalance, currencyCode: account.currencyCode)
+            let opening = try StoredAmount.stored(account.openingBalance, currencyCode: account.currencyCode)
             openingBalanceMinor = opening.minorUnits
             openingBalanceScale = opening.scale
             openingDate = account.openingDate
@@ -25,7 +25,7 @@
             sortOrder = account.sortOrder
             notes = account.notes
             if let creditLimit = account.creditLimit {
-                let storedLimit = try stored(creditLimit, currencyCode: account.currencyCode)
+                let storedLimit = try StoredAmount.stored(creditLimit, currencyCode: account.currencyCode)
                 creditLimitMinor = storedLimit.minorUnits
                 creditLimitScale = storedLimit.scale
             } else {
@@ -70,7 +70,7 @@
         ) throws {
             id = transaction.id
             transactionType = transaction.type.rawValue
-            let amount = try stored(transaction.amount, currencyCode: sourceCurrency)
+            let amount = try StoredAmount.stored(transaction.amount, currencyCode: sourceCurrency)
             amountMinor = amount.minorUnits
             amountScale = amount.scale
             date = transaction.date
@@ -78,7 +78,7 @@
             details = transaction.details
             note = transaction.note
             if let destinationAmount = transaction.destinationAmount {
-                let storedDestination = try stored(
+                let storedDestination = try StoredAmount.stored(
                     destinationAmount,
                     currencyCode: destinationCurrency ?? sourceCurrency,
                 )
@@ -115,7 +115,8 @@
                 scheduledTemplateID: scheduledTemplateID,
                 scheduledOccurrenceDate: scheduledOccurrenceDate,
                 status: TransactionStatus(storedRawValue: status),
-                tagIDs: (tags ?? []).map(\.id),
+                // SwiftData keeps a to-many link in no order, a different one in each context (#265).
+                tagIDs: Transaction.normalizedTagIDs((tags ?? []).map(\.id)),
                 refundOfID: refundOfID,
                 isRefund: isRefund,
                 createdAt: createdAt,
@@ -212,7 +213,7 @@
         var recordID: UUID { id }
         func apply(_ split: TransactionSplit, currencyCode: String) throws {
             id = split.id
-            let amount = try stored(split.amount, currencyCode: currencyCode)
+            let amount = try StoredAmount.stored(split.amount, currencyCode: currencyCode)
             amountMinor = amount.minorUnits
             amountScale = amount.scale
             note = split.note
@@ -334,7 +335,7 @@
         var recordID: UUID { id }
         func apply(_ limit: BudgetLimit, currencyCode: String) throws {
             id = limit.id
-            let amount = try stored(limit.amount, currencyCode: currencyCode)
+            let amount = try StoredAmount.stored(limit.amount, currencyCode: currencyCode)
             amountMinor = amount.minorUnits
             amountScale = amount.scale
             startYear = limit.startDay.year
@@ -364,11 +365,11 @@
         func apply(_ item: ScheduledItem, sourceCurrency: String?, destinationCurrency: String?) throws {
             id = item.id
             transactionType = item.type.rawValue
-            let amount = try storedKeepingScale(item.amount, currencyCode: sourceCurrency)
+            let amount = try StoredAmount.stored(item.amount, currencyCode: sourceCurrency)
             amountMinor = amount.minorUnits
             amountScale = amount.scale
             if let destination = item.destinationAmount {
-                let storedDestination = try storedKeepingScale(destination, currencyCode: destinationCurrency)
+                let storedDestination = try StoredAmount.stored(destination, currencyCode: destinationCurrency)
                 destinationAmountMinor = storedDestination.minorUnits
                 destinationAmountScale = storedDestination.scale
             } else {
@@ -446,21 +447,6 @@
             }
             return CalendarDay(year: year, month: month, day: dayOfMonth)
         }
-    }
-
-    private func stored(_ value: Decimal, currencyCode: String) throws -> MinorUnitDecimal.Stored {
-        let scale = CurrencyCode.minorUnits(for: currencyCode) ?? 0
-        return try MinorUnitDecimal.store(value, scale: scale)
-    }
-
-    /// As `stored(_:currencyCode:)`, or, with no currency, at the value's own decimal places (at least the
-    /// fallback currency's), so nothing is rounded.
-    private func storedKeepingScale(_ value: Decimal, currencyCode: String?) throws -> MinorUnitDecimal.Stored {
-        if let currencyCode {
-            return try stored(value, currencyCode: currencyCode)
-        }
-        let fallback = CurrencyCode.minorUnits(for: CurrencyCode.fallback) ?? 0
-        return try MinorUnitDecimal.store(value, scale: max(fallback, MinorUnitDecimal.fractionalDigits(in: value)))
     }
 
     private func decimal(minor: Int64, scale: Int16) -> Decimal {

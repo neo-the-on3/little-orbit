@@ -18,6 +18,7 @@ extension LedgerBook {
         transaction.timeZoneID = LedgerText.trimmed(transaction.timeZoneID)
         transaction.details = LedgerText.trimmedOptional(transaction.details)
         transaction.note = LedgerText.trimmedOptional(transaction.note)
+        transaction.tagIDs = Transaction.normalizedTagIDs(transaction.tagIDs)
         return transaction
     }
 
@@ -348,5 +349,13 @@ extension LedgerBook {
             }
         }
         return collected
+    }
+}
+
+extension Transaction {
+    /// Each tag once, in a fixed order, as `Budget.normalizedCategoryIDs`: a store keeps a transaction's tags as a
+    /// set, so the same tags always compare and read back the same (#265).
+    public static func normalizedTagIDs(_ ids: [UUID]) -> [UUID] {
+        Array(Set(ids)).sorted { $0.uuidString < $1.uuidString }
     }
 }

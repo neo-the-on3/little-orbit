@@ -3,21 +3,59 @@
     import LittleOrbitDomain
     import SwiftData
 
+    /// The ledger in SwiftData. All of it runs on the main actor, through one long-lived context of its own (or
+    /// the one passed in), with autosave off. That context holds every record (`SwiftDataStoredLedger`), so reads
+    /// come from memory and a write changes only the records that differ, then saves once (#235).
+    ///
+    /// A failed write never calls `rollback()`, which traps in SwiftData when it restores a to-many link that was
+    /// never read (#265): the context is dropped for a new one, and the next read loads the store again. Not the
+    /// container's `mainContext`, which autosaves, so a dropped context's changes are never saved.
+    ///
+    /// Single writer: this repository's one long-lived context is the only thing that writes the store. A widget,
+    /// extension or App Group reader that writes the store file, or any feature that replaces the file or the
+    /// container, would leave the records and the in-memory ledger stale; such a change must reload or rebuild
+    /// the repository. Other contexts on the container may only read.
     @MainActor
     public final class SwiftDataLedgerRepository: LedgerRepository {
         /// `ModelContext` does not keep the container alive. Dropping it crashes the next fetch.
-        private let container: ModelContainer
-        private let context: ModelContext
+        let container: ModelContainer
+        /// The repository's own context, with autosave off (#265). It owns it so that a failed write can drop it
+        /// for a new one (`discardChanges(after:)`) instead of calling `rollback()`, which traps in SwiftData on a
+        /// to-many link that was never read; with autosave off, nothing saves a dropped context's changes. So
+        /// nothing else may write through, or read from, a context of this store in the apps: no `mainContext`,
+        /// no `@Query`, no SwiftUI `modelContext`. `mise run validate-project` fails on any of them in the app
+        /// code (docs/persistence-migration.md, "Writes").
+        private(set) var context: ModelContext
         let now: @MainActor () -> Date
         /// While `atomically` runs, reads and writes use this snapshot, and one save at the end stores it.
         private(set) var batch: LedgerSnapshot?
+        /// The store as last saved, loaded on the first read and kept in step by each write; `nil` until then, and
+        /// after a whole-store or failed write, so the next read loads the store again (#235).
+        var stored: SwiftDataStoredLedger?
+        /// Records an incremental write made, until it inserts them (`insertCreated`); empty between writes.
+        var createdRecords: [any PersistentModel] = []
+        /// For tests: runs inside a write after the records are changed and before the one `save()`, with the
+        /// snapshot being written. A throw here is a failure in the middle of a write (#235).
+        var beforeSave: ((LedgerSnapshot) throws -> Void)?
+        /// For tests: runs at each step of an incremental write after records start changing. A throw here is a
+        /// failure partway through it (#265).
+        var afterStep: ((LedgerWriteStep) throws -> Void)?
+        /// For tests and the timing ladder: the delete path every write uses, instead of `LedgerWriteTuning`'s.
+        var deletePathOverride: LedgerDeletePath?
+        /// For tests and the timing ladder: whether written transactions are linked from their parents, instead of
+        /// `LedgerWriteTuning`'s choice.
+        var linksFromParentsOverride: Bool?
+        /// For the timing ladder: runs right after an incremental write's `save()`, before the in-memory ledger is
+        /// reread, so the two can be timed apart (#265). It can't fail the write, which is saved by then.
+        var afterSave: (() -> Void)?
         /// The store's pending-seed marker file (D293, `StoreLocation.pendingSeedMarkerURL`), or `nil` for a store
         /// with none, which counts as seeded. An in-memory container keeps the marker as `pendingInMemory`.
         private let seedMarkerURL: URL?
         private var pendingInMemory: Bool
 
-        public init(context: ModelContext, now: @escaping @MainActor () -> Date = { Date() }) {
+        init(context: ModelContext, now: @escaping @MainActor () -> Date = { Date() }) {
             self.container = context.container
+            context.autosaveEnabled = false
             self.context = context
             self.now = now
             self.seedMarkerURL = nil
@@ -33,7 +71,7 @@
             seedPendingInMemory: Bool = false,
         ) {
             self.container = container
-            self.context = container.mainContext
+            self.context = Self.writerContext(container)
             self.now = now
             self.seedMarkerURL = seedMarker
             self.pendingInMemory = seedPendingInMemory
@@ -161,8 +199,9 @@
             try mutate { try LedgerBook.replacingSplits(splits, for: transactionID, in: $0, now: now()) }
         }
 
+        /// With their bytes, read for these attachments only: the ledger in memory keeps none (#235, B1).
         public func attachments(for transactionID: UUID?) throws -> [Attachment] {
-            try load().attachmentsVisible(for: transactionID)
+            try withBytes(load().attachmentsVisible(for: transactionID))
         }
 
         public func saveAttachment(_ attachment: Attachment) throws {
@@ -191,7 +230,7 @@
                     throw error
                 }
             }
-            batch = try loadStored()
+            batch = try storedLedger().snapshot
             defer { batch = nil }
             let result = try body()
             if let batch {
@@ -204,11 +243,12 @@
             try persist(try body(try load()))
         }
 
+        /// The batch inside `atomically`, otherwise the store as last saved. Attachments come without their bytes.
         func load() throws -> LedgerSnapshot {
             if let batch {
                 return batch
             }
-            return try loadStored()
+            return try storedLedger().snapshot
         }
 
         func persist(_ snapshot: LedgerSnapshot) throws {
@@ -219,260 +259,59 @@
             try write(snapshot)
         }
 
-        private func loadStored() throws -> LedgerSnapshot {
-            try loadStored(attachments: fetch(LittleOrbitSchemaV1.AttachmentRecord.self).map { $0.makeAttachment() })
+        static func writerContext(_ container: ModelContainer) -> ModelContext {
+            let context = ModelContext(container)
+            context.autosaveEnabled = false
+            return context
         }
 
-        /// Every record, attachments without their bytes: the fetch leaves out `data`, so SwiftData never reads the
-        /// external-storage files (B1).
-        private func loadStoredDetails() throws -> LedgerSnapshot {
-            var descriptor = FetchDescriptor<LittleOrbitSchemaV1.AttachmentRecord>()
-            descriptor.propertiesToFetch = [
-                \.id, \.fileName, \.contentType, \.byteSize, \.createdAt, \.updatedAt, \.deletedAt,
-            ]
-            return try loadStored(attachments: context.fetch(descriptor).map { $0.makeAttachmentDetails() })
+        /// After a failed write: the context with its unsaved changes is dropped, never saved or rolled back, and
+        /// the records and in-memory ledger go with it; the next read loads them from the store in a new context.
+        /// The repository keeps no other record: `stored` and `createdRecords` are the only places it holds one,
+        /// and a write's parent and link lists are locals. Logs the error's type only. The caller throws `error` on, unchanged.
+        func discardChanges(after error: any Error) {
+            StoreLog.failureType(.writeDiscarded, error)
+            context = Self.writerContext(container)
+            stored = nil
+            createdRecords = []
         }
 
-        private func loadStored(attachments: [Attachment]) throws -> LedgerSnapshot {
-            LedgerSnapshot(
-                accounts: try fetch(LittleOrbitSchemaV1.AccountRecord.self).map { $0.makeAccount() },
-                transactions: try fetch(LittleOrbitSchemaV1.TransactionRecord.self).map { $0.makeTransaction() },
-                categories: try fetch(LittleOrbitSchemaV1.CategoryRecord.self).map { $0.makeCategory() },
-                payees: try fetch(LittleOrbitSchemaV1.PayeeRecord.self).map { $0.makePayee() },
-                tags: try fetch(LittleOrbitSchemaV1.TagRecord.self).map { $0.makeTag() },
-                splits: try fetch(LittleOrbitSchemaV1.TransactionSplitRecord.self).map { $0.makeSplit() },
-                attachments: attachments,
-                budgets: try fetch(LittleOrbitSchemaV1.BudgetRecord.self).map { $0.makeBudget() },
-                scheduledItems: try fetch(LittleOrbitSchemaV1.ScheduledItemRecord.self).map { $0.makeScheduledItem() },
-            )
+        func storedLedger() throws -> SwiftDataStoredLedger {
+            if let stored {
+                return stored
+            }
+            let loaded = try SwiftDataStoredLedger(context: context)
+            stored = loaded
+            return loaded
         }
 
         func fetch<T: PersistentModel>(_ type: T.Type) throws -> [T] {
             try context.fetch(FetchDescriptor<T>())
         }
-
-        /// Writes the snapshot with one `save()`. On any error the context is rolled back, so nothing is half-written.
-        private func write(_ snapshot: LedgerSnapshot, attachmentBytes: (any BackupAttachmentReading)? = nil) throws {
-            do {
-                try apply(snapshot, attachmentBytes: attachmentBytes)
-                try context.save()
-            } catch {
-                context.rollback()
-                throw error
-            }
-        }
-
-        /// With `attachmentBytes`, each attachment's bytes come from there, one at a time, as a file-backed value
-        /// where they're in a file; `snapshot`'s attachments then have none (B1).
-        private func apply(_ snapshot: LedgerSnapshot, attachmentBytes: (any BackupAttachmentReading)?) throws {
-            let accounts = try fetch(LittleOrbitSchemaV1.AccountRecord.self)
-            let transactions = try fetch(LittleOrbitSchemaV1.TransactionRecord.self)
-            let categories = try fetch(LittleOrbitSchemaV1.CategoryRecord.self)
-            let payees = try fetch(LittleOrbitSchemaV1.PayeeRecord.self)
-            let tags = try fetch(LittleOrbitSchemaV1.TagRecord.self)
-            let splits = try fetch(LittleOrbitSchemaV1.TransactionSplitRecord.self)
-            let attachments = try fetch(LittleOrbitSchemaV1.AttachmentRecord.self)
-
-            let currencies = Dictionary(uniqueKeysWithValues: snapshot.accounts.map { ($0.id, $0.currencyCode) })
-            let accountRecords = try upsert(snapshot.accounts, existing: accounts) {
-                LittleOrbitSchemaV1.AccountRecord()
-            } apply: { record, account in
-                try record.apply(account)
-            }
-            let categoryRecords = try upsert(snapshot.categories, existing: categories) {
-                LittleOrbitSchemaV1.CategoryRecord()
-            } apply: { record, category in
-                record.apply(category)
-            }
-            let payeeRecords = try upsert(snapshot.payees, existing: payees) {
-                LittleOrbitSchemaV1.PayeeRecord()
-            } apply: { record, payee in
-                record.apply(payee)
-            }
-            let tagRecords = try upsert(snapshot.tags, existing: tags) {
-                LittleOrbitSchemaV1.TagRecord()
-            } apply: { record, tag in
-                record.apply(tag)
-            }
-            let transactionRecords = try upsert(snapshot.transactions, existing: transactions) {
-                LittleOrbitSchemaV1.TransactionRecord()
-            } apply: { record, transaction in
-                let source = transaction.accountID.flatMap { currencies[$0] } ?? CurrencyCode.fallback
-                let destination = transaction.transferAccountID.flatMap { currencies[$0] }
-                try record.apply(transaction, sourceCurrency: source, destinationCurrency: destination)
-            }
-            let splitRecords = try upsert(snapshot.splits, existing: splits) {
-                LittleOrbitSchemaV1.TransactionSplitRecord()
-            } apply: { record, split in
-                let currency =
-                    split.transactionID
-                    .flatMap { id in snapshot.transactions.first { $0.id == id }?.accountID }
-                    .flatMap { currencies[$0] } ?? CurrencyCode.fallback
-                try record.apply(split, currencyCode: currency)
-            }
-            let attachmentRecords = try upsert(snapshot.attachments, existing: attachments) {
-                LittleOrbitSchemaV1.AttachmentRecord()
-            } apply: { record, attachment in
-                guard let attachmentBytes else {
-                    record.apply(attachment)
-                    return
-                }
-                record.applyDetails(attachment)
-                let data = try attachmentBytes.mappedData(for: attachment.id) ?? Data()
-                record.data = data
-                record.byteSize = Int64(data.count)
-            }
-
-            try applyBudgets(snapshot, categories: categoryRecords)
-            try applyScheduledItems(snapshot, currencies: currencies)
-            clearRelationships(
-                transactions: transactionRecords,
-                categories: categoryRecords,
-                payees: payeeRecords,
-                splits: splitRecords,
-                attachments: attachmentRecords,
-            )
-            deleteMissing(accounts, keeping: Set(snapshot.accounts.map(\.id)))
-            deleteMissing(transactions, keeping: Set(snapshot.transactions.map(\.id)))
-            deleteMissing(categories, keeping: Set(snapshot.categories.map(\.id)))
-            deleteMissing(payees, keeping: Set(snapshot.payees.map(\.id)))
-            deleteMissing(tags, keeping: Set(snapshot.tags.map(\.id)))
-            deleteMissing(splits, keeping: Set(snapshot.splits.map(\.id)))
-            deleteMissing(attachments, keeping: Set(snapshot.attachments.map(\.id)))
-            link(
-                snapshot,
-                accounts: accountRecords,
-                categories: categoryRecords,
-                payees: payeeRecords,
-                tags: tagRecords,
-                transactions: transactionRecords,
-                splits: splitRecords,
-                attachments: attachmentRecords,
-            )
-        }
-
-        private func link(
-            _ snapshot: LedgerSnapshot,
-            accounts: [UUID: LittleOrbitSchemaV1.AccountRecord],
-            categories: [UUID: LittleOrbitSchemaV1.CategoryRecord],
-            payees: [UUID: LittleOrbitSchemaV1.PayeeRecord],
-            tags: [UUID: LittleOrbitSchemaV1.TagRecord],
-            transactions: [UUID: LittleOrbitSchemaV1.TransactionRecord],
-            splits: [UUID: LittleOrbitSchemaV1.TransactionSplitRecord],
-            attachments: [UUID: LittleOrbitSchemaV1.AttachmentRecord],
-        ) {
-            for category in snapshot.categories {
-                categories[category.id]?.parent = category.parentID.flatMap { categories[$0] }
-            }
-            for payee in snapshot.payees {
-                payees[payee.id]?.defaultCategory = payee.defaultCategoryID.flatMap { categories[$0] }
-            }
-            for transaction in snapshot.transactions {
-                guard let record = transactions[transaction.id] else {
-                    continue
-                }
-                record.account = transaction.accountID.flatMap { accounts[$0] }
-                record.transferAccount = transaction.transferAccountID.flatMap { accounts[$0] }
-                record.category = transaction.categoryID.flatMap { categories[$0] }
-                record.payee = transaction.payeeID.flatMap { payees[$0] }
-                record.tags = transaction.tagIDs.compactMap { tags[$0] }
-            }
-            for split in snapshot.splits {
-                guard let record = splits[split.id] else {
-                    continue
-                }
-                record.transaction = split.transactionID.flatMap { transactions[$0] }
-                record.category = split.categoryID.flatMap { categories[$0] }
-            }
-            for attachment in snapshot.attachments {
-                attachments[attachment.id]?.transaction = attachment.transactionID.flatMap { transactions[$0] }
-            }
-        }
-
-        func upsert<Record, Value: Identifiable>(
-            _ values: [Value],
-            existing: [Record],
-            create: () -> Record,
-            apply: (Record, Value) throws -> Void,
-        ) throws -> [UUID: Record] where Record: PersistentModel, Value.ID == UUID {
-            var byID: [UUID: Record] = [:]
-            for record in existing {
-                guard let identified = record as? any IdentifiedLedgerRecord else {
-                    continue
-                }
-                byID[identified.recordID] = record
-            }
-            for value in values {
-                let record: Record
-                if let found = byID[value.id] {
-                    record = found
-                } else {
-                    record = create()
-                    context.insert(record)
-                    byID[value.id] = record
-                }
-                try apply(record, value)
-            }
-            return byID
-        }
-
-        func deleteMissing<Record: PersistentModel>(_ records: [Record], keeping ids: Set<UUID>) {
-            for record in records {
-                guard let identified = record as? any IdentifiedLedgerRecord else {
-                    continue
-                }
-                if !ids.contains(identified.recordID) {
-                    context.delete(record)
-                }
-            }
-        }
-
-        private func clearRelationships(
-            transactions: [UUID: LittleOrbitSchemaV1.TransactionRecord],
-            categories: [UUID: LittleOrbitSchemaV1.CategoryRecord],
-            payees: [UUID: LittleOrbitSchemaV1.PayeeRecord],
-            splits: [UUID: LittleOrbitSchemaV1.TransactionSplitRecord],
-            attachments: [UUID: LittleOrbitSchemaV1.AttachmentRecord],
-        ) {
-            for record in transactions.values {
-                record.account = nil
-                record.transferAccount = nil
-                record.category = nil
-                record.payee = nil
-                record.tags = []
-            }
-            for record in categories.values {
-                record.parent = nil
-            }
-            for record in payees.values {
-                record.defaultCategory = nil
-            }
-            for record in splits.values {
-                record.transaction = nil
-                record.category = nil
-            }
-            for record in attachments.values {
-                record.transaction = nil
-            }
-        }
     }
 
     /// Backups (#40): the whole ledger out, and replaced in one save.
     extension SwiftDataLedgerRepository: LedgerBackupSource {
+        /// The whole ledger with every attachment's bytes.
         public func ledgerSnapshot() throws -> LedgerSnapshot {
-            try load()
+            try withAttachmentBytes(load())
         }
 
-        /// `persist` upserts and deletes every record, then saves once; a failed save rolls back, so the store
-        /// is either fully replaced or unchanged (D63).
-        /// A completed restore also marks the seeding done, so even an empty backup never leads to a seed (D293.2).
+        /// The whole-store write upserts and deletes every record, then saves once; a failed save drops the
+        /// context (`discardChanges(after:)`), so the store is either fully replaced or unchanged (D63). Inside
+        /// `atomically` it replaces the batch. A completed restore also marks the seeding done, so even an empty
+        /// backup never leads to a seed (D293.2).
         /// Budgets are checked first by the rule the in-memory store uses, so a link to a missing category is never
         /// dropped here and kept there (`LedgerBook.validateStoredBudgets`, #174 B1), and scheduled items by theirs
         /// (`LedgerBook.validateStoredScheduledItems`, #26); nothing changes when either throws.
         public func replaceLedger(with snapshot: LedgerSnapshot) throws {
             try LedgerBook.validateStoredBudgets(in: snapshot)
             try LedgerBook.validateStoredScheduledItems(in: snapshot)
-            try persist(snapshot)
+            if batch != nil {
+                batch = snapshot
+            } else {
+                try writeWholeStore(snapshot)
+            }
             markDefaultSeedDone()
         }
 
@@ -480,7 +319,7 @@
             if let batch {
                 return batch.withoutAttachmentBytes
             }
-            return try loadStoredDetails()
+            return try storedLedger().snapshot
         }
 
         public func attachmentBytes() throws -> any BackupAttachmentReading {
@@ -493,7 +332,7 @@
         public func replaceLedger(with snapshot: LedgerSnapshot, attachments: any BackupAttachmentReading) throws {
             try LedgerBook.validateStoredBudgets(in: snapshot)
             try LedgerBook.validateStoredScheduledItems(in: snapshot)
-            try write(snapshot, attachmentBytes: attachments)
+            try writeWholeStore(snapshot, attachmentBytes: attachments)
             markDefaultSeedDone()
         }
     }
