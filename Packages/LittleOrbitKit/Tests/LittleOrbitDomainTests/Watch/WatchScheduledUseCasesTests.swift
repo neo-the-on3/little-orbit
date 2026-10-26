@@ -15,10 +15,13 @@ struct WatchScheduledUseCasesTests {
         var latest: Data?
         var sent: [Data] = []
         private var handler: (@MainActor (Data) -> Void)?
+        private var activated: (@MainActor () -> Void)?
 
         func latestSnapshotData() -> Data? { latest }
         func onSnapshot(_ handler: @escaping @MainActor (Data) -> Void) { self.handler = handler }
         func send(_ request: Data) { sent.append(request) }
+        func onActivated(_ handler: @escaping @MainActor () -> Void) { activated = handler }
+        func activate() { activated?() }
 
         func deliver(_ snapshot: WatchSnapshot) throws {
             let data = try WatchMessageCodec.encode(snapshot)
@@ -60,6 +63,23 @@ struct WatchScheduledUseCasesTests {
         #expect(requests[0].action == .pay && requests[0].occurrence == row.day && requests[0].tappedOn == watchToday)
         #expect(watch.state().sent.map(\.isPending) == [true])
         #expect(changes == 1)
+    }
+
+    @Test("On activation every request still waiting for an answer is sent again, and only those (5646845418 NB1)")
+    func resendsPendingOnActivation() throws {
+        try link.deliver(Codec.snapshot)
+        let watch = useCases()
+        watch.pay(Codec.snapshot.scheduled[0])
+        watch.skip(Codec.snapshot.scheduled[1])
+        let first = try #require(try link.sentRequests().first)
+        var next = Codec.snapshot
+        next.outcomes = [WatchRequestOutcome(requestID: first.id, result: .applied)]
+        try link.deliver(next)
+        link.sent = []
+        link.activate()
+        let resent = try link.sentRequests()
+        #expect(resent.map(\.action) == [.skip])
+        #expect(resent.first?.occurrence == Codec.snapshot.scheduled[1].day)
     }
 
     @Test("The iPhone applied it: the next snapshot clears the pending mark")

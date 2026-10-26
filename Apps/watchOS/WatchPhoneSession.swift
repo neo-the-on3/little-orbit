@@ -9,6 +9,7 @@ import WatchConnectivity
 final class WatchPhoneSession: NSObject, WatchPhoneLink {
     private let session = WCSession.default
     private var snapshotHandler: (@MainActor (Data) -> Void)?
+    private var activationHandler: (@MainActor () -> Void)?
     /// Requests tapped before the session finished activating; they're queued on activation.
     private var waitingRequests: [Data] = []
 
@@ -26,9 +27,20 @@ final class WatchPhoneSession: NSObject, WatchPhoneLink {
         snapshotHandler = handler
     }
 
+    func onActivated(_ handler: @escaping @MainActor () -> Void) {
+        activationHandler = handler
+    }
+
+    /// A request the system is still delivering isn't queued twice.
     func send(_ request: Data) {
         guard session.activationState == .activated else {
             waitingRequests.append(request)
+            return
+        }
+        let queued = session.outstandingUserInfoTransfers.contains { transfer in
+            (transfer.userInfo[WatchLinkKeys.request] as? Data) == request
+        }
+        guard !queued else {
             return
         }
         session.transferUserInfo([WatchLinkKeys.request: request])
@@ -38,6 +50,8 @@ final class WatchPhoneSession: NSObject, WatchPhoneLink {
         let waiting = waitingRequests
         waitingRequests = []
         waiting.forEach(send)
+        // The use cases send their pending requests again (Tech Architect 5646845418, NB1).
+        activationHandler?()
         if let latest = latestSnapshotData() {
             snapshotHandler?(latest)
         }

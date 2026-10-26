@@ -9,11 +9,15 @@ import WatchConnectivity
 final class PhoneWatchSession: NSObject, WatchCompanionLink {
     private let session: WCSession?
     private var requestHandler: (@MainActor (Data) -> Void)?
-    /// The snapshot to send once the session is active.
+    /// The latest snapshot no watch could take yet: it goes out on activation, or when a watch is paired or the
+    /// watch app is installed (Tech Architect 5646845418, B1).
     private var waitingSnapshot: Data?
+    /// A held snapshot that the session refused when it finally went out; logged with no user data.
+    private let onPublishFailed: @MainActor (any Error) -> Void
 
-    override init() {
+    init(onPublishFailed: @escaping @MainActor (any Error) -> Void = { _ in }) {
         session = WCSession.isSupported() ? WCSession.default : nil
+        self.onPublishFailed = onPublishFailed
         super.init()
         session?.delegate = self
         session?.activate()
@@ -23,28 +27,29 @@ final class PhoneWatchSession: NSObject, WatchCompanionLink {
         requestHandler = handler
     }
 
-    /// Before the session is active, the snapshot waits and goes out on activation. With no paired watch or no
-    /// watch app installed, there's no one to send it to.
-    func publish(_ snapshot: Data) throws {
-        guard let session else {
-            return
-        }
-        guard session.activationState == .activated else {
+    /// Until the session is active, a watch is paired and the watch app is installed, the snapshot waits here and
+    /// the feature is told it wasn't delivered.
+    func publish(_ snapshot: Data) throws -> WatchPublishResult {
+        guard let session, session.activationState == .activated, session.isPaired, session.isWatchAppInstalled
+        else {
             waitingSnapshot = snapshot
-            return
-        }
-        guard session.isPaired, session.isWatchAppInstalled else {
-            return
+            return .waiting
         }
         try session.updateApplicationContext([WatchLinkKeys.snapshot: snapshot])
+        waitingSnapshot = nil
+        return .delivered
     }
 
-    private func activated() {
+    /// Activation finished, or the paired watch or its app changed: sends the held snapshot if it can go now.
+    private func sendWaiting() {
         guard let snapshot = waitingSnapshot else {
             return
         }
-        waitingSnapshot = nil
-        try? publish(snapshot)
+        do {
+            _ = try publish(snapshot)
+        } catch {
+            onPublishFailed(error)
+        }
     }
 
     private func received(_ request: Data) {
@@ -61,7 +66,12 @@ extension PhoneWatchSession: WCSessionDelegate {
         guard activationState == .activated else {
             return
         }
-        Task { @MainActor in self.activated() }
+        Task { @MainActor in self.sendWaiting() }
+    }
+
+    /// A watch was paired or unpaired, or the watch app installed or removed.
+    nonisolated func sessionWatchStateDidChange(_ session: WCSession) {
+        Task { @MainActor in self.sendWaiting() }
     }
 
     nonisolated func sessionDidBecomeInactive(_ session: WCSession) {}
