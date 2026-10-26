@@ -220,6 +220,21 @@
                 announce: { AccessibilityNotification.Announcement($0).post() },
             )
         }
+
+        /// CSV import and export (#30), with the Debit & Credit preset (#60). An import or Undo Import reloads every
+        /// window through `updates`, like a transaction change.
+        static func makeImportExport(repository: any LedgerRepository, updates: LedgerUpdates) -> ImportExportFeature {
+            ImportExportFeature(
+                useCases: ImportExportUseCases(
+                    importing: ImportUseCases(
+                        repository: repository,
+                        formats: ImportFormats(specific: [DebitAndCreditFormat()]),
+                    ),
+                    exporting: DefaultExportTransactionsUseCase(repository: repository),
+                ),
+                updates: updates,
+            )
+        }
     }
 
     /// The features the root view shows, wired over one repository.
@@ -352,18 +367,7 @@
                 ),
                 updates: transactions.updates,
             )
-            // CSV import and export (#30), with the Debit & Credit preset (#60). An import or Undo Import reloads
-            // every window, like a transaction change.
-            importExport = ImportExportFeature(
-                useCases: ImportExportUseCases(
-                    importing: ImportUseCases(
-                        repository: repository,
-                        formats: ImportFormats(specific: [DebitAndCreditFormat()]),
-                    ),
-                    exporting: DefaultExportTransactionsUseCase(repository: repository),
-                ),
-                updates: transactions.updates,
-            )
+            importExport = AppComposition.makeImportExport(repository: repository, updates: transactions.updates)
         }
     }
 
