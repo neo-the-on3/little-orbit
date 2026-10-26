@@ -326,9 +326,8 @@
                     // `.scheduled(_)` and the case below builds them (Tester's #198 iOS FAIL).
                     ScheduledListView(
                         feature: scheduled,
-                        slot: scheduledSlot,
+                        host: .parentStack(slot: scheduledSlot, open: { path.append($0) }),
                         linkValue: AccountsRoute.scheduled,
-                        openLink: { path.append($0) },
                     )
                 }
             case .scheduled(let route):

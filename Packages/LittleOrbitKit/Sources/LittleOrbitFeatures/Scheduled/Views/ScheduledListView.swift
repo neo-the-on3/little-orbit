@@ -13,39 +13,35 @@
     /// The Mac gives the list its own stack, and the list registers the item and Completed destinations. On iPhone
     /// and iPad it's pushed onto the Accounts stack, whose typed path only takes `AccountsRoute` and only honours
     /// its root's destinations, so the links push `linkValue(route)` and the root builds the pushed screens with the
-    /// model from `slot` (Tester's #198 iOS FAIL).
+    /// model from the host's slot, and buttons push through the host (Tester's #198 iOS FAIL).
     public struct ScheduledListView<Link: Hashable>: View {
         @State private var model: ScheduledListViewModel
         private let feature: ScheduledFeature
-        /// `nil` when the list registers its own destinations.
-        private let slot: ScheduledListSlot?
+        /// Whether the list registers its own destinations or a parent stack builds them (with the slot and a way to
+        /// push, always together).
+        private let host: ScheduledListHost<Link>
         private let linkValue: (ScheduledRoute) -> Link
-        /// Pushes a link value onto the caller's stack, for buttons that open a screen (the watch notice card's View
-        /// Item); `nil` when the list registers its own destinations.
-        private let openLink: ((Link) -> Void)?
 
         /// A list that registers its own destinations (the Mac's detail column stack).
         public init(feature: ScheduledFeature) where Link == ScheduledRoute {
-            self.init(feature: feature, slot: nil, linkValue: { $0 })
+            self.init(feature: feature, host: .ownStack, linkValue: { $0 })
         }
 
-        /// A list on a stack whose root registers the destinations for `linkValue`'s values and builds them with the
-        /// model in `slot` (the iPhone and iPad Accounts stack).
+        /// A list whose links push `linkValue`'s values. On a parent stack (the iPhone and iPad Accounts stack) its
+        /// root registers their destinations and builds them with the model in the host's slot.
         init(
             feature: ScheduledFeature,
-            slot: ScheduledListSlot?,
+            host: ScheduledListHost<Link>,
             linkValue: @escaping (ScheduledRoute) -> Link,
-            openLink: ((Link) -> Void)? = nil,
         ) {
             self.feature = feature
-            self.slot = slot
+            self.host = host
             self.linkValue = linkValue
-            self.openLink = openLink
             _model = State(initialValue: feature.makeList())
         }
 
         public var body: some View {
-            if let slot {
+            if let slot = host.slot {
                 list.onAppear { slot.attach(model) }
             } else {
                 list.navigationDestination(for: ScheduledRoute.self) { route in
@@ -57,7 +53,12 @@
         private var list: some View {
             List {
                 if let notices = feature.watchNotices, let card = notices.card {
-                    WatchRequestNoticeCardView(card: card, model: notices, linkValue: linkValue, openLink: openLink)
+                    WatchRequestNoticeCardView(
+                        card: card,
+                        model: notices,
+                        linkValue: linkValue,
+                        openLink: host.openLink,
+                    )
                 }
                 if let hint = model.catchUpHint {
                     Section {

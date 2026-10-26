@@ -38,4 +38,22 @@ struct ScheduledRouteTests {
         slot.attach(next)
         #expect(slot.model === next)
     }
+
+    @Test(
+        "A list on the Accounts stack always has both the slot and the push, so View Item is never a link (5647157983)"
+    )
+    func parentStackHasSlotAndPush() {
+        let slot = ScheduledListSlot()
+        let rent = UUID()
+        var path: [AccountsRoute] = [.home(.scheduled)]
+        let host = ScheduledListHost<AccountsRoute>.parentStack(slot: slot, open: { path.append($0) })
+        #expect(host.slot === slot)
+        let open = host.openLink
+        #expect(open != nil)
+        open?(AccountsRoute.scheduled(.item(rent)))
+        #expect(path == [.home(.scheduled), .scheduled(.item(rent))])
+        // The Mac's own stack has neither: the list registers its destinations and links push `ScheduledRoute`.
+        let own = ScheduledListHost<ScheduledRoute>.ownStack
+        #expect(own.slot == nil && own.openLink == nil)
+    }
 }
