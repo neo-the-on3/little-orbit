@@ -119,7 +119,7 @@ struct PhoneWatchLinkTests {
         #expect(sessions.dropped == 0)
     }
 
-    @Test("Ledger changes keep the content dedupe; a state change that isn't pairing or install sends nothing")
+    @Test("Ledger changes keep the content dedupe; with no watch to receive, callbacks send nothing")
     func dedupeKept() throws {
         let phone = phone()
         defer { withExtendedLifetime(phone) {} }
@@ -131,16 +131,52 @@ struct PhoneWatchLinkTests {
         try scene.add(scene.item("Gym", day: 22, month: 10))
         phone.publish()
         #expect(sessions.accepted.count == 2)
-        // sessionWatchStateDidChange for something else, such as a complication: same pairing and install.
-        link.watchStateChanged()
-        #expect(sessions.accepted.count == 2)
-        // Unpaired: nothing can go, and nothing is sent.
+        // Unpaired: nothing can go, and nothing is sent, however many callbacks come.
         sessions.watchState.isPaired = false
-        link.watchStateChanged()
+        for _ in 0..<5 {
+            link.watchStateChanged()
+        }
         phone.publish()
         #expect(sessions.accepted.count == 2)
         sessions.watchState.isPaired = true
         link.watchStateChanged()
         #expect(sessions.accepted.count == 3)
+        // Ledger publishes with no change still send nothing after a forced one.
+        phone.publish()
+        phone.start()
+        #expect(sessions.accepted.count == 3)
+    }
+
+    @Test("A removal and reinstall reported in one callback, with the flags unchanged, still re-sends (5648120868 NB1)")
+    func reinstallInOneCallback() throws {
+        let phone = phone()
+        defer { withExtendedLifetime(phone) {} }
+        link.activationCompleted()
+        phone.start()
+        #expect(sessions.accepted.count == 1)
+        let state = sessions.watchState
+        sessions.reinstallInOneCallback()
+        #expect(sessions.watchState == state)
+        #expect(sessions.accepted.count == 2)
+        #expect(sessions.dropped == 0)
+        #expect(watch().rows.first?.title == "Phone Plan")
+    }
+
+    @Test("Unrelated callbacks, such as a complication, send one stamped context each, never more")
+    func noSendStorm() throws {
+        let phone = phone()
+        defer { withExtendedLifetime(phone) {} }
+        link.activationCompleted()
+        phone.start()
+        #expect(sessions.accepted.count == 1)
+        for callback in 1...3 {
+            link.watchStateChanged()
+            #expect(sessions.accepted.count == 1 + callback)
+        }
+        #expect(sessions.dropped == 0)
+        #expect(Set(sessions.stamps).count == sessions.accepted.count)
+        // Nothing else follows from them: the next unchanged ledger publish is still deduped.
+        phone.publish()
+        #expect(sessions.accepted.count == 4)
     }
 }

@@ -30,8 +30,9 @@ public protocol WatchContextSession: AnyObject {
 ///   publish before then waits (Tester F1).
 /// - Every publish carries a new stamp beside the snapshot, so a deliberate re-send is never byte-identical and the
 ///   session never drops it as "no change". The feature still skips a snapshot the watch already has.
-/// - Activation with the watch app installed, and a change to `isPaired` or `isWatchAppInstalled` that leaves it
-///   installed, ask the feature to send the current snapshot again (Tech Architect 5647974743; 5646901449 NB1).
+/// - Activation with the watch app installed, and every `sessionWatchStateDidChange` while the watch can receive,
+///   ask the feature to send the current snapshot again, once per callback: a removal and a reinstall can arrive
+///   as one callback with nothing looking changed (Tech Architect 5647974743, 5648120868 NB1; 5646901449 NB1).
 /// - Requests from the watch arrive as user info and go to the feature as they are; it settles them exactly once.
 @MainActor
 public final class PhoneWatchLink: WatchCompanionLink {
@@ -39,8 +40,6 @@ public final class PhoneWatchLink: WatchCompanionLink {
     private let now: () -> Date
     private var stamps = WatchPublishStamp()
     private var isActivated = false
-    /// The state as of activation or the last state change; `nil` before activation.
-    private var knownState: WatchSessionState?
     private var requestHandler: (@MainActor (Data) -> Void)?
     private var watchChangedHandler: (@MainActor () -> Void)?
 
@@ -72,9 +71,7 @@ public final class PhoneWatchLink: WatchCompanionLink {
     /// out again, stamped, even if an identical one went before.
     public func activationCompleted() {
         isActivated = true
-        let state = session.watchState
-        knownState = state
-        if state.canReceive {
+        if session.watchState.canReceive {
             watchChangedHandler?()
         }
     }
@@ -82,18 +79,13 @@ public final class PhoneWatchLink: WatchCompanionLink {
     /// The user switched to another watch; the adapter activates again, and `activationCompleted` follows.
     public func deactivated() {
         isActivated = false
-        knownState = nil
     }
 
-    /// `sessionWatchStateDidChange`: a pairing or install change that leaves the app installed sends the current
-    /// snapshot again, stamped. Other changes, such as a complication, send nothing.
+    /// `sessionWatchStateDidChange`: while the watch can receive, the current snapshot goes again, stamped, once
+    /// for this callback, whatever changed. The flags can look unchanged after a removal and reinstall reported
+    /// together (5648120868 NB1). With no watch to receive, nothing is sent.
     public func watchStateChanged() {
-        guard isActivated else {
-            return
-        }
-        let state = session.watchState
-        defer { knownState = state }
-        guard state != knownState, state.canReceive else {
+        guard isActivated, session.watchState.canReceive else {
             return
         }
         watchChangedHandler?()
