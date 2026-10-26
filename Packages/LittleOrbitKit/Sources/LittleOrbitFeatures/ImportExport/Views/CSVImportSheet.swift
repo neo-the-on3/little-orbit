@@ -230,6 +230,9 @@
                     Text(ImportExportText.ambiguousDates)
                 }
             }
+            // Off during “Reading…”: a Mac menu pick applies a moment after the click, so it could land after the
+            // plan moved the sheet on (#232).
+            .disabled(model.isPlanning)
         }
 
         private func fieldBinding(_ column: ImportColumnRow) -> Binding<ImportField?> {
