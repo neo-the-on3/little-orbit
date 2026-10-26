@@ -70,11 +70,19 @@ enum WatchRequestNoticeText {
         )
     }
 
-    static var severalChangedAgain: String {
-        FeatureText.string(
+    /// The second sentence after `severalChanged(count)`: "that item" for one (D377), "those items" otherwise.
+    static func severalChangedAgain(_ count: Int) -> String {
+        if count == 1 {
+            return FeatureText.string(
+                "Check that item and try again if you need to.",
+                comment:
+                    "iPhone Scheduled list, card message, second sentence, after one Pay or Skip action from the Apple Watch did nothing because its scheduled item changed on the iPhone: the user can check that item on the iPhone. Follows “1 watch action couldn’t be applied…”.",
+            )
+        }
+        return FeatureText.string(
             "Check those items and try again if you need to.",
             comment:
-                "iPhone Scheduled list, card message, second sentence, after several Pay or Skip actions from the Apple Watch did nothing: the user can check the scheduled items on the iPhone.",
+                "iPhone Scheduled list, card message, second sentence, after several (two or more) Pay or Skip actions from the Apple Watch did nothing because their scheduled items changed on the iPhone: the user can check those items on the iPhone.",
         )
     }
 

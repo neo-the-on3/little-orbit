@@ -8824,7 +8824,7 @@
       }
     },
     "Check those items and try again if you need to.": {
-      "comment": "iPhone Scheduled list, card message, second sentence, after several Pay or Skip actions from the Apple Watch did nothing: the user can check the scheduled items on the iPhone.",
+      "comment": "iPhone Scheduled list, card message, second sentence, after several (two or more) Pay or Skip actions from the Apple Watch did nothing because their scheduled items changed on the iPhone: the user can check those items on the iPhone.",
       "extractionState": "manual",
       "generatesSymbol": false,
       "localizations": {
@@ -9025,6 +9025,19 @@
                 }
               }
             }
+          }
+        }
+      }
+    },
+    "Check that item and try again if you need to.": {
+      "comment": "iPhone Scheduled list, card message, second sentence, after one Pay or Skip action from the Apple Watch did nothing because its scheduled item changed on the iPhone: the user can check that item on the iPhone. Follows “1 watch action couldn’t be applied…”.",
+      "extractionState": "manual",
+      "generatesSymbol": false,
+      "localizations": {
+        "en": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Check that item and try again if you need to."
           }
         }
       }

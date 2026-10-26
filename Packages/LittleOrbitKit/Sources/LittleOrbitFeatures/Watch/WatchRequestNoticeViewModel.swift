@@ -43,6 +43,12 @@ public final class WatchRequestNoticeViewModel {
         card = group.count == 1 ? Self.single(first) : Self.grouped(group)
     }
 
+    /// Where View Item goes: the item's own screen, mapped by the list to its stack's route (`AccountsRoute` on
+    /// iPhone and iPad, #198). `nil` when the card has no View Item.
+    public var viewItemRoute: ScheduledRoute? {
+        card?.itemID.map(ScheduledRoute.item)
+    }
+
     /// OK: the card never shows again.
     public func dismiss() {
         guard let card else {
@@ -100,7 +106,7 @@ public final class WatchRequestNoticeViewModel {
             title: isNewer ? WatchRequestNoticeText.updateTitle : WatchRequestNoticeText.severalChangedTitle,
             message: WatchText.sentences(
                 isNewer ? WatchRequestNoticeText.severalNewer(count) : WatchRequestNoticeText.severalChanged(count),
-                isNewer ? WatchRequestNoticeText.severalNewerAgain : WatchRequestNoticeText.severalChangedAgain,
+                isNewer ? WatchRequestNoticeText.severalNewerAgain : WatchRequestNoticeText.severalChangedAgain(count),
             ),
             itemID: nil,
             noticeIDs: Set(entries.map(\.id)),

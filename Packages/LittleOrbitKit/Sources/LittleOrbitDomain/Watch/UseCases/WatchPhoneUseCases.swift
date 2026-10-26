@@ -236,6 +236,9 @@ public protocol WatchCompanionLink: AnyObject {
     /// active, no watch is paired or the watch app isn't installed): the link keeps it and sends it itself once it
     /// can. Throws when the session refuses it.
     func publish(_ snapshot: Data) throws -> WatchPublishResult
+    /// Called when the session activates and when the paired watch or its app changes: the watch may not have the
+    /// last snapshot, even one already delivered (Tech Architect 5646901449, NB1).
+    func onWatchChanged(_ handler: @escaping @MainActor () -> Void)
 }
 
 /// Whether a published snapshot reached WatchConnectivity (Tech Architect 5646845418, B1).

@@ -324,7 +324,12 @@
                 if let scheduled {
                     // The typed path only honours this root's destinations, so the list's links push
                     // `.scheduled(_)` and the case below builds them (Tester's #198 iOS FAIL).
-                    ScheduledListView(feature: scheduled, slot: scheduledSlot, linkValue: AccountsRoute.scheduled)
+                    ScheduledListView(
+                        feature: scheduled,
+                        slot: scheduledSlot,
+                        linkValue: AccountsRoute.scheduled,
+                        openLink: { path.append($0) },
+                    )
                 }
             case .scheduled(let route):
                 if let scheduled {

@@ -8,6 +8,7 @@ import SwiftUI
 struct LittleOrbitWatchApp: App {
     /// Built once per launch by the composition root, then passed down.
     private let scheduled: WatchScheduledViewModel
+    @Environment(\.scenePhase) private var scenePhase
 
     init() {
         scheduled = WatchComposition.makeScheduled()
@@ -16,6 +17,12 @@ struct LittleOrbitWatchApp: App {
     var body: some Scene {
         WindowGroup {
             WatchScheduledListView(model: scheduled)
+        }
+        // Opening or returning to the app retries any Pay or Skip not delivered yet whose wait is over (D377).
+        .onChange(of: scenePhase) { _, phase in
+            if phase == .active {
+                scheduled.appBecameActive()
+            }
         }
     }
 }
@@ -39,6 +46,12 @@ enum WatchComposition {
             link: WatchPhoneSession(),
             cache: UserDefaultsWatchScheduledCache(),
             today: { TransactionTiming.today(clock(), timeZone: timeZone()) },
+            schedule: { delay, retry in
+                Task { @MainActor in
+                    try? await Task.sleep(for: .seconds(delay))
+                    retry()
+                }
+            },
         )
         return WatchScheduledViewModel(useCases: useCases)
     }

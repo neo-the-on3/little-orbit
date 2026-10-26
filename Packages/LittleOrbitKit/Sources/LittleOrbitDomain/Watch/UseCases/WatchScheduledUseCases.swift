@@ -6,21 +6,64 @@ public struct WatchSentRequest: Codable, Hashable, Sendable, Identifiable {
     public var request: WatchScheduledRequest
     public var occurrence: WatchScheduledOccurrence
     public var result: WatchRequestResult?
+    /// The system confirmed it reached the iPhone, so it's never sent again (D377).
+    public var isDelivered: Bool
+    /// Failed deliveries in a row. Each one makes the next retry wait longer, up to a ceiling; the request is never
+    /// dropped (D377).
+    public var failures: Int
+    /// No retry before this, after a failed delivery.
+    public var retryAfter: Date?
 
     public init(
         request: WatchScheduledRequest,
         occurrence: WatchScheduledOccurrence,
         result: WatchRequestResult? = nil,
+        isDelivered: Bool = false,
+        failures: Int = 0,
+        retryAfter: Date? = nil,
     ) {
         self.request = request
         self.occurrence = occurrence
         self.result = result
+        self.isDelivered = isDelivered
+        self.failures = failures
+        self.retryAfter = retryAfter
     }
 
     public var id: UUID { request.id }
 
     /// Sent, and the iPhone hasn't answered yet: the row shows it as syncing.
     public var isPending: Bool { result == nil }
+
+    private enum CodingKeys: String, CodingKey {
+        case request, occurrence, result, isDelivered, failures, retryAfter
+    }
+
+    /// A cache written before D377 has no delivery fields: its requests count as not delivered yet.
+    public init(from decoder: any Decoder) throws {
+        let container = try decoder.container(keyedBy: CodingKeys.self)
+        request = try container.decode(WatchScheduledRequest.self, forKey: .request)
+        occurrence = try container.decode(WatchScheduledOccurrence.self, forKey: .occurrence)
+        result = try container.decodeIfPresent(WatchRequestResult.self, forKey: .result)
+        isDelivered = try container.decodeIfPresent(Bool.self, forKey: .isDelivered) ?? false
+        failures = try container.decodeIfPresent(Int.self, forKey: .failures) ?? 0
+        retryAfter = try container.decodeIfPresent(Date.self, forKey: .retryAfter)
+    }
+}
+
+/// How often the watch retries a request whose delivery failed (D377): it waits twice as long after each failure
+/// in a row, from `first` up to `ceiling`, and never gives up.
+public enum WatchRetryPolicy {
+    public static let first: TimeInterval = 10
+    public static let ceiling: TimeInterval = 15 * 60
+
+    public static func delay(afterFailures failures: Int) -> TimeInterval {
+        guard failures > 0 else {
+            return 0
+        }
+        let doublings = min(failures - 1, 16)
+        return min(first * Double(1 << doublings), ceiling)
+    }
 }
 
 /// What the watch's Scheduled screen reads: the last snapshot from the iPhone, if any, and the requests it sent
@@ -43,6 +86,8 @@ public protocol WatchScheduledUseCase: AnyObject {
     func skip(_ occurrence: WatchScheduledOccurrence)
     /// The user closed the message for a request the iPhone turned down.
     func acknowledge(requestID: UUID)
+    /// The watch app opened or became active: sends any request not delivered yet whose retry is due (D377).
+    func retryPending()
     /// Called after every change to `state()`: a new snapshot, or a request sent or closed.
     func onChange(_ handler: @escaping @MainActor () -> Void)
 }
@@ -55,10 +100,21 @@ public protocol WatchPhoneLink: AnyObject {
     func latestSnapshotData() -> Data?
     /// Called with each snapshot the iPhone sends.
     func onSnapshot(_ handler: @escaping @MainActor (Data) -> Void)
-    /// Queues a request for the iPhone.
-    func send(_ request: Data)
-    /// Called each time the session finishes activating.
-    func onActivated(_ handler: @escaping @MainActor () -> Void)
+    /// Queues a request for the iPhone. `.inFlight` once the system has it, including when it already had it, so a
+    /// request is never queued twice; `.unavailable` before the session is active.
+    func send(_ request: Data, id: UUID) -> WatchSendResult
+    /// Called when a queued request finished: delivered to the iPhone (`true`) or failed.
+    func onSendFinished(_ handler: @escaping @MainActor (UUID, Bool) -> Void)
+    /// Called when the session activates and when the iPhone becomes reachable: a time to retry.
+    func onCanRetry(_ handler: @escaping @MainActor () -> Void)
+}
+
+/// Whether the link took a request (D377).
+public enum WatchSendResult: Sendable {
+    /// Queued with the system, which delivers it once.
+    case inFlight
+    /// The session isn't active yet; the request waits in the cache.
+    case unavailable
 }
 
 /// A disposable cache on the watch: the last snapshot and the sent requests. Losing it loses no ledger data, since
@@ -91,24 +147,34 @@ public final class DefaultWatchScheduledUseCases: WatchScheduledUseCase {
     private let link: any WatchPhoneLink
     private let cache: any WatchScheduledCache
     private let today: @MainActor () -> CalendarDay
+    private let now: @MainActor () -> Date
+    /// Runs the action after the delay: the App's timer. A retry also happens on every trigger once it's due.
+    private let schedule: @MainActor (TimeInterval, @escaping @MainActor () -> Void) -> Void
     private var current: WatchScheduledState
     private var handlers: [@MainActor () -> Void] = []
+    /// Requests the system is delivering now: at most one send per request (D377).
+    private var inFlight: Set<UUID> = []
 
     public init(
         link: any WatchPhoneLink,
         cache: any WatchScheduledCache,
         today: @escaping @MainActor () -> CalendarDay,
+        now: @escaping @MainActor () -> Date = { Date() },
+        schedule: @escaping @MainActor (TimeInterval, @escaping @MainActor () -> Void) -> Void = { _, _ in },
     ) {
         self.link = link
         self.cache = cache
         self.today = today
+        self.now = now
+        self.schedule = schedule
         // An unreadable or newer cached snapshot is dropped: the next one from the iPhone replaces it.
         let cached = cache.snapshotData().flatMap { try? WatchMessageCodec.decodeSnapshot($0) }
         current = WatchScheduledState(snapshot: cached, sent: cache.sentRequests())
         link.onSnapshot { [weak self] data in self?.received(data) }
-        // A request tapped just before the app quit may never have been queued: send every pending one again. The
-        // iPhone applies each request ID once (Tech Architect 5646845418, NB1).
-        link.onActivated { [weak self] in self?.resendPending() }
+        // Queued requests stay in the cache until delivered, and go out again on activation, when the iPhone becomes
+        // reachable and when the app opens (D377; Tech Architect 5646845418, NB1).
+        link.onCanRetry { [weak self] in self?.retryPending() }
+        link.onSendFinished { [weak self] id, delivered in self?.finished(id, delivered: delivered) }
         if let latest = link.latestSnapshotData() {
             received(latest, notify: false)
         }
@@ -118,13 +184,46 @@ public final class DefaultWatchScheduledUseCases: WatchScheduledUseCase {
         current
     }
 
-    /// Sends every request still waiting for the iPhone's answer again.
-    func resendPending() {
-        for sent in current.sent where sent.isPending {
-            if let data = try? WatchMessageCodec.encode(sent.request) {
-                link.send(data)
-            }
+    public func retryPending() {
+        for sent in current.sent {
+            deliver(sent.id)
         }
+    }
+
+    /// Hands one request to the link, unless it's delivered or answered, already in flight, or waiting out its
+    /// backoff.
+    private func deliver(_ id: UUID) {
+        guard let sent = current.sent.first(where: { $0.id == id }),
+            sent.isPending, !sent.isDelivered, !inFlight.contains(id),
+            sent.retryAfter.map({ $0 <= now() }) ?? true,
+            let data = try? WatchMessageCodec.encode(sent.request)
+        else {
+            return
+        }
+        if link.send(data, id: id) == .inFlight {
+            inFlight.insert(id)
+        }
+    }
+
+    /// Delivered: never sent again, and the row syncs until the iPhone's answer. Failed: kept, and retried after
+    /// a longer wait each time (D377).
+    private func finished(_ id: UUID, delivered: Bool) {
+        inFlight.remove(id)
+        guard let index = current.sent.firstIndex(where: { $0.id == id }) else {
+            return
+        }
+        if delivered {
+            current.sent[index].isDelivered = true
+            current.sent[index].failures = 0
+            current.sent[index].retryAfter = nil
+            cache.setSentRequests(current.sent)
+            return
+        }
+        current.sent[index].failures += 1
+        let delay = WatchRetryPolicy.delay(afterFailures: current.sent[index].failures)
+        current.sent[index].retryAfter = now().addingTimeInterval(delay)
+        cache.setSentRequests(current.sent)
+        schedule(delay) { [weak self] in self?.deliver(id) }
     }
 
     public func pay(_ occurrence: WatchScheduledOccurrence) {
@@ -186,12 +285,9 @@ public final class DefaultWatchScheduledUseCases: WatchScheduledUseCase {
             tappedOn: today(),
             revision: occurrence.revision,
         )
-        guard let data = try? WatchMessageCodec.encode(request) else {
-            return
-        }
         current.sent.append(WatchSentRequest(request: request, occurrence: occurrence))
         cache.setSentRequests(current.sent)
-        link.send(data)
+        deliver(request.id)
         notify()
     }
 
