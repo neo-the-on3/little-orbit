@@ -152,7 +152,9 @@ struct ScheduledPresenter {
             tone: tone,
             dateText: date,
             symbolName: symbol(of: item),
-            spokenLabel: spoken.formatted(.list(type: .and, width: .narrow).locale(locale)),
+            // "Electricity, Overdue · 15 Aug, −₹1,800.00": parts joined like the account and home rows' labels,
+            // with no "and" before the amount (Tester's #198 polish).
+            spokenLabel: spoken.joined(separator: ", "),
         )
     }
 }
