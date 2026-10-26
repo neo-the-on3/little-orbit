@@ -68,7 +68,7 @@ struct ScheduledNextDueTests {
         #expect(list.detail(phone.id)?.next == "Next: 20 Nov")
     }
 
-    @Test("Everything left is overdue and nothing follows: it reads Ended, and the overdue rows stay")
+    @Test("Everything left is overdue and nothing follows: it reads Ended with the count (D373), and the rows stay")
     func allOverdueNoFutureDate() throws {
         let scene = try ScheduledScene()
         var gym = scene.item("Gym", day: 5, month: 8)
@@ -77,7 +77,7 @@ struct ScheduledNextDueTests {
         let list = scene.feature().makeList()
         list.load()
         let detail = try #require(list.detail(gym.id))
-        #expect(detail.next == "Ended 5 Oct")
+        #expect(detail.next == "Ended 5 Oct · 3 overdue")
         #expect(detail.due.count == 3)
     }
 }

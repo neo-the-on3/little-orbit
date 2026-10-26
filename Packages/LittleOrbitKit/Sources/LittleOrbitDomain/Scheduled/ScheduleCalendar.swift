@@ -146,17 +146,41 @@ public enum ScheduleCalendar {
             && (1...9999).contains(day.year)
     }
 
-    /// The occurrence fell on the month's last day because the anchor day doesn't exist in that month (D24). A day
-    /// kept from before a Starts edit (D336.1) that is merely earlier than the new anchor isn't shortened.
+    /// The occurrence fell on the month's last day because the rule's day doesn't exist in that month (D24, D373):
+    /// `day` is the current rule's own occurrence in that month, moved from the rule's day. A day kept from an
+    /// earlier schedule (D336.1) never is, even when it falls on a month's last day.
     public static func isShortened(_ day: CalendarDay, of item: ScheduledItem) -> Bool {
-        guard case .every(_, let unit) = item.repeatRule, unit == .month || unit == .year else {
+        guard day.day < item.startDay.day, item.occurrence(on: day)?.outcome != .pending,
+            day >= max(item.creationDay, item.resumesOn ?? item.creationDay),
+            let index = ruleIndex(ofMonthOf: day, in: item)
+        else {
             return false
         }
-        if unit == .year && day.month != item.startDay.month {
-            return false
+        return occurrence(index, from: item.startDay, repeating: item.repeatRule) == day
+    }
+
+    /// Which occurrence of a monthly or yearly rule falls in `day`'s month, if the rule has one there.
+    private static func ruleIndex(ofMonthOf day: CalendarDay, in item: ScheduledItem) -> Int? {
+        guard case .every(let count, let unit) = item.repeatRule, count > 0 else {
+            return nil
         }
-        let monthLength = daysIn(year: day.year, month: day.month)
-        return day.day == monthLength && item.startDay.day > monthLength
+        let start = item.startDay
+        let steps: Int
+        switch unit {
+        case .month:
+            steps = (day.year - start.year) * 12 + (day.month - start.month)
+        case .year:
+            guard day.month == start.month else {
+                return nil
+            }
+            steps = day.year - start.year
+        case .day, .week:
+            return nil
+        }
+        guard steps >= 0, steps % count == 0 else {
+            return nil
+        }
+        return steps / count
     }
 
     public static func daysIn(year: Int, month: Int) -> Int {

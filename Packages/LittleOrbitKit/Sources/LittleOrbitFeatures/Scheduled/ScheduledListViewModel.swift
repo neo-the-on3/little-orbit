@@ -321,9 +321,8 @@ public final class ScheduledListViewModel {
             .map {
                 rows.row($0.item, day: $0.day, kind: .dueToday)
             }
-        // D369: the next unsettled day on the current rule from today, never an overdue day; the overdue ones keep
-        // their own rows above (D339, D340).
-        let next = ScheduleCalendar.firstOccurrence(of: item, onOrAfter: listing.board.today) { !item.isSettled($0) }
+        // D369: never an overdue day; the overdue ones keep their own rows above (D339, D340).
+        let next = nextOnSchedule(of: item, onOrAfter: listing.board.today)
         return ScheduledItemDetail(
             itemID: itemID,
             title: presenter.name(of: item),
@@ -331,9 +330,25 @@ public final class ScheduledListViewModel {
             tone: tone,
             facts: facts.filter { !$0.value.isEmpty },
             next: next.map { ScheduledText.nextDue(presenter.dateText($0)) }
-                ?? ScheduledText.ended(lastDueDay(of: item).map(presenter.dateText) ?? ""),
+                ?? endedText(lastDueDay(of: item).map(presenter.dateText) ?? "", overdue: overdueCount(of: itemID)),
             due: due,
         )
+    }
+
+    /// The next date on the schedule (D369): the first unpaid, unskipped occurrence on the current rule from the
+    /// later of `first` and today, so it's never an overdue day.
+    private func nextOnSchedule(of item: ScheduledItem, onOrAfter first: CalendarDay) -> CalendarDay? {
+        ScheduleCalendar.firstOccurrence(of: item, onOrAfter: max(first, listing.board.today)) { !item.isSettled($0) }
+    }
+
+    /// "Ended 5 Oct", or "Ended 5 Oct · 2 overdue" while unpaid overdue occurrences remain (D373).
+    private func endedText(_ date: String, overdue: Int) -> String {
+        overdue > 0 ? ScheduledText.ended(date, overdue: overdue) : ScheduledText.ended(date)
+    }
+
+    /// The item's unpaid, unskipped overdue occurrences, other than `excluding`.
+    private func overdueCount(of itemID: UUID, excluding day: CalendarDay? = nil) -> Int {
+        listing.board.overdue.filter { $0.item.id == itemID && $0.day != day }.count
     }
 
     /// A completed item's last due date: its last occurrence, or the last one settled.
@@ -358,22 +373,24 @@ public final class ScheduledListViewModel {
         perform { try useCases.manage.payNow(itemID: row.itemID, occurrence: occurrence) }
     }
 
-    /// Asks before skipping (D334.8, D339): "Skip 15 Oct Electricity?", with the next due date
-    /// that stays on the schedule, or that none follows.
+    /// Asks before skipping (D334.8, D339): "Skip 15 Oct Electricity?", with the next date on the schedule after
+    /// the skipped one and not before today (D369), or that none follows, then how many other occurrences are
+    /// still overdue (D373).
     public func confirmSkip(_ row: ScheduledRow) {
         guard let occurrence = row.occurrence, let item = listing.item(row.itemID) else {
             return
         }
         let rows = rows
         let date = rows.dateText(occurrence)
-        let next = ScheduleCalendar.adding(days: 1, to: occurrence)
-            .flatMap { after in
-                ScheduleCalendar.firstOccurrence(of: item, onOrAfter: after, where: { !item.isSettled($0) })
-            }
-        let message =
+        let next = ScheduleCalendar.adding(days: 1, to: occurrence).flatMap { nextOnSchedule(of: item, onOrAfter: $0) }
+        var message =
             next.map {
                 ScheduledText.skipMessage(date: date, next: ScheduledPresenter.dateWithYear($0, locale: locale))
             } ?? ScheduledText.skipLastMessage(date: date)
+        let stillOverdue = overdueCount(of: row.itemID, excluding: occurrence)
+        if stillOverdue > 0 {
+            message = ScheduledText.sentences(message, ScheduledText.moreStillOverdue(stillOverdue))
+        }
         confirmation = ScheduledConfirmation(
             action: .skip(itemID: row.itemID, occurrence: occurrence),
             title: ScheduledText.skipTitle(date: date, name: rows.shortName(of: item)),
