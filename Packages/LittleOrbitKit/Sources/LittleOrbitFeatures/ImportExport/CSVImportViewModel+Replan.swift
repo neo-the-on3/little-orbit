@@ -29,9 +29,14 @@ extension CSVImportViewModel {
     /// D327.1: accounts, categories, payees or transactions changed while the sheet is open, from another window,
     /// a scheduled posting or a watch entry. The sheet calls this on the shared store-change signal. The preview
     /// re-plans with the same mapping, date format, separator, target account and the Match choices that still
-    /// exist, and the notice shows. Nothing happens before a file is open or once the import is done.
+    /// exist, and the notice shows. Nothing happens before a file is open. On the summary, a change other than
+    /// the import's own ends Undo Import (D108, D381.4).
     public func dataChanged() async {
-        guard file != nil, !isClosed, step != .pickFile, step != .summary else { return }
+        guard file != nil, !isClosed, step != .pickFile else { return }
+        guard step != .summary else {
+            endUndoWindowIfDataChanged()
+            return
+        }
         guard !isWorking else {
             isDataChangePending = true
             return

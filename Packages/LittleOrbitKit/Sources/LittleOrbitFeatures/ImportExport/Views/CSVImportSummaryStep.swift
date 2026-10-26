@@ -4,6 +4,10 @@
     /// The import sheet's last step: what was imported, what wasn't, and Undo Import.
     struct CSVSummaryStep: View {
         let model: CSVImportViewModel
+        /// VoiceOver focus on the summary's title, for when Undo Import goes away.
+        @AccessibilityFocusState private var isTitleFocused: Bool
+        /// VoiceOver focus on Undo Import, which the model reads when the window ends (D381.4, V1).
+        @AccessibilityFocusState private var isUndoFocused: Bool
 
         /// “Undo Import…” on the Mac, because it asks first (D281); “Undo Import” on iOS.
         private var undoLabel: String {
@@ -23,6 +27,15 @@
                         .accessibilityHidden(true)
                     Text(model.summaryTitle)
                         .font(.title2.bold())
+                        .accessibilityFocused($isTitleFocused)
+                        // D381.4, V1: when the next change to data ends Undo Import while VoiceOver focus is on its
+                        // button or its confirmation is open, focus moves here rather than being lost. Focus
+                        // elsewhere stays put, and a successful Undo shows Import Undone, so it doesn't move then.
+                        .onChange(of: model.movesFocusToSummaryTitle) { _, moves in
+                            if moves {
+                                isTitleFocused = true
+                            }
+                        }
                     Text(model.importedText)
                         .foregroundStyle(.secondary)
                 }
@@ -51,6 +64,10 @@
             if model.canUndo {
                 Section {
                     Button(undoLabel, role: .destructive) { model.requestUndo() }
+                        .accessibilityFocused($isUndoFocused)
+                        .onChange(of: isUndoFocused) { _, isFocused in
+                            model.isUndoFocused = isFocused
+                        }
                 } footer: {
                     Text(ImportExportText.undoFooter)
                 }

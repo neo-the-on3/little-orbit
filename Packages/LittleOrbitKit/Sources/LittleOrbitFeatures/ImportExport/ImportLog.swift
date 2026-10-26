@@ -14,6 +14,7 @@ enum ImportLog {
         case commitFailed = "An import failed; nothing was saved."
         case undone = "An import was undone."
         case undoFailed = "Undo Import failed; nothing was removed."
+        case undoEnded = "Undo Import ended: the data changed after the import."
         case exportFailed = "A CSV export couldn't be made."
     }
 

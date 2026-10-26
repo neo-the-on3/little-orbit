@@ -203,7 +203,8 @@ extension CSVImportViewModel {
     }
 
     public var canUndo: Bool {
-        step == .summary && receipt.map { !$0.transactions.isEmpty } == true && !isUndone && !isWorking
+        step == .summary && receipt.map { !$0.transactions.isEmpty } == true && !isUndone && !isUndoWindowOver
+            && !isWorking
     }
 
     public var undoTitle: String {
