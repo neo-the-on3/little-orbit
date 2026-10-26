@@ -141,13 +141,44 @@
             return { Date() }
         }
 
+        /// The transactions feature over `repository`. The default categories are seeded here, at launch, before any
+        /// screen can write (D291.7, D293.4), and nowhere else. A failed seed is only logged (D293.3): the app opens
+        /// as normal and the next launch tries again while the store is still empty. An account's history also shows
+        /// its scheduled occurrences as Upcoming rows (S85), unless Show upcoming is off (D348).
+        static func makeTransactions(
+            repository: some LedgerRepository & ScheduleRepository,
+            editing: DefaultCategoryEditingUseCase,
+            showUpcoming: UserDefaultsShowUpcomingSetting,
+        ) -> TransactionsFeature {
+            let transactionUseCases = TransactionUseCases(
+                repository: repository,
+                categoryNames: CatalogDefaultCategoryNames(),
+                // Undo and Redo of a Scheduled form save go through the schedule (D351.1).
+                schedule: repository,
+            )
+            do {
+                try transactionUseCases.seedDefaults?.seedIfFirstLaunch()
+            } catch {
+                StoreLog.failure(.defaultSeedFailed, error)
+            }
+            return TransactionsFeature(
+                useCases: transactionUseCases.showingScheduled(
+                    from: repository,
+                    while: { showUpcoming.showsUpcoming },
+                ),
+                categoryPicking: CategoryPickingUseCases(load: editing, edit: editing),
+            )
+        }
+
         /// Local backups (#40): one folder per backup in Application Support/<bundle id>/Backups on this device
         /// only, never in the App Group container (D195). Exports are Apple Archive files, and N and M are app
-        /// settings in UserDefaults. App Lock (#29) replaces `AppLockOff` here when it lands.
+        /// settings in UserDefaults. App Lock (#29) replaces `AppLockOff` here when it lands. Each backup carries the
+        /// shared settings (D96.1), which today is Show upcoming (D348).
         static func makeBackups(
             source: any LedgerBackupSource,
             storage: any BackupStorage,
             changes: LedgerChanges,
+            sharedSettings: any BackupSharedSettingsStore,
         ) -> BackupsViewModel {
             let service = BackupService(
                 source: source,
@@ -157,6 +188,7 @@
                 hashing: CryptoKitBackupHashing(),
                 changes: changes,
                 schemaVersion: LedgerSchemaVersion.description,
+                sharedSettings: sharedSettings,
             )
             let useCases = BackupUseCases(
                 service: service,
@@ -183,32 +215,22 @@
         let importExport: ImportExportFeature
         /// The watch's Scheduled list and its Pay and Skip (#197 item 10); `nil` with no watch link (the Mac).
         let watch: WatchPhoneFeature?
+        let scheduledUpcoming: ScheduledUpcomingSettingsModel
 
         init(
             repository: some LedgerRepository & ScheduleRepository & LedgerBackupSource,
             backupStorage: any BackupStorage,
             watchLink: (any WatchCompanionLink)? = nil,
         ) {
-            let transactionUseCases = TransactionUseCases(
-                repository: repository,
-                categoryNames: CatalogDefaultCategoryNames(),
-                // Undo and Redo of a Scheduled form save go through the schedule (D351.1).
-                schedule: repository,
-            )
-            // The default categories are seeded here, at launch, before any screen can write (D291.7, D293.4), and
-            // nowhere else. A failed seed is only logged (D293.3): the app opens as normal and the next launch
-            // tries again while the store is still empty.
-            do {
-                try transactionUseCases.seedDefaults?.seedIfFirstLaunch()
-            } catch {
-                StoreLog.failure(.defaultSeedFailed, error)
-            }
             // The entry sheet's category picker reads and adds categories with the editor's use cases (#24).
             let editing = DefaultCategoryEditingUseCase(repository: repository)
-            transactions = TransactionsFeature(
-                // An account's history also shows its scheduled occurrences as Upcoming rows (S85).
-                useCases: transactionUseCases.showingScheduled(from: repository),
-                categoryPicking: CategoryPickingUseCases(load: editing, edit: editing),
+            // Settings › Scheduled Items › Show upcoming, in app settings (D348).
+            let showUpcoming = UserDefaultsShowUpcomingSetting()
+            // Seeds the default categories first, before any screen can write.
+            transactions = AppComposition.makeTransactions(
+                repository: repository,
+                editing: editing,
+                showUpcoming: showUpcoming,
             )
             // One signal for "the whole ledger was replaced" (a restore): the accounts reload, and every window's
             // undo history is cleared, so Undo never replays a step made against the old data (D187.2, N6).
@@ -274,6 +296,7 @@
                 updates: transactions.updates,
             )
             watch?.start()
+            scheduledUpcoming = ScheduledUpcomingSettingsModel(store: showUpcoming, updates: transactions.updates)
             // Account delete returns its change; the screens record it in the transactions' history (#93). Every
             // account change moves the shared store-change signal, so an open import re-plans (D327.1).
             accounts = AccountsFeature(
@@ -282,7 +305,13 @@
                 ledgerChanges: changes,
                 updates: transactions.updates,
             )
-            backups = AppComposition.makeBackups(source: repository, storage: backupStorage, changes: changes)
+            // Show upcoming is a shared preference, so it goes in every backup and a restore puts it back (D348.3).
+            backups = AppComposition.makeBackups(
+                source: repository,
+                storage: backupStorage,
+                changes: changes,
+                sharedSettings: ShowUpcomingBackupSettings(store: showUpcoming),
+            )
             // Settings › Categories and Payees (#24): the category and payee use cases, the category editor's
             // reads and saves, and the payee list's reads.
             let categoryUseCases = CategoryUseCases(repository: repository)
@@ -386,6 +415,7 @@
                         payees: features.payees,
                         importExport: features.importExport,
                         scheduled: features.scheduled,
+                        scheduledUpcoming: features.scheduledUpcoming,
                         onCategoryRemoval: { settingsUndoHistory?.clearAfterRemoval() },
                     )
                 }

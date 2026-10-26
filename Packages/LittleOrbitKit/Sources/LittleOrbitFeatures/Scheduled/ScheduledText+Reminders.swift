@@ -59,7 +59,8 @@ extension ScheduledText {
     static var settingsSection: String {
         FeatureText.string(
             "Scheduled Items",
-            comment: "Settings section, and the Mac Settings tab, for scheduled items’ reminders (D341.4).",
+            comment:
+                "Settings: the Scheduled Items section on iOS and the Scheduled Items tab on the Mac, with Show upcoming and Reminder Time (D341.4, D348).",
         )
     }
 
@@ -73,7 +74,7 @@ extension ScheduledText {
     static var reminderTimeFooter: String {
         FeatureText.string(
             "Scheduled items set to “Notify when due” remind you at this time.",
-            comment: "Settings › Scheduled Items footer under Reminder Time (D341.4).",
+            comment: "Settings › Scheduled Items footer under both rows; it's about reminders only (D341.4, D348).",
         )
     }
 

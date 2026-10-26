@@ -60,9 +60,12 @@ struct BackupServiceTests {
         #expect(try harness.repository.balance(of: account.id, today: FeatureFixture.today) == edited)
     }
 
-    @Test("No automatic backup right after a restore, until the data changes (S53)")
+    @Test("No automatic backup right after a restore, until the data changes (S53), with Show upcoming in backups")
     func automaticAfterRestore() async throws {
-        let harness = try BackupHarness()
+        // The shared settings count in the fingerprint, so the restore's must count them too (Tech Architect B1).
+        let harness = try BackupHarness(
+            sharedSettings: ShowUpcomingBackupSettings(store: InMemoryShowUpcomingSetting(showsUpcoming: false))
+        )
         let backup = try await harness.service.backUpNow()
         try harness.repository.saveTransaction(
             Transaction(amount: 10, accountID: try #require(try harness.repository.accounts().first).id)

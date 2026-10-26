@@ -181,6 +181,14 @@ extension BackupSnapshotFiles: BackupFileReading {
 
 /// The backup settings of this device (D195.4). They're app settings, not ledger data: a backup doesn't hold
 /// them and a restore doesn't change them. Implemented over `UserDefaults` in `LittleOrbitPersistence`.
+/// The shared settings a backup carries (D96.1): read when a backup is written, and put back after a restore has
+/// replaced the data.
+@MainActor
+public protocol BackupSharedSettingsStore: AnyObject {
+    func backupSharedSettings() -> BackupSharedSettings
+    func restoreSharedSettings(_ settings: BackupSharedSettings)
+}
+
 public protocol BackupSettingsStore: Sendable {
     func retention() -> BackupRetention
     func setRetention(_ retention: BackupRetention)

@@ -81,6 +81,11 @@ lets an unchanged year or attachment be cloned into the next backup.
 Dates are seconds since 1 January 2001 UTC as JSON numbers, so they round-trip exactly and don't depend on the
 time zone (D133). Amounts are JSON decimals. A transaction's year comes from its date in its own time zone.
 
+Shared settings (D96.1) are in `shared.json` under `sharedSettings`. The only one written today is `showUpcoming`
+(D348): `true` or `false`, the current "Show upcoming" switch, and a restore puts it back. A backup without it,
+as every backup made before D348 is, restores as On. Text left there by an older Next month, Next quarter or Next
+year range also reads as On, and only `false` (or the text `off`) reads as Off. This is still format 1.
+
 Per-device settings (App Lock, Hide amounts, report exclusions, theme, reconciliation drafts) are never part of a
 backup (D23, D62), and a restore doesn't change them. That includes N and M, the backup retention settings, which
 are app settings in `UserDefaults`.
