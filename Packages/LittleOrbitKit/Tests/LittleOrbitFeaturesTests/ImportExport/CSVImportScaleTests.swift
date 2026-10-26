@@ -6,7 +6,7 @@ import Testing
 
 /// A 5,200-row file (Tester's Mac pass on #190): the plan runs off the main actor, and Match and Review read rows
 /// that were built once, so drawing either step and ticking a row do no per-row formatting. Made-up rows.
-@Suite("CSV import at 5,200 rows (#190)")
+@Suite("CSV import at 5,200 rows (#190)", .serialized)
 @MainActor
 struct CSVImportScaleTests {
     typealias F = CSVFixture  // swiftlint:disable:this type_name

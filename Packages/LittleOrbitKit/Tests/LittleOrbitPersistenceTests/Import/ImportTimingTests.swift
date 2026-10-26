@@ -7,7 +7,7 @@ import Testing
 /// and remove the batch in one pass instead of once per row. Made-up rows; the bounds are loose so a slow CI
 /// machine still passes, and the timings are printed for the PR. Commit and Undo run `attempts` times, each on
 /// a fresh repository, and the fastest of each is checked, so one slow moment on a shared runner doesn't fail it.
-@Suite("Import commit and Undo timing (#30 S35)")
+@Suite("Import commit and Undo timing (#30 S35)", .serialized)
 @MainActor
 struct ImportTimingTests {
     static let zone = TimeZone(identifier: "Asia/Kolkata") ?? .gmt
