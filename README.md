@@ -61,9 +61,9 @@ The packages follow MVVM with Clean layering. Dependencies point inward: Domain 
 | --- | --- | --- | --- | --- |
 | LittleOrbit iOS | LittleOrbit iOS | iOS 27.0 | `app.littleorbit.ios` | `LittleOrbit.app` |
 | LittleOrbit macOS | LittleOrbit macOS | macOS 27.0 | `app.littleorbit.macos` | `LittleOrbitMac.app` |
-| LittleOrbit watchOS | LittleOrbit watchOS | watchOS 27.0 | `app.littleorbit.watchos` | `LittleOrbitWatch.app` |
+| LittleOrbit watchOS | LittleOrbit watchOS | watchOS 27.0 | `app.littleorbit.ios.watchkitapp` | `LittleOrbitWatch.app` |
 
-The on-screen name is **Little Orbit** on every platform. The watchOS app is standalone (it is not embedded in the iOS app) and runs in the watchOS simulator. Its generated Info.plist sets `WKWatchOnly` (it has no iOS companion), not `WKRunsIndependentlyOfCompanionApp`. Values live in `Config/`.
+The on-screen name is **Little Orbit** on every platform. The watchOS app is embedded in the iOS app (#17): running the iOS scheme on an iPhone simulator paired with an Apple Watch simulator installs both. Its generated Info.plist names `app.littleorbit.ios` as its companion and sets `WKRunsIndependentlyOfCompanionApp`, not `WKWatchOnly`, so it still launches and works when the iPhone app isn't running. The watch has no ledger of its own and no App Group: it reads the iPhone's data over WatchConnectivity (#48, D345). Values live in `Config/`.
 
 `Packages/LittleOrbitKit` declares the same iOS 27, macOS 27, and watchOS 27 floors (`// swift-tools-version: 6.4`).
 
@@ -88,7 +88,7 @@ xcrun simctl install <udid> derived-data/Build/Products/Debug-iphonesimulator/Li
 xcrun simctl launch <udid> app.littleorbit.ios
 ```
 
-For the watch app, use `-scheme 'LittleOrbit watchOS'`, `platform=watchOS Simulator,id=<udid>`, `Debug-watchsimulator/LittleOrbitWatch.app`, and `app.littleorbit.watchos`. For the Mac app, use `-scheme 'LittleOrbit macOS' -destination 'platform=macOS'`. `mise run build` builds every shared scheme with its default destination.
+For the watch app, use `-scheme 'LittleOrbit watchOS'`, `platform=watchOS Simulator,id=<udid>`, `Debug-watchsimulator/LittleOrbitWatch.app`, and `app.littleorbit.ios.watchkitapp`. For the Mac app, use `-scheme 'LittleOrbit macOS' -destination 'platform=macOS'`. `mise run build` builds every shared scheme with its default destination.
 
 ## Signing
 

@@ -41,7 +41,7 @@
       "children": [
         { "path": "<PRODUCTS>/LittleOrbit.app", "id": "7C2E9B1A4D6F48C2E9B1A4D6", "index": false },
         { "path": "<PRODUCTS>/LittleOrbitMac.app", "id": "7C2E9B1A4D6F48C2E9B1A4D7", "index": false },
-        { "path": "<PRODUCTS>/LittleOrbitWatch.app", "id": "7C2E9B1A4D6F48C2E9B1A4D8", "index": false },
+        { "path": "<PRODUCTS>/LittleOrbitWatch.app", "id": "7C2E9B1A4D6F48C2E9B1A4D8", "index": false, "target-membership": [ "LittleOrbit iOS/copy/Embed Watch Content" ] },
       ],
     },
   ],
@@ -61,11 +61,18 @@
         { "kind": "package", "package": "LittleOrbitKit", "product-name": "LittleOrbitPersistence" },
         { "kind": "package", "package": "LittleOrbitKit", "product-name": "LittleOrbitTheme" },
         { "kind": "package", "package": "LittleOrbitKit", "product-name": "LittleOrbitFeatures" },
+        "LittleOrbit watchOS",
       ],
       "build-phases": [
         "compile-sources",
         "frameworks",
         "resources",
+        {
+          "kind": "copy",
+          "name": "Embed Watch Content",
+          "bundle-base-path": "build-products-directory",
+          "relative-path": "$(CONTENTS_FOLDER_PATH)/Watch",
+        },
       ],
       "package-product-members": [
         {
@@ -148,6 +155,7 @@
         { "kind": "package", "package": "LittleOrbitKit", "product-name": "LittleOrbitDomain" },
         { "kind": "package", "package": "LittleOrbitKit", "product-name": "LittleOrbitPersistence" },
         { "kind": "package", "package": "LittleOrbitKit", "product-name": "LittleOrbitTheme" },
+        { "kind": "package", "package": "LittleOrbitKit", "product-name": "LittleOrbitFeatures" },
       ],
       "build-phases": [
         "compile-sources",
@@ -162,6 +170,10 @@
         }, {
           "package": "LittleOrbitKit",
           "product-name": "LittleOrbitDomain",
+          "build-phase": { "build-phase": "frameworks" },
+        }, {
+          "package": "LittleOrbitKit",
+          "product-name": "LittleOrbitFeatures",
           "build-phase": { "build-phase": "frameworks" },
         }, {
           "package": "LittleOrbitKit",
