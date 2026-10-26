@@ -49,6 +49,13 @@ final class FakeWatchSessions: WatchContextSession, WatchPhoneLink {
         phoneLink?.watchStateChanged()
     }
 
+    /// The watch app is deleted and installed again, and the session reports both in one callback: the flags look
+    /// the same before and after (Tech Architect 5648120868 NB1).
+    func reinstallInOneCallback() {
+        watchContext = nil
+        phoneLink?.watchStateChanged()
+    }
+
     /// The watch app is deleted: it loses its context, and the session says so.
     func removeWatchApp() {
         watchHasApp = false

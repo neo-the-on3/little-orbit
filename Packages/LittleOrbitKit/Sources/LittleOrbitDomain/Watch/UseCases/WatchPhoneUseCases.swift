@@ -236,9 +236,9 @@ public protocol WatchCompanionLink: AnyObject {
     /// `.waiting` when there's no one to give it to yet (activation hasn't completed, no watch is paired or the
     /// watch app isn't installed); `onWatchChanged` says when to publish again. Throws when the session refuses it.
     func publish(_ snapshot: Data) throws -> WatchPublishResult
-    /// Called when activation completes with the watch app installed, and when pairing or the install changes and
-    /// leaves it installed: the watch may not have the last snapshot, even one already delivered (Tech Architect
-    /// 5646901449 NB1, 5647974743).
+    /// Called when activation completes with the watch app installed, and on each watch-state change while the
+    /// watch can receive: the watch may not have the last snapshot, even one already delivered (Tech Architect
+    /// 5646901449 NB1, 5647974743, 5648120868 NB1).
     func onWatchChanged(_ handler: @escaping @MainActor () -> Void)
 }
 
