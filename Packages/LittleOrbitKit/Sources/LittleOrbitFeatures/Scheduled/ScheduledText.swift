@@ -321,6 +321,12 @@ enum ScheduledText {
         CategoryAlert(title: CategoryText.couldntSaveTitle, message: nothingChanged)
     }
 
+    /// "Rent has been deleted. Nothing was changed.", the stale-step entry: an Edit form's Save after its item was
+    /// deleted elsewhere (#258, D389.2).
+    static func deletedNothingSaved(_ name: String) -> CategoryAlert {
+        CategoryAlert(title: CategoryText.couldntSaveTitle, message: StaleText.deleted(name))
+    }
+
     static var loadFailed: CategoryAlert {
         CategoryAlert(
             title: FeatureText.string(

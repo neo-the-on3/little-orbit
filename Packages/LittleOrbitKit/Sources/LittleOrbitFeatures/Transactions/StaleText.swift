@@ -23,7 +23,8 @@ enum StaleText {
     static func deleted(_ name: String) -> String {
         FeatureText.string(
             "\(name) has been deleted. Nothing was changed.",
-            comment: "Alert message: Undo or Redo of a record or account deleted since. Its name. Name no cause.",
+            comment:
+                "Alert message: Undo or Redo of a record or account deleted since, or a transaction's or scheduled item's Edit form saved after it was deleted. Its name. Name no cause.",
         )
     }
 

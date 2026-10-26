@@ -109,12 +109,19 @@
             }
             .alert(
                 model.alert?.title ?? "",
-                isPresented: Binding(get: { model.alert != nil }, set: { if !$0 { model.alert = nil } }),
+                isPresented: $model.isAlertPresented,
                 presenting: model.alert,
             ) { _ in
-                Button(model.okayTitle) { model.alert = nil }
+                // The cancel role makes Esc on the Mac this OK. Either way the alert's dismissal closes the form when
+                // its item was deleted elsewhere (#258).
+                Button(model.okayTitle, role: .cancel) {}
             } message: { alert in
                 Text(alert.message)
+            }
+            .onChange(of: model.closeRequested) { _, closes in
+                if closes {
+                    dismiss()
+                }
             }
         }
     }
