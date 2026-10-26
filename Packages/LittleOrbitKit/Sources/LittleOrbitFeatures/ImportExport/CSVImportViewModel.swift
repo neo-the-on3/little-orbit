@@ -66,6 +66,13 @@ public final class CSVImportViewModel {
     public private(set) var isPlanning = false
     public private(set) var receipt: ImportReceipt?
     public internal(set) var isUndone = false
+    /// D108, D381.4: the store changed after the import's own change, so Undo Import is no longer offered.
+    public internal(set) var isUndoWindowOver = false
+    /// D381.4, V1: VoiceOver focus is on Undo Import now. The summary keeps this up to date.
+    @ObservationIgnored public var isUndoFocused = false
+    /// D381.4, V1: the window ended while VoiceOver focus was on Undo Import or its confirmation was open, so the
+    /// summary moves focus to its title. Otherwise focus stays where it is.
+    public internal(set) var movesFocusToSummaryTitle = false
     /// D327.1: “Your data changed, so this preview was updated.”, shown inline at the top of the current step
     /// after the preview re-planned because the ledger changed; `nil` otherwise. It isn't an alert.
     public internal(set) var dataChangedNotice: String?
@@ -78,6 +85,9 @@ public final class CSVImportViewModel {
     @ObservationIgnored let locale: Locale
     @ObservationIgnored let timeZone: TimeZone
     @ObservationIgnored let changed: () -> Void
+    /// The shared store-change signal's value now, and its value just after this import's own change (D381.4).
+    @ObservationIgnored let revision: @MainActor () -> Int
+    @ObservationIgnored var importRevision: Int?
     /// The ledger the preview was planned against. Observed, so the account and match options redraw after a
     /// re-plan (D327.1).
     var ledger = TransactionLedger()
@@ -103,6 +113,7 @@ public final class CSVImportViewModel {
         locale: Locale = .current,
         timeZone: TimeZone = .current,
         changed: @escaping () -> Void = {},
+        revision: @escaping @MainActor () -> Int = { 0 },
         overlayPause: @escaping @MainActor () async -> Void = { try? await Task.sleep(for: .milliseconds(32)) },
         planPause: @escaping @MainActor (ImportReadSettings, ImportChoices) async -> Void = { _, _ in },
     ) {
@@ -113,6 +124,7 @@ public final class CSVImportViewModel {
         self.locale = locale
         self.timeZone = timeZone
         self.changed = changed
+        self.revision = revision
         money = MoneyFormatter(locale: locale)
     }
 
@@ -456,8 +468,12 @@ public final class CSVImportViewModel {
         do {
             receipt = try useCases.ledger.commit(preview, selection: selection, fileName: fileName)
             isUndone = false
+            isUndoWindowOver = false
+            isUndoFocused = false
+            movesFocusToSummaryTitle = false
             step = .summary
             changed()
+            importRevision = revision()
             ImportLog.imported(receipt?.importedCount ?? 0)
         } catch {
             ImportLog.event(.commitFailed)

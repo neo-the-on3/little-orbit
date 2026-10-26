@@ -39,9 +39,12 @@ public final class ImportExportFeature {
     }
 
     public func makeImport() -> CSVImportViewModel {
-        CSVImportViewModel(useCases: useCases.importing, defaultCurrency: useCases.defaultCurrency) { [weak updates] in
-            updates?.changed()
-        }
+        CSVImportViewModel(
+            useCases: useCases.importing,
+            defaultCurrency: useCases.defaultCurrency,
+            changed: { [weak updates] in updates?.changed() },
+            revision: { [weak updates] in updates?.revision ?? 0 },
+        )
     }
 
     public func makeExport() -> CSVExportViewModel {
