@@ -132,6 +132,19 @@
         }
       }
     },
+    "%1$@ · %2$@.": {
+      "comment": "Apple Watch message, first sentence: %1$@ is the scheduled item’s name and %2$@ the occurrence’s due date, such as 20 Oct.",
+      "extractionState": "manual",
+      "generatesSymbol": false,
+      "localizations": {
+        "en": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "%1$@ · %2$@."
+          }
+        }
+      }
+    },
     "%1$@ · %2$lld": {
       "comment": "Payee row, right side: %1$@ is the payee’s last-used category; %2$lld is how many transactions use the payee.",
       "extractionState": "manual",
@@ -967,6 +980,32 @@
           "stringUnit": {
             "state": "translated",
             "value": "All data on this %1$@ will be replaced with this backup (%2$@). Your current data is saved first as a Before restore backup, so you can go back. App Lock, Hide amounts, report exclusions and theme on this %1$@ don’t change."
+          }
+        }
+      }
+    },
+    "Already paid on iPhone": {
+      "comment": "Apple Watch message title: a Pay or Skip from the watch did nothing, because this occurrence was already paid on the iPhone.",
+      "extractionState": "manual",
+      "generatesSymbol": false,
+      "localizations": {
+        "en": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Already paid on iPhone"
+          }
+        }
+      }
+    },
+    "Already skipped on iPhone": {
+      "comment": "Apple Watch message title: a Pay or Skip from the watch did nothing, because this occurrence was already skipped on the iPhone.",
+      "extractionState": "manual",
+      "generatesSymbol": false,
+      "localizations": {
+        "en": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Already skipped on iPhone"
           }
         }
       }
@@ -3362,6 +3401,19 @@
         }
       }
     },
+    "Deleted on iPhone": {
+      "comment": "Apple Watch message title: a Pay or Skip from the watch did nothing, because the scheduled item was deleted on the iPhone.",
+      "extractionState": "manual",
+      "generatesSymbol": false,
+      "localizations": {
+        "en": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Deleted on iPhone"
+          }
+        }
+      }
+    },
     "Delete…": {
       "comment": "Button on a backup that asks to delete it.",
       "extractionState": "manual",
@@ -5621,6 +5673,19 @@
         }
       }
     },
+    "Paid · syncing": {
+      "comment": "Apple Watch, Scheduled list row: paid on the watch, waiting for the iPhone to record it.",
+      "extractionState": "manual",
+      "generatesSymbol": false,
+      "localizations": {
+        "en": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Paid · syncing"
+          }
+        }
+      }
+    },
     "Parent": {
       "comment": "Category editor row: the subcategory’s parent category.",
       "extractionState": "manual",
@@ -5630,6 +5695,19 @@
           "stringUnit": {
             "state": "translated",
             "value": "Parent"
+          }
+        }
+      }
+    },
+    "Pay": {
+      "comment": "Apple Watch, a scheduled occurrence: records it on the iPhone, dated today.",
+      "extractionState": "manual",
+      "generatesSymbol": false,
+      "localizations": {
+        "en": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Pay"
           }
         }
       }
@@ -6112,6 +6190,19 @@
         }
       }
     },
+    "Skipped · syncing": {
+      "comment": "Apple Watch, Scheduled list row: skipped on the watch, waiting for the iPhone to apply it.",
+      "extractionState": "manual",
+      "generatesSymbol": false,
+      "localizations": {
+        "en": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Skipped · syncing"
+          }
+        }
+      }
+    },
     "Shortened": {
       "comment": "CSV import Review: the count of rows whose description or notes were shortened to fit.",
       "extractionState": "manual",
@@ -6558,6 +6649,19 @@
           "stringUnit": {
             "state": "translated",
             "value": "This file isn’t encrypted and contains all your financial data."
+          }
+        }
+      }
+    },
+    "Today": {
+      "comment": "Apple Watch, Scheduled list row: this occurrence is due today.",
+      "extractionState": "manual",
+      "generatesSymbol": false,
+      "localizations": {
+        "en": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Today"
           }
         }
       }
@@ -7143,6 +7247,19 @@
         }
       }
     },
+    "Your Pay from the watch wasn’t recorded, and %@ is unchanged.": {
+      "comment": "Apple Watch message, after its title and the item and date: the Pay tapped on the watch recorded nothing. %@ is the account it would have recorded into.",
+      "extractionState": "manual",
+      "generatesSymbol": false,
+      "localizations": {
+        "en": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Your Pay from the watch wasn’t recorded, and %@ is unchanged."
+          }
+        }
+      }
+    },
     "Your data changed, so this preview was updated.": {
       "comment": "CSV import: an inline note at the top of the current step, and a VoiceOver announcement, when accounts, categories, payees or transactions changed while the import sheet was open and the preview was planned again (D327.1).",
       "extractionState": "manual",
@@ -7273,6 +7390,19 @@
           "stringUnit": {
             "state": "translated",
             "value": "little-orbit makes a backup once a day after you change something. Backups stay on this %@."
+          }
+        }
+      }
+    },
+    "Your Skip from the watch wasn’t applied.": {
+      "comment": "Apple Watch message, after its title and the item and date: the Skip tapped on the watch did nothing.",
+      "extractionState": "manual",
+      "generatesSymbol": false,
+      "localizations": {
+        "en": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Your Skip from the watch wasn’t applied."
           }
         }
       }
