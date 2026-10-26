@@ -5622,7 +5622,7 @@
       }
     },
     "OK": {
-      "comment": "Closes a category, payee, scheduled item or transaction alert, such as “Couldn’t Save Changes” after an edited item was deleted (there OK also closes the Edit form), or a CSV import or export alert, or dismisses the Scheduled list’s card about watch actions for good.",
+      "comment": "Closes a category, payee, scheduled item or transaction alert, such as “Couldn’t Save Changes” after an edited item was deleted (there OK also closes the Edit form), the Mac’s Bulk Edit alert about deleted transactions, or a CSV import or export alert, or dismisses the Scheduled list’s card about watch actions for good.",
       "extractionState": "manual",
       "generatesSymbol": false,
       "localizations": {
@@ -8831,6 +8831,91 @@
           "stringUnit": {
             "state": "translated",
             "value": "Couldn’t Apply Watch Actions"
+          }
+        }
+      }
+    },
+    "Couldn’t Apply Changes": {
+      "comment": "Bulk edit on the Mac: alert title when Apply found that some of the selected transactions were deleted elsewhere, so nothing was changed. The alert has only an OK button (D393).",
+      "extractionState": "manual",
+      "localizations": {
+        "en": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Couldn’t Apply Changes"
+          }
+        }
+      }
+    },
+    "%lld of the selected transactions have been deleted. Nothing was changed.": {
+      "comment": "Bulk edit on the Mac: message under “Couldn’t Apply Changes”. %lld is how many of the selected transactions were deleted elsewhere (1 or more) since the Edit Transactions sheet opened; none of the selected transactions were changed. Translate the whole sentence for each plural form (D393).",
+      "extractionState": "manual",
+      "localizations": {
+        "en": {
+          "variations": {
+            "plural": {
+              "one": {
+                "stringUnit": {
+                  "state": "translated",
+                  "value": "%lld of the selected transactions has been deleted. Nothing was changed."
+                }
+              },
+              "other": {
+                "stringUnit": {
+                  "state": "translated",
+                  "value": "%lld of the selected transactions have been deleted. Nothing was changed."
+                }
+              }
+            }
+          }
+        }
+      }
+    },
+    "transactions.bulkEdit.title": {
+      "comment": "Bulk edit on the Mac: title of the Edit Transactions sheet, which changes the ticked fields on every selected transaction. %lld is how many transactions are selected (1 or more; it can drop to 1 after some were deleted elsewhere). Translate the whole phrase for each plural form (D396).",
+      "extractionState": "manual",
+      "generatesSymbol": false,
+      "localizations": {
+        "en": {
+          "variations": {
+            "plural": {
+              "one": {
+                "stringUnit": {
+                  "state": "translated",
+                  "value": "Edit %lld Transaction"
+                }
+              },
+              "other": {
+                "stringUnit": {
+                  "state": "translated",
+                  "value": "Edit %lld Transactions"
+                }
+              }
+            }
+          }
+        }
+      }
+    },
+    "Apply to %lld Transactions": {
+      "comment": "Bulk edit on the Mac: the sheet's Apply button, “Apply to 1 Transaction” or “Apply to 3 Transactions”, which changes the ticked fields on every selected transaction. %lld is how many transactions are selected (1 or more). Translate the whole phrase for each plural form (D393).",
+      "extractionState": "manual",
+      "localizations": {
+        "en": {
+          "variations": {
+            "plural": {
+              "one": {
+                "stringUnit": {
+                  "state": "translated",
+                  "value": "Apply to %lld Transaction"
+                }
+              },
+              "other": {
+                "stringUnit": {
+                  "state": "translated",
+                  "value": "Apply to %lld Transactions"
+                }
+              }
+            }
           }
         }
       }

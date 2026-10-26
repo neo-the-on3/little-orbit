@@ -33,7 +33,7 @@ struct BulkEditViewModelTests {
         let rows = mixed()
         let model = model(try F.repository(rows), rows.map(\.id))
         #expect(model.title == "Edit 5 Transactions")
-        #expect(model.applyTitle == "Apply to 5")
+        #expect(model.applyTitle == "Apply to 5 Transactions")
         #expect(!model.canApply)
     }
 
@@ -129,6 +129,34 @@ struct BulkEditViewModelTests {
         #expect(saved.first { $0.id == first.id }?.payeeID == oldPayee.id)
         let savedTransfer = try #require(saved.first { $0.id == transfer.id })
         #expect(savedTransfer.payeeID == nil && savedTransfer.details == "card payment" && savedTransfer.amount == 500)
+    }
+
+    @Test("Redo after Undo of a bulk payee edit applies it again, with its new payee (S77)")
+    func redo() throws {
+        let oldPayee = Payee(name: "Old Shop")
+        let repository = try F.repository()
+        try repository.savePayee(oldPayee)
+        var first = F.expense(100, on: F.date(2026, 10, 15))
+        first.payeeID = oldPayee.id
+        var second = F.expense(200, on: F.date(2026, 10, 16))
+        second.payeeID = oldPayee.id
+        try repository.saveTransaction(first)
+        try repository.saveTransaction(second)
+        let model = model(repository, [first.id, second.id])
+        model.editsPayee = true
+        model.payeeText = "Corner Bakery"
+        let change = try #require(model.apply())
+        let window = UndoTestSupport.undo(
+            change,
+            useCases: TransactionUseCases(repository: repository, categoryNames: CatalogDefaultCategoryNames()),
+        )
+        #expect(try repository.transactions().allSatisfy { $0.payeeID == oldPayee.id })
+        #expect(try repository.payees().allSatisfy { $0.name != "Corner Bakery" })
+
+        window.history.redo()
+        let payee = try #require(try repository.payees().first { $0.name == "Corner Bakery" })
+        #expect(try repository.transactions().allSatisfy { $0.payeeID == payee.id })
+        #expect(try repository.transactions().count == 2)
     }
 
     @Test("Account change moves the rows")

@@ -19,27 +19,36 @@ public final class BulkEditViewModel {
     public var editsAccount = false
     public var accountID: UUID?
     public var errorMessage: String?
+    /// “Couldn’t Apply Changes”, when selected transactions were deleted elsewhere (D393.2).
+    public private(set) var alert: CategoryAlert?
+    /// Set when a refused apply found every selected transaction deleted: dismissing the alert closes the sheet,
+    /// as the edit form does when its transaction is gone (#262, #266). Reset at the start of each apply.
+    public private(set) var alertClosesForm = false
+    /// Set once the alert is dismissed in any way while `alertClosesForm`: the sheet closes (D394).
+    public private(set) var closeRequested = false
     public private(set) var accountOptions: [TransactionAccountOption] = []
 
     @ObservationIgnored private let loadLedger: any LoadTransactionLedgerUseCase
-    @ObservationIgnored private let saveTransactions: any SaveTransactionsUseCase
+    @ObservationIgnored private let applyBulkEdit: any ApplyBulkEditUseCase
     @ObservationIgnored private let now: () -> Date
     @ObservationIgnored private let timeZone: TimeZone
-    @ObservationIgnored private var selection: [Transaction] = []
+    /// Observed: the title and the Apply button count it, and it shrinks after a refused apply (D393.3).
+    private var selection: [Transaction] = []
+    /// The selected transactions a refused apply found deleted; they leave the selection when its alert goes.
+    @ObservationIgnored private var deletedIDs: Set<UUID> = []
     @ObservationIgnored private var accounts: [Account] = []
     @ObservationIgnored private var categories: [TransactionCategory] = []
-    @ObservationIgnored private var payees: [Payee] = []
 
     public init(
         loadLedger: any LoadTransactionLedgerUseCase,
-        saveTransactions: any SaveTransactionsUseCase,
+        applyBulkEdit: any ApplyBulkEditUseCase,
         transactionIDs: [UUID],
         locale: Locale = .current,
         timeZone: TimeZone = .current,
         now: @escaping () -> Date = Date.init,
     ) {
         self.loadLedger = loadLedger
-        self.saveTransactions = saveTransactions
+        self.applyBulkEdit = applyBulkEdit
         self.now = now
         self.timeZone = timeZone
         self.date = now()
@@ -49,7 +58,6 @@ public final class BulkEditViewModel {
             selection = ledger.transactions.filter { ids.contains($0.id) }
             accounts = ledger.accounts
             categories = ledger.categories
-            payees = ledger.payees
         } catch {
             errorMessage = AccountHistoryViewModel.message(for: error)
         }
@@ -71,7 +79,7 @@ public final class BulkEditViewModel {
     ) {
         self.init(
             loadLedger: useCases.loadLedger,
-            saveTransactions: useCases.saveTransactions,
+            applyBulkEdit: useCases.bulkEdit,
             transactionIDs: transactionIDs,
             locale: locale,
             timeZone: timeZone,
@@ -80,8 +88,8 @@ public final class BulkEditViewModel {
     }
 
     public var count: Int { selection.count }
-    public var title: String { "Edit \(count) Transactions" }
-    public var applyTitle: String { "Apply to \(count)" }
+    public var title: String { BulkEditText.title(count: count) }
+    public var applyTitle: String { BulkEditText.applyTitle(count: count) }
 
     public var categoryAvailability: CategoryAvailability { BulkEditRules.categoryAvailability(for: selection) }
 
@@ -193,48 +201,59 @@ public final class BulkEditViewModel {
         !selection.isEmpty && !changes.isEmpty && BulkEditRules.issues(changes).isEmpty
     }
 
-    /// Applies the ticked fields and returns the change to register for Undo.
+    /// Applies the ticked fields and returns the change to register for Undo. If selected transactions were deleted
+    /// elsewhere, nothing is written and it returns `nil`, so no Undo step is recorded, with `alert` set (D393).
     @discardableResult
     public func apply() -> TransactionChange? {
+        alertClosesForm = false
         guard canApply else {
             return nil
         }
+        let request = BulkEditRequest(
+            selection: selection,
+            changes: changes,
+            payeeName: payeeText,
+            accounts: accounts,
+            timeZoneID: timeZone.identifier,
+            now: now(),
+        )
         do {
-            var changes = changes
-            var created: [Payee] = []
-            if editsPayee {
-                let resolved = try resolvePayee()
-                changes.payeeID = .some(resolved?.payee.id)
-                created = resolved.flatMap { $0.isNew ? [$0.payee] : nil } ?? []
-            }
-            let updated = BulkEditRules.apply(
-                changes,
-                to: selection,
-                accounts: accounts,
-                timeZoneID: timeZone.identifier,
+            return try applyBulkEdit.apply(request)
+        } catch let deleted as BulkEditSelectionDeleted {
+            deletedIDs = deleted.ids
+            alertClosesForm = selection.allSatisfy { deleted.ids.contains($0.id) }
+            alert = CategoryAlert(
+                title: BulkEditText.couldntApplyTitle,
+                message: BulkEditText.deletedMessage(count: deleted.ids.count),
             )
-            let changed = zip(selection, updated).filter { $0 != $1 }.map(\.1)
-            if changed.isEmpty {
-                return .replaced([])
-            }
-            // A payee this edit created goes with it on Undo, unless something else uses it by then (D191.4).
-            return try saveTransactions.save(changed, creating: created)
+            return nil
         } catch {
             errorMessage = AccountHistoryViewModel.message(for: error)
             return nil
         }
     }
 
-    private func resolvePayee() throws -> ResolvedPayee? {
-        guard let name = TransactionText.trimmed(payeeText) else {
-            return nil
+    /// Whether the alert shows, for its `isPresented` binding. Any dismissal, OK or Esc, clears it and drops the
+    /// deleted transactions from the selection; the ticked fields and their values stay, so Apply works again on
+    /// the rest (D393.3). When every selected transaction was deleted, the selection ends up empty and the sheet
+    /// closes (`closeRequested`), since there's nothing left to edit. Setting it to `true` changes nothing.
+    public var isAlertPresented: Bool {
+        get { alert != nil }
+        set {
+            guard !newValue, alert != nil else {
+                return
+            }
+            alert = nil
+            selection.removeAll { deletedIDs.contains($0.id) }
+            deletedIDs = []
+            if alertClosesForm {
+                closeRequested = true
+            }
         }
-        guard let resolved = try saveTransactions.resolvePayee(named: name, createdAt: now()) else {
-            return nil
-        }
-        if !payees.contains(where: { $0.id == resolved.payee.id }) {
-            payees.append(resolved.payee)
-        }
-        return resolved
+    }
+
+    /// The alert's OK.
+    public func acknowledgeAlert() {
+        isAlertPresented = false
     }
 }

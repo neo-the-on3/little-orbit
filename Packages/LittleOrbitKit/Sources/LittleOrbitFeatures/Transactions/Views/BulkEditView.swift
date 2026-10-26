@@ -86,6 +86,23 @@
             }
             .padding(Layout.marginMacOS)
             .frame(minWidth: 460)
+            // Apply found selected transactions deleted elsewhere (D393). OK, Esc or any dismissal sets the binding to
+            // false, which drops them from the selection and keeps the sheet open with the ticked fields. When every
+            // selected transaction was deleted, the model's `closeRequested` closes the sheet instead.
+            .alert(
+                model.alert?.title ?? "",
+                isPresented: $model.isAlertPresented,
+                presenting: model.alert,
+            ) { _ in
+                Button("OK", role: .cancel) { model.acknowledgeAlert() }
+            } message: { alert in
+                Text(alert.message)
+            }
+            .onChange(of: model.closeRequested) { _, close in
+                if close {
+                    dismiss()
+                }
+            }
         }
 
         @ViewBuilder private var categoryRow: some View {
