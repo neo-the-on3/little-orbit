@@ -54,6 +54,26 @@ public struct LedgerSnapshot: Equatable, Sendable {
             + scheduledItems.filter { $0.payeeID == payeeID && $0.deletedAt == nil }.count
     }
 
+    /// Which of `ids` a live transaction or scheduled item uses, in one pass over each: the same rule as
+    /// `payeeReferenceCount`, for many payees at once (#250).
+    public func payeesInUse(among ids: Set<UUID>) -> Set<UUID> {
+        var used: Set<UUID> = []
+        guard !ids.isEmpty else {
+            return used
+        }
+        for transaction in transactions where transaction.deletedAt == nil {
+            if let payeeID = transaction.payeeID, ids.contains(payeeID) {
+                used.insert(payeeID)
+            }
+        }
+        for item in scheduledItems where item.deletedAt == nil {
+            if let payeeID = item.payeeID, ids.contains(payeeID) {
+                used.insert(payeeID)
+            }
+        }
+        return used
+    }
+
     public func payeesVisible() -> [Payee] {
         payees.filter { $0.deletedAt == nil }
     }
