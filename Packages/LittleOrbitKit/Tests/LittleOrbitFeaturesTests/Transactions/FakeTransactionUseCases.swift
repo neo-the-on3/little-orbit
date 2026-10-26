@@ -19,7 +19,13 @@ final class FakeTransactionUseCases {
     private(set) var reverted: [TransactionChange] = []
 
     var useCases: TransactionUseCases {
-        TransactionUseCases(loadLedger: self, accountHistory: self, saveTransactions: self, changes: self)
+        TransactionUseCases(
+            loadLedger: self,
+            accountHistory: self,
+            saveTransactions: self,
+            changes: self,
+            bulkEdit: self,
+        )
     }
 
     func ledger() throws -> TransactionLedger { contents }
