@@ -250,6 +250,11 @@
         /// The watch's Scheduled list and its Pay and Skip (#197 item 10); `nil` with no watch link (the Mac).
         let watch: WatchPhoneFeature?
         let scheduledUpcoming: ScheduledUpcomingSettingsModel
+        #if DEBUG
+            /// Debug › Tap Scheduled Reminder on the Mac and in the iPad menu bar: a warm tap on a reminder, through
+            /// the same handler as `-LittleOrbitScheduledReminderTap` (S33). Debug builds only.
+            let tapScheduledReminder: () -> Void
+        #endif
 
         init(
             repository: some LedgerRepository & ScheduleRepository & LedgerBackupSource,
@@ -334,6 +339,11 @@
             )
             watch?.start()
             scheduledUpcoming = ScheduledUpcomingSettingsModel(store: showUpcoming, updates: transactions.updates)
+            #if DEBUG
+                // S33 testing hooks, not in release builds: the launch argument's tap, and Debug › Tap Scheduled
+                // Reminder on the Mac and in the iPad menu bar.
+                tapScheduledReminder = AppComposition.debugReminderTaps(for: scheduled, through: notifications)
+            #endif
             // Account delete returns its change; the screens record it in the transactions' history (#93). Every
             // account change moves the shared store-change signal, so an open import re-plans (D327.1).
             accounts = AccountsFeature(

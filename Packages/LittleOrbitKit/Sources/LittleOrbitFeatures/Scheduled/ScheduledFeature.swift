@@ -139,6 +139,16 @@ public final class ScheduledFeature: PlannedItemsSource {
         return PlannedItemCounts(scheduledItemCount: board.itemCount, overdueOccurrenceCount: board.overdueCount)
     }
 
+    /// The item a reminder tap that names none opens, for Debug › Tap Scheduled Reminder (S33): the first item with
+    /// Notify when due on, else the first item, in the list's order. `nil` with no items, or when the store can't
+    /// be read.
+    public func defaultReminderItemID() -> UUID? {
+        guard let items = try? useCases.load.listing().board.items else {
+            return nil
+        }
+        return (items.first(where: \.notifiesWhenDue) ?? items.first)?.id
+    }
+
     public func makeList() -> ScheduledListViewModel {
         ScheduledListViewModel(useCases: useCases, locale: locale) { [weak updates] in updates?.changed() }
     }

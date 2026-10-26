@@ -16,6 +16,10 @@ struct LittleOrbitIOSApp: App {
         WindowGroup {
             RootView(features: features, backgroundActivity: backgroundActivity)
         }
+        #if DEBUG
+            // The iPad menu bar's Debug › Tap Scheduled Reminder, as on the Mac (S33). iPhone has no menu bar.
+            .commands { ScheduledReminderTapCommand(features: features) }
+        #endif
     }
 }
 
