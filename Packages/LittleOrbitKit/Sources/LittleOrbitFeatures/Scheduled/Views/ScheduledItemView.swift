@@ -8,9 +8,10 @@
     struct ScheduledItemView: View {
         let model: ScheduledListViewModel
         let itemID: UUID
+        var settling: ScheduledSettling = .dueOccurrences
 
         var body: some View {
-            ScheduledItemContent(model: model, itemID: itemID)
+            ScheduledItemContent(model: model, itemID: itemID, settling: settling)
                 .scheduledSheets(model, on: .item(itemID))
                 .onAppear { model.screenAppeared(.item(itemID)) }
                 .onDisappear { model.screenDisappeared(.item(itemID)) }
@@ -20,6 +21,7 @@
     private struct ScheduledItemContent: View {
         let model: ScheduledListViewModel
         let itemID: UUID
+        let settling: ScheduledSettling
         @Environment(\.dismiss) private var dismiss
 
         var body: some View {
@@ -34,9 +36,10 @@
                             Text(verbatim: detail.next)
                         }
                     }
-                    if !detail.due.isEmpty {
+                    let settleable = model.settleableRows(of: itemID, settling)
+                    if !settleable.isEmpty {
                         Section {
-                            ForEach(detail.due) { row in
+                            ForEach(settleable) { row in
                                 // The status is the row's own text; each button is named by its title alone, not
                                 // by the row's label (Tester's #198 Mac pass).
                                 HStack {

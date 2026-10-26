@@ -53,14 +53,14 @@ public protocol LoadScheduledUseCase {
 public protocol ManageScheduledUseCase {
     /// Saves `item`. A new item carries the zone it was made in, `currentTimeZoneID()`, and keeps it.
     func save(_ item: ScheduledItem) throws
-    /// Saves an edit of a stored item. When it's no longer stored (deleted elsewhere while the form was open), it
-    /// throws `LedgerValidationError.missingScheduledItem` and saves nothing; an edit never adds it back (#258).
-    func update(_ item: ScheduledItem) throws
     func delete(id: UUID) throws
-    /// The payee named `name`, ignoring case and outer spaces, or a new one saved with that name, for the form's
-    /// "Create “‹name›”" row (#197, #23). Only picking that row creates a payee; saving the item never does. `nil`
-    /// for a blank name.
-    func createPayee(named name: String) throws -> Payee?
+    /// The form's Save of a new item: `item` with the payee its field left pending, created or unarchived in the
+    /// same save (D350.1, D351.2). Returns what the window's Undo step needs (D351.1).
+    func save(_ item: ScheduledItem, payee: ScheduledPendingPayee?) throws -> ScheduledItemSaveChange
+    /// The form's Save of an edit, as `save(_:payee:)`. When the item is no longer stored (deleted elsewhere while
+    /// the form was open), it throws `LedgerValidationError.missingScheduledItem` and saves nothing, the pending
+    /// payee included; an edit never adds the item back (#258).
+    func update(_ item: ScheduledItem, payee: ScheduledPendingPayee?) throws -> ScheduledItemSaveChange
     /// Pay now: records the occurrence on `occurrence`, dated today. `nil` when it was already settled.
     @discardableResult
     func payNow(itemID: UUID, occurrence: CalendarDay) throws -> Transaction?
@@ -206,25 +206,16 @@ public struct DefaultScheduledUseCases: LoadScheduledUseCase, ManageScheduledUse
         try repository.saveScheduledItem(item, today: today(), now: now())
     }
 
-    public func update(_ item: ScheduledItem) throws {
-        try repository.updateScheduledItem(item, today: today(), now: now())
-    }
-
     public func delete(id: UUID) throws {
         try repository.deleteScheduledItem(id: id)
     }
 
-    public func createPayee(named name: String) throws -> Payee? {
-        let trimmed = name.trimmingCharacters(in: .whitespacesAndNewlines)
-        guard !trimmed.isEmpty else {
-            return nil
-        }
-        if let existing = try repository.scheduleLedger().payees.first(where: { $0.isLive(named: trimmed) }) {
-            return existing
-        }
-        let payee = Payee(name: trimmed, createdAt: now())
-        try repository.savePayee(payee)
-        return try repository.scheduleLedger().payees.first { $0.id == payee.id } ?? payee
+    public func save(_ item: ScheduledItem, payee: ScheduledPendingPayee?) throws -> ScheduledItemSaveChange {
+        try repository.saveScheduledItem(item, payee: payee, today: today(), now: now())
+    }
+
+    public func update(_ item: ScheduledItem, payee: ScheduledPendingPayee?) throws -> ScheduledItemSaveChange {
+        try repository.updateScheduledItem(item, payee: payee, today: today(), now: now())
     }
 
     @discardableResult

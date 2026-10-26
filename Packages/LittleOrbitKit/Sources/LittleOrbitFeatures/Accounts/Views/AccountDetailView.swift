@@ -66,7 +66,7 @@
                 }
                 .sheet(item: $scheduledItem) { route in
                     if let scheduled {
-                        ScheduledItemSheet(feature: scheduled, itemID: route.itemID)
+                        ScheduledItemSheet(feature: scheduled, itemID: route.itemID, occurrence: route.occurrence)
                     }
                 }
                 #if os(macOS)
@@ -139,10 +139,11 @@
             undoHistory.undo()
         }
 
-        /// A scheduled Upcoming row opens its scheduled item, with Pay and Skip (S85); stored rows open the editor.
+        /// A scheduled Upcoming row opens its scheduled item (S85), with Pay and Skip only when the row is the item's
+        /// next occurrence (D350.2); stored rows open the editor.
         private func edit(_ ids: Set<UUID>) {
             if ids.count == 1, let id = ids.first, let itemID = history.scheduledItemID(of: id) {
-                openScheduled(itemID)
+                openScheduled(itemID, occurrence: history.scheduledOccurrence(of: id))
                 return
             }
             let ids = history.storedIDs(ids)
@@ -154,9 +155,9 @@
             }
         }
 
-        private func openScheduled(_ itemID: UUID) {
+        private func openScheduled(_ itemID: UUID, occurrence: CalendarDay?) {
             if scheduled != nil {
-                scheduledItem = ScheduledItemRoute(itemID: itemID)
+                scheduledItem = ScheduledItemRoute(itemID: itemID, occurrence: occurrence)
             }
         }
 
@@ -319,7 +320,7 @@
                 if let itemID = row.scheduledItemID {
                     // Not a stored transaction: it opens its scheduled item and can't be swiped away (S85).
                     Button {
-                        openScheduled(itemID)
+                        openScheduled(itemID, occurrence: row.scheduledOccurrence)
                     } label: {
                         TransactionRowView(row: row)
                     }

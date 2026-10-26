@@ -17,8 +17,94 @@
             try mutate { try LedgerBook.savingScheduledItem(item, in: $0, today: today, now: now) }
         }
 
-        public func updateScheduledItem(_ item: ScheduledItem, today: CalendarDay, now: Date) throws {
-            try mutate { try LedgerBook.updatingScheduledItem(item, in: $0, today: today, now: now) }
+        public func saveScheduledItem(
+            _ item: ScheduledItem,
+            payee: ScheduledPendingPayee?,
+            today: CalendarDay,
+            now: Date,
+        ) throws -> ScheduledItemSaveChange {
+            try formSave(side: .saved) {
+                try LedgerBook.savingScheduledItem(item, payee: payee, in: $0, today: today, now: now)
+            }
+        }
+
+        public func updateScheduledItem(
+            _ item: ScheduledItem,
+            payee: ScheduledPendingPayee?,
+            today: CalendarDay,
+            now: Date,
+        ) throws -> ScheduledItemSaveChange {
+            try formSave(side: .saved) {
+                try LedgerBook.updatingScheduledItem(item, payee: payee, in: $0, today: today, now: now)
+            }
+        }
+
+        /// One form save: the existence check, the stored rows it reads, the payee it creates or unarchives and the
+        /// item's write are one `atomically` block. A refusal, such as an edit of an item deleted elsewhere, throws
+        /// before anything is written, so nothing changes in the context (#258). The change is then read back as
+        /// stored.
+        private func formSave(
+            side: SaveSide,
+            _ body: (LedgerSnapshot) throws -> (snapshot: LedgerSnapshot, change: ScheduledItemSaveChange),
+        ) throws -> ScheduledItemSaveChange {
+            let change = try atomically {
+                let outcome = try body(try load())
+                try persist(outcome.snapshot)
+                return outcome.change
+            }
+            return try storedAsWritten(change, side: side)
+        }
+
+        public func revertScheduledItemSave(_ change: ScheduledItemSaveChange, undone: Bool) throws
+            -> ScheduledItemSaveRevert
+        {
+            // As `formSave`: the check, the read, any payee it removes or puts back and the write are one block, and
+            // an Undo or Redo of an item deleted since throws before anything is written (#258).
+            let result = try atomically {
+                let outcome = try LedgerBook.revertingScheduledItemSave(
+                    change,
+                    undone: undone,
+                    in: try load(),
+                    now: now(),
+                )
+                if case .reverted = outcome.result {
+                    try persist(outcome.snapshot)
+                }
+                return outcome.result
+            }
+            guard case .reverted(let left) = result else {
+                return result
+            }
+            return .reverted(try storedAsWritten(left, side: undone ? .saved : .undone))
+        }
+
+        private enum SaveSide { case saved, undone }
+
+        /// The change read back as the store keeps it, so the next Undo or Redo compares like with like. After a
+        /// save or Redo the store holds the 'after' side and the payees as saved; after an Undo it holds the
+        /// 'before' side only (B2), and the 'after' side stays what Redo puts back.
+        private func storedAsWritten(_ change: ScheduledItemSaveChange, side: SaveSide) throws
+            -> ScheduledItemSaveChange
+        {
+            let stored = try load()
+            let item = stored.scheduledItems.first { $0.id == change.itemID }
+            var change = change
+            switch side {
+            case .saved:
+                if let item {
+                    change.after = item
+                }
+                let read = { (payee: Payee?) in
+                    payee.map { payee in stored.payees.first { $0.id == payee.id } ?? payee }
+                }
+                change.createdPayee = read(change.createdPayee)
+                change.unarchivedPayeeAsSaved = read(change.unarchivedPayeeAsSaved)
+            case .undone:
+                if change.before != nil, let item {
+                    change.before = item
+                }
+            }
+            return change
         }
 
         public func deleteScheduledItem(id: UUID) throws {

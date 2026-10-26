@@ -23,6 +23,8 @@ public struct TransactionRowModel: Identifiable, Equatable, Sendable {
     /// The scheduled item a projected Upcoming row comes from (S85): it shows a "Scheduled" tag and opens that item.
     /// `nil` for a stored transaction, including future ones the user entered.
     public var scheduledItemID: UUID?
+    /// The due day of the scheduled occurrence a projected row shows; `nil` on a stored transaction (D350.2).
+    public var scheduledOccurrence: CalendarDay?
     public var symbolName: String
     public var isUncategorised: Bool
     /// macOS columns.
@@ -137,6 +139,7 @@ struct TransactionRowContext {
             balanceValueText: balance,
             isUpcoming: isUpcoming,
             scheduledItemID: entry.scheduledItemID,
+            scheduledOccurrence: entry.scheduledItemID == nil ? nil : day,
             symbolName: isTransfer ? "arrow.left.arrow.right" : category?.iconName ?? "questionmark",
             isUncategorised: !isTransfer && category == nil,
             dateText: text.fullDate(day),

@@ -112,14 +112,33 @@
         }
     }
 
-    /// The "Upcoming" tag on future-dated rows (D21). An image and text, not a `Label`: in the history row a
-    /// `Label` drew only its clock (Tester's #87 recheck, bug 7), and no label style can drop the word here.
+    /// The "Upcoming" tag on future-dated rows (D21).
     struct UpcomingTag: View {
         var body: some View {
+            HistoryTag(label: Text("Upcoming"), symbol: "clock")
+        }
+    }
+
+    /// The "Scheduled" tag beside "Upcoming" on a scheduled occurrence that isn't recorded yet (S85). It's drawn
+    /// exactly as the Upcoming tag, with its own word and symbol (UI Designer, #203 item 1).
+    struct ScheduledTag: View {
+        var body: some View {
+            HistoryTag(label: Text(HistoryScheduledText.tag), symbol: "calendar.badge.clock")
+        }
+    }
+
+    /// One tag on a history row: a symbol and a word in the info colours, in a capsule. An image and text, not a
+    /// `Label`: in the history row a `Label` drew only its clock (Tester's #87 recheck, bug 7), and no label style
+    /// can drop the word here.
+    struct HistoryTag: View {
+        let label: Text
+        let symbol: String
+
+        var body: some View {
             HStack(spacing: Spacing.space1) {
-                Image(systemName: "clock")
+                Image(systemName: symbol)
                     .accessibilityHidden(true)
-                Text("Upcoming")
+                label
             }
             .accessibilityElement(children: .combine)
             .font(.theme(Typography.IOS.caption1))
@@ -130,26 +149,6 @@
             .padding(.horizontal, Spacing.space2)
             .padding(.vertical, Spacing.spaceHalf)
             .background(Color(ThemeColor.statusInfoBg), in: Capsule())
-        }
-    }
-
-    /// The "Scheduled" tag beside "Upcoming" on a scheduled occurrence that isn't recorded yet (S85), in the
-    /// secondary label colour so it reads as a note on the Upcoming tag.
-    struct ScheduledTag: View {
-        var body: some View {
-            HStack(spacing: Spacing.space1) {
-                Image(systemName: "calendar.badge.clock")
-                    .accessibilityHidden(true)
-                Text(HistoryScheduledText.tag)
-            }
-            .accessibilityElement(children: .combine)
-            .font(.theme(Typography.IOS.caption1))
-            .lineLimit(1)
-            .fixedSize()
-            .foregroundStyle(Color(ThemeColor.labelSecondary))
-            .padding(.horizontal, Spacing.space2)
-            .padding(.vertical, Spacing.spaceHalf)
-            .background(Color(ThemeColor.fillSecondary), in: Capsule())
         }
     }
 

@@ -226,14 +226,30 @@ final class FlakyScheduleRepository: ScheduleRepository {
 
     func scheduleLedger() throws -> LedgerSnapshot { try base.scheduleLedger() }
 
-    func savePayee(_ payee: Payee) throws { try base.savePayee(payee) }
-
     func saveScheduledItem(_ item: ScheduledItem, today: CalendarDay, now: Date) throws {
         try base.saveScheduledItem(item, today: today, now: now)
     }
 
-    func updateScheduledItem(_ item: ScheduledItem, today: CalendarDay, now: Date) throws {
-        try base.updateScheduledItem(item, today: today, now: now)
+    func saveScheduledItem(
+        _ item: ScheduledItem,
+        payee: ScheduledPendingPayee?,
+        today: CalendarDay,
+        now: Date,
+    ) throws -> ScheduledItemSaveChange {
+        try base.saveScheduledItem(item, payee: payee, today: today, now: now)
+    }
+
+    func updateScheduledItem(
+        _ item: ScheduledItem,
+        payee: ScheduledPendingPayee?,
+        today: CalendarDay,
+        now: Date,
+    ) throws -> ScheduledItemSaveChange {
+        try base.updateScheduledItem(item, payee: payee, today: today, now: now)
+    }
+
+    func revertScheduledItemSave(_ change: ScheduledItemSaveChange, undone: Bool) throws -> ScheduledItemSaveRevert {
+        try base.revertScheduledItemSave(change, undone: undone)
     }
 
     func deleteScheduledItem(id: UUID) throws { try base.deleteScheduledItem(id: id) }

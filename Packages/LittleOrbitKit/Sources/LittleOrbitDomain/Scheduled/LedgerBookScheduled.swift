@@ -59,6 +59,7 @@ extension LedgerBook {
                 item.resumesOn = [afterLast, today, existing.resumesOn].compactMap { $0 }.max()
             }
             try validate(item, in: snapshot)
+            touchPayees(from: existing.payeeID, to: item.payeeID, in: &snapshot, now: now)
             replace(&snapshot.scheduledItems, with: item)
         } else {
             item.occurrences = []
@@ -66,24 +67,23 @@ extension LedgerBook {
             item.createdAt = now
             item.updatedAt = now
             try validate(item, in: snapshot)
+            touchPayees(from: nil, to: item.payeeID, in: &snapshot, now: now)
             snapshot.scheduledItems.append(item)
         }
         return snapshot
     }
 
-    /// Changes an item that's already stored, as `savingScheduledItem(_:in:today:now:)` does. An item that isn't
-    /// stored, because it was deleted while an Edit form was open, say in another window, throws
-    /// `missingScheduledItem` and changes nothing: an edit never adds the item back as a new one (#258).
-    public static func updatingScheduledItem(
-        _ item: ScheduledItem,
-        in snapshot: LedgerSnapshot,
-        today: CalendarDay,
-        now: Date,
-    ) throws -> LedgerSnapshot {
-        guard snapshot.scheduledItems.contains(where: { $0.id == item.id }) else {
-            throw LedgerValidationError.missingScheduledItem
+    /// A payee given to or taken from a scheduled item is touched, as a transaction touches its payee, so a form
+    /// save's Undo can tell it was used since (D362, D363).
+    private static func touchPayees(from old: UUID?, to new: UUID?, in snapshot: inout LedgerSnapshot, now: Date) {
+        guard old != new else {
+            return
         }
-        return try savingScheduledItem(item, in: snapshot, today: today, now: now)
+        for id in [old, new].compactMap({ $0 }) {
+            if let index = snapshot.payees.firstIndex(where: { $0.id == id && $0.deletedAt == nil }) {
+                snapshot.payees[index].updatedAt = now
+            }
+        }
     }
 
     /// Deletes the item. The transactions it recorded stay as they are (D114).

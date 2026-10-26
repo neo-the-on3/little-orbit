@@ -62,12 +62,21 @@ public final class WindowUndoHistory {
         let impact: ChangeImpact
         /// The account a whole-account step is about.
         let account: Account?
+        /// What a stale alert names when the step holds no transaction to name: a scheduled item (D351.1).
+        let subject: String?
         /// The name the `UndoManager` shows for it now.
         var title = ""
 
-        init(change: TransactionChange, outcome: ChangeOutcome, impact: ChangeImpact) {
+        init(
+            change: TransactionChange,
+            outcome: ChangeOutcome,
+            impact: ChangeImpact,
+            name: String? = nil,
+            subject: String? = nil,
+        ) {
             // The account is in the name, kept as it was when the step was recorded (D198).
-            self.name = UndoActionTitle.stepName(of: change, impact: impact)
+            self.name = name ?? UndoActionTitle.stepName(of: change, impact: impact)
+            self.subject = subject
             self.change = change
             self.outcome = outcome
             self.impact = impact
@@ -158,9 +167,11 @@ public final class WindowUndoHistory {
     // MARK: Recording
 
     /// Records a change the user just made in this window and returns its step's id. Any toast or notice
-    /// closes (D164.2). Deleting an account replaces this window's steps for it with this one (D187.9).
+    /// closes (D164.2). Deleting an account replaces this window's steps for it with this one (D187.9). `name`
+    /// replaces the name the change would get, and `subject` is what a stale alert names: a Scheduled form save
+    /// is "New Scheduled Item Rent", named for its item as the list shows it (D351.1).
     @discardableResult
-    public func record(_ change: TransactionChange) -> UUID {
+    public func record(_ change: TransactionChange, named name: String? = nil, subject: String? = nil) -> UUID {
         var impact = ChangeImpact()
         var newAlert: UndoAlert?
         do {
@@ -174,7 +185,13 @@ public final class WindowUndoHistory {
         if outcome == nil {
             newAlert = UndoAlert(title: Self.changeFailedTitle, message: Self.unreadableChange)
         }
-        let step = Step(change: change, outcome: outcome ?? ChangeOutcome(), impact: impact)
+        let step = Step(
+            change: change,
+            outcome: outcome ?? ChangeOutcome(),
+            impact: impact,
+            name: name,
+            subject: subject,
+        )
         if let account = step.account {
             for old in (undoSteps + redoSteps) where old.accountIDs.contains(account.id) {
                 registrar?.removeSteps(for: old)
@@ -366,7 +383,9 @@ public final class WindowUndoHistory {
             switch step.change.core {
             case .added: .restored
             case .removed: .deleted
-            case .replaced, .removedAccount, .addedAccount, .createdPayees, .removedPayees: .updated
+            case .replaced, .removedAccount, .addedAccount, .createdPayees, .removedPayees, .savedScheduledItem,
+                .revertedScheduledItemSave:
+                .updated
             }
         return UndoNotice(
             message: UndoActionTitle.placed(UndoText.notice(effect, count: count), step.impact),

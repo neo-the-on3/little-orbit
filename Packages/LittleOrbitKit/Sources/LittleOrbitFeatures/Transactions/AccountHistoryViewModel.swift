@@ -17,9 +17,10 @@ public struct BulkDeletePrompt: Equatable, Sendable, Identifiable {
     public var ids: [UUID]
 
     public var id: [UUID] { ids }
-    public var title: String { "Delete \(ids.count) transactions?" }
+    // One stored row in a selection with scheduled rows asks too (Tech Architect, #203 NB 7).
+    public var title: String { ids.count == 1 ? "Delete Transaction?" : "Delete \(ids.count) transactions?" }
     public var message: String { "You can undo this." }
-    public var confirmTitle: String { "Delete \(ids.count) Transactions" }
+    public var confirmTitle: String { ids.count == 1 ? "Delete Transaction" : "Delete \(ids.count) Transactions" }
 }
 
 /// One account's history (#23): current balance, Upcoming at the top with projected balances (D21), then days
@@ -99,14 +100,21 @@ public final class AccountHistoryViewModel {
         upcoming.first { $0.id == rowID }?.scheduledItemID
     }
 
+    /// The occurrence a projected scheduled row shows, for its item sheet's Pay and Skip (D350.2).
+    public func scheduledOccurrence(of rowID: UUID) -> CalendarDay? {
+        upcoming.first { $0.id == rowID }?.scheduledOccurrence
+    }
+
     /// The rows that are stored transactions, which can be edited or deleted; projected scheduled rows can't.
     public func storedIDs(_ ids: Set<UUID>) -> Set<UUID> {
         ids.filter { scheduledItemID(of: $0) == nil }
     }
 
-    /// "5 selected" under the macOS table.
+    /// "5 selected" under the macOS table, counting stored transactions only: a scheduled row can't be edited or
+    /// deleted (Tech Architect, #203 NB 7).
     public var selectionSummary: String? {
-        selection.isEmpty ? nil : "\(selection.count) selected"
+        let count = storedIDs(selection).count
+        return count == 0 ? nil : "\(count) selected"
     }
 
     public func load() {
@@ -177,14 +185,16 @@ public final class AccountHistoryViewModel {
         }
     }
 
-    /// The Delete key, swipe or context menu. One row is deleted at once with Undo; several ask first.
+    /// The Delete key, swipe or context menu. One row is deleted at once with Undo; several ask first. Scheduled
+    /// rows are never deleted, and a selection that includes one asks first even for one stored row, so Delete
+    /// never acts on less than what's selected without saying so (Tech Architect, #203 NB 7).
     @discardableResult
-    public func requestDelete(ids: Set<UUID>) -> TransactionChange? {
-        let ids = storedIDs(ids)
-        if ids.count == 1, let id = ids.first {
+    public func requestDelete(ids requested: Set<UUID>) -> TransactionChange? {
+        let ids = storedIDs(requested)
+        if requested.count == 1, let id = ids.first {
             return delete(id: id)
         }
-        if ids.count > 1 {
+        if !ids.isEmpty {
             let order = allRows.map(\.id)
             deletePrompt = BulkDeletePrompt(ids: order.filter { ids.contains($0) })
         }
