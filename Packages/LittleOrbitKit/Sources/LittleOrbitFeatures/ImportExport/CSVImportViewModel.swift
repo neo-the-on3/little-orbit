@@ -33,13 +33,13 @@ public final class CSVImportViewModel {
     public var dateOrder: ImportDateOrder = .dayMonthYear {
         didSet {
             if !isApplyingDetection { pickedDateOrder = dateOrder }
-            if dateOrder != oldValue { invalidatePreview() }
+            if dateOrder != oldValue { settingChanged(owner: .columns) }
         }
     }
     public var decimalSeparator: ImportDecimalSeparator = .period {
         didSet {
             if !isApplyingDetection { pickedSeparator = decimalSeparator }
-            if decimalSeparator != oldValue { invalidatePreview() }
+            if decimalSeparator != oldValue { settingChanged(owner: .columns) }
         }
     }
     public internal(set) var choices = ImportChoices()
@@ -61,8 +61,9 @@ public final class CSVImportViewModel {
     @ObservationIgnored var reviewTotalsBuilds = 0
     /// Counts plans, so only the latest one lands.
     @ObservationIgnored var planGeneration = 0
-    /// Whether the latest plan is still running, so dropping it also clears `isWorking`.
-    @ObservationIgnored private var isPlanning = false
+    /// Whether the latest plan is still running, so dropping it also clears `isWorking`. The sheet turns the
+    /// Format pickers off while it's on, so a menu pick can't apply after the plan lands (#232).
+    public private(set) var isPlanning = false
     public private(set) var receipt: ImportReceipt?
     public internal(set) var isUndone = false
     /// D327.1: “Your data changed, so this preview was updated.”, shown inline at the top of the current step
@@ -262,7 +263,7 @@ public final class CSVImportViewModel {
         dateOrder = pickedDateOrder ?? detected.date.order
         decimalSeparator = pickedSeparator ?? detected.decimalSeparator
         isApplyingDetection = false
-        invalidatePreview()
+        settingChanged(owner: .columns)
     }
 
     private var settings: ImportReadSettings {
@@ -289,7 +290,7 @@ public final class CSVImportViewModel {
         get { choices.targetAccountID }
         set {
             choices.targetAccountID = newValue
-            invalidatePreview()
+            settingChanged(owner: needsTargetAccount ? .account : .columns)
         }
     }
 
@@ -371,6 +372,16 @@ public final class CSVImportViewModel {
         reviewState = ImportReviewState()
         matchSections = ImportMatchSections()
         reviewTotals = ImportReviewTotals()
+    }
+
+    /// A read setting or the target account changed: drops the preview and any running plan (B3). A change that
+    /// arrives once the sheet has moved on, such as a menu pick applied just after the plan landed, goes back to
+    /// the step that owns the setting, so Match or Review is never left empty with Next off (#232).
+    private func settingChanged(owner: Step) {
+        invalidatePreview()
+        if step == .match || step == .review {
+            step = owner
+        }
     }
 
     /// Plans the preview off the main actor, with the Review and Match rows, behind “Reading…”. Only the latest
