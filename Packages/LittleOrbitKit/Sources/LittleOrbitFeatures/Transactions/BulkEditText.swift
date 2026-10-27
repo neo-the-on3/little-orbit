@@ -58,9 +58,17 @@ enum BulkEditText {
     }
 
     /// N5: VoiceOver's announcement when Apply finishes, “Changed 1 transaction.” or “Changed 3 transactions.”,
-    /// a whole-phrase plural; 0 when no selected row needed the change.
+    /// a whole-phrase plural. When no selected row needed the change it's its own sentence, never
+    /// “Changed 0 transactions.” (D402).
     static func appliedAnnouncement(count: Int) -> String {
-        FeatureText.plural("Changed %lld transactions.", one: "Changed %lld transaction.", count)
+        guard count > 0 else {
+            return FeatureText.string(
+                "No transactions changed.",
+                comment:
+                    "Bulk edit on the Mac: VoiceOver announcement when Apply finishes and none of the selected transactions needed the change, so nothing was saved and there is nothing to undo (D402).",
+            )
+        }
+        return FeatureText.plural("Changed %lld transactions.", one: "Changed %lld transaction.", count)
     }
 
     /// The sheet title's catalog key.
