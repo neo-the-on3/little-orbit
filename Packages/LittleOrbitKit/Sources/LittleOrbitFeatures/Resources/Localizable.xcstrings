@@ -5584,6 +5584,18 @@
         }
       }
     },
+    "No transactions changed.": {
+      "comment": "Bulk edit on the Mac: VoiceOver announcement when Apply finishes and none of the selected transactions needed the change, so nothing was saved and there is nothing to undo (D402).",
+      "extractionState": "manual",
+      "localizations": {
+        "en": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "No transactions changed."
+          }
+        }
+      }
+    },
     "No Transactions Found in This File": {
       "comment": "CSV import: alert title when the picked file has only a header row (D323.7).",
       "extractionState": "manual",
@@ -9283,7 +9295,7 @@
       }
     },
     "Changed %lld transactions.": {
-      "comment": "Bulk edit on the Mac: VoiceOver announcement when Apply finishes. %lld is how many of the selected transactions changed (0 or more). Translate the whole phrase for each plural form (N5).",
+      "comment": "Bulk edit on the Mac: VoiceOver announcement when Apply finishes. %lld is how many of the selected transactions changed (1 or more; none has its own entry). Translate the whole phrase for each plural form (N5).",
       "extractionState": "manual",
       "localizations": {
         "en": {
