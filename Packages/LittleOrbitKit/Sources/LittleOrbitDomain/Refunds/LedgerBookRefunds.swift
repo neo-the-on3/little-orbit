@@ -25,7 +25,7 @@ extension LedgerBook {
     }
 
     /// Checks a refund against its original. `validate` has already rejected a link without `isRefund` (D33.1).
-    static func validateRefund(_ transaction: Transaction, in snapshot: LedgerSnapshot) throws {
+    static func validateRefund(_ transaction: Transaction, in index: LedgerIndex) throws {
         guard transaction.isRefund else {
             return
         }
@@ -35,25 +35,24 @@ extension LedgerBook {
         guard let originalID = transaction.refundOfID else {
             return
         }
-        guard
-            originalID != transaction.id,
-            let original = snapshot.transactions.first(where: { $0.id == originalID && $0.deletedAt == nil })
-        else {
+        guard originalID != transaction.id, let original = index.liveTransaction(originalID) else {
             throw LedgerValidationError.refundOriginalMissing
         }
         if original.type != .expense || original.isRefund {
             throw LedgerValidationError.refundOriginalNotExpense
         }
-        if !snapshot.splitsVisible(for: original.id).isEmpty {
+        if !index.liveSplits(of: original.id).isEmpty {
             throw LedgerValidationError.refundOriginalIsSplit
         }
         if transaction.categoryID != original.categoryID {
             throw LedgerValidationError.refundCategoryMismatch
         }
-        if currency(of: transaction, in: snapshot) != currency(of: original, in: snapshot) {
+        if currency(of: transaction, in: index) != currency(of: original, in: index) {
             throw LedgerValidationError.refundCurrencyMismatch
         }
-        let refunded = refundedAmount(of: original.id, in: snapshot, excluding: transaction.id)
+        let refunded = index.linkedRefunds(of: original.id)
+            .filter { $0.id != transaction.id }
+            .reduce(Decimal(0)) { $0 + $1.amount }
         if refunded + transaction.amount > original.amount {
             throw LedgerValidationError.refundsExceedOriginal
         }
@@ -61,19 +60,19 @@ extension LedgerBook {
 
     /// Checks `transaction` against the refunds already linked to it: it stays an expense, in their currency,
     /// and its amount covers them (D33.5, D35.1).
-    static func validateOriginal(_ transaction: Transaction, in snapshot: LedgerSnapshot) throws {
+    static func validateOriginal(_ transaction: Transaction, in index: LedgerIndex) throws {
         guard transaction.deletedAt == nil else {
             return
         }
-        let refunds = linkedRefunds(of: transaction.id, in: snapshot).filter { $0.id != transaction.id }
+        let refunds = index.linkedRefunds(of: transaction.id).filter { $0.id != transaction.id }
         guard !refunds.isEmpty else {
             return
         }
         if transaction.type != .expense || transaction.isRefund {
             throw LedgerValidationError.originalHasRefunds
         }
-        let currency = currency(of: transaction, in: snapshot)
-        if refunds.contains(where: { self.currency(of: $0, in: snapshot) != currency }) {
+        let currency = currency(of: transaction, in: index)
+        if refunds.contains(where: { self.currency(of: $0, in: index) != currency }) {
             throw LedgerValidationError.refundCurrencyMismatch
         }
         let refunded = refunds.reduce(Decimal(0)) { $0 + $1.amount }
@@ -84,23 +83,29 @@ extension LedgerBook {
 
     /// After `original` is saved: its linked refunds take its category in the same change (D33.4), and if it
     /// was saved as deleted, they're unlinked as if it had been deleted (D19).
-    static func applyingOriginal(_ original: Transaction, to snapshot: inout LedgerSnapshot, now: Date) {
+    static func applyingOriginal(_ original: Transaction, to index: inout LedgerIndex, now: Date) {
+        let positions = index.refundPositions(of: original.id)
         if original.deletedAt != nil {
-            unlinkRefunds(of: [original.id], in: &snapshot, now: now)
+            // `unlinkRefunds(of:in:now:)` for this one original.
+            for position in positions {
+                var refund = index.snapshot.transactions[position]
+                refund.refundOfID = nil
+                refund.updatedAt = now
+                index.replace(at: position, with: refund)
+            }
             return
         }
         guard original.type == .expense else {
             return
         }
-        for index in snapshot.transactions.indices {
-            let refund = snapshot.transactions[index]
-            guard refund.refundOfID == original.id, refund.deletedAt == nil,
-                refund.categoryID != original.categoryID
-            else {
+        for position in positions {
+            var refund = index.snapshot.transactions[position]
+            guard refund.categoryID != original.categoryID else {
                 continue
             }
-            snapshot.transactions[index].categoryID = original.categoryID
-            snapshot.transactions[index].updatedAt = now
+            refund.categoryID = original.categoryID
+            refund.updatedAt = now
+            index.replace(at: position, with: refund)
         }
     }
 
@@ -122,7 +127,7 @@ extension LedgerBook {
     }
 
     /// The currency of the transaction's live account, or `nil` without one.
-    private static func currency(of transaction: Transaction, in snapshot: LedgerSnapshot) -> String? {
-        transaction.accountID.flatMap { activeAccount($0, in: snapshot) }?.currencyCode
+    private static func currency(of transaction: Transaction, in index: LedgerIndex) -> String? {
+        transaction.accountID.flatMap { index.account($0) }?.currencyCode
     }
 }
