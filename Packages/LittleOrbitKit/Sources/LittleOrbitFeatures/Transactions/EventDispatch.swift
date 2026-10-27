@@ -16,7 +16,7 @@ import LittleOrbitCore
 /// Accessibility action (VoiceOver, Voice Control, an AXPress) outside any dispatch: they see none, and Edit › Undo
 /// and Redo are off during a batch for them instead (`UndoCommandGate`, D407). The Mac app's entry point makes the
 /// subclass the shared app before SwiftUI starts (`LittleOrbitApplication.makeShared()`), and reports at launch
-/// whether it took (`reportSource(live:)`).
+/// whether it took (`reportSource(live:)`); the first queued-command check makes sure again (`checkWiringOnce()`).
 ///
 /// A sendEvent override rather than a local event monitor: a monitor sees an event as it arrives, but not when its
 /// dispatch ends, so it can't tell a command sent while handling that event from one sent after it.
@@ -47,6 +47,10 @@ final class EventDispatch {
     var nextTopLevelTurn: @MainActor (@escaping @MainActor () -> Void) -> Void = EventDispatch.mainDefaultModeTurn
     /// Whether a clear is already asked for.
     private var clearAsked = false
+    /// Whether the first queued-command check has checked the app's `NSApplication` (m12).
+    private(set) var wiringChecked = false
+    /// What a check that finds the subclass missing stops with: a Debug build's assertion; tests record it.
+    var wiringFailed: @MainActor (String) -> Void = { assertionFailure($0) }
 
     /// The launch self-check: whether the app's `NSApplication` is the one that records its dispatches. Signposted
     /// once, as `ledger.command.dispatchSource` tagged `live` or `absent`, and logged (`app.littleorbit`, `Batch`).
@@ -65,6 +69,38 @@ final class EventDispatch {
                 log.fault("ledger.command.dispatchSource absent: queued Undo and Redo are never dropped (D403)")
             }
         #endif
+    }
+
+    /// The check that always runs, whatever the entry point did (Tech Architect's m12 on 4839e5d): on the first
+    /// queued-command decision, whether `NSApp` is a `LittleOrbitApplication`. Signposted once as
+    /// `ledger.command.dispatchWiring`, tagged `live` or `absent`; absent is also logged as a fault and stops a
+    /// Debug build. Nothing with no app at all, as under `swift test`, and nothing off the Mac.
+    func checkWiringOnce() {
+        #if canImport(AppKit) && os(macOS)
+            guard !wiringChecked, let app = NSApp else {
+                return
+            }
+            checkWiring(appIsSubclass: app is LittleOrbitApplication)
+        #endif
+    }
+
+    /// `checkWiringOnce()` for an app that is, or isn't, the subclass: only the first call checks.
+    func checkWiring(appIsSubclass: Bool) {
+        guard !wiringChecked else {
+            return
+        }
+        wiringChecked = true
+        BatchTrace.event("ledger.command.dispatchWiring", appIsSubclass ? "live" : "absent")
+        guard !appIsSubclass else {
+            return
+        }
+        let message =
+            "ledger.command.dispatchWiring absent: NSApp isn't LittleOrbitApplication, so a queued ⌘Z is "
+            + "never dropped and Edit › Undo stays on during a batch (D407)"
+        #if canImport(OSLog)
+            Logger(subsystem: "app.littleorbit", category: "Batch").fault("\(message, privacy: .public)")
+        #endif
+        wiringFailed(message)
     }
 
     /// `body`, with `entry` being dispatched until it returns, nested inside any already being dispatched.

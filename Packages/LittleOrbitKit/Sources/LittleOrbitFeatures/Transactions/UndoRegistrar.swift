@@ -114,6 +114,8 @@ public final class LedgerUpdates {
     @ObservationIgnored var dispatchingEvent: @MainActor () -> QueuedCommandPolicy.Event? = {
         EventDispatch.shared.current
     }
+    /// Checks once that the app records its dispatches, whatever ran at launch (m12 on 4839e5d); tests set it.
+    @ObservationIgnored var checkDispatchWiring: @MainActor () -> Void = { EventDispatch.shared.checkWiringOnce() }
     /// Turns Edit › Undo and Redo off while a batch runs, and on again as it ends (D407.1); tests give their own.
     @ObservationIgnored var commandGate = UndoCommandGate.shared
     /// Window refreshes running now, by the revision of the change that started them (`refreshStarted(for:)`), so
