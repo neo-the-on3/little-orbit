@@ -58,7 +58,7 @@ struct OffMainSaveSheetTests {
 
     @Test("The bar turns indeterminate once, at the save, and never back; the title and \"Saving…\" stay (UI Designer)")
     func indeterminateOneWay() async throws {
-        let progress = BatchProgress(kind: .undoing, total: 4, showAfter: .seconds(60))
+        let progress = BatchProgress(kind: .undoing, total: 4, showAfter: nil)
         let reporter = progress.start()
         let title = progress.title
         reporter.rowsDone(2)

@@ -111,12 +111,12 @@ final class TestWindow {
         )
         queue = { [unowned self] in self.pending.append($0) }
         history.attach(undoManager)
-        // A clock that stands still, and a sheet timer that doesn't fire: a slow parallel run mustn't show a batch's
+        // A clock that stands still, and no sheet timer at all: a slow parallel run mustn't show a batch's
         // sheet, which holds its announcement. A sheet still shows when `BatchSheetPolicy` asks for one before the
         // save (Tech Architect's review 5666870090).
         let instant = ContinuousClock.now
         history.progressClock = { instant }
-        history.progressShowDelay = .seconds(60)
+        history.progressShowDelay = nil
         history.announce = { [unowned self] in self.announcements.append($0) }
         undoManager.afterAction = { [unowned self] in self.settle() }
     }

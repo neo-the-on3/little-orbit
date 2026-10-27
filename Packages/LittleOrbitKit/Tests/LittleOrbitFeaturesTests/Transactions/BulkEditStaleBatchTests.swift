@@ -111,7 +111,7 @@ struct BulkEditStaleBatchTests {
         model.editsCategory = true
         model.categoryID = DefaultCategoryID.food
         // No sheet: its timer mustn't fire on a slow run (review 5666870090).
-        model.progressShowDelay = .seconds(60)
+        model.progressShowDelay = nil
         let title = model.title
         #expect(await model.applyInBackground() == nil)
         #expect(model.alert?.title == "Couldn’t Apply Changes")

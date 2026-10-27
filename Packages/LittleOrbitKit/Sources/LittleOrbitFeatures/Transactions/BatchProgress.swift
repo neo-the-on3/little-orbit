@@ -55,13 +55,14 @@ public final class BatchProgress {
     /// How many times the sheet went up: once at most (#285, B).
     @ObservationIgnored private(set) var timesShown = 0
 
-    @ObservationIgnored private let delay: Duration
+    /// `showDelay` in the app; `nil` runs no timer, for tests that must never see a timer-shown sheet.
+    @ObservationIgnored private let delay: Duration?
     @ObservationIgnored private let now: () -> ContinuousClock.Instant
     @ObservationIgnored private var startedAt: ContinuousClock.Instant?
     @ObservationIgnored private var continuation: AsyncStream<Int>.Continuation?
     @ObservationIgnored private var tasks: [Task<Void, Never>] = []
     /// The half-second timer, for the build only: the save cancels it.
-    @ObservationIgnored private var timer: Task<Void, Never>?
+    @ObservationIgnored private(set) var timer: Task<Void, Never>?
     /// Set when the sheet's progress view appears.
     @ObservationIgnored private(set) var hasAppeared = false
     /// Whether the sheet's progress view is on screen: it appeared and hasn't disappeared yet.
@@ -88,7 +89,7 @@ public final class BatchProgress {
     init(
         kind: Kind,
         total: Int,
-        showAfter delay: Duration = BatchProgress.showDelay,
+        showAfter delay: Duration? = BatchProgress.showDelay,
         now: @escaping () -> ContinuousClock.Instant = { .now },
     ) {
         self.kind = kind
@@ -122,13 +123,15 @@ public final class BatchProgress {
             }
         )
         startedAt = now()
-        timer = Task { [weak self, delay] in
-            try? await Task.sleep(for: delay)
-            guard !Task.isCancelled, let self, !self.isShown else {
-                return
+        if let delay {
+            timer = Task { [weak self] in
+                try? await Task.sleep(for: delay)
+                guard !Task.isCancelled, let self, !self.isShown else {
+                    return
+                }
+                self.show()
+                BatchTrace.event("batch.sheet.shown", "timer")
             }
-            self.show()
-            BatchTrace.event("batch.sheet.shown", "timer")
         }
         return LedgerBatchReporter(
             rowsDone: { continuation.yield($0) },
