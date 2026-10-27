@@ -14,6 +14,14 @@ import LittleOrbitCore
 // A reading that can't be right holds nothing (fail open).
 
 extension UndoCommandGate {
+    /// How soon after a batch's end a menu must start tracking for a press inside that batch to hold it (B6 on
+    /// f43b0c4). A press queued while the main thread was blocked is handled within the first turns after the end,
+    /// well inside a second: `endBatch` already waits for the windows' refreshes and one free turn. A menu that opens
+    /// later, from Ctrl-F2, VoiceOver, an AXPress or a fresh click, wasn't opened by that press, and must find Undo on
+    /// (D407.1). One second leaves room for a slow Mac's first turns without holding a menu the user opens on
+    /// purpose afterwards; at worst such a menu has Undo off until it closes.
+    static let queuedPressLimit: TimeInterval = 1.0
+
     /// What a menu that started tracking did with the gate, for `ledger.editMenu.trackingPress`.
     enum TrackingDecision: Equatable {
         /// The press fell inside a batch: off until the menu closes.
@@ -34,7 +42,8 @@ extension UndoCommandGate {
     }
 
     /// A menu started tracking (`NSMenu.didBeginTrackingNotification`): holds Undo and Redo off until it closes when
-    /// the press that opened it fell inside the batch running now or the last one. Signposted as
+    /// the last left press fell inside the batch running now, or inside the last one with the menu starting within
+    /// `queuedPressLimit` of its end, so that press, queued, is what opened it. Signposted as
     /// `ledger.editMenu.trackingPress`, tagged `held`, `passed` or `noReading`, with, in order: the press time, the
     /// running batch's start, the last batch's start and end (-1 for each one there's none of), and whether the gate
     /// is closed after (1 or 0).
@@ -45,7 +54,8 @@ extension UndoCommandGate {
         let decision: TrackingDecision
         if let press {
             let inRunning = batchStart.map { press >= $0 && press <= now } ?? false
-            decision = inRunning || lastBatch?.contains(press) == true ? .held : .passed
+            let inJustEnded = lastBatch.map { $0.contains(press) && now - $0.upperBound <= Self.queuedPressLimit }
+            decision = inRunning || inJustEnded == true ? .held : .passed
         } else {
             decision = .noReading
         }
