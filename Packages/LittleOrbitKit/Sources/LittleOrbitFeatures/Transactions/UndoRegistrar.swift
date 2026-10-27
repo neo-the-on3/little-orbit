@@ -99,8 +99,13 @@ public final class LedgerUpdates {
     /// A Bulk Edit, or its Undo or Redo, is being built or saved in some window. Until it ends, every window's
     /// ledger writes are off, Undo and Redo included; nothing queues (#285, D398).
     public private(set) var isBatchRunning = false
-    /// When the last batch ended, on the `systemUptime` clock, for `dropsQueuedCommand` (Tester2, c8c6594).
-    @ObservationIgnored private(set) var lastBatchEnd: TimeInterval?
+    /// When the last batch ran, start to end, on the `systemUptime` clock, for `dropsQueuedCommand` (Tester2,
+    /// c8c6594; review 5666694381).
+    @ObservationIgnored private(set) var lastBatch: ClosedRange<TimeInterval>?
+    /// When the batch running now started.
+    @ObservationIgnored private var batchStart: TimeInterval?
+    /// The event whose command was dropped last: it drops no other.
+    @ObservationIgnored private var lastDroppedEventTime: TimeInterval?
     /// The `systemUptime` clock; tests set it.
     @ObservationIgnored var uptime: @MainActor () -> TimeInterval = { ProcessInfo.processInfo.systemUptime }
     /// The time of the event being handled; tests set it.
@@ -125,6 +130,7 @@ public final class LedgerUpdates {
             return false
         }
         isBatchRunning = true
+        batchStart = uptime()
         refreshHistories()
         return true
     }
@@ -134,14 +140,26 @@ public final class LedgerUpdates {
             return
         }
         isBatchRunning = false
-        lastBatchEnd = uptime()
+        let end = uptime()
+        lastBatch = min(batchStart ?? end, end)...end
+        batchStart = nil
         refreshHistories()
     }
 
-    /// Whether the command being handled was asked for before the last batch ended, so it waited in the event queue
-    /// while the save blocked the main thread: an Undo or Redo then does nothing (`QueuedCommandPolicy`).
+    /// Whether the command being handled was asked for while the last batch ran, so it waited in the event queue
+    /// while the save blocked the main thread: an Undo or Redo then does nothing (`QueuedCommandPolicy`). A `true`
+    /// uses up the event, so the next command it's seen with goes through.
     func dropsQueuedCommand() -> Bool {
-        QueuedCommandPolicy.dropsCommand(eventTime: currentEventTime(), lastBatchEnd: lastBatchEnd)
+        let eventTime = currentEventTime()
+        let drops = QueuedCommandPolicy.dropsCommand(
+            eventTime: eventTime,
+            lastBatch: lastBatch,
+            lastDroppedEventTime: lastDroppedEventTime,
+        )
+        if drops {
+            lastDroppedEventTime = eventTime
+        }
+        return drops
     }
 
     private func refreshHistories() {
