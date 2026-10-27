@@ -111,11 +111,10 @@
 
         // MARK: - Actions
 
-        /// Records a change in this window's history and refreshes. Adds and edits show no toast (D164.2).
+        /// Records a change in this window's history. Adds and edits show no toast (D164.2). Recording moves the
+        /// shared revision, whose `onChange` reloads this window once, as it does every other (N5).
         private func record(_ change: TransactionChange) {
             undoHistory.record(change)
-            history.load()
-            onChange()
         }
 
         /// Records a delete; on iOS and iPadOS the toast offers the same Undo step (D164.1, D164.2).
