@@ -69,6 +69,7 @@ extension DefaultApplyBulkEditUseCase {
             let written = try await repository.writeBatchOffMain(
                 changeSet.result.snapshot,
                 expectedRevision: changeSet.revision,
+                beforeInstall: reporter.willInstall,
             )
             if written {
                 return .saved(.replaced(changeSet.result.previous), creating: changeSet.created)

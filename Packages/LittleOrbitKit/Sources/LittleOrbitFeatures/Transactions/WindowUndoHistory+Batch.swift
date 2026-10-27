@@ -67,6 +67,8 @@ extension WindowUndoHistory {
             progressHandingOff()
             self?.batchHandedOff(stepID)
         }
+        // Saved off the main actor: the sheet goes before the result is installed (D405 on 3dc318b).
+        reporter.willInstall = { [weak self] in await self?.closeSheetBeforeInstall(stepID) }
         let changes = changes
         let change = step.change
         let outcome = step.outcome

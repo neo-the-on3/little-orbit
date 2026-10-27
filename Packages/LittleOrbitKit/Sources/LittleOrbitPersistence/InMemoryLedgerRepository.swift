@@ -173,12 +173,21 @@ public final class InMemoryLedgerRepository: LedgerRepository {
     public var savesBatchesOffMain: Bool { offMainSave != nil }
 
     public func writeBatchOffMain(_ snapshot: LedgerSnapshot, expectedRevision: UInt64) async throws -> Bool {
+        try await writeBatchOffMain(snapshot, expectedRevision: expectedRevision, beforeInstall: {})
+    }
+
+    public func writeBatchOffMain(
+        _ snapshot: LedgerSnapshot,
+        expectedRevision: UInt64,
+        beforeInstall: @escaping @MainActor @Sendable () async -> Void,
+    ) async throws -> Bool {
         guard writes == expectedRevision else {
             return false
         }
         if let offMainSave {
             try await offMainSave()
         }
+        await beforeInstall()
         self.snapshot = snapshot
         return true
     }

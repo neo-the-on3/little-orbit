@@ -16,6 +16,14 @@
         public var savesBatchesOffMain: Bool { true }
 
         public func writeBatchOffMain(_ snapshot: LedgerSnapshot, expectedRevision: UInt64) async throws -> Bool {
+            try await writeBatchOffMain(snapshot, expectedRevision: expectedRevision, beforeInstall: {})
+        }
+
+        public func writeBatchOffMain(
+            _ snapshot: LedgerSnapshot,
+            expectedRevision: UInt64,
+            beforeInstall: @escaping @MainActor @Sendable () async -> Void,
+        ) async throws -> Bool {
             guard writes == expectedRevision else {
                 return false
             }
@@ -24,7 +32,7 @@
                 try writeBatch(snapshot)
                 return true
             }
-            try await BackgroundBatchSave.run(snapshot, in: self)
+            try await BackgroundBatchSave.run(snapshot, in: self, beforeInstall: beforeInstall)
             return true
         }
 

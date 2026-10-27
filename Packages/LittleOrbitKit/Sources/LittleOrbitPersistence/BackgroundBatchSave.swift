@@ -44,7 +44,11 @@ enum BackgroundBatchSave {
     /// Everything up to the hand-off runs on the main actor before the first suspension, so the caller's revision
     /// check still holds when the plan is handed off.
     @MainActor
-    static func run<Store: BackgroundBatchStore>(_ snapshot: LedgerSnapshot, in store: Store) async throws {
+    static func run<Store: BackgroundBatchStore>(
+        _ snapshot: LedgerSnapshot,
+        in store: Store,
+        beforeInstall: @MainActor @Sendable () async -> Void = {},
+    ) async throws {
         let preparation = try BatchTrace.interval("bg.presave") { try store.prepareBackgroundBatch(snapshot) }
         let plan: Store.Plan
         switch preparation {
@@ -69,6 +73,11 @@ enum BackgroundBatchSave {
             store.dropCache(after: error)
             throw error
         }
+        // The caller's sheet closes now, and the install waits for it to go (`bg.install.wait`, idle on the main
+        // actor), so the install and the old context's teardown after it don't freeze the sheet (D405 on 3dc318b).
+        let wait = BatchTrace.begin("bg.install.wait")
+        await beforeInstall()
+        wait.end()
         store.beforeInstall?()
         BatchTrace.interval("bg.install") {
             if store.writeCount == handedOff {
@@ -77,5 +86,8 @@ enum BackgroundBatchSave {
                 store.dropCache(after: nil)
             }
         }
+        // How long the main actor stays busy after the install, with no signpost of ours: the old context's
+        // records are torn down then. The value is the seconds until the main queue's next turn.
+        BatchTrace.mainBacklog("bg.install.backlog")
     }
 }
