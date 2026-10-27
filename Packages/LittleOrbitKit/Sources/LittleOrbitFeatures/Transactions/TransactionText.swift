@@ -4,6 +4,13 @@ import LittleOrbitDomain
 /// Dates and labels shared by the history, the entry sheet and the macOS table.
 struct TransactionText {
     let locale: Locale
+    /// Made once per text, so rows don't each make a `DateFormatter` (N5).
+    private let formatters: DayFormatters
+
+    init(locale: Locale) {
+        self.locale = locale
+        formatters = DayFormatters(locale: locale)
+    }
 
     static let uncategorised = "Uncategorised"
     static let transfer = "Transfer"
@@ -45,11 +52,7 @@ struct TransactionText {
         guard let date = TransactionCalendar.noon(on: day, timeZoneID: "UTC") else {
             return "\(day.year)-\(day.month)-\(day.day)"
         }
-        let formatter = DateFormatter()
-        formatter.locale = locale
-        formatter.timeZone = TimeZone(identifier: "UTC")
-        formatter.setLocalizedDateFormatFromTemplate(template)
-        return formatter.string(from: date)
+        return formatters.string(from: date, template: template)
     }
 
     static func adding(_ days: Int, to day: CalendarDay) -> CalendarDay {
