@@ -38,7 +38,7 @@ public final class TransactionsFeature {
     }
 
     public func makeForm(_ mode: TransactionFormMode) -> TransactionFormViewModel {
-        TransactionFormViewModel(
+        let model = TransactionFormViewModel(
             useCases: useCases,
             mode: mode,
             locale: locale,
@@ -47,6 +47,8 @@ public final class TransactionsFeature {
             categoryPicking: categoryPicking,
             categoriesChanged: { [weak updates] in updates?.changed() },
         )
+        model.updates = updates
+        return model
     }
 
     public func makeBulkEdit(_ transactionIDs: [UUID]) -> BulkEditViewModel {

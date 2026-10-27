@@ -63,6 +63,8 @@ public final class TransactionFormViewModel {
 
     @ObservationIgnored private let loadLedger: any LoadTransactionLedgerUseCase
     @ObservationIgnored let saveTransactions: any SaveTransactionsUseCase
+    /// Shared by every window: while a batch runs, Save waits (D399, D404).
+    @ObservationIgnored weak var updates: LedgerUpdates?
     @ObservationIgnored let dates: any TransactionDateUseCase
     @ObservationIgnored let locale: Locale
     @ObservationIgnored private let formatter: MoneyFormatter
@@ -401,6 +403,9 @@ public final class TransactionFormViewModel {
             && note.count <= NoteLimit.limit
     }
 
+    /// A Bulk Edit, or its Undo or Redo, runs in some window: the sheet stays open, with Save off (D399, D404).
+    public var isWaitingForBatch: Bool { updates?.isBatchRunning ?? false }
+
     /// The same as `hasUnsavedInput`: a tapped reminder closes the entry sheet only when it's untouched (S33).
     public var hasUnsavedEdits: Bool { hasUnsavedInput }
 
@@ -422,7 +427,7 @@ public final class TransactionFormViewModel {
     public func save() -> TransactionChange? {
         // Only this save's deleted-transaction alert closes the form: it may be back (an Undo elsewhere) (#264).
         alertClosesForm = false
-        guard !isUnchanged else {
+        guard !isUnchanged, !isWaitingForBatch else {
             return nil
         }
         guard canSave else {
