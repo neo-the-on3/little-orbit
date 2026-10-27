@@ -64,6 +64,8 @@ public final class BatchProgress {
     @ObservationIgnored private var timer: Task<Void, Never>?
     /// Set when the sheet's progress view appears.
     @ObservationIgnored private(set) var hasAppeared = false
+    /// Whether the sheet's progress view is on screen: it appeared and hasn't disappeared yet.
+    @ObservationIgnored private(set) var isOnScreen = false
     /// What VoiceOver hears once the sheet has closed, and how it's posted (Tester2 on c8c6594).
     @ObservationIgnored private var pendingAnnouncement: (text: String, post: @MainActor (String) -> Void)?
     /// Posts a held announcement if the sheet never reports that it closed.
@@ -71,8 +73,17 @@ public final class BatchProgress {
     /// Set once the sheet has closed.
     @ObservationIgnored private(set) var sheetHasClosed = false
 
-    /// How long a held announcement waits for the sheet to close before it's posted anyway.
+    /// How long a held announcement waits for the sheet to close before it's posted anyway, counted from the
+    /// first free turn of the main actor after the batch ended, when SwiftUI starts the dismissal.
     static let announcementFallbackDelay = Duration.milliseconds(1_500)
+    /// The safety limit: while the sheet's view is still on screen the wait goes on, up to this long in all, so a
+    /// sheet that never closes still gets its announcement.
+    static let announcementFallbackLimit = Duration.seconds(5)
+    /// How often a wait past `announcementFallbackDelay` checks whether the sheet's view has gone.
+    static let announcementFallbackRecheck = Duration.milliseconds(100)
+    /// `announcementFallbackDelay` and `announcementFallbackLimit`; tests shorten them.
+    @ObservationIgnored var fallbackDelay = BatchProgress.announcementFallbackDelay
+    @ObservationIgnored var fallbackLimit = BatchProgress.announcementFallbackLimit
 
     init(
         kind: Kind,
@@ -129,11 +140,22 @@ public final class BatchProgress {
     /// The sheet's progress view appeared: a save waiting for it can start once it has drawn.
     public func sheetAppeared() {
         hasAppeared = true
+        isOnScreen = true
+    }
+
+    /// The sheet's progress view went away. A held announcement still waits for `sheetClosed()`; this only lets
+    /// the fallback know the sheet isn't drawn any more.
+    public func sheetDisappeared() {
+        isOnScreen = false
     }
 
     /// Posts `text`, how a batch ended, after its sheet has closed, so VoiceOver hears it over the window and not
     /// over a sheet that's going away (Tester2 on c8c6594). With no sheet, or one already closed, it's posted now.
-    /// If the sheet never reports closing, it's posted after `announcementFallbackDelay` all the same.
+    /// If the sheet never reports closing, it's posted all the same: `announcementFallbackDelay` after the
+    /// dismissal starts, later while the sheet's view is still on screen, and by `announcementFallbackLimit` at
+    /// the latest. The wait starts at the main actor's first free turn, not when the batch ended: a long main
+    /// block after the batch holds the dismissal up too, and the fallback mustn't run out during it (k1, Undo run 4
+    /// on c6b3778: announced at +1.41 s, sheet closed at +1.88 s).
     func announceAfterSheet(_ text: String, post: @escaping @MainActor (String) -> Void) {
         guard isShown, !sheetHasClosed else {
             post(text)
@@ -141,10 +163,18 @@ public final class BatchProgress {
         }
         pendingAnnouncement = (text, post)
         announcementFallback = Task { [self] in
-            try? await Task.sleep(for: Self.announcementFallbackDelay)
-            guard !Task.isCancelled else {
+            await Self.uiTurn()
+            BatchTrace.event("batch.sheet.dismissRequested")
+            try? await Task.sleep(for: fallbackDelay)
+            var waited = fallbackDelay
+            while isOnScreen, waited < fallbackLimit, !Task.isCancelled {
+                try? await Task.sleep(for: Self.announcementFallbackRecheck)
+                waited += Self.announcementFallbackRecheck
+            }
+            guard !Task.isCancelled, pendingAnnouncement != nil else {
                 return
             }
+            BatchTrace.event("batch.announce.fallback", isOnScreen ? "limit" : "notDrawn")
             postPendingAnnouncement()
         }
     }

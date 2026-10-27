@@ -42,7 +42,7 @@ struct BatchAnnouncementTests {
         #expect(heard.texts == ["Undid Edit"], "Once")
     }
 
-    @Test("A sheet that never reports closing still gets its announcement, after a short wait")
+    @Test("A sheet whose view went but never reports closing still gets its announcement, after a short wait")
     func fallback() async throws {
         #expect(BatchProgress.announcementFallbackDelay == .milliseconds(1_500))
         let heard = Heard()
@@ -51,6 +51,7 @@ struct BatchAnnouncementTests {
         progress.sheetAppeared()
         await reporter.willSave(3_334)
         progress.finish()
+        progress.sheetDisappeared()
         progress.announceAfterSheet("Redid Edit") { heard.texts.append($0) }
         let clock = ContinuousClock()
         let start = clock.now
