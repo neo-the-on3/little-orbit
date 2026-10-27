@@ -236,9 +236,10 @@ set -euo pipefail
 # #265: SwiftDataLedgerRepository owns its ModelContext, with autosave off, and drops it after a failed write.
 # Nothing else in the apps may use a context of the store: no mainContext, @Query or SwiftUI modelContext. The
 # repository's own file may name mainContext only in its /// documentation lines. Tests may read a record's
-# modelContext. #285 B: the one exception is BackgroundLedgerWriter.swift, the BackgroundLedgerWriter model actor
-# the repository makes for one batch save, which may name its own modelContext. mainContext and @Query are still
-# refused there, and no other file is exempt.
+# modelContext. #285 B: the one exception is the BackgroundLedgerWriter model actor the repository makes for one
+# batch save, which may name its own modelContext. The exemption is pinned to that type's body: the lines from
+# `actor BackgroundLedgerWriter {` to its closing brace at the same indent, in BackgroundLedgerWriter.swift. Any
+# other type in that file, or anywhere else, is refused, and mainContext and @Query are refused in the actor too.
 status=0
 context_paths=()
 for path in Apps Packages/LittleOrbitKit/Sources; do
@@ -247,10 +248,29 @@ for path in Apps Packages/LittleOrbitKit/Sources; do
   fi
 done
 if [ -n "${context_paths[*]:-}" ]; then
+  writer_file='Packages/LittleOrbitKit/Sources/LittleOrbitPersistence/BackgroundLedgerWriter.swift'
+  writer_first=0
+  writer_last=0
+  if [ -f "$writer_file" ]; then
+    read -r writer_first writer_last < <(awk '
+      first == 0 && match($0, /^[[:space:]]*actor BackgroundLedgerWriter[[:space:]]*\{/) {
+        first = NR
+        indent = substr($0, 1, index($0, "actor") - 1)
+        next
+      }
+      first != 0 && last == 0 && $0 == indent "}" { last = NR }
+      END { print first + 0, last + 0 }
+    ' "$writer_file")
+  fi
   context_uses="$(grep -rnE --include='*.swift' '(\bmainContext\b|@Query\b|\bmodelContext\b)' "${context_paths[@]}" \
     | grep -vE '^Packages/LittleOrbitKit/Sources/LittleOrbitPersistence/SwiftDataLedgerRepository\.swift:[0-9]+:[[:space:]]*///' \
-    | awk -v writer='Packages/LittleOrbitKit/Sources/LittleOrbitPersistence/BackgroundLedgerWriter.swift:' \
-      'index($0, writer) != 1 || /mainContext|@Query/' \
+    | awk -v writer="${writer_file}:" -v first="$writer_first" -v last="$writer_last" '
+        index($0, writer) != 1 || /mainContext|@Query/ { print; next }
+        {
+          rest = substr($0, length(writer) + 1)
+          line = substr(rest, 1, index(rest, ":") - 1) + 0
+          if (first == 0 || last == 0 || line <= first || line >= last) print
+        }' \
     || true)"
   if [ -n "$context_uses" ]; then
     echo "error: app code uses a SwiftData context; only SwiftDataLedgerRepository may (docs/persistence-migration.md, Writes):" >&2

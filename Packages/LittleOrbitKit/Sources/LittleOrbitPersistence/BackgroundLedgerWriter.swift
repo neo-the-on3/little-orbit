@@ -20,9 +20,12 @@
         }
 
         /// Applies `plan` and saves once; returns what the save left, read back from the records.
-        func save(_ plan: BackgroundBatchPlan<PersistentIdentifier>) throws -> BackgroundBatchReceipt<
-            PersistentIdentifier
-        > {
+        /// `failingBeforeSave` is for tests (`SwiftDataLedgerRepository.backgroundSaveFails`): the writer throws
+        /// after changing its records, before its one save. It's always `false` in the app.
+        func save(
+            _ plan: BackgroundBatchPlan<PersistentIdentifier>,
+            failingBeforeSave: Bool,
+        ) throws -> BackgroundBatchReceipt<PersistentIdentifier> {
             modelContext.autosaveEnabled = false
             let span = BatchTrace.begin("bg.save")
             defer { span.end() }
@@ -39,7 +42,7 @@
             for removal in plan.removedPayees {
                 modelContext.delete(try records.found(removal.record, in: records.payees))
             }
-            if plan.failsBeforeSave {
+            if failingBeforeSave {
                 throw BackgroundBatchTestFailure()
             }
             try BatchTrace.interval("bg.write.save") { try modelContext.save() }

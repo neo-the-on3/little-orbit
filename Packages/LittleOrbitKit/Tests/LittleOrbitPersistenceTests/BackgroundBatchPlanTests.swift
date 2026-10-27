@@ -85,7 +85,6 @@ struct BackgroundBatchPlanTests {
         #expect(Set(plan.relinks[0].removed) == moved && plan.relinks[0].added.isEmpty)
         #expect(plan.relinks[1].parent == .stored(try #require(ledger.numbers[travel])))
         #expect(Set(plan.relinks[1].added) == moved && plan.relinks[1].removed.isEmpty)
-        #expect(!plan.failsBeforeSave)
     }
 
     @Test("A payee the write adds is written without a record and is the parent its rows join")

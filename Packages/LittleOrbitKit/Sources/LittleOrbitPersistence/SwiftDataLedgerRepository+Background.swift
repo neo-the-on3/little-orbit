@@ -65,10 +65,9 @@
                         current.recordID($0, $1)
                     }
             }
-            guard var plan else {
+            guard let plan else {
                 return .onMain
             }
-            plan.failsBeforeSave = backgroundSaveFails
             return .background(plan)
         }
 
@@ -80,9 +79,11 @@
             _ plan: BackgroundBatchPlan<PersistentIdentifier>
         ) -> @Sendable () async throws -> BackgroundBatchReceipt<PersistentIdentifier> {
             let container = self.container
+            // The test switch is read here, on the main actor, and crosses as a value, not in the plan.
+            let failsBeforeSave = backgroundSaveFails
             return {
                 let writer = await BackgroundLedgerWriter.make(for: container)
-                return try await writer.save(plan)
+                return try await writer.save(plan, failingBeforeSave: failsBeforeSave)
             }
         }
 
