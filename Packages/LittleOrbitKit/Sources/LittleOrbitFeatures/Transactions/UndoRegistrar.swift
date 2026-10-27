@@ -176,7 +176,8 @@ public final class LedgerUpdates {
     /// After a change was posted: waits until every refresh it started has ended (`settleLimit` at most), then one
     /// turn of the main run loop, so the table updates that follow them have been committed and the main actor is
     /// free. `changed(_:)` starts and counts each window's refresh before it returns, so there's nothing to guess at
-    /// (Tech Architect's B2 on 0389f40). Signposted as `ledger.settle`. `true` if it stopped at `settleLimit`.
+    /// (Tech Architect's B2 on 0389f40). Signposted as `ledger.settle`; `true`, and a `ledger.settle.limit` event,
+    /// if it stopped at `settleLimit`.
     @discardableResult
     func settle() async -> Bool {
         let span = BatchTrace.begin("ledger.settle")
@@ -190,6 +191,10 @@ public final class LedgerUpdates {
             }
             reachedLimit = await withCheckedContinuation { settleWaiters[id] = $0 }
             limit.cancel()
+        }
+        if reachedLimit {
+            // The batch ends with refreshes still running, how many as the value (m3 on 0389f40).
+            BatchTrace.event("ledger.settle.limit", value: Double(refreshesRunning))
         }
         await sleep(BatchProgress.uiTurnLength)
         return reachedLimit
