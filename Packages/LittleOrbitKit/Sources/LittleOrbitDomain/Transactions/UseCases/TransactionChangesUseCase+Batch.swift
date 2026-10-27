@@ -65,17 +65,19 @@ extension DefaultTransactionChangesUseCase {
         guard offMain else {
             return try commitRevert(prepared, of: change, expecting: outcome)
         }
-        return try await commitRevertOffMain(prepared, of: change, expecting: outcome)
+        return try await commitRevertOffMain(prepared, of: change, expecting: outcome, reporting: reporter)
     }
 
     /// `commitRevert` for a store that saves off the main actor (#285, B): the stale check, and the rebuild if the
     /// store moved, run on the main actor right before the hand-off, with no suspension in between. What the
     /// revert leaves is read from the ledger it writes, as `commitRevert` reads it inside its change. If the
-    /// store still moved by the hand-off, nothing is written and it's checked and built again.
+    /// store still moved by the hand-off, nothing is written and it's checked and built again. `handingOff` is
+    /// reported before each hand-off: from then on the write isn't cancelled (B1).
     func commitRevertOffMain(
         _ prepared: PreparedRevert,
         of change: TransactionChange,
         expecting outcome: ChangeOutcome,
+        reporting reporter: LedgerBatchReporter,
     ) async throws -> RevertResult {
         let span = BatchTrace.begin("batch.commit")
         defer { span.end() }
@@ -89,6 +91,7 @@ extension DefaultTransactionChangesUseCase {
                 revert = ready
             }
             let left = ChangeChecker.outcome(of: revert.inverse, among: revert.snapshot.transactionsVisible())
+            reporter.handingOff()
             if try await repository.writeBatchOffMain(revert.snapshot, expectedRevision: revert.revision) {
                 return .reverted(revert.inverse, left)
             }

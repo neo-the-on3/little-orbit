@@ -23,19 +23,27 @@ public struct LedgerBatchBase: Equatable, Sendable {
 /// `willSaveOffMain`, when given, runs instead of `willSave` for a store that saves off the main actor
 /// (`LedgerRepository.savesBatchesOffMain`, #285 B): the main actor stays free during the save, so the sheet
 /// needn't be drawn before it.
+///
+/// `handingOff` runs on the main actor right before each `writeBatchOffMain(_:expectedRevision:)`, after the
+/// batch's last cancellation check, with no suspension in between (#285, B1): from then on the save may already
+/// be running off the main actor, so cancelling the caller no longer stops the write, and the caller must keep
+/// the batch running until the use case returns.
 public struct LedgerBatchReporter: Sendable {
     public var rowsDone: @Sendable (Int) -> Void
     public var willSave: @MainActor @Sendable (_ changedRows: Int) async -> Void
     public var willSaveOffMain: (@MainActor @Sendable (_ changedRows: Int) async -> Void)?
+    public var handingOff: @MainActor @Sendable () -> Void
 
     public init(
         rowsDone: @escaping @Sendable (Int) -> Void = { _ in },
         willSave: @escaping @MainActor @Sendable (_ changedRows: Int) async -> Void = { _ in },
         willSaveOffMain: (@MainActor @Sendable (_ changedRows: Int) async -> Void)? = nil,
+        handingOff: @escaping @MainActor @Sendable () -> Void = {},
     ) {
         self.rowsDone = rowsDone
         self.willSave = willSave
         self.willSaveOffMain = willSaveOffMain
+        self.handingOff = handingOff
     }
 
     /// Just before the save: `willSaveOffMain` when the save runs off the main actor and it's given, otherwise
