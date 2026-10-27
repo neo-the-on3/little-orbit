@@ -10,15 +10,16 @@ import LittleOrbitDomain
 // a command given meanwhile applies nothing. If the revert fails, is stale or is cancelled (the window closed or
 // its history was cleared), nothing is written and the registered step is removed, so no half-done step is left.
 // A revert already handed off to a background save (#285, B) can't be cancelled: cancelling it lets the save end,
-// with busy held until then, and the change it wrote is still posted to every window (B1).
+// with busy held until then, and the change it wrote is still posted to every window (B1). A revert that wrote ends
+// in `WindowUndoHistory+BatchEnd.swift`: its sheet closes first, then the windows refresh, then the batch ends.
 
 extension WindowUndoHistory {
     /// The batch Undo or Redo running in this window.
     struct BatchRun {
         let task: Task<Void, Never>
         let step: Step
-        /// Set once the revert is handed off to a background save (`LedgerBatchReporter.handingOff`): from then on
-        /// it writes whatever `cancelBatch` does.
+        /// Set once the revert is handed off to a background save (`LedgerBatchReporter.handingOff`), or once it has
+        /// written: from then on it writes whatever `cancelBatch` does.
         var isHandedOff = false
         /// `cancelBatch` ran after the hand-off: the run ends when the save does, without a step, alert or notice.
         var isDetached = false
@@ -93,16 +94,17 @@ extension WindowUndoHistory {
                 }
                 return
             }
-            self.finishBatch(step, undoing: undoing, title: shown, result: result)
+            await self.finishBatch(step, undoing: undoing, title: shown, result: result)
         }
         batchRun = BatchRun(task: task, step: step)
     }
 
     /// Stops a batch Undo or Redo that hasn't been handed off to its save yet: nothing is written, busy ends now and
     /// its step goes, without an alert. Once handed off to a background save it can't be stopped (B1): busy stays
-    /// on and the run is only detached from this window, so when the save ends the batch ends, its step goes
-    /// without an alert, notice or announcement, and, if it wrote, every window hears of the change once. The
-    /// window calls it when it closes; clearing the history does too.
+    /// on and the run is only detached from this window, so when the save ends its step goes without an alert, notice
+    /// or announcement and, if it wrote, every window hears of the change once; the batch ends once they've refreshed.
+    /// A revert that has written can't be stopped either. The window calls it when it closes; clearing the history
+    /// does too.
     public func cancelBatch() {
         guard let run = batchRun else {
             return
@@ -110,6 +112,8 @@ extension WindowUndoHistory {
         guard !run.isHandedOff else {
             batchRun?.isDetached = true
             BatchTrace.event("batch.cancel.deferred")
+            // A revert that wrote and waits for its sheet to go stops waiting: its window is going.
+            closingProgress?.sheetClosed()
             return
         }
         run.task.cancel()
@@ -124,27 +128,30 @@ extension WindowUndoHistory {
         undoing: Bool,
         title shown: String,
         result: Result<RevertResult, any Error>,
-    ) {
+    ) async {
         guard let run = batchRun, run.step === step else {
             // Cancelled: `cancelBatch` already removed the step.
             return
         }
+        if case .success(.reverted(let inverse, let outcome)) = result {
+            step.change = inverse
+            step.outcome = outcome
+            // The sheet closes, the windows refresh, then the batch ends (D403.1, D405).
+            await finishReverted(step, undoing: undoing, title: shown)
+            return
+        }
         batchRun = nil
-        let progress = batchProgress
         endBatch()
         guard !run.isDetached else {
-            finishDetached(step, result: result)
+            // Nothing was written: the step goes, with no alert (B1).
+            removeInFlight(step)
+            refreshMenu()
             return
         }
         switch result {
-        case .success(.reverted(let inverse, let outcome)):
-            step.change = inverse
-            step.outcome = outcome
-            notice = noticeAfterApplying(step)
-            // Once the sheet has closed if it showed, now if it didn't (Tester2 on c8c6594).
-            announceAfterSheet(undoing ? UndoText.undid(shown) : UndoText.redid(shown), progress: progress)
-            // One notification for the whole batch, with the rows and accounts it touched (N5).
-            updates.changed(Self.delta(of: step))
+        case .success(.reverted):
+            // Handled above.
+            break
         case .success(.stale(let reason)):
             // Nothing was written, and the step goes (D187.5).
             removeInFlight(step)
@@ -165,44 +172,12 @@ extension WindowUndoHistory {
         refreshMenu()
     }
 
-    /// The revert was handed off, then its window closed or its history was cleared (B1): the step goes, with no
-    /// alert, notice or announcement; a write it made is posted once, so every window shows it.
-    private func finishDetached(_ step: Step, result: Result<RevertResult, any Error>) {
-        removeInFlight(step)
-        if case .success(.reverted(let inverse, let outcome)) = result {
-            step.change = inverse
-            step.outcome = outcome
-            updates.changed(Self.delta(of: step))
-        }
-        refreshMenu()
-    }
-
     /// The revert is about to be handed off to a background save: from now on `cancelBatch` can't stop it (B1).
     private func batchHandedOff(_ stepID: ObjectIdentifier) {
         guard let run = batchRun, ObjectIdentifier(run.step) == stepID else {
             return
         }
         batchRun?.isHandedOff = true
-    }
-
-    private func announceAfterSheet(_ text: String, progress: BatchProgress?) {
-        guard let progress else {
-            announce(text)
-            return
-        }
-        if progress.isShown {
-            closingProgress = progress
-        }
-        progress.announceAfterSheet(text) { [weak self, weak progress] text in
-            guard let self else {
-                return
-            }
-            self.announce(text)
-            // The sheet has gone by now: its content can go too.
-            if let progress, self.closingProgress === progress {
-                self.closingProgress = nil
-            }
-        }
     }
 
     /// The progress sheet's `onDismiss` ran. On macOS that can be as its dismissal starts, so the announcement held
@@ -221,7 +196,7 @@ extension WindowUndoHistory {
     /// Outside an Undo or Redo, removing a step's actions leaves no empty group on the `UndoManager`. A stand-in
     /// still holding the step, from an Undo or Redo swallowed while it ran, is dropped too, so it can't put the
     /// step back afterwards.
-    private func removeInFlight(_ step: Step) {
+    func removeInFlight(_ step: Step) {
         undoSteps.removeAll { $0 === step }
         redoSteps.removeAll { $0 === step }
         registrar?.removeSteps(for: step)

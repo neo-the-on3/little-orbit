@@ -223,6 +223,42 @@ struct BatchCancelDuringSaveTests {
         #expect(updates.delta(since: revision).transactionIDs == ids)
     }
 
+    @Test(
+        "The window closes while the sheet of a revert that wrote closes: no wait, one change notice, no announcement",
+        arguments: Cancel.allCases,
+    )
+    func cancelWhileSheetCloses(how: Cancel) async throws {
+        let setup = try await Setup()
+        // The sheet shows during the held save, as after half a second in the app.
+        setup.window.history.progressShowDelay = .zero
+        let task = try await Self.startHeld(setup, undoing: true)
+        let sleeper = ManualSleeper()
+        setup.window.history.batchProgress?.sleep = sleeper.sleep
+        await ManualSleeper.until { setup.window.history.batchProgress?.isShown == true }
+        try #require(setup.window.history.batchProgress?.isShown == true)
+        let revision = setup.updates.revision
+        let announced = setup.window.announcements.count
+        setup.held.release()
+        // Installed: the sheet is taken down, and the change waits until it has gone (D405 on 1f2eae8).
+        await ManualSleeper.until { setup.window.history.closingProgress != nil }
+        #expect(setup.window.history.batchProgress == nil)
+        #expect(setup.window.history.isBatchRunning)
+        #expect(setup.updates.revision == revision, "Not while the sheet is up")
+
+        Self.cancel(setup, how)
+        await ManualSleeper.until { !setup.window.history.isBatchRunning }
+        #expect(!setup.window.history.isBatchRunning, "The wait for a sheet whose window went ends at once")
+        // Lets a run that still waits end, so a failure above doesn't hang the test.
+        setup.window.history.closingProgress?.sheetClosed()
+        await task.value
+        #expect(setup.updates.revision == revision + 1, "One change notice")
+        #expect(try setup.details() == [nil], "The store holds the revert")
+        #expect(setup.window.undoManager.undoNames.isEmpty)
+        #expect(setup.window.undoManager.redoNames.isEmpty)
+        #expect(setup.window.announcements.count == announced, "No announcement for a cancelled run")
+        #expect(setup.window.history.closingProgress == nil)
+    }
+
     @Test("Bulk Edit Apply is unaffected: cancelled during its save, busy holds until the write ends and it returns")
     func applyCancelledDuringSave() async throws {
         let rows = (0..<5).map { F.expense(Decimal(100 * ($0 + 1)), on: F.date(2026, 10, 10 + $0)) }

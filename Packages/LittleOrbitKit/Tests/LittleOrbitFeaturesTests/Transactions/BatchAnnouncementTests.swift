@@ -110,8 +110,11 @@ struct BatchAnnouncementTests {
 
     /// The sheet's `onDismiss`, which on macOS can run as the dismissal starts (Tester2 on 8728d1f): nothing is
     /// heard, and the progress stays drawn, until the main actor's next free turn and `dismissSettle` have passed.
+    /// Only then is the change posted, so the windows refresh with the sheet gone, and the batch ends once they have;
+    /// the announcement comes last (D403.1, D405 on 1f2eae8).
     private static func dismiss(_ window: TestWindow, _ sleeper: ManualSleeper, expecting text: String) async {
         let before = window.announcements
+        let revision = window.history.updates.revision
         let asked = sleeper.asked.count
         window.history.batchSheetDismissed()
         #expect(window.announcements == before, "Not as the dismissal starts")
@@ -122,13 +125,31 @@ struct BatchAnnouncementTests {
         await sleeper.advance()
         #expect(await sleeper.next() == BatchProgress.dismissSettle)
         #expect(window.announcements == before, "Not before the dismissal has finished")
+        #expect(window.history.updates.revision == revision, "No change notice while the sheet is up")
+        #expect(window.history.isBatchRunning, "Busy until the windows have refreshed")
         await sleeper.advance()
-        await ManualSleeper.until { window.announcements.count > before.count }
+        await Self.untilEnded(window)
+        #expect(window.history.updates.revision == revision + 1, "One change notice, once the sheet has gone")
         #expect(window.announcements == before + [text], "Once, after the sheet has gone")
         #expect(window.history.closingProgress == nil)
     }
 
-    /// The Undo or Redo just started: its progress waits through `sleeper`.
+    /// Real time, for the build off the main actor; at most 10 s, so a regression fails instead of hanging.
+    private static func until(_ done: () -> Bool) async {
+        let clock = ContinuousClock()
+        let started = clock.now
+        while !done(), clock.now - started < .seconds(10) {
+            try? await Task.sleep(for: .milliseconds(5))
+        }
+    }
+
+    /// Until the batch has ended and the history has no run.
+    private static func untilEnded(_ window: TestWindow) async {
+        await until { !window.history.isBatchRunning && window.history.batchRun == nil }
+    }
+
+    /// The Undo or Redo just started: its progress waits through `sleeper`. Returns once its save has ended and its
+    /// sheet has been taken down, which then closes.
     private static func step(_ window: TestWindow, redo: Bool, _ sleeper: ManualSleeper) async {
         if redo {
             window.history.redo()
@@ -136,7 +157,7 @@ struct BatchAnnouncementTests {
             window.history.undo()
         }
         window.history.batchProgress?.sleep = sleeper.sleep
-        await window.history.batchRun?.task.value
+        await until { window.history.batchProgress == nil }
     }
 
     @Test(
@@ -179,9 +200,10 @@ struct BatchAnnouncementTests {
             await Self.dismiss(window, sleeper, expecting: "Undid \(name)")
             await Self.step(window, redo: true, sleeper)
         }
-        // The save has finished; the sheet hasn't started closing yet.
+        // The save has finished; the sheet hasn't started closing yet, and busy holds.
         #expect(window.history.closingProgress?.isShown == true)
         #expect(window.history.batchProgress == nil)
+        #expect(window.history.isBatchRunning)
         #expect(window.announcements.count == (redo ? 1 : 0), "Not before the sheet closes")
         await Self.dismiss(window, sleeper, expecting: redo ? "Redid \(name)" : "Undid \(name)")
     }

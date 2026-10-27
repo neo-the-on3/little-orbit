@@ -29,7 +29,12 @@ extension AccountHistoryViewModel {
             return
         }
         let span = BatchTrace.begin("window.recompute")
-        defer { span.end() }
+        // A batch Undo or Redo ends once every window's refresh is done (`LedgerUpdates.settle()`, D403.1).
+        updates.refreshStarted()
+        defer {
+            updates.refreshEnded()
+            span.end()
+        }
         generation &+= 1
         let loading = generation
         do {
