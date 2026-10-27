@@ -72,6 +72,15 @@ public enum BatchTrace {
         #endif
     }
 
+    /// A point in time with a number that isn't from the ledger, such as an event's timestamp in seconds.
+    public static func event(_ name: StaticString, value: Double) {
+        #if canImport(OSLog)
+            signposter.emitEvent(name, "\(value, privacy: .public)")
+        #else
+            _ = value
+        #endif
+    }
+
     #if canImport(OSLog)
         /// The `untilNextTurn` intervals still open; the next turn ends them all.
         @MainActor private static var openTurns: [Span] = []

@@ -56,8 +56,12 @@
                 // VoiceOver hears "Undid …" or "Redid …" once the sheet has gone (Tester2 on c8c6594).
                 onDismiss: { history.batchSheetDismissed() },
             ) {
-                // The ended batch's progress stays drawn while the sheet closes.
-                if let progress = history.batchProgress ?? history.closingProgress {
+                // The ended batch's progress stays drawn while the sheet closes. Signposted when SwiftUI builds the
+                // sheet's content, for the presentation's freeze breakdown (D405).
+                let shown = BatchTrace.interval("batch.sheet.content") {
+                    history.batchProgress ?? history.closingProgress
+                }
+                if let progress = shown {
                     BatchProgressView(progress: progress)
                         .interactiveDismissDisabled()
                 }
