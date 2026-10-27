@@ -23,10 +23,10 @@ extension AccountHistoryViewModel {
     /// selection keeps what's still shown, so the table keeps its selection and scroll position. A registered
     /// history's refresh was started by the change itself (`LedgerUpdates.changed(_:)`), so this does nothing then.
     public func refresh(after updates: LedgerUpdates) async {
-        guard claimRefresh(after: updates) else {
+        guard let revision = claimRefresh(after: updates) else {
             return
         }
-        await runRefresh(after: updates)
+        await runRefresh(after: updates, counted: revision)
     }
 
     /// Its view appeared, or the account's row changed: it's registered, so each change starts its refresh as it's
@@ -52,29 +52,31 @@ extension AccountHistoryViewModel {
         recomputes += 1
     }
 
-    /// The part of a refresh that runs as the change is posted: `true`, counting it as running
-    /// (`LedgerUpdates.refreshStarted()`), when the change touched this account and `runRefresh` should follow.
-    /// `false` when it's already up to date, or the change didn't touch it.
-    func claimRefresh(after updates: LedgerUpdates) -> Bool {
+    /// The part of a refresh that runs as the change is posted: the change's revision, counting the refresh as
+    /// running for it (`LedgerUpdates.refreshStarted(for:)`), when the change touched this account and `runRefresh`
+    /// should follow. `nil` when it's already up to date, or the change didn't touch it.
+    func claimRefresh(after updates: LedgerUpdates) -> Int? {
         guard seenRevision < updates.revision else {
-            return false
+            return nil
         }
         let delta = updates.delta(since: seenRevision)
         seenRevision = updates.revision
         guard delta.affects(account: accountID) else {
             BatchTrace.event("window.recompute", "skip")
-            return false
+            return nil
         }
-        // A batch Undo or Redo ends once every window's refresh is done (`LedgerUpdates.settle()`, D403.1).
-        updates.refreshStarted()
-        return true
+        // A batch Undo or Redo ends once every window's refresh for its change is done (`LedgerUpdates.settle()`,
+        // D403.1).
+        let revision = updates.revision
+        updates.refreshStarted(for: revision)
+        return revision
     }
 
-    /// The rest of a claimed refresh; it ends the count `claimRefresh` started.
-    func runRefresh(after updates: LedgerUpdates) async {
+    /// The rest of a claimed refresh; it ends the count `claimRefresh` started for `revision`.
+    func runRefresh(after updates: LedgerUpdates, counted revision: Int) async {
         let span = BatchTrace.begin("window.recompute")
         defer {
-            updates.refreshEnded()
+            updates.refreshEnded(for: revision)
             span.end()
         }
         countRecompute()

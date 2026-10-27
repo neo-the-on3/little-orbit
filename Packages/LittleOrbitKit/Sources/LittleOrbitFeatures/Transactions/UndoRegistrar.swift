@@ -119,12 +119,18 @@ public final class LedgerUpdates {
     @ObservationIgnored var currentEvent: @MainActor () -> QueuedCommandPolicy.Event? = QueuedCommandPolicy.currentEvent
     /// Seconds since the left mouse button last went down: the event source on the Mac, `nil` on iOS; tests set it.
     @ObservationIgnored var secondsSincePress: @MainActor () -> Double? = QueuedCommandPolicy.secondsSinceLeftMouseDown
-    /// Window refreshes running now, after a change (`refreshStarted`), so a batch can end once they're done.
-    @ObservationIgnored private(set) var refreshesRunning = 0
+    /// Window refreshes running now, by the revision of the change that started them (`refreshStarted(for:)`), so
+    /// a batch ends once its own change's refreshes are done, and one still running for an earlier change, in any
+    /// window, doesn't hold it (Tech Architect on 0d676f8).
+    @ObservationIgnored private var runningRefreshes: [Int: Int] = [:]
+    /// Every window refresh running now, for any change.
+    var refreshesRunning: Int { runningRefreshes.values.reduce(0, +) }
     /// How `settle()` waits; tests may step it by hand.
     @ObservationIgnored var sleep: @MainActor (Duration) async -> Void = { try? await Task.sleep(for: $0) }
-    /// `settle()` calls waiting for the last running refresh to end, by id.
-    @ObservationIgnored private var settleWaiters: [UUID: CheckedContinuation<Bool, Never>] = [:]
+    /// `settle()` calls waiting for the refreshes of a change, from its revision on, to end, by id.
+    @ObservationIgnored private var settleWaiters:
+        [UUID: (revision: Int, continuation: CheckedContinuation<Bool, Never>)] =
+            [:]
     @ObservationIgnored private var histories: [WeakHistory] = []
     /// Every window's account history, held weakly, so a change starts their refreshes as it's posted (B2).
     @ObservationIgnored private var registers: [WeakRegister] = []
@@ -185,14 +191,25 @@ public final class LedgerUpdates {
     func settle() async -> Bool {
         let span = BatchTrace.begin("ledger.settle")
         defer { span.end() }
+        // The change just posted: only its refreshes, or a later change's, hold the batch.
+        let change = revision
         var reachedLimit = false
-        if refreshesRunning > 0 {
+        if isRefreshing(from: change) {
             let id = UUID()
             let limit = Task { [weak self] in
                 await self?.sleep(Self.settleLimit)
                 self?.resumeSettle(id, reachedLimit: true)
             }
-            reachedLimit = await withCheckedContinuation { settleWaiters[id] = $0 }
+            reachedLimit = await withCheckedContinuation { continuation in
+                // The count is read again in the same main-actor step that starts the wait, so a refresh that ended
+                // in between can't leave it waiting for a wake-up already given. Each waiter is resumed once: by the
+                // last refresh's end or by the cap, whichever takes it from `settleWaiters` first.
+                guard isRefreshing(from: change) else {
+                    continuation.resume(returning: false)
+                    return
+                }
+                settleWaiters[id] = (change, continuation)
+            }
             limit.cancel()
         }
         if reachedLimit {
@@ -204,24 +221,31 @@ public final class LedgerUpdates {
     }
 
     private func resumeSettle(_ id: UUID, reachedLimit: Bool) {
-        settleWaiters.removeValue(forKey: id)?.resume(returning: reachedLimit)
+        settleWaiters.removeValue(forKey: id)?.continuation.resume(returning: reachedLimit)
     }
 
-    /// A window's refresh after a change started; `refreshEnded()` when it's done.
-    func refreshStarted() {
-        refreshesRunning += 1
+    /// Whether a refresh for the change at `revision`, or a later one, is running.
+    private func isRefreshing(from revision: Int) -> Bool {
+        runningRefreshes.keys.contains { $0 >= revision }
     }
 
-    /// The last running refresh ending lets every waiting `settle()` go on.
-    func refreshEnded() {
-        refreshesRunning = max(refreshesRunning - 1, 0)
-        guard refreshesRunning == 0 else {
+    /// A window's refresh after the change at `revision` started, the current one by default; `refreshEnded(for:)`
+    /// with the same revision when it's done.
+    func refreshStarted(for revision: Int? = nil) {
+        runningRefreshes[revision ?? self.revision, default: 0] += 1
+    }
+
+    /// A refresh for the change at `revision` ended; by default the newest change's that's running. Each `settle()`
+    /// whose change has no refresh running any more goes on, resumed once.
+    func refreshEnded(for revision: Int? = nil) {
+        guard let key = revision ?? runningRefreshes.keys.max(), let count = runningRefreshes[key] else {
             return
         }
-        let waiting = settleWaiters
-        settleWaiters.removeAll()
-        for continuation in waiting.values {
-            continuation.resume(returning: false)
+        runningRefreshes[key] = count > 1 ? count - 1 : nil
+        let done = settleWaiters.filter { !isRefreshing(from: $0.value.revision) }
+        for (id, waiter) in done {
+            settleWaiters.removeValue(forKey: id)
+            waiter.continuation.resume(returning: false)
         }
     }
 
@@ -287,8 +311,10 @@ public final class LedgerUpdates {
     /// returns; the view's `onChange` that follows finds it up to date and does nothing more (B2).
     private func startRefreshes() {
         registers.removeAll { $0.model == nil }
-        for model in registers.compactMap(\.model) where model.claimRefresh(after: self) {
-            Task { await model.runRefresh(after: self) }
+        for model in registers.compactMap(\.model) {
+            if let revision = model.claimRefresh(after: self) {
+                Task { await model.runRefresh(after: self, counted: revision) }
+            }
         }
     }
 
