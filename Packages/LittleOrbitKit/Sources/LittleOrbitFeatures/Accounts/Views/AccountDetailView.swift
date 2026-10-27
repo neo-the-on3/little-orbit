@@ -470,25 +470,5 @@
                 }
             #endif
         }
-
-        private static func balanceLabel(_ row: AccountRowModel) -> String {
-            #if os(macOS)
-                row.detailCaption
-            #else
-                "Current balance"
-            #endif
-        }
-
-        #if os(macOS)
-            private static let captionStyle = Typography.MacOS.footnote
-            private static let amountStyle = Typography.Amount.macOSTitle
-            private static let headerAlignment = HorizontalAlignment.leading
-            private static let headerFrameAlignment = Alignment.leading
-        #else
-            private static let captionStyle = Typography.IOS.footnote
-            private static let amountStyle = Typography.Amount.iOSTitle
-            private static let headerAlignment = HorizontalAlignment.center
-            private static let headerFrameAlignment = Alignment.center
-        #endif
     }
 #endif
