@@ -281,9 +281,10 @@ public final class WindowUndoHistory {
         let shown = step.title
         undoSteps.removeAll { $0 === step }
         redoSteps.removeAll { $0 === step }
-        if isBusy {
-            // A command queued behind a failure, or given before its alert was dismissed, or while a batch runs:
-            // applies nothing (X8b, D398).
+        if isBusy || updates.dropsQueuedCommand() {
+            // A command queued behind a failure, or given before its alert was dismissed, or while a batch runs, or
+            // one asked for during a batch that waited in the event queue until it ended: applies nothing (X8b,
+            // D398, Tester2 on c8c6594).
             swallow(step, undoing: undoing, title: shown)
             return
         }
