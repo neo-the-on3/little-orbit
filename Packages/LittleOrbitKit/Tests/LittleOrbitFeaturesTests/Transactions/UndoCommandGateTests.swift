@@ -153,11 +153,11 @@ struct UndoCommandGateTests {
 
     // MARK: m14, a menu opened by a press made during a batch
 
-    /// A probe after a batch from 10 s to 11 s, now at 11.5 s, with the last left press `pressedAt`.
-    private static func afterBatch(pressedAt press: Double?) -> Probe {
+    /// A probe after a batch from 10 s to 11 s, now at `now` (11.5 s), with the last left press `pressedAt`.
+    private static func afterBatch(pressedAt press: Double?, now: TimeInterval = 11.5) -> Probe {
         let probe = Probe()
-        probe.gate.uptime = { 11.5 }
-        probe.gate.secondsSinceLeftMouseDown = { press.map { 11.5 - $0 } }
+        probe.gate.uptime = { now }
+        probe.gate.secondsSinceLeftMouseDown = { press.map { now - $0 } }
         probe.gate.batchStarted(at: 10)
         probe.gate.batchEnded(at: 11)
         return probe
@@ -213,5 +213,59 @@ struct UndoCommandGateTests {
         probe.tracking = true
         probe.gate.batchStarted(at: 10)
         #expect(probe.phases == ["startWhileTracking"])
+    }
+
+    @Test(
+        "B6: the last press inside the batch holds a menu opened 0.5 s after the end, not 5 s or 300 s after",
+        arguments: [(11.5, true), (16.0, false), (311.0, false)],
+    )
+    func menuAfterBatchPress(openedAt now: Double, holds: Bool) {
+        // 0.5 s after the end: the queued press opened it. 5 s and 300 s after: Ctrl-F2, VoiceOver or an AXPress,
+        // the last click still the one at 10.6 s.
+        let probe = Self.afterBatch(pressedAt: 10.6, now: now)
+        #expect(probe.gate.menuBeganTracking() == (holds ? .held : .passed))
+        #expect(probe.undoAndRedoOn == !holds)
+        #expect(probe.turns.count == (holds ? 1 : 0))
+    }
+
+    @Test("B6: within the limit of the end it holds; just past it, it doesn't")
+    func queuedPressLimitBoundary() {
+        #expect(UndoCommandGate.queuedPressLimit == 1.0)
+        let limit = 11 + UndoCommandGate.queuedPressLimit
+        for now in [11.0, 11.2, limit] {
+            #expect(Self.afterBatch(pressedAt: 10.6, now: now).gate.menuBeganTracking() == .held, "\(now)")
+        }
+        for now in [limit + 0.001, limit + 0.5] {
+            #expect(Self.afterBatch(pressedAt: 10.6, now: now).gate.menuBeganTracking() == .passed, "\(now)")
+        }
+    }
+
+    @Test("m15: held, released as the menu closes, then held again for the next batch's press, and released again")
+    func holdTwice() throws {
+        let probe = Probe()
+        var now = 10.5
+        var press = 10.4
+        probe.gate.uptime = { now }
+        probe.gate.secondsSinceLeftMouseDown = { now - press }
+        probe.gate.batchStarted(at: 10)
+        probe.gate.batchEnded(at: 11)
+        now = 11.3
+        #expect(probe.gate.menuBeganTracking() == .held)
+        #expect(probe.gate.isHeldByMenu && !probe.undoAndRedoOn)
+        try #require(probe.turns.count == 1)
+        probe.runTurns()
+        #expect(!probe.gate.isHeldByMenu && probe.undoAndRedoOn, "Released")
+
+        // A second batch, and a second press inside it, handled after its end.
+        probe.gate.batchStarted(at: 20)
+        probe.gate.batchEnded(at: 21)
+        #expect(probe.undoAndRedoOn)
+        press = 20.5
+        now = 21.2
+        #expect(probe.gate.menuBeganTracking() == .held, "Holds again")
+        #expect(probe.gate.isHeldByMenu && !probe.undoAndRedoOn)
+        try #require(probe.turns.count == 1)
+        probe.runTurns()
+        #expect(!probe.gate.isHeldByMenu && probe.undoAndRedoOn, "Released again")
     }
 }
