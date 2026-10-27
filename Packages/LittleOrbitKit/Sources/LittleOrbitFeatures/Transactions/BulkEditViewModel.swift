@@ -30,8 +30,13 @@ public final class BulkEditViewModel {
     public private(set) var accountOptions: [TransactionAccountOption] = []
     /// While Apply runs as a batch, for the progress that replaces the sheet's fields (#285, D398.3).
     public internal(set) var progress: BatchProgress?
+    /// After an Apply whose progress showed: the progress stays on screen while the sheet closes, instead of the
+    /// fields coming back for a moment, and holds the announcement until the sheet has closed (Tester2 on c8c6594).
+    public internal(set) var closingProgress: BatchProgress?
     /// Shared by every window: on while Apply runs, so no other write lands meanwhile (D398).
     @ObservationIgnored var updates: LedgerUpdates?
+    /// The clock the progress times the sheet with; tests stop it.
+    @ObservationIgnored var progressClock: () -> ContinuousClock.Instant = { .now }
     /// Posts a VoiceOver announcement; the Mac sheet passes `AccessibilityNotification.Announcement` (N5).
     @ObservationIgnored public var announce: @MainActor (String) -> Void = { _ in }
 

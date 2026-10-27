@@ -23,7 +23,8 @@
             Group {
                 // After half a second, or just before a long save, the progress takes the fields' place in the
                 // same sheet (D398.3, D401).
-                if let progress = model.progress, progress.isShown {
+                // After Apply, it stays while the sheet closes, so the fields don't flash back (Tester2 on c8c6594).
+                if let progress = model.progress ?? model.closingProgress, progress.isShown {
                     BatchProgressView(progress: progress)
                 } else {
                     fields
@@ -32,7 +33,11 @@
             // Apply can't be stopped once it starts: no Cancel, Esc or close (D398.3). If the window closes all the
             // same, nothing is written.
             .interactiveDismissDisabled(model.isApplying)
-            .onDisappear { applying?.cancel() }
+            .onDisappear {
+                applying?.cancel()
+                // "Changed ‹N› transactions." once the sheet has closed (Tester2 on c8c6594).
+                model.sheetClosed()
+            }
             // Apply found selected transactions deleted elsewhere (D393). OK, Esc or any dismissal sets the binding to
             // false, which drops them from the selection and keeps the sheet open with the ticked fields. When every
             // selected transaction was deleted, the model's `closeRequested` closes the sheet instead.
