@@ -6,14 +6,15 @@ import Testing
 
 /// Tech Architect's B2 on 0389f40: a window's refresh was only counted once its view's `onChange` had run and a task
 /// had hopped to `refresh(after:)`, and `settle()` guessed both landed within 50 ms. A late one let the batch end
-/// before that window's refresh. Every account history made for a window is now registered with `LedgerUpdates`,
-/// which starts and counts its refresh as the change is posted. Made-up data.
+/// before that window's refresh. Every account history its view shows is now registered with `LedgerUpdates`, which
+/// starts and counts its refresh as the change is posted. Made-up data.
 @MainActor
 @Suite("Window refreshes started and counted as a change is posted", .timeLimit(.minutes(1)))
 struct LedgerRefreshRegistrationTests {
     typealias F = TransactionFeatureFixture  // swiftlint:disable:this type_name
 
-    /// The app's own account history for `accountID`, from `TransactionsFeature.makeHistory`, its builds held.
+    /// The app's own account history for `accountID`, from `TransactionsFeature.makeHistory`, its builds held, shown
+    /// as its view shows it (`appeared(in:)`).
     static func register(
         _ setup: QueuedCommandTests.Setup,
         updates: LedgerUpdates,
@@ -30,8 +31,7 @@ struct LedgerRefreshRegistrationTests {
         let model = feature.makeHistory(accountID: accountID)
         let builds = HeldRegisterBuilds()
         model.buildContent = builds.builder
-        model.seenRevision = updates.revision
-        model.load()
+        model.appeared(in: updates)
         return (model, builds)
     }
 

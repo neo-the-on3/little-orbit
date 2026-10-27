@@ -99,19 +99,15 @@
                 .onChange(of: transactions.updates.revision) {
                     Task { await history.refresh(after: transactions.updates) }
                 }
-                .task(id: row) {
-                    // Each change starts this history's refresh as it's posted; the `onChange` above then finds it
-                    // up to date (B2 on 0389f40).
-                    transactions.updates.add(history)
-                    history.seenRevision = transactions.updates.revision
-                    history.load()
-                }
+                // Registered, so each change starts its refresh as it's posted (B2); a row that changed with that
+                // change, such as its balance, doesn't load it again (Tester2's five windows at 3dc318b).
+                .task(id: row) { history.appeared(in: transactions.updates) }
                 // The toast and notice say where a change happened when it wasn't on this account (D165.1).
                 .task(id: row.id) { undoHistory.setScreen(.account(row.id)) }
                 // Leaving the list closes its toast (D164.2), but not the account delete toast that the
                 // list it returns to shows (D170 U3).
                 .onDisappear {
-                    transactions.updates.remove(history)
+                    history.disappeared(from: transactions.updates)
                     if let toast = undoHistory.toast, toast.stepID == toastStepID {
                         undoHistory.dismissToast()
                     }
