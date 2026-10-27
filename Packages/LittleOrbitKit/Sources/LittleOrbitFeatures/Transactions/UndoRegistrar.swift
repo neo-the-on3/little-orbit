@@ -102,6 +102,9 @@ public final class LedgerUpdates {
     /// When the last batch ran, start to end, on the `systemUptime` clock, for `dropsQueuedCommand` (Tester2,
     /// c8c6594; review 5666694381).
     @ObservationIgnored private(set) var lastBatch: ClosedRange<TimeInterval>?
+    /// Whether a mouse button was held as the last batch ended, so a mouse-up just after it finishes a press made
+    /// inside it (B3 on 0389f40).
+    @ObservationIgnored private(set) var heldAtLastEnd = false
     /// When the batch running now started.
     @ObservationIgnored private var batchStart: TimeInterval?
     /// The event whose command was dropped last: it drops no other.
@@ -110,6 +113,8 @@ public final class LedgerUpdates {
     @ObservationIgnored var uptime: @MainActor () -> TimeInterval = { ProcessInfo.processInfo.systemUptime }
     /// The event being handled; tests set it.
     @ObservationIgnored var currentEvent: @MainActor () -> QueuedCommandPolicy.Event? = QueuedCommandPolicy.currentEvent
+    /// Whether a mouse button is held now; tests set it.
+    @ObservationIgnored var mouseButtonHeld: @MainActor () -> Bool = QueuedCommandPolicy.isMouseButtonHeld
     /// Window refreshes running now, after a change (`refreshStarted`), so a batch can end once they're done.
     @ObservationIgnored private(set) var refreshesRunning = 0
     /// How `settle()` waits; tests may step it by hand.
@@ -159,6 +164,7 @@ public final class LedgerUpdates {
         isBatchRunning = false
         let end = uptime()
         lastBatch = min(batchStart ?? end, end)...end
+        heldAtLastEnd = mouseButtonHeld()
         BatchTrace.event("ledger.batch.end", value: end)
         batchStart = nil
         refreshHistories()
@@ -219,6 +225,7 @@ public final class LedgerUpdates {
         let drops = QueuedCommandPolicy.dropsCommand(
             event: event,
             lastBatch: lastBatch,
+            heldAtEnd: heldAtLastEnd,
             lastDroppedEventTime: lastDroppedEventTime,
         )
         if let event {

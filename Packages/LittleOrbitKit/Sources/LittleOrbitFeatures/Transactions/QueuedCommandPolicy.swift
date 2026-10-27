@@ -14,8 +14,10 @@ import Foundation
 /// system started: `NSEvent.timestamp` and `ProcessInfo.systemUptime` share that clock.
 ///
 /// A menu item chosen with the mouse can be handled with the mouse-up as its event, later than the press that chose it
-/// (Tester2 on 1f2eae8: a Redo pressed at +0.626 s, before the batch's end at +0.676 s, still ran). A mouse-up up to
-/// `pressAllowance` after the end is taken to finish a press that began inside the batch, so it's dropped too.
+/// (Tester2 on 1f2eae8: a Redo pressed at +0.626 s, before the batch's end at +0.676 s, still ran). When a mouse button
+/// was held as the batch ended, the press began inside it, so a mouse-up up to `pressAllowance` after the end is
+/// dropped too. With no button held then, the press came after the end, and its click goes through (Tech Architect's
+/// B3 on 0389f40).
 ///
 /// AppKit never clears `NSApp.currentEvent`, so a command not driven by an event of its own (VoiceOver, Voice
 /// Control or any other Accessibility press) sees whatever event came last. One from before the batch isn't
@@ -33,11 +35,12 @@ enum QueuedCommandPolicy {
     static let pressAllowance: TimeInterval = 0.3
 
     /// Whether to drop the command: its event happened while the last batch ran, `batch.start ≤ time ≤ batch.end`,
-    /// or it's a mouse-up within `pressAllowance` after the end, and it hasn't dropped a command already. With no
-    /// current event, or no batch yet, it goes through.
+    /// or it's a mouse-up within `pressAllowance` after the end with a button held at the end (`heldAtEnd`), and it
+    /// hasn't dropped a command already. With no current event, or no batch yet, it goes through.
     static func dropsCommand(
         event: Event?,
         lastBatch: ClosedRange<TimeInterval>?,
+        heldAtEnd: Bool,
         lastDroppedEventTime: TimeInterval?,
     ) -> Bool {
         guard let event, let lastBatch, event.time != lastDroppedEventTime else {
@@ -46,11 +49,11 @@ enum QueuedCommandPolicy {
         if lastBatch.contains(event.time) {
             return true
         }
-        return event.isMouseUp && event.time > lastBatch.upperBound
+        return heldAtEnd && event.isMouseUp && event.time > lastBatch.upperBound
             && event.time - lastBatch.upperBound <= pressAllowance
     }
 
-    /// `dropsCommand(event:lastBatch:lastDroppedEventTime:)` for an event that isn't a mouse-up.
+    /// `dropsCommand(event:lastBatch:heldAtEnd:lastDroppedEventTime:)` for an event that isn't a mouse-up.
     static func dropsCommand(
         eventTime: TimeInterval?,
         lastBatch: ClosedRange<TimeInterval>?,
@@ -59,6 +62,7 @@ enum QueuedCommandPolicy {
         dropsCommand(
             event: eventTime.map { Event(time: $0) },
             lastBatch: lastBatch,
+            heldAtEnd: false,
             lastDroppedEventTime: lastDroppedEventTime,
         )
     }
@@ -78,6 +82,17 @@ enum QueuedCommandPolicy {
             }
         #else
             nil
+        #endif
+    }
+
+    /// Whether a mouse button is held down now, from the hardware's state rather than an event, since menu tracking
+    /// may never pass its mouse-down to the app: the Mac's `NSEvent.pressedMouseButtons`, `false` elsewhere.
+    @MainActor
+    static func isMouseButtonHeld() -> Bool {
+        #if canImport(AppKit) && os(macOS)
+            NSEvent.pressedMouseButtons != 0
+        #else
+            false
         #endif
     }
 }
