@@ -108,7 +108,7 @@ struct QueuedCommandTests {
         let clock = UptimeClock(now: 100)
         clock.eventTime = 100
         updates.uptime = { clock.now }
-        updates.currentEventTime = { clock.eventTime }
+        updates.currentEvent = { clock.event }
         let setup = try await Self.setup(updates: updates)
         let history = setup.window.history
 
@@ -150,7 +150,7 @@ struct QueuedCommandTests {
         let clock = UptimeClock(now: 10)
         clock.eventTime = 10
         updates.uptime = { clock.now }
-        updates.currentEventTime = { clock.eventTime }
+        updates.currentEvent = { clock.event }
         let setup = try await Self.setup(updates: updates)
         let history = setup.window.history
         // Undo both steps: the Bulk Edit (a batch, ending at 11 s), then the earlier edit at 12 s.
@@ -198,7 +198,7 @@ struct QueuedCommandTests {
         // event, so a VoiceOver, Voice Control or AXPress Undo after the batch sees it.
         let eventTime: TimeInterval? = 99.5
         updates.uptime = { clock.now }
-        updates.currentEventTime = { eventTime }
+        updates.currentEvent = { eventTime.map { Policy.Event(time: $0) } }
         let setup = try await Self.setup(updates: updates)
         // The toolbar Undo of the Bulk Edit runs as a batch from 100 s to 101 s.
         setup.window.history.undo()
@@ -223,7 +223,7 @@ struct QueuedCommandTests {
         let clock = UptimeClock(now: 100)
         clock.eventTime = 99.5
         updates.uptime = { clock.now }
-        updates.currentEventTime = { clock.eventTime }
+        updates.currentEvent = { clock.event }
         let setup = try await Self.setup(updates: updates)
         // The toolbar Undo of the Bulk Edit runs as a batch from 100 s to 101 s.
         setup.window.history.undo()
@@ -256,6 +256,13 @@ struct QueuedCommandTests {
 final class UptimeClock {
     var now: TimeInterval
     var eventTime: TimeInterval?
+    /// Whether the current event is a mouse-up.
+    var isMouseUp = false
+
+    /// The current event, as `LedgerUpdates.currentEvent` gives it.
+    var event: QueuedCommandPolicy.Event? {
+        eventTime.map { QueuedCommandPolicy.Event(time: $0, isMouseUp: isMouseUp) }
+    }
 
     init(now: TimeInterval) {
         self.now = now
