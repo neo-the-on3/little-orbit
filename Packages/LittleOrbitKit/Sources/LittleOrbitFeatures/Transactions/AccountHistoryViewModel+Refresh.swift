@@ -20,17 +20,36 @@ extension AccountHistoryViewModel {
     /// After a change to the shared store, from this window or another (N5 on #286): a change that didn't touch
     /// this account, on either side of a transfer, reloads nothing. Otherwise the history is read on the main
     /// actor, its rows are built off it, and they're shown in one assignment. Rows keep their IDs and the
-    /// selection keeps what's still shown, so the table keeps its selection and scroll position.
+    /// selection keeps what's still shown, so the table keeps its selection and scroll position. A registered
+    /// history's refresh was started by the change itself (`LedgerUpdates.changed(_:)`), so this does nothing then.
     public func refresh(after updates: LedgerUpdates) async {
+        guard claimRefresh(after: updates) else {
+            return
+        }
+        await runRefresh(after: updates)
+    }
+
+    /// The part of a refresh that runs as the change is posted: `true`, counting it as running
+    /// (`LedgerUpdates.refreshStarted()`), when the change touched this account and `runRefresh` should follow.
+    /// `false` when it's already up to date, or the change didn't touch it.
+    func claimRefresh(after updates: LedgerUpdates) -> Bool {
+        guard seenRevision < updates.revision else {
+            return false
+        }
         let delta = updates.delta(since: seenRevision)
         seenRevision = updates.revision
         guard delta.affects(account: accountID) else {
             BatchTrace.event("window.recompute", "skip")
-            return
+            return false
         }
-        let span = BatchTrace.begin("window.recompute")
         // A batch Undo or Redo ends once every window's refresh is done (`LedgerUpdates.settle()`, D403.1).
         updates.refreshStarted()
+        return true
+    }
+
+    /// The rest of a claimed refresh; it ends the count `claimRefresh` started.
+    func runRefresh(after updates: LedgerUpdates) async {
+        let span = BatchTrace.begin("window.recompute")
         defer {
             updates.refreshEnded()
             span.end()

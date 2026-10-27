@@ -100,6 +100,9 @@
                     Task { await history.refresh(after: transactions.updates) }
                 }
                 .task(id: row) {
+                    // Each change starts this history's refresh as it's posted; the `onChange` above then finds it
+                    // up to date (B2 on 0389f40).
+                    transactions.updates.add(history)
                     history.seenRevision = transactions.updates.revision
                     history.load()
                 }
@@ -108,6 +111,7 @@
                 // Leaving the list closes its toast (D164.2), but not the account delete toast that the
                 // list it returns to shows (D170 U3).
                 .onDisappear {
+                    transactions.updates.remove(history)
                     if let toast = undoHistory.toast, toast.stepID == toastStepID {
                         undoHistory.dismissToast()
                     }
