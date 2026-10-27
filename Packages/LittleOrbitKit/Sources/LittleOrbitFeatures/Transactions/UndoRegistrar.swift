@@ -114,7 +114,11 @@ public final class LedgerUpdates {
     @ObservationIgnored private(set) var refreshesRunning = 0
     /// How `settle()` waits; tests may step it by hand.
     @ObservationIgnored var sleep: @MainActor (Duration) async -> Void = { try? await Task.sleep(for: $0) }
+    /// `settle()` calls waiting for the last running refresh to end, by id.
+    @ObservationIgnored private var settleWaiters: [UUID: CheckedContinuation<Bool, Never>] = [:]
     @ObservationIgnored private var histories: [WeakHistory] = []
+    /// Every window's account history, held weakly, so a change starts their refreshes as it's posted (B2).
+    @ObservationIgnored private var registers: [WeakRegister] = []
     @ObservationIgnored private var replacedHandlers: [(id: UUID, run: @MainActor () -> Void)] = []
     @ObservationIgnored private var changedHandlers: [@MainActor () -> Void] = []
     /// What each recent revision touched, newest last, so a window that saw an earlier one can tell what it missed.
@@ -124,6 +128,10 @@ public final class LedgerUpdates {
 
     private struct WeakHistory {
         weak var history: WindowUndoHistory?
+    }
+
+    private struct WeakRegister {
+        weak var model: AccountHistoryViewModel?
     }
 
     public init() {}
@@ -158,23 +166,31 @@ public final class LedgerUpdates {
 
     /// The longest `settle()` waits for window refreshes, so a refresh that never ends can't hold busy on for good.
     static let settleLimit = Duration.seconds(2)
-    /// How long `settle()` first waits for the windows' `onChange` to start their refreshes: about three frames, so
-    /// a SwiftUI update held to the next frame still starts them first.
-    static let settleStart = Duration.milliseconds(50)
 
-    /// After a change was posted: waits `settleStart`, so every window's `onChange` has started its refresh, then
-    /// turns of the main run loop until no refresh is running (`settleLimit` at most), then one more turn, so the
-    /// table updates that follow them have been committed and the main actor is free. Signposted as `ledger.settle`.
-    func settle() async {
+    /// After a change was posted: waits until every refresh it started has ended (`settleLimit` at most), then one
+    /// turn of the main run loop, so the table updates that follow them have been committed and the main actor is
+    /// free. `changed(_:)` starts and counts each window's refresh before it returns, so there's nothing to guess at
+    /// (Tech Architect's B2 on 0389f40). Signposted as `ledger.settle`. `true` if it stopped at `settleLimit`.
+    @discardableResult
+    func settle() async -> Bool {
         let span = BatchTrace.begin("ledger.settle")
         defer { span.end() }
-        let clock = ContinuousClock()
-        let started = clock.now
-        await sleep(Self.settleStart)
-        while refreshesRunning > 0, clock.now - started < Self.settleLimit {
-            await sleep(BatchProgress.uiTurnLength)
+        var reachedLimit = false
+        if refreshesRunning > 0 {
+            let id = UUID()
+            let limit = Task { [weak self] in
+                await self?.sleep(Self.settleLimit)
+                self?.resumeSettle(id, reachedLimit: true)
+            }
+            reachedLimit = await withCheckedContinuation { settleWaiters[id] = $0 }
+            limit.cancel()
         }
         await sleep(BatchProgress.uiTurnLength)
+        return reachedLimit
+    }
+
+    private func resumeSettle(_ id: UUID, reachedLimit: Bool) {
+        settleWaiters.removeValue(forKey: id)?.resume(returning: reachedLimit)
     }
 
     /// A window's refresh after a change started; `refreshEnded()` when it's done.
@@ -182,8 +198,17 @@ public final class LedgerUpdates {
         refreshesRunning += 1
     }
 
+    /// The last running refresh ending lets every waiting `settle()` go on.
     func refreshEnded() {
         refreshesRunning = max(refreshesRunning - 1, 0)
+        guard refreshesRunning == 0 else {
+            return
+        }
+        let waiting = settleWaiters
+        settleWaiters.removeAll()
+        for continuation in waiting.values {
+            continuation.resume(returning: false)
+        }
     }
 
     /// Whether the command being handled was asked for while the last batch ran, so it waited in the event queue
@@ -224,7 +249,17 @@ public final class LedgerUpdates {
         defer { span.end() }
         bump(delta)
         BatchTrace.event("ledger.notify.post")
+        startRefreshes()
         runChangedHandlers()
+    }
+
+    /// Starts, and counts, the refresh of every registered account history the change touched, before `changed(_:)`
+    /// returns; the view's `onChange` that follows finds it up to date and does nothing more (B2).
+    private func startRefreshes() {
+        registers.removeAll { $0.model == nil }
+        for model in registers.compactMap(\.model) where model.claimRefresh(after: self) {
+            Task { await model.runRefresh(after: self) }
+        }
     }
 
     /// Everything that changed after `seen`, a revision a window has shown: `nothing` when it's up to date, and
@@ -274,6 +309,18 @@ public final class LedgerUpdates {
     func add(_ history: WindowUndoHistory) {
         histories.removeAll { $0.history == nil }
         histories.append(WeakHistory(history: history))
+    }
+
+    /// Registers a window's account history, held weakly: each change then starts its refresh (B2). Adding it again
+    /// does nothing.
+    func add(_ register: AccountHistoryViewModel) {
+        remove(register)
+        registers.append(WeakRegister(model: register))
+    }
+
+    /// Stops starting `register`'s refreshes, as when its view goes. Removing it twice does nothing.
+    func remove(_ register: AccountHistoryViewModel) {
+        registers.removeAll { $0.model == nil || $0.model === register }
     }
 
     /// The whole ledger was replaced outside any window, by a backup restore (#40, #99). Every window's

@@ -7,7 +7,7 @@ import LittleOrbitDomain
 public final class TransactionsFeature {
     public let useCases: TransactionUseCases
     /// Moves on after every change to the shared store, so every window reloads (D187.4).
-    public let updates = LedgerUpdates()
+    public let updates: LedgerUpdates
     private let locale: Locale
     private let timeZone: TimeZone
     private let now: () -> Date
@@ -20,8 +20,10 @@ public final class TransactionsFeature {
         locale: Locale = .current,
         timeZone: TimeZone = .current,
         now: @escaping () -> Date = Date.init,
+        updates: LedgerUpdates = LedgerUpdates(),
     ) {
         self.useCases = useCases
+        self.updates = updates
         self.categoryPicking = categoryPicking
         self.locale = locale
         self.timeZone = timeZone
@@ -34,7 +36,16 @@ public final class TransactionsFeature {
     }
 
     public func makeHistory(accountID: UUID) -> AccountHistoryViewModel {
-        AccountHistoryViewModel(useCases: useCases, accountID: accountID, locale: locale, timeZone: timeZone, now: now)
+        let model = AccountHistoryViewModel(
+            useCases: useCases,
+            accountID: accountID,
+            locale: locale,
+            timeZone: timeZone,
+            now: now,
+        )
+        // Each change starts its refresh as it's posted, so a batch can't end before it (B2 on 0389f40).
+        updates.add(model)
+        return model
     }
 
     public func makeForm(_ mode: TransactionFormMode) -> TransactionFormViewModel {
