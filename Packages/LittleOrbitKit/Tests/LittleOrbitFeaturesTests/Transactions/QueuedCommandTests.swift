@@ -54,11 +54,11 @@ struct QueuedCommandTests {
     @Test("The batch's start and end are taken from the uptime clock when busy sets and clears")
     func batchRecordedWhenBusyChanges() {
         let updates = LedgerUpdates()
-        var now: TimeInterval = 50
-        updates.uptime = { now }
+        let clock = UptimeClock(now: 50)
+        updates.uptime = { clock.now }
         #expect(updates.lastBatch == nil)
         #expect(updates.beginBatch())
-        now = 51.5
+        clock.now = 51.5
         #expect(updates.lastBatch == nil)
         updates.endBatch()
         #expect(updates.lastBatch == 50...51.5)
@@ -105,17 +105,17 @@ struct QueuedCommandTests {
     @Test("Edit › Undo or ⌘Z queued during a batch Undo is ignored after it ends; a fresh Undo then works")
     func queuedUndoIgnored() async throws {
         let updates = LedgerUpdates()
-        var now: TimeInterval = 100
-        var eventTime: TimeInterval? = 100
-        updates.uptime = { now }
-        updates.currentEventTime = { eventTime }
+        let clock = UptimeClock(now: 100)
+        clock.eventTime = 100
+        updates.uptime = { clock.now }
+        updates.currentEventTime = { clock.eventTime }
         let setup = try await Self.setup(updates: updates)
         let history = setup.window.history
 
         // The toolbar Undo at 100 s starts the batch Undo of the Bulk Edit; it ends at 101 s.
         history.undo()
         #expect(history.isBatchRunning)
-        now = 101
+        clock.now = 101
         await history.batchRun?.task.value
         #expect(!history.isBatchRunning)
         #expect(updates.lastBatch == 100...101)
@@ -126,7 +126,7 @@ struct QueuedCommandTests {
         let undoTitle = history.undoTitle
 
         // The click (or ⌘Z) from 100.6 s, handled only now: the window's own Undo, as the Edit menu sends it.
-        eventTime = 100.6
+        clock.eventTime = 100.6
         setup.window.undoManager.undo()
         setup.window.settle()
         #expect(try setup.details(0) == "Earlier edit", "No extra step undone")
@@ -137,8 +137,8 @@ struct QueuedCommandTests {
         #expect(history.alert == nil)
 
         // A fresh ⌘Z after the end goes through.
-        eventTime = 102
-        now = 102
+        clock.eventTime = 102
+        clock.now = 102
         history.undo()
         setup.window.settle()
         #expect(try setup.details(0) == nil)
@@ -147,28 +147,28 @@ struct QueuedCommandTests {
     @Test("Undo and Redo queued during a batch Redo are ignored too, and each step stays on Undo once (D403)")
     func queuedRedoIgnored() async throws {
         let updates = LedgerUpdates()
-        var now: TimeInterval = 10
-        var eventTime: TimeInterval? = 10
-        updates.uptime = { now }
-        updates.currentEventTime = { eventTime }
+        let clock = UptimeClock(now: 10)
+        clock.eventTime = 10
+        updates.uptime = { clock.now }
+        updates.currentEventTime = { clock.eventTime }
         let setup = try await Self.setup(updates: updates)
         let history = setup.window.history
         // Undo both steps: the Bulk Edit (a batch, ending at 11 s), then the earlier edit at 12 s.
         history.undo()
-        now = 11
+        clock.now = 11
         await history.batchRun?.task.value
-        eventTime = 12
-        now = 12
+        clock.eventTime = 12
+        clock.now = 12
         history.undo()
         setup.window.settle()
         #expect(try setup.details(0) == nil)
         // Redo the earlier edit at 13 s, then the Bulk Edit as a batch, which ends at 14 s.
-        eventTime = 13
+        clock.eventTime = 13
         history.redo()
         setup.window.settle()
         #expect(try setup.details(0) == "Earlier edit")
         history.redo()
-        now = 14
+        clock.now = 14
         await history.batchRun?.task.value
         // The Bulk Edit is back on Undo, once, above the earlier edit (D403).
         let undoNames = setup.window.undoManager.undoNames
@@ -176,9 +176,9 @@ struct QueuedCommandTests {
         #expect(setup.window.undoManager.redoNames.isEmpty)
         // A Redo click queued from 13.5 s, during that batch, is handled now; nothing is left to redo, but it
         // mustn't change anything either. Then the same for an Undo queued from 13.6 s.
-        eventTime = 13.5
+        clock.eventTime = 13.5
         setup.window.undoManager.redo()
-        eventTime = 13.6
+        clock.eventTime = 13.6
         setup.window.undoManager.undo()
         setup.window.settle()
         #expect(setup.window.undoManager.undoNames == undoNames, "Both steps still on Undo, once each")
@@ -193,23 +193,23 @@ struct QueuedCommandTests {
     @Test("An AX Undo after a batch, seeing a current event from before it started, goes through")
     func staleEventBeforeBatchGoesThrough() async throws {
         let updates = LedgerUpdates()
-        var now: TimeInterval = 100
+        let clock = UptimeClock(now: 100)
         // The last real event: the click at 99.5 s that started the batch Undo. AppKit keeps it as the current
         // event, so a VoiceOver, Voice Control or AXPress Undo after the batch sees it.
         let eventTime: TimeInterval? = 99.5
-        updates.uptime = { now }
+        updates.uptime = { clock.now }
         updates.currentEventTime = { eventTime }
         let setup = try await Self.setup(updates: updates)
         // The toolbar Undo of the Bulk Edit runs as a batch from 100 s to 101 s.
         setup.window.history.undo()
         #expect(setup.window.history.isBatchRunning)
-        now = 101
+        clock.now = 101
         await setup.window.history.batchRun?.task.value
         #expect(!setup.window.history.isBatchRunning)
         #expect(updates.lastBatch == 100...101)
         #expect(try setup.details(0) == "Earlier edit")
 
-        now = 102
+        clock.now = 102
         setup.window.undoManager.undo()
         setup.window.settle()
         #expect(try setup.details(0) == nil, "The earlier edit is undone")
@@ -220,32 +220,44 @@ struct QueuedCommandTests {
     @Test("An in-batch event drops one queued Undo; a second command seen with the same event goes through")
     func sameEventDropsOnce() async throws {
         let updates = LedgerUpdates()
-        var now: TimeInterval = 100
-        var eventTime: TimeInterval? = 99.5
-        updates.uptime = { now }
-        updates.currentEventTime = { eventTime }
+        let clock = UptimeClock(now: 100)
+        clock.eventTime = 99.5
+        updates.uptime = { clock.now }
+        updates.currentEventTime = { clock.eventTime }
         let setup = try await Self.setup(updates: updates)
         // The toolbar Undo of the Bulk Edit runs as a batch from 100 s to 101 s.
         setup.window.history.undo()
         #expect(setup.window.history.isBatchRunning)
-        now = 101
+        clock.now = 101
         await setup.window.history.batchRun?.task.value
         #expect(!setup.window.history.isBatchRunning)
         let undoNames = setup.window.undoManager.undoNames
 
         // The Edit › Undo click from 100.6 s, queued during the batch and handled now, is dropped.
-        eventTime = 100.6
+        clock.eventTime = 100.6
         setup.window.undoManager.undo()
         setup.window.settle()
         #expect(try setup.details(0) == "Earlier edit", "The queued click undoes nothing")
         #expect(setup.window.undoManager.undoNames == undoNames)
 
         // An AX Undo next, with no real event since: the current event is still that click. It goes through.
-        now = 102
+        clock.now = 102
         setup.window.undoManager.undo()
         setup.window.settle()
         #expect(try setup.details(0) == nil, "The AX Undo undoes the earlier edit")
         #expect(setup.window.undoManager.undoNames.isEmpty)
         #expect(setup.window.history.alert == nil)
+    }
+}
+
+/// The uptime clock and the current event's time, moved by hand. Isolated to the main actor, so the `@MainActor`
+/// closures `LedgerUpdates` reads them through capture it safely, and it can be changed after they do.
+@MainActor
+final class UptimeClock {
+    var now: TimeInterval
+    var eventTime: TimeInterval?
+
+    init(now: TimeInterval) {
+        self.now = now
     }
 }
