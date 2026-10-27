@@ -9282,6 +9282,30 @@
         }
       }
     },
+    "Changed %lld transactions.": {
+      "comment": "Bulk edit on the Mac: VoiceOver announcement when Apply finishes. %lld is how many of the selected transactions changed (0 or more). Translate the whole phrase for each plural form (N5).",
+      "extractionState": "manual",
+      "localizations": {
+        "en": {
+          "variations": {
+            "plural": {
+              "one": {
+                "stringUnit": {
+                  "state": "translated",
+                  "value": "Changed %lld transaction."
+                }
+              },
+              "other": {
+                "stringUnit": {
+                  "state": "translated",
+                  "value": "Changed %lld transactions."
+                }
+              }
+            }
+          }
+        }
+      }
+    },
     "Check those items and try again if you need to.": {
       "comment": "iPhone Scheduled list, card message, second sentence, after several (two or more) Pay or Skip actions from the Apple Watch did nothing (their scheduled items changed on the iPhone, or the iPhone couldn’t save them): the user can check those items on the iPhone.",
       "extractionState": "manual",

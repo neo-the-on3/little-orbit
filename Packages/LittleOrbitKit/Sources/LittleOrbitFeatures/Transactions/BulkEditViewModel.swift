@@ -32,6 +32,8 @@ public final class BulkEditViewModel {
     public internal(set) var progress: BatchProgress?
     /// Shared by every window: on while Apply runs, so no other write lands meanwhile (D398).
     @ObservationIgnored var updates: LedgerUpdates?
+    /// Posts a VoiceOver announcement; the Mac sheet passes `AccessibilityNotification.Announcement` (N5).
+    @ObservationIgnored public var announce: @MainActor (String) -> Void = { _ in }
 
     @ObservationIgnored private let loadLedger: any LoadTransactionLedgerUseCase
     @ObservationIgnored private let applyBulkEdit: any ApplyBulkEditUseCase

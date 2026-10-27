@@ -63,10 +63,9 @@ extension DefaultApplyBulkEditUseCase {
                     throw BulkEditDataChanged()
                 }
             }
+            // No row changed: write nothing, not even a payee the edit typed, so an Apply with no Undo step leaves
+            // nothing behind (N5).
             if changeSet.changesNoRow {
-                if !changeSet.created.isEmpty {
-                    try repository.writeBatch(changeSet.result.snapshot)
-                }
                 return .replaced([])
             }
             try repository.writeBatch(changeSet.result.snapshot)

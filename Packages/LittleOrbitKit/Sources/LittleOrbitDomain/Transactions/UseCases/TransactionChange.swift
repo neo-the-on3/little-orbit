@@ -128,6 +128,15 @@ public enum TransactionChange: Equatable, Sendable {
         }
     }
 
+    /// A Bulk Edit Apply that changed no row and wrote nothing: there is nothing to undo, so it gets no Undo step
+    /// (Tester2, N5). A change that also created a payee isn't one: Undo removes that payee.
+    public var changesNoTransaction: Bool {
+        if case .replaced(let items) = self {
+            return items.isEmpty
+        }
+        return false
+    }
+
     /// The account a whole-account change is about; empty for transaction changes.
     public var accountIDs: [UUID] {
         switch core {
