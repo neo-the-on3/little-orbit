@@ -47,6 +47,16 @@ enum BulkEditText {
         )
     }
 
+    /// D399: the message under “Couldn’t Apply Changes” when the data changed while Apply ran, and the change no
+    /// longer fits it. The selection stays.
+    static var dataChangedMessage: String {
+        FeatureText.string(
+            "Your data changed while the changes were being applied. Nothing was changed.",
+            comment:
+                "Bulk edit on the Mac: message under “Couldn’t Apply Changes” when other changes were saved while Apply ran and the edit no longer fits the data as it is now; nothing was changed. The alert has only an OK button (D399).",
+        )
+    }
+
     /// The sheet title's catalog key.
     static let titleKey: StaticString = "transactions.bulkEdit.title"
 

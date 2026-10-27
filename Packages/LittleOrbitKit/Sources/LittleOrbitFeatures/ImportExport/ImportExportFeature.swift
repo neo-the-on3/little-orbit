@@ -38,13 +38,20 @@ public final class ImportExportFeature {
         updates?.revision ?? 0
     }
 
+    /// Import… is off while a Bulk Edit, or its Undo or Redo, runs in any window (D399).
+    public var importEnabled: Bool {
+        !(updates?.isBatchRunning ?? false)
+    }
+
     public func makeImport() -> CSVImportViewModel {
-        CSVImportViewModel(
+        let model = CSVImportViewModel(
             useCases: useCases.importing,
             defaultCurrency: useCases.defaultCurrency,
             changed: { [weak updates] in updates?.changed() },
             revision: { [weak updates] in updates?.revision ?? 0 },
         )
+        model.isLedgerBusy = { [weak updates] in updates?.isBatchRunning ?? false }
+        return model
     }
 
     public func makeExport() -> CSVExportViewModel {

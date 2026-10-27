@@ -14,8 +14,43 @@
             self.onApplied = onApplied
         }
         @Environment(\.dismiss) private var dismiss
+        @Environment(WindowUndoHistory.self) private var undoHistory: WindowUndoHistory?
+        /// Apply, while it runs (#285).
+        @State private var applying: Task<Void, Never>?
 
         var body: some View {
+            Group {
+                // After half a second, the progress takes the fields' place in the same sheet (D398.3).
+                if let progress = model.progress, progress.isShown {
+                    BatchProgressView(progress: progress)
+                } else {
+                    fields
+                }
+            }
+            // Apply can't be stopped once it starts: no Cancel, Esc or close (D398.3). If the window closes all the
+            // same, nothing is written.
+            .interactiveDismissDisabled(model.isApplying)
+            .onDisappear { applying?.cancel() }
+            // Apply found selected transactions deleted elsewhere (D393). OK, Esc or any dismissal sets the binding to
+            // false, which drops them from the selection and keeps the sheet open with the ticked fields. When every
+            // selected transaction was deleted, the model's `closeRequested` closes the sheet instead.
+            .alert(
+                model.alert?.title ?? "",
+                isPresented: $model.isAlertPresented,
+                presenting: model.alert,
+            ) { _ in
+                Button("OK", role: .cancel) { model.acknowledgeAlert() }
+            } message: { alert in
+                Text(alert.message)
+            }
+            .onChange(of: model.closeRequested) { _, close in
+                if close {
+                    dismiss()
+                }
+            }
+        }
+
+        private var fields: some View {
             VStack(alignment: .leading, spacing: Spacing.space3) {
                 Text(model.title)
                     .font(.theme(Typography.MacOS.headline))
@@ -74,35 +109,27 @@
                     Spacer()
                     Button("Cancel") { dismiss() }
                         .keyboardShortcut(.cancelAction)
+                        .disabled(model.isApplying)
                     Button(model.applyTitle) {
-                        if let change = model.apply() {
-                            onApplied(change)
-                            dismiss()
-                        }
+                        applying = Task { await apply() }
                     }
                     .keyboardShortcut(.defaultAction)
-                    .disabled(!model.canApply)
+                    // Off while another window's Bulk Edit, or its Undo or Redo, runs (D398).
+                    .disabled(!model.canApply || model.isApplying || undoHistory?.isBatchRunning == true)
                 }
             }
             .padding(Layout.marginMacOS)
             .frame(minWidth: 460)
-            // Apply found selected transactions deleted elsewhere (D393). OK, Esc or any dismissal sets the binding to
-            // false, which drops them from the selection and keeps the sheet open with the ticked fields. When every
-            // selected transaction was deleted, the model's `closeRequested` closes the sheet instead.
-            .alert(
-                model.alert?.title ?? "",
-                isPresented: $model.isAlertPresented,
-                presenting: model.alert,
-            ) { _ in
-                Button("OK", role: .cancel) { model.acknowledgeAlert() }
-            } message: { alert in
-                Text(alert.message)
+        }
+
+        /// One Undo step for the whole edit, whose Undo and Redo run as a batch too (#285).
+        private func apply() async {
+            guard let change = await model.applyInBackground() else {
+                return
             }
-            .onChange(of: model.closeRequested) { _, close in
-                if close {
-                    dismiss()
-                }
-            }
+            onApplied(change)
+            undoHistory?.markBulkEdit(change)
+            dismiss()
         }
 
         @ViewBuilder private var categoryRow: some View {

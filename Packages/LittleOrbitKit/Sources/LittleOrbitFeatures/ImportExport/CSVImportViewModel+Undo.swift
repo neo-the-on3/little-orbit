@@ -8,13 +8,13 @@ extension CSVImportViewModel {
     /// the revision themselves first. A change in the same step, such as a watch Skip, still ends Undo Import.
     public func requestUndo() {
         endUndoWindowIfDataChanged()
-        guard canUndo else { return }
+        guard canUndo, !isWaitingForBatch else { return }
         isConfirmingUndo = true
     }
 
     public func undo() {
         endUndoWindowIfDataChanged()
-        guard let receipt, canUndo else { return }
+        guard let receipt, canUndo, !isWaitingForBatch else { return }
         do {
             try useCases.ledger.undo(receipt)
             isUndone = true

@@ -9,6 +9,8 @@
         @Bindable var history: AccountHistoryViewModel
         let onEdit: (Set<UUID>) -> Void
         let onDelete: (Set<UUID>) -> Void
+        /// Deleting waits while a Bulk Edit, or its Undo or Redo, runs in any window (D398).
+        @Environment(WindowUndoHistory.self) private var undoHistory: WindowUndoHistory?
 
         private struct TableSection: Identifiable {
             let id: String
@@ -91,12 +93,15 @@
                     ) {
                         onDelete(ids)
                     }
+                    .disabled(undoHistory?.isBatchRunning ?? false)
                 }
             } primaryAction: { ids in
                 onEdit(ids)
             }
             .onDeleteCommand {
-                onDelete(history.selection)
+                if !(undoHistory?.isBatchRunning ?? false) {
+                    onDelete(history.selection)
+                }
             }
         }
     }

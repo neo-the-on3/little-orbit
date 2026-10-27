@@ -50,9 +50,18 @@ public final class BackupsWindow {
     @ObservationIgnored private var heldFeedback: BackupFeedback?
 
     @ObservationIgnored public let model: BackupsViewModel
+    /// The shared ledger signal: while a Bulk Edit, or its Undo or Redo, runs in any window, Restore waits (D399).
+    @ObservationIgnored private let ledgerUpdates: LedgerUpdates?
 
-    public init(model: BackupsViewModel) {
+    public init(model: BackupsViewModel, ledgerUpdates: LedgerUpdates? = nil) {
         self.model = model
+        self.ledgerUpdates = ledgerUpdates
+    }
+
+    /// Restore… and Restore from File…: off while a backup or restore runs (D118.5) or a batch runs in any window
+    /// (D399). Back Up Now, Export… and Delete… don't write the ledger, so they don't wait for a batch.
+    public var restoreEnabled: Bool {
+        model.actionsEnabled && !(ledgerUpdates?.isBatchRunning ?? false)
     }
 
     /// The window closed: an export file neither callback removed goes with it (B4), and so does an error still held
@@ -181,11 +190,13 @@ public final class BackupsWindow {
     // MARK: Restore
 
     public func requestRestore(_ id: UUID) async {
+        guard restoreEnabled else { return }
         await run { restorePrompt = try await model.restorePrompt(for: id) }
     }
 
     /// A picked file, checked where it is: nothing is copied or written (B1.1, D197a.1).
     public func restoreFromFile(_ archive: BackupArchiveSource) async {
+        guard restoreEnabled else { return }
         await run { restorePrompt = try await model.restorePrompt(forFile: archive) }
     }
 
@@ -195,7 +206,7 @@ public final class BackupsWindow {
 
     public func confirmRestore(_ prompt: BackupRestorePrompt) async {
         restorePrompt = nil
-        guard model.actionsEnabled else {
+        guard restoreEnabled else {
             return
         }
         restoredMessage = nil

@@ -205,6 +205,8 @@
                         .accessibilityLabel(row.accessibilityLabel)
                         .tag(AccountsRoute.account(row.id))
                         .contextMenu { menu(for: row) }
+                        // D151 reorder waits while a batch runs in any window (D399).
+                        .moveDisabled(transactions.updates.isBatchRunning)
                     }
                     // D151: drag rows to reorder directly; macOS has no Edit mode.
                     .onMove { model.move(in: group, fromOffsets: $0, toOffset: $1) }
@@ -215,14 +217,19 @@
         @ViewBuilder
         private func menu(for row: AccountRowModel) -> some View {
             Button("Edit Account…") { formSheet = AccountFormSheet(model: feature.makeForm(.edit(row.id))) }
+            // Account writes wait while a Bulk Edit, or its Undo or Redo, runs in any window; Edit Account… opens
+            // with Save off (D399).
             Button(row.isHidden ? "Unhide Account" : "Hide Account") {
                 model.setHidden(!row.isHidden, accountID: row.id)
             }
+            .disabled(transactions.updates.isBatchRunning)
             Button(row.isExcluded ? "Include in Net Wealth" : "Exclude from Net Wealth") {
                 model.setExcluded(!row.isExcluded, accountID: row.id)
             }
+            .disabled(transactions.updates.isBatchRunning)
             Divider()
             Button("Delete Account…", role: .destructive) { deleteConfirmation.request(accountID: row.id) }
+                .disabled(transactions.updates.isBatchRunning)
         }
 
         @ViewBuilder private var netWealthFooter: some View {

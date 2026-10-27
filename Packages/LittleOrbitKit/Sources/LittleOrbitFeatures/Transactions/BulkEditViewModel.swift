@@ -19,7 +19,8 @@ public final class BulkEditViewModel {
     public var editsAccount = false
     public var accountID: UUID?
     public var errorMessage: String?
-    /// “Couldn’t Apply Changes”, when selected transactions were deleted elsewhere (D393.2).
+    /// “Couldn’t Apply Changes”, when selected transactions were deleted elsewhere (D393.2), or the data changed
+    /// while Apply ran as a batch (D399).
     public private(set) var alert: CategoryAlert?
     /// Set when a refused apply found every selected transaction deleted: dismissing the alert closes the sheet,
     /// as the edit form does when its transaction is gone (#262, #266). Reset at the start of each apply.
@@ -252,6 +253,10 @@ public final class BulkEditViewModel {
                 title: BulkEditText.couldntApplyTitle,
                 message: BulkEditText.deletedMessage(count: deleted.ids.count),
             )
+        } else if error is BulkEditDataChanged {
+            // All or nothing, and the selection stays (D399).
+            alertClosesForm = false
+            alert = CategoryAlert(title: BulkEditText.couldntApplyTitle, message: BulkEditText.dataChangedMessage)
         } else {
             errorMessage = AccountHistoryViewModel.message(for: error)
         }
