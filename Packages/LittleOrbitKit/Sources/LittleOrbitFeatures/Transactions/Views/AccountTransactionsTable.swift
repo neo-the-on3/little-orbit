@@ -1,4 +1,5 @@
 #if canImport(SwiftUI) && os(macOS)
+    import LittleOrbitCore
     import LittleOrbitTheme
     import SwiftUI
 
@@ -30,6 +31,8 @@
         }
 
         var body: some View {
+            // How often the table's body runs, and what its rows cost, for Tester2's freeze breakdown (D405).
+            let sections = BatchTrace.interval("ui.table.body") { tableSections }
             Table(of: TransactionRowModel.self, selection: $history.selection) {
                 TableColumn("Date") { row in
                     Text(row.dateText)
@@ -71,7 +74,7 @@
                 }
                 .width(min: 90, ideal: 110)
             } rows: {
-                ForEach(tableSections) { section in
+                ForEach(sections) { section in
                     Section(section.id) {
                         ForEach(section.rows) { row in
                             TableRow(row)

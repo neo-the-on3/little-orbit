@@ -134,7 +134,9 @@ public final class LedgerUpdates {
             return false
         }
         isBatchRunning = true
-        batchStart = uptime()
+        let start = uptime()
+        batchStart = start
+        BatchTrace.event("ledger.batch.start", value: start)
         refreshHistories()
         return true
     }
@@ -149,6 +151,7 @@ public final class LedgerUpdates {
         isBatchRunning = false
         let end = uptime()
         lastBatch = min(batchStart ?? end, end)...end
+        BatchTrace.event("ledger.batch.end", value: end)
         batchStart = nil
         refreshHistories()
     }
@@ -193,6 +196,10 @@ public final class LedgerUpdates {
             lastBatch: lastBatch,
             lastDroppedEventTime: lastDroppedEventTime,
         )
+        if let event {
+            // The event's time and whether it dropped, to line up with `ledger.batch.start` and `.end`.
+            BatchTrace.event(drops ? "ledger.command.dropped" : "ledger.command.passed", value: event.time)
+        }
         if drops {
             lastDroppedEventTime = event?.time
         }

@@ -267,6 +267,12 @@ public final class BatchProgress {
         }
         isShown = true
         timesShown += 1
+        // The first free turn of the main actor once the sheet is asked for: with `batch.sheet.shown`, it brackets
+        // the main-thread time the sheet's presentation takes (D405, Tester2 on 1f2eae8).
+        Task {
+            await Self.uiTurn()
+            BatchTrace.event("batch.sheet.mainFree")
+        }
     }
 
     private func cancelTimer() {
