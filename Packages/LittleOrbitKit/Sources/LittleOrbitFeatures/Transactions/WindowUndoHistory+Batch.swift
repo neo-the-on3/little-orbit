@@ -98,7 +98,8 @@ extension WindowUndoHistory {
             step.outcome = outcome
             notice = noticeAfterApplying(step)
             announce(undoing ? UndoText.undid(shown) : UndoText.redid(shown))
-            updates.changed()
+            // One notification for the whole batch, with the rows and accounts it touched (N5).
+            updates.changed(Self.delta(of: step))
         case .success(.stale(let reason)):
             // Nothing was written, and the step goes (D187.5).
             removeInFlight(step)

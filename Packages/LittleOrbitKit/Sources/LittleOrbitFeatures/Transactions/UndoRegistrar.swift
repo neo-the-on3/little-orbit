@@ -102,6 +102,10 @@ public final class LedgerUpdates {
     @ObservationIgnored private var histories: [WeakHistory] = []
     @ObservationIgnored private var replacedHandlers: [(id: UUID, run: @MainActor () -> Void)] = []
     @ObservationIgnored private var changedHandlers: [@MainActor () -> Void] = []
+    /// What each recent revision touched, newest last, so a window that saw an earlier one can tell what it missed.
+    @ObservationIgnored private var deltas: [(revision: Int, delta: LedgerDelta)] = []
+    /// Revisions kept in `deltas`; a window further behind reloads everything.
+    static let deltaHistory = 32
 
     private struct WeakHistory {
         weak var history: WindowUndoHistory?
@@ -133,12 +137,31 @@ public final class LedgerUpdates {
         }
     }
 
+    /// A change that may have touched anything: every window reloads.
     func changed() {
+        changed(.everything)
+    }
+
+    /// One change, with what it touched (N5 on #286). A batch posts one, when it commits. Every observer of
+    /// `revision` still hears it; a register whose account it didn't touch skips its reload (`delta(since:)`).
+    func changed(_ delta: LedgerDelta) {
         let span = BatchTrace.begin("ledger.notify")
         defer { span.end() }
-        revision += 1
+        bump(delta)
         BatchTrace.event("ledger.notify.post")
         runChangedHandlers()
+    }
+
+    /// Everything that changed after `seen`, a revision a window has shown: `nothing` when it's up to date, and
+    /// `everything` when it's further behind than the kept history.
+    public func delta(since seen: Int) -> LedgerDelta {
+        guard seen < revision else {
+            return .nothing
+        }
+        guard let oldest = deltas.first?.revision, oldest <= seen + 1 else {
+            return .everything
+        }
+        return deltas.filter { $0.revision > seen }.reduce(.nothing) { $0.merging($1.delta) }
     }
 
     /// Runs `handler` after every change and every restore, for state kept outside the ledger that follows it, such
@@ -190,7 +213,16 @@ public final class LedgerUpdates {
         for handler in replacedHandlers {
             handler.run()
         }
-        revision += 1
+        bump(.everything)
         runChangedHandlers()
+    }
+
+    /// The next revision, with what it touched. Every revision goes through here, so `deltas` has no gaps.
+    private func bump(_ delta: LedgerDelta) {
+        deltas.append((revision + 1, delta))
+        if deltas.count > Self.deltaHistory {
+            deltas.removeFirst(deltas.count - Self.deltaHistory)
+        }
+        revision += 1
     }
 }
