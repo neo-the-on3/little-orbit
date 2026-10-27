@@ -6,45 +6,62 @@ import Testing
 @testable import LittleOrbitFeatures
 
 /// Tester2's N5 at c8c6594 (comment 6440723910): an Edit › Undo clicked, or a ⌘Z pressed, while a batch Undo
-/// saved waited in the event queue and undid one step more once the batch ended. A command whose event is no
-/// newer than the last batch's end is dropped (Tech Architect's ruling).
+/// saved waited in the event queue and undid one step more once the batch ended. A command whose event falls
+/// inside the last batch, start to end, is dropped, and an event drops at most one command (Tech Architect's
+/// rulings; review 5666694381 for the stale `NSApp.currentEvent` an Accessibility press sees).
 @MainActor
 @Suite("Undo and Redo queued during a batch")
 struct QueuedCommandTests {
     typealias F = TransactionFeatureFixture  // swiftlint:disable:this type_name
     typealias Policy = QueuedCommandPolicy
 
-    @Test("An event during the batch, or at its very end, is dropped")
+    /// A batch that started at 100.0 s and ended at 101.0 s.
+    static let batch: ClosedRange<TimeInterval> = 100.0...101.0
+
+    @Test("An event during the batch, or at its very start or end, is dropped")
     func duringBatch() {
-        // A ⌘Z key press, or a menu click, at 100.6 s, during a batch that ended at 101.0 s.
-        #expect(Policy.dropsCommand(eventTime: 100.6, lastBatchEnd: 101.0))
-        #expect(Policy.dropsCommand(eventTime: 101.0, lastBatchEnd: 101.0))
+        // A ⌘Z key press, or a menu click, at 100.6 s, during the batch.
+        #expect(Policy.dropsCommand(eventTime: 100.6, lastBatch: Self.batch, lastDroppedEventTime: nil))
+        #expect(Policy.dropsCommand(eventTime: 100.0, lastBatch: Self.batch, lastDroppedEventTime: nil))
+        #expect(Policy.dropsCommand(eventTime: 101.0, lastBatch: Self.batch, lastDroppedEventTime: nil))
     }
 
     @Test("An event after the end goes through")
     func afterBatch() {
-        #expect(!Policy.dropsCommand(eventTime: 101.001, lastBatchEnd: 101.0))
-        #expect(!Policy.dropsCommand(eventTime: 250, lastBatchEnd: 101.0))
+        #expect(!Policy.dropsCommand(eventTime: 101.001, lastBatch: Self.batch, lastDroppedEventTime: nil))
+        #expect(!Policy.dropsCommand(eventTime: 250, lastBatch: Self.batch, lastDroppedEventTime: nil))
+    }
+
+    @Test("An event from before the batch started goes through: the stale current event an AX press sees")
+    func beforeBatch() {
+        #expect(!Policy.dropsCommand(eventTime: 99.999, lastBatch: Self.batch, lastDroppedEventTime: nil))
+        #expect(!Policy.dropsCommand(eventTime: 3, lastBatch: Self.batch, lastDroppedEventTime: nil))
+    }
+
+    @Test("An event that already dropped a command drops no other")
+    func oneDropPerEvent() {
+        #expect(!Policy.dropsCommand(eventTime: 100.6, lastBatch: Self.batch, lastDroppedEventTime: 100.6))
+        #expect(Policy.dropsCommand(eventTime: 100.7, lastBatch: Self.batch, lastDroppedEventTime: 100.6))
     }
 
     @Test("No current event, or no batch yet: the command goes through")
     func noEventOrNoBatch() {
-        #expect(!Policy.dropsCommand(eventTime: nil, lastBatchEnd: 101.0))
-        #expect(!Policy.dropsCommand(eventTime: 100.6, lastBatchEnd: nil))
-        #expect(!Policy.dropsCommand(eventTime: nil, lastBatchEnd: nil))
+        #expect(!Policy.dropsCommand(eventTime: nil, lastBatch: Self.batch, lastDroppedEventTime: nil))
+        #expect(!Policy.dropsCommand(eventTime: 100.6, lastBatch: nil, lastDroppedEventTime: nil))
+        #expect(!Policy.dropsCommand(eventTime: nil, lastBatch: nil, lastDroppedEventTime: nil))
     }
 
-    @Test("The batch's end is taken from the uptime clock when busy clears, and not before")
-    func endRecordedWhenBusyClears() {
+    @Test("The batch's start and end are taken from the uptime clock when busy sets and clears")
+    func batchRecordedWhenBusyChanges() {
         let updates = LedgerUpdates()
         var now: TimeInterval = 50
         updates.uptime = { now }
-        #expect(updates.lastBatchEnd == nil)
+        #expect(updates.lastBatch == nil)
         #expect(updates.beginBatch())
         now = 51.5
-        #expect(updates.lastBatchEnd == nil)
+        #expect(updates.lastBatch == nil)
         updates.endBatch()
-        #expect(updates.lastBatchEnd == 51.5)
+        #expect(updates.lastBatch == 50...51.5)
     }
 
     /// An ordinary edit, then a Bulk Edit of the same rows, recorded in one window with a hand-driven clock.
@@ -101,7 +118,7 @@ struct QueuedCommandTests {
         now = 101
         await history.batchRun?.task.value
         #expect(!history.isBatchRunning)
-        #expect(updates.lastBatchEnd == 101)
+        #expect(updates.lastBatch == 100...101)
         let undoNames = setup.window.undoManager.undoNames
         let redoNames = setup.window.undoManager.redoNames
         #expect(undoNames.count == 1, "Only the earlier edit is on Undo")
@@ -171,5 +188,64 @@ struct QueuedCommandTests {
                 .allSatisfy { $0.categoryID == DefaultCategoryID.food },
             "The Bulk Edit stays applied",
         )
+    }
+
+    @Test("An AX Undo after a batch, seeing a current event from before it started, goes through")
+    func staleEventBeforeBatchGoesThrough() async throws {
+        let updates = LedgerUpdates()
+        var now: TimeInterval = 100
+        // The last real event: the click at 99.5 s that started the batch Undo. AppKit keeps it as the current
+        // event, so a VoiceOver, Voice Control or AXPress Undo after the batch sees it.
+        let eventTime: TimeInterval? = 99.5
+        updates.uptime = { now }
+        updates.currentEventTime = { eventTime }
+        let setup = try await Self.setup(updates: updates)
+        // The toolbar Undo of the Bulk Edit runs as a batch from 100 s to 101 s.
+        setup.window.history.undo()
+        #expect(setup.window.history.isBatchRunning)
+        now = 101
+        await setup.window.history.batchRun?.task.value
+        #expect(!setup.window.history.isBatchRunning)
+        #expect(updates.lastBatch == 100...101)
+        #expect(try setup.details(0) == "Earlier edit")
+
+        now = 102
+        setup.window.undoManager.undo()
+        setup.window.settle()
+        #expect(try setup.details(0) == nil, "The earlier edit is undone")
+        #expect(setup.window.undoManager.undoNames.isEmpty)
+        #expect(setup.window.history.alert == nil)
+    }
+
+    @Test("An in-batch event drops one queued Undo; a second command seen with the same event goes through")
+    func sameEventDropsOnce() async throws {
+        let updates = LedgerUpdates()
+        var now: TimeInterval = 100
+        var eventTime: TimeInterval? = 99.5
+        updates.uptime = { now }
+        updates.currentEventTime = { eventTime }
+        let setup = try await Self.setup(updates: updates)
+        // The toolbar Undo of the Bulk Edit runs as a batch from 100 s to 101 s.
+        setup.window.history.undo()
+        #expect(setup.window.history.isBatchRunning)
+        now = 101
+        await setup.window.history.batchRun?.task.value
+        #expect(!setup.window.history.isBatchRunning)
+        let undoNames = setup.window.undoManager.undoNames
+
+        // The Edit › Undo click from 100.6 s, queued during the batch and handled now, is dropped.
+        eventTime = 100.6
+        setup.window.undoManager.undo()
+        setup.window.settle()
+        #expect(try setup.details(0) == "Earlier edit", "The queued click undoes nothing")
+        #expect(setup.window.undoManager.undoNames == undoNames)
+
+        // An AX Undo next, with no real event since: the current event is still that click. It goes through.
+        now = 102
+        setup.window.undoManager.undo()
+        setup.window.settle()
+        #expect(try setup.details(0) == nil, "The AX Undo undoes the earlier edit")
+        #expect(setup.window.undoManager.undoNames.isEmpty)
+        #expect(setup.window.history.alert == nil)
     }
 }
