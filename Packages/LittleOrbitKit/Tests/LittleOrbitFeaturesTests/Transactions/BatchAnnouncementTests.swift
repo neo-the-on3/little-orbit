@@ -77,6 +77,9 @@ struct BatchAnnouncementTests {
         let instant = ContinuousClock.now
         model.progressClock = { instant }
         model.progressShowDelay = nil
+        // The announcement's fallback can't run out on its own: on macOS the SwiftData timing suites hold the main
+        // actor for seconds beside this test, and it then closed the sheet before the test could (Tester2 on 0d676f8).
+        model.progressSleep = ManualSleeper.holding([BatchProgress.announcementFallbackDelay])
         model.editsCategory = true
         model.categoryID = DefaultCategoryID.food
         return model
@@ -90,7 +93,8 @@ struct BatchAnnouncementTests {
         let model = Self.applyModel(repository, rows: rows, heard: heard)
         // Apply waits for its sheet to go before it ends (D403), so the sheet closes while it runs.
         let applying = Task { await model.applyInBackground() }
-        await RealTime.until(seconds: 10) { model.closingProgress != nil }
+        await RealTime.eventually { model.closingProgress != nil }
+        try #require(model.closingProgress != nil, "The sheet was asked to close")
         #expect(heard.texts.isEmpty, "Not before the sheet closes")
         #expect(model.progress == nil)
         #expect(model.closeRequested)
@@ -138,13 +142,10 @@ struct BatchAnnouncementTests {
         #expect(window.history.closingProgress == nil)
     }
 
-    /// Real time, for the build off the main actor; at most 10 s, so a regression fails instead of hanging.
+    /// Real time, for the build off the main actor; `RealTime.hangGuard` at most, so a regression fails instead of
+    /// hanging.
     private static func until(_ done: () -> Bool) async {
-        let clock = ContinuousClock()
-        let started = clock.now
-        while !done(), clock.now - started < .seconds(10) {
-            try? await Task.sleep(for: .milliseconds(5))
-        }
+        await RealTime.eventually(done)
     }
 
     /// Until the batch has ended and the history has no run.

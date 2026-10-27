@@ -39,7 +39,11 @@ struct LedgerRefreshRegistrationTests {
     func busyUntilRegisterBuilt() async throws {
         let updates = LedgerUpdates()
         let clock = UptimeClock(now: 100)
-        updates.uptime = { clock.now }
+        clock.drive(updates)
+        // `settle()` waits through the sleeper, so neither its cap nor its turn runs out in real time: on macOS the
+        // SwiftData timing suites hold the main actor for seconds beside this test (Tester2 on 0d676f8).
+        let sleeper = ManualSleeper()
+        updates.sleep = sleeper.sleep
         let setup = try await QueuedCommandTests.setup(updates: updates)
         let history = setup.window.history
         let (register, builds) = Self.register(setup, updates: updates)
@@ -48,19 +52,22 @@ struct LedgerRefreshRegistrationTests {
         history.undo()
         clock.now = 101
         // No view and no `onChange` here: the change itself starts the register's refresh.
-        await ManualSleeper.until { builds.started > 0 || history.batchRun == nil }
+        await RealTime.eventually { builds.started > 0 || history.batchRun == nil }
         try #require(builds.started == 1, "The change started the register's refresh")
         #expect(updates.refreshesRunning == 1)
-        // Well past any short guess at when refreshes start, the batch still waits for the build.
-        try await Task.sleep(for: .milliseconds(200))
+        // The batch waits for the build, on `settle()`'s cap only, however long it takes.
+        await RealTime.eventually { sleeper.waiting == [LedgerUpdates.settleLimit] }
+        try #require(sleeper.waiting == [LedgerUpdates.settleLimit], "settle() waits for the build")
         #expect(history.isBatchRunning, "Busy while the register builds")
         #expect(updates.lastBatch == nil)
 
         clock.now = 101.4
         builds.finishAll()
-        // Fails fast, well inside the 2 s limit, if the last `refreshEnded()` stops waking `settle()` (m6).
-        await RealTime.until(seconds: 1) { !history.isBatchRunning }
-        try #require(!history.isBatchRunning, "The last refresh's end woke settle()")
+        // Fails here, rather than hanging, if the last `refreshEnded()` stops waking `settle()` (m6).
+        await RealTime.eventually { sleeper.waiting == [BatchProgress.uiTurnLength] }
+        try #require(sleeper.waiting == [BatchProgress.uiTurnLength], "The last refresh's end woke settle()")
+        #expect(history.isBatchRunning, "Busy until main has had its turn")
+        await sleeper.advance()
         await history.batchRun?.task.value
         #expect(updates.refreshesRunning == 0)
         #expect(updates.lastBatch == 100...101.4, "Ends once the register has refreshed")

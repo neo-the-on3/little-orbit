@@ -109,7 +109,10 @@ final class TestWindow {
             updates: updates,
             later: { queue($0) },
         )
-        queue = { [unowned self] in self.pending.append($0) }
+        // Weak, not unowned: a test that fails early returns while its batch still runs, and the batch's end then
+        // reaches these after the window has gone. An unowned read of a freed window aborted the whole test process
+        // with signal 6 (Tester2 on 0d676f8, LedgerRefreshRegistrationTests, Release run 2).
+        queue = { [weak self] in self?.pending.append($0) }
         history.attach(undoManager)
         // A clock that stands still, and no sheet timer at all: a slow parallel run mustn't show a batch's
         // sheet, which holds its announcement. A sheet still shows when `BatchSheetPolicy` asks for one before the
@@ -117,8 +120,8 @@ final class TestWindow {
         let instant = ContinuousClock.now
         history.progressClock = { instant }
         history.progressShowDelay = nil
-        history.announce = { [unowned self] in self.announcements.append($0) }
-        undoManager.afterAction = { [unowned self] in self.settle() }
+        history.announce = { [weak self] in self?.announcements.append($0) }
+        undoManager.afterAction = { [weak self] in self?.settle() }
     }
 
     /// Runs what was left for after the current Undo or Redo; the stand-in `UndoManager` calls it.

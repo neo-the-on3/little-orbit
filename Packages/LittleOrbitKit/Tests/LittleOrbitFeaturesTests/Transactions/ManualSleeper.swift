@@ -74,4 +74,12 @@ final class ManualSleeper {
             await Task.yield()
         }
     }
+
+    /// A sleep in real time, except that `held` durations, such as a safety cap or a fallback, last until they're
+    /// cancelled: a main actor held up beside the test can't let them run out before what they guard against.
+    static func holding(_ held: [Duration]) -> @MainActor (Duration) async -> Void {
+        { duration in
+            try? await Task.sleep(for: held.contains(duration) ? .seconds(86_400) : duration)
+        }
+    }
 }

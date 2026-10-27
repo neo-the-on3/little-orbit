@@ -54,7 +54,7 @@ struct InstallAfterSheetTests {
             window.history.undo()
         }
         window.history.batchProgress?.sleep = sleeper.sleep
-        await RealTime.until(seconds: 10) { window.history.batchProgress == nil }
+        await RealTime.eventually { window.history.batchProgress == nil }
         // Saved, and the sheet is closing: nothing is installed yet.
         try #require(window.history.closingProgress?.isShown == true)
         #expect(try details() == before, "Not installed while the sheet is up")
@@ -65,7 +65,7 @@ struct InstallAfterSheetTests {
         try await Self.untilSettle(sleeper)
         #expect(try details() == before, "Not installed while the sheet finishes closing")
         await sleeper.advance()
-        await RealTime.until(seconds: 10) { !window.history.isBatchRunning && window.history.batchRun == nil }
+        await RealTime.eventually { !window.history.isBatchRunning && window.history.batchRun == nil }
         #expect(try details() == (redo ? "Bulk" : rows[0].details), "Installed once the sheet had gone")
         #expect(memory.revision != revision)
         #expect(window.announcements.last?.hasPrefix(redo ? "Redid" : "Undid") == true)
@@ -79,11 +79,11 @@ struct InstallAfterSheetTests {
             window.history.undo()
         }
         window.history.batchProgress?.sleep = sleeper.sleep
-        await RealTime.until(seconds: 10) { window.history.batchProgress == nil }
+        await RealTime.eventually { window.history.batchProgress == nil }
         window.history.batchSheetDismissed()
         try await Self.untilSettle(sleeper)
         try #require(await sleeper.advance() == BatchProgress.dismissSettle)
-        await RealTime.until(seconds: 10) { !window.history.isBatchRunning && window.history.batchRun == nil }
+        await RealTime.eventually { !window.history.isBatchRunning && window.history.batchRun == nil }
     }
 
     /// Steps the dismissal's turn until only its `dismissSettle` waits. The fallback's first turn may be asked for
@@ -91,7 +91,7 @@ struct InstallAfterSheetTests {
     /// nothing. Real time bounds the wait, as counted turns run out under a loaded parallel run.
     private static func untilSettle(_ sleeper: ManualSleeper) async throws {
         let clock = ContinuousClock()
-        let deadline = clock.now + .seconds(10)
+        let deadline = clock.now + .seconds(RealTime.hangGuard)
         while sleeper.waiting != [BatchProgress.dismissSettle], clock.now < deadline {
             if sleeper.waiting.first == BatchProgress.uiTurnLength {
                 await sleeper.advance()

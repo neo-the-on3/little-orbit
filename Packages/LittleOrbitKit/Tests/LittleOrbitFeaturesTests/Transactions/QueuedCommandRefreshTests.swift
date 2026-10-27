@@ -13,24 +13,30 @@ import Testing
 @Suite("Undo and Redo queued during a batch's refresh", .timeLimit(.minutes(1)))
 struct QueuedCommandRefreshTests {
     /// One window's refresh after the batch's change: it starts when the change is posted, at the install (101 s),
-    /// moves the clock to 101.4 s, and ends a little later, as `window.recompute` and the table update do.
+    /// and runs until the test ends it, as `window.recompute` and the table update do. No real time: on macOS the
+    /// SwiftData timing suites hold the main actor for seconds, so a timed refresh and a real-time deadline failed
+    /// there (Tester2 on 0d676f8, comment 6449826260).
     @MainActor
     final class Refresh {
         private(set) var started = 0
-        var isRunning = false
+        private(set) var isRunning = false
+        private var updates: LedgerUpdates?
 
-        func attach(to updates: LedgerUpdates, clock: UptimeClock) {
+        func attach(to updates: LedgerUpdates) {
+            self.updates = updates
             updates.onChanged { [self] in
                 started += 1
                 isRunning = true
                 updates.refreshStarted()
-                Task { @MainActor in
-                    try? await Task.sleep(for: .milliseconds(120))
-                    clock.now = 101.4
-                    self.isRunning = false
-                    updates.refreshEnded()
-                }
             }
+        }
+
+        func finish() {
+            guard isRunning else {
+                return
+            }
+            isRunning = false
+            updates?.refreshEnded()
         }
     }
 
@@ -39,24 +45,32 @@ struct QueuedCommandRefreshTests {
         let updates = LedgerUpdates()
         let clock = UptimeClock(now: 100)
         clock.eventTime = 100
-        updates.uptime = { clock.now }
-        updates.currentEvent = { clock.event }
+        clock.drive(updates)
+        let sleeper = ManualSleeper()
+        updates.sleep = sleeper.sleep
         let setup = try await QueuedCommandTests.setup(updates: updates)
         let history = setup.window.history
         let refresh = Refresh()
-        refresh.attach(to: updates, clock: clock)
+        refresh.attach(to: updates)
 
         // The batch Undo starts at 100 s; its save is installed at 101 s, and the change goes out.
         history.undo()
         clock.now = 101
-        await ManualSleeper.until { refresh.started > 0 || history.batchRun == nil }
+        await RealTime.eventually { refresh.started > 0 || history.batchRun == nil }
         try #require(refresh.started == 1, "One change notice")
         #expect(refresh.isRunning)
+        // `settle()` waits on its cap only, for the refresh.
+        await RealTime.eventually { sleeper.waiting == [LedgerUpdates.settleLimit] }
+        try #require(sleeper.waiting == [LedgerUpdates.settleLimit], "settle() waits for the refresh")
         #expect(history.isBatchRunning, "Busy while the windows refresh")
         #expect(!history.canUndo && !history.canRedo)
-        // Fails fast, inside the 2 s limit, if the refresh's end stops waking `settle()` (m6).
-        await RealTime.until(seconds: 1) { !history.isBatchRunning }
-        try #require(!history.isBatchRunning, "The refresh's end woke settle()")
+        // The refresh ends at 101.4 s. Fails here, rather than hanging, if its end stops waking `settle()` (m6).
+        clock.now = 101.4
+        refresh.finish()
+        await RealTime.eventually { sleeper.waiting == [BatchProgress.uiTurnLength] }
+        try #require(sleeper.waiting == [BatchProgress.uiTurnLength], "The refresh's end woke settle()")
+        #expect(history.isBatchRunning, "Busy until main has had its turn")
+        await sleeper.advance()
         await history.batchRun?.task.value
         #expect(!history.isBatchRunning)
         #expect(updates.lastBatch == 100...101.4, "Ends once the refresh is done, not at the install")
