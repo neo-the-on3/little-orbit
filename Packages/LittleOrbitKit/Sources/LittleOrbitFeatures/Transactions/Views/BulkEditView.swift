@@ -10,6 +10,7 @@
         let onApplied: (TransactionChange) -> Void
 
         init(model: BulkEditViewModel, onApplied: @escaping (TransactionChange) -> Void) {
+            model.announce = { AccessibilityNotification.Announcement($0).post() }
             _model = State(initialValue: model)
             self.onApplied = onApplied
         }
@@ -127,8 +128,11 @@
             guard let change = await model.applyInBackground() else {
                 return
             }
-            onApplied(change)
-            undoHistory?.markBulkEdit(change)
+            // No row changed: nothing to undo, so no “Undo Edit 0 Transactions” step (Tester2, N5).
+            if !change.changesNoTransaction {
+                onApplied(change)
+                undoHistory?.markBulkEdit(change)
+            }
             dismiss()
         }
 

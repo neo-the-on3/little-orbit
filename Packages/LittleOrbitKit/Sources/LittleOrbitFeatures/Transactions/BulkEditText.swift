@@ -57,6 +57,12 @@ enum BulkEditText {
         )
     }
 
+    /// N5: VoiceOver's announcement when Apply finishes, “Changed 1 transaction.” or “Changed 3 transactions.”,
+    /// a whole-phrase plural; 0 when no selected row needed the change.
+    static func appliedAnnouncement(count: Int) -> String {
+        FeatureText.plural("Changed %lld transactions.", one: "Changed %lld transaction.", count)
+    }
+
     /// The sheet title's catalog key.
     static let titleKey: StaticString = "transactions.bulkEdit.title"
 

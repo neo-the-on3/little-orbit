@@ -30,7 +30,10 @@ extension BulkEditViewModel {
             let reporter = progress.start()
             // The phase first: the UI draws Applying before any work starts (N5).
             await BatchProgress.uiTurn()
-            return try await applyUseCase.apply(request, reporting: reporter)
+            let change = try await applyUseCase.apply(request, reporting: reporter)
+            // VoiceOver hears that Apply finished, and how many rows changed (Tester2, N5).
+            announce(BulkEditText.appliedAnnouncement(count: change.transactionIDs.count))
+            return change
         } catch is CancellationError {
             return nil
         } catch {
