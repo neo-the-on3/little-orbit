@@ -31,6 +31,21 @@ struct TransactionParentLinkPlan: Equatable {
         for transaction in upserted {
             let before = stored[transaction.id]
             for link in Link.allCases {
+                if link != .tag {
+                    // One parent at most: no sets to build for the thousands of rows whose parent stays (N5).
+                    let old = before.flatMap { Self.parent(of: $0, in: link) }
+                    let new = Self.parent(of: transaction, in: link)
+                    guard old != new else {
+                        continue
+                    }
+                    if let old {
+                        changes[link, default: [:]][old, default: Change()].removed.insert(transaction.id)
+                    }
+                    if let new {
+                        changes[link, default: [:]][new, default: Change()].added.append(transaction.id)
+                    }
+                    continue
+                }
                 let old = before.map { Self.parents(of: $0, in: link) } ?? []
                 let new = Self.parents(of: transaction, in: link)
                 for parent in old.subtracting(new) {
@@ -63,6 +78,17 @@ struct TransactionParentLinkPlan: Equatable {
             return children
         }
         return children.filter { !leaving.contains(key($0)) }
+    }
+
+    /// The one parent of a to-one `link`; `nil` for none, and for `.tag`, which has many.
+    static func parent(of transaction: Transaction, in link: Link) -> UUID? {
+        switch link {
+        case .account: transaction.accountID
+        case .transferAccount: transaction.transferAccountID
+        case .category: transaction.categoryID
+        case .payee: transaction.payeeID
+        case .tag: nil
+        }
     }
 
     static func parents(of transaction: Transaction, in link: Link) -> Set<UUID> {
