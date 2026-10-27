@@ -86,14 +86,18 @@ extension WindowUndoHistory {
                 result = .failure(error)
             }
             guard let self else {
-                // The history went without `cancelBatch`: the batch still ends, so writes come back on. A revert
-                // handed off before it went has written: every other window still hears of it (B1).
+                // The history went without `cancelBatch` (NB3): nothing is left to announce to, and nothing of the
+                // window's is reached. A revert handed off before it went has written: every other window still hears
+                // of it once (B1), and the batch ends once they've refreshed, as every batch does (D403.1). Once the
+                // revert has returned to a history still here, `finishBatch` holds it to the end, the announcement
+                // included (Tech Architect on 0d676f8: no unowned in the batch's end).
                 progress.finish()
-                updates.endBatch()
                 if case .success(.reverted(let inverse, _)) = result {
                     step.change = inverse
                     updates.changed(Self.delta(of: step))
+                    await updates.settle()
                 }
+                updates.endBatch()
                 return
             }
             await self.finishBatch(step, undoing: undoing, title: shown, result: result)
