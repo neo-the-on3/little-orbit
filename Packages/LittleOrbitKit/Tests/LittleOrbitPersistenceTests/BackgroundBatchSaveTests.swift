@@ -95,6 +95,40 @@ struct BackgroundBatchSaveTests {
         #expect(store.writeCount == 2)
     }
 
+    /// Tech Architect's m8 on 0d676f8: the caller's hook before the install (`willInstall`, where its sheet closes
+    /// and the install waits for it to go, D405) wasn't tested; a `run` that never called it passed everything.
+    @Test("The caller's hook runs once the save has finished, before the install, and only for a save that worked")
+    func hookBeforeInstall() async throws {
+        let store = FakeStore()
+        try await BackgroundBatchSave.run(Self.snapshot(), in: store) { [store] in
+            store.steps.append("hook")
+            #expect(store.installed == nil, "Not installed yet")
+        }
+        #expect(store.steps == ["prepare", "handOff plan", "hook", "install receipt of plan"])
+        #expect(store.writeCount == 1)
+
+        let failing = FakeStore()
+        failing.result = .fails
+        await #expect(throws: BackgroundBatchTestFailure.self) {
+            try await BackgroundBatchSave.run(Self.snapshot(), in: failing) { [failing] in
+                failing.steps.append("hook")
+            }
+        }
+        #expect(failing.steps == ["prepare", "handOff plan", "drop (failed)"], "No hook for a failed save")
+    }
+
+    @Test("A write landing while the caller's hook waits: the install drops the ledger in memory instead")
+    func writeDuringHook() async throws {
+        let store = FakeStore()
+        try await BackgroundBatchSave.run(Self.snapshot(), in: store) { [store] in
+            store.steps.append("hook, then another write")
+            store.writeCount += 1
+        }
+        #expect(store.steps == ["prepare", "handOff plan", "hook, then another write", "drop (another write)"])
+        #expect(store.installed == nil)
+        #expect(store.writeCount == 2)
+    }
+
     @Test("A write the background save doesn't take goes through the main actor, and an empty one writes nothing")
     func otherPaths() async throws {
         let store = FakeStore()
