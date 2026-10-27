@@ -12,6 +12,10 @@ struct AccountHistoryContent: Sendable {
     var sections: [TransactionDaySection]
 }
 
+/// Builds what a load shows from its history page, as of a day, off the main actor.
+typealias AccountHistoryContentBuilder =
+    @Sendable (AccountHistoryPage, CalendarDay, MoneyFormatter, TransactionText) async -> AccountHistoryContent
+
 extension AccountHistoryViewModel {
     /// After a change to the shared store, from this window or another (N5 on #286): a change that didn't touch
     /// this account, on either side of a transfer, reloads nothing. Otherwise the history is read on the main
@@ -32,14 +36,8 @@ extension AccountHistoryViewModel {
             guard let (page, today) = try readPage() else {
                 return
             }
-            let formatter = formatter
-            let text = text
             let rows = BatchTrace.begin("history.rows")
-            let content =
-                await Task.detached(priority: .userInitiated) {
-                    Self.content(of: page, today: today, formatter: formatter, text: text)
-                }
-                .value
+            let content = await buildContent(page, today, formatter, text)
             rows.end()
             // A newer load or refresh started meanwhile; it shows the newer ledger.
             guard loading == generation else {
@@ -81,6 +79,19 @@ extension AccountHistoryViewModel {
         BatchTrace.untilNextTurn("ui.table.update")
         let visible = Set(allRows.map(\.id))
         selection = selection.intersection(visible)
+    }
+
+    /// `buildContent` outside tests: `content(of:today:formatter:text:)` on a detached task.
+    nonisolated static func contentOffMain(
+        of page: AccountHistoryPage,
+        today: CalendarDay,
+        formatter: MoneyFormatter,
+        text: TransactionText,
+    ) async -> AccountHistoryContent {
+        await Task.detached(priority: .userInitiated) {
+            content(of: page, today: today, formatter: formatter, text: text)
+        }
+        .value
     }
 
     /// The balance lines, Upcoming and the days for `page`, as of `today`.

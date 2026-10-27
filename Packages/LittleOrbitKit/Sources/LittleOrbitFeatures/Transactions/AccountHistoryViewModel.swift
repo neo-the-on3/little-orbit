@@ -55,6 +55,8 @@ public final class AccountHistoryViewModel {
     @ObservationIgnored public var seenRevision = 0
     /// Moves on with each load, so a slower refresh never shows over a newer one.
     @ObservationIgnored var generation = 0
+    /// Builds a refresh's rows off the main actor. Tests swap it to finish two refreshes in a chosen order.
+    @ObservationIgnored var buildContent: AccountHistoryContentBuilder = AccountHistoryViewModel.contentOffMain
 
     public init(
         accountHistory: any AccountHistoryUseCase,
