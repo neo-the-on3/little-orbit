@@ -61,7 +61,11 @@ extension WindowUndoHistory {
         batchProgress = progress
         var reporter = progress.start()
         let stepID = ObjectIdentifier(step)
-        reporter.handingOff = { [weak self] in self?.batchHandedOff(stepID) }
+        let progressHandingOff = reporter.handingOff
+        reporter.handingOff = { [weak self] in
+            progressHandingOff()
+            self?.batchHandedOff(stepID)
+        }
         let changes = changes
         let change = step.change
         let outcome = step.outcome
