@@ -51,6 +51,20 @@ struct TransactionParentLinkPlan: Equatable {
             }
     }
 
+    /// `children` in their order, without the ones whose `key` is in `leaving`: how a parent's link drops the
+    /// transactions leaving it. The store keys them by persistent ID, which a child has without being read, so
+    /// dropping a few from a link of thousands doesn't read the thousands (N5 on #286).
+    static func keeping<Child, Key: Hashable>(
+        _ children: [Child],
+        without leaving: Set<Key>,
+        by key: (Child) -> Key,
+    ) -> [Child] {
+        guard !leaving.isEmpty else {
+            return children
+        }
+        return children.filter { !leaving.contains(key($0)) }
+    }
+
     static func parents(of transaction: Transaction, in link: Link) -> Set<UUID> {
         switch link {
         case .account: Set([transaction.accountID].compactMap(\.self))

@@ -96,4 +96,19 @@ struct TransactionParentLinkPlanTests {
         #expect(toCard == edited.filter { $0.accountID == card }.map(\.id))
         #expect(plan.changes(in: .category).isEmpty)
     }
+
+    @Test("Dropping by persistent ID leaves the same children, in the same order, as dropping by id (N5)")
+    func keepingByKey() {
+        struct Child: Equatable {
+            let id: UUID
+            let key: Int
+        }
+        let children = (0..<3_000).map { Child(id: UUID(), key: $0 * 7) }
+        let leaving = Set(children.indices.filter { $0.isMultiple(of: 3) }.map { children[$0].id })
+        let keys = Set(children.filter { leaving.contains($0.id) }.map(\.key))
+        let byID = children.filter { !leaving.contains($0.id) }
+        #expect(Plan.keeping(children, without: keys) { $0.key } == byID)
+        #expect(Plan.keeping(children, without: Set<Int>()) { $0.key } == children)
+        #expect(Plan.keeping([Child](), without: keys) { $0.key }.isEmpty)
+    }
 }
