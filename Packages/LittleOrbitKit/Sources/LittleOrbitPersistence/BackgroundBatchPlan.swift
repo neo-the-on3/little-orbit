@@ -61,8 +61,6 @@ struct BackgroundBatchPlan<RecordID: Hashable & Sendable>: Sendable {
     var removedPayees: [PayeeRemoval] = []
     /// Every removal first, then every addition, each in `TransactionParentLinkPlan.Link` order.
     var relinks: [Relink] = []
-    /// For tests: the writer fails after changing its records and before its one save.
-    var failsBeforeSave = false
 
     /// The plan for `changes`, the write from `stored` to `target`, or `nil` when it isn't a write this path takes
     /// or a record it names has no identifier. `recordID` finds a stored record's identifier by its ledger id.
