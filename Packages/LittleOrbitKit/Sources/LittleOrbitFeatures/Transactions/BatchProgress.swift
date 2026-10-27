@@ -133,7 +133,8 @@ public final class BatchProgress {
 
     /// "Saving…" with the bar full. The timer stops, since it can't fire during the save. The sheet goes up now
     /// if `BatchSheetPolicy` says so, and the save waits until it has drawn; otherwise the UI still gets a turn of
-    /// the run loop, so it's up to date before the write blocks the main actor (N5, D401).
+    /// the run loop, so it's up to date before the write blocks the main actor (N5, D401). With no row to change,
+    /// there's no sheet at all, and one already up closes (D402).
     private func willSave(changing rows: Int) async {
         cancelTimer()
         done = total
@@ -145,6 +146,9 @@ public final class BatchProgress {
         case .show:
             isShown = true
             await waitForSheet()
+        case .none:
+            // Nothing will be written: an Apply that changes no row never shows the sheet (D402).
+            isShown = false
         }
     }
 
