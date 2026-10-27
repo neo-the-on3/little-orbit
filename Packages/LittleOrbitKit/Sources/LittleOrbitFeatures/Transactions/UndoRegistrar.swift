@@ -111,6 +111,9 @@ public final class LedgerUpdates {
     @ObservationIgnored private var lastDroppedPressTime: TimeInterval?
     /// The newest event an Undo or Redo was handled with, so an older or the same one is stale (condition 1).
     @ObservationIgnored private var lastCommandEventTime: TimeInterval?
+    /// The current event when the last batch ended, so one dispatched before the end, which no command consumed,
+    /// is stale too (Tech Architect's B4 on 0d676f8).
+    @ObservationIgnored private(set) var eventTimeAtEnd: TimeInterval?
     /// The `systemUptime` clock; tests set it.
     @ObservationIgnored var uptime: @MainActor () -> TimeInterval = { ProcessInfo.processInfo.systemUptime }
     /// When the app started, on that clock: a press time before it is wrong, and drops nothing; tests set it.
@@ -174,6 +177,10 @@ public final class LedgerUpdates {
         isBatchRunning = false
         let end = uptime()
         lastBatch = min(batchStart ?? end, end)...end
+        // A click or key press dispatched while the batch ran, which no Undo or Redo was handled with, is still the
+        // current event after it. A VoiceOver or Voice Control Undo or Redo then sees it, and it mustn't count (B4).
+        // A queued command's own event is dispatched after this, so it's newer and the batch's rules still apply.
+        eventTimeAtEnd = currentEvent()?.time
         BatchTrace.event("ledger.batch.end", value: end)
         batchStart = nil
         refreshHistories()
@@ -258,7 +265,10 @@ public final class LedgerUpdates {
     /// `ledger.command.dropped` or `.passed` with the event's time (-1 for none, or a stale one).
     func dropsQueuedCommand() -> Bool {
         let seen = currentEvent()
-        let event = QueuedCommandPolicy.fresh(seen, after: lastCommandEventTime)
+        let event = QueuedCommandPolicy.fresh(
+            seen,
+            after: QueuedCommandPolicy.newest(lastCommandEventTime, eventTimeAtEnd),
+        )
         if let seen {
             lastCommandEventTime = max(lastCommandEventTime ?? seen.time, seen.time)
         }

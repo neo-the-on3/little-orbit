@@ -26,9 +26,10 @@ import Foundation
 /// `ProcessInfo.systemUptime`, which `LedgerUpdates` stamps the batch's start and end with, and so `pressTime`.
 ///
 /// AppKit never clears `NSApp.currentEvent`, so a command not driven by an event of its own (VoiceOver, Voice
-/// Control or any other Accessibility press) sees whatever event came last. Only an event newer than the one the last
-/// command was handled with counts (`fresh(_:after:)`); a stale one counts as no event, and no event never drops.
-/// One from before the batch isn't inside it either, so the command goes through.
+/// Control or any other Accessibility press) sees whatever event came last. Only an event newer than both the one the
+/// last command was handled with and the one current when the last batch ended counts (`fresh(_:after:)`, B4 on
+/// 0d676f8); a stale one counts as no event, and no event never drops. One from before the batch isn't inside it
+/// either, so the command goes through.
 enum QueuedCommandPolicy {
     /// The event a command is handled with: when it happened, and whether it's the mouse's.
     struct Event: Equatable, Sendable {
@@ -65,6 +66,17 @@ enum QueuedCommandPolicy {
             return event
         }
         return event.time > last ? event : nil
+    }
+
+    /// The later of two times an event must be newer than to count, either of them possibly unknown.
+    static func newest(_ first: TimeInterval?, _ second: TimeInterval?) -> TimeInterval? {
+        guard let first else {
+            return second
+        }
+        guard let second else {
+            return first
+        }
+        return max(first, second)
     }
 
     /// Whether to drop the command, for its fresh event. A mouse event drops when the press (`pressTime`) fell inside
