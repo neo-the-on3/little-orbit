@@ -86,6 +86,15 @@ public final class BatchProgress {
     /// `announcementFallbackDelay` and `announcementFallbackLimit`; tests shorten them.
     @ObservationIgnored var fallbackDelay = BatchProgress.announcementFallbackDelay
     @ObservationIgnored var fallbackLimit = BatchProgress.announcementFallbackLimit
+    /// Once the sheet's `onDismiss` ran, how long after the main actor's next free turn the held announcement
+    /// waits for the dismissal to finish and focus to go back to the window (Tester2 on 8728d1f: the sheet went
+    /// 0.01 s after that turn, focus 0.05–0.12 s after).
+    static let dismissSettle = Duration.milliseconds(150)
+    /// How the announcement's waits sleep: `Task.sleep` in the app; tests step it by hand, so no wait depends on
+    /// real time under load.
+    @ObservationIgnored var sleep: @MainActor (Duration) async -> Void = { try? await Task.sleep(for: $0) }
+    /// The wait after `sheetDismissed()`.
+    @ObservationIgnored private var dismissWait: Task<Void, Never>?
 
     init(
         kind: Kind,
@@ -169,12 +178,12 @@ public final class BatchProgress {
         }
         pendingAnnouncement = (text, post)
         announcementFallback = Task { [self] in
-            await Self.uiTurn()
+            await sleep(Self.uiTurnLength)
             BatchTrace.event("batch.sheet.dismissRequested")
-            try? await Task.sleep(for: fallbackDelay)
+            await sleep(fallbackDelay)
             var waited = fallbackDelay
             while isOnScreen, waited < fallbackLimit, !Task.isCancelled {
-                try? await Task.sleep(for: Self.announcementFallbackRecheck)
+                await sleep(Self.announcementFallbackRecheck)
                 waited += Self.announcementFallbackRecheck
             }
             guard !Task.isCancelled, pendingAnnouncement != nil else {
@@ -185,12 +194,42 @@ public final class BatchProgress {
         }
     }
 
-    /// The sheet has closed: a held announcement is posted now.
+    /// The sheet has closed: a held announcement is posted now. Bulk Edit calls it when its own sheet's view has
+    /// gone, at the end of the sheet's close.
     public func sheetClosed() {
         sheetHasClosed = true
         announcementFallback?.cancel()
         announcementFallback = nil
+        dismissWait?.cancel()
+        dismissWait = nil
         postPendingAnnouncement()
+    }
+
+    /// The Undo or Redo sheet's `onDismiss` ran. On macOS it can run as the dismissal starts, and the main actor can
+    /// then stay busy, with the sheet still up, while the register updates (Tester2 on 8728d1f: announced 0.40–0.50 s
+    /// before the dismissal, 10 of 10). So a held announcement waits for the main actor's next free turn, when the
+    /// dismissal goes ahead, then `dismissSettle` for it to finish, and is posted then, once. The fallback stops.
+    public func sheetDismissed() {
+        guard !sheetHasClosed else {
+            return
+        }
+        sheetHasClosed = true
+        announcementFallback?.cancel()
+        announcementFallback = nil
+        guard pendingAnnouncement != nil else {
+            return
+        }
+        BatchTrace.event("batch.sheet.onDismiss")
+        dismissWait = Task { [self] in
+            await sleep(Self.uiTurnLength)
+            BatchTrace.event("batch.sheet.dismissTurn")
+            await sleep(Self.dismissSettle)
+            guard !Task.isCancelled else {
+                return
+            }
+            BatchTrace.event("batch.announce.afterDismiss")
+            postPendingAnnouncement()
+        }
     }
 
     private func postPendingAnnouncement() {

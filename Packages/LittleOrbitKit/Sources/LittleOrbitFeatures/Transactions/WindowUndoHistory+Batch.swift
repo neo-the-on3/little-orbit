@@ -193,13 +193,23 @@ extension WindowUndoHistory {
         if progress.isShown {
             closingProgress = progress
         }
-        progress.announceAfterSheet(text) { [weak self] in self?.announce($0) }
+        progress.announceAfterSheet(text) { [weak self, weak progress] text in
+            guard let self else {
+                return
+            }
+            self.announce(text)
+            // The sheet has gone by now: its content can go too.
+            if let progress, self.closingProgress === progress {
+                self.closingProgress = nil
+            }
+        }
     }
 
-    /// The progress sheet has closed: an announcement held for it is posted now.
+    /// The progress sheet's `onDismiss` ran. On macOS that can be as its dismissal starts, so the announcement held
+    /// for it waits for the main actor's next free turn and the end of the dismissal (`BatchProgress.sheetDismissed`).
+    /// The ended batch's progress stays drawn until then.
     public func batchSheetDismissed() {
-        closingProgress?.sheetClosed()
-        closingProgress = nil
+        closingProgress?.sheetDismissed()
     }
 
     private func endBatch() {

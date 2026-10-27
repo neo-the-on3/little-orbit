@@ -46,20 +46,20 @@ struct BatchAnnouncementTests {
     func fallback() async throws {
         #expect(BatchProgress.announcementFallbackDelay == .milliseconds(1_500))
         let heard = Heard()
+        let sleeper = ManualSleeper()
         let progress = BatchProgress(kind: .redoing, total: 3_334, showAfter: nil)
+        progress.sleep = sleeper.sleep
         let reporter = progress.start()
         progress.sheetAppeared()
         await reporter.willSave(3_334)
         progress.finish()
         progress.sheetDisappeared()
         progress.announceAfterSheet("Redid Edit") { heard.texts.append($0) }
-        let clock = ContinuousClock()
-        let start = clock.now
-        while heard.texts.isEmpty, clock.now - start < .seconds(10) {
-            try await Task.sleep(for: .milliseconds(50))
-        }
+        #expect(await sleeper.advance() == BatchProgress.uiTurnLength)
+        #expect(heard.texts.isEmpty)
+        #expect(await sleeper.advance() == BatchProgress.announcementFallbackDelay)
+        await ManualSleeper.until { !heard.texts.isEmpty }
         #expect(heard.texts == ["Redid Edit"])
-        #expect(clock.now - start >= .milliseconds(1_400))
     }
 
     static func applyModel(_ repository: some LedgerRepository, rows: [Transaction], heard: Heard)
@@ -108,14 +108,54 @@ struct BatchAnnouncementTests {
         #expect(model.closingProgress == nil)
     }
 
-    @Test("Undo and Redo with the sheet: heard only after it closes", arguments: [true, false])
-    func undoRedoAfterSheet(redo: Bool) async throws {
+    /// The sheet's `onDismiss`, which on macOS can run as the dismissal starts (Tester2 on 8728d1f): nothing is
+    /// heard, and the progress stays drawn, until the main actor's next free turn and `dismissSettle` have passed.
+    private static func dismiss(_ window: TestWindow, _ sleeper: ManualSleeper, expecting text: String) async {
+        let before = window.announcements
+        let asked = sleeper.asked.count
+        window.history.batchSheetDismissed()
+        #expect(window.announcements == before, "Not as the dismissal starts")
+        #expect(window.history.closingProgress?.isShown == true, "The progress stays drawn while the sheet closes")
+        // The fallback's wait goes; the dismissal's turn is asked for.
+        await ManualSleeper.until { sleeper.asked.count == asked + 1 && sleeper.waiting.count == 1 }
+        #expect(sleeper.waiting == [BatchProgress.uiTurnLength])
+        await sleeper.advance()
+        #expect(await sleeper.next() == BatchProgress.dismissSettle)
+        #expect(window.announcements == before, "Not before the dismissal has finished")
+        await sleeper.advance()
+        await ManualSleeper.until { window.announcements.count > before.count }
+        #expect(window.announcements == before + [text], "Once, after the sheet has gone")
+        #expect(window.history.closingProgress == nil)
+    }
+
+    /// The Undo or Redo just started: its progress waits through `sleeper`.
+    private static func step(_ window: TestWindow, redo: Bool, _ sleeper: ManualSleeper) async {
+        if redo {
+            window.history.redo()
+        } else {
+            window.history.undo()
+        }
+        window.history.batchProgress?.sleep = sleeper.sleep
+        await window.history.batchRun?.task.value
+    }
+
+    @Test(
+        "Undo and Redo with the sheet: heard only after it has closed, with the save on or off the main actor",
+        arguments: [true, false],
+        [true, false],
+    )
+    func undoRedoAfterSheet(redo: Bool, offMain: Bool) async throws {
         let count = BatchSheetPolicy.rowsThatShowSheet
         let rows = (0..<count)
             .map { F.expense(Decimal($0 + 1), on: F.date(2026, 10, 1).addingTimeInterval(Double($0) * 60)) }
-        let disk = FullDiskLedgerRepository(try F.repository(rows))
+        let memory = try F.repository(rows)
+        let disk = FullDiskLedgerRepository(memory)
         disk.hasBatchPath = true
-        let useCases = TransactionUseCases(repository: disk, categoryNames: CatalogDefaultCategoryNames())
+        if offMain {
+            memory.offMainSave = {}
+        }
+        let repository: any LedgerRepository = offMain ? memory : disk
+        let useCases = TransactionUseCases(repository: repository, categoryNames: CatalogDefaultCategoryNames())
         let window = TestWindow(useCases)
         window.history.setScreen(.account(F.savingsID))
         var changes = BulkEditChanges()
@@ -124,7 +164,7 @@ struct BatchAnnouncementTests {
             selection: rows,
             changes: changes,
             payeeName: "",
-            accounts: try disk.accounts(),
+            accounts: try repository.accounts(),
             timeZoneID: F.zoneID,
             now: F.now,
         )
@@ -132,21 +172,17 @@ struct BatchAnnouncementTests {
         window.history.record(change)
         window.history.markBulkEdit(change)
         let name = "Edit 750 Transactions in Everyday Savings"
+        let sleeper = ManualSleeper()
 
-        window.history.undo()
-        await window.history.batchRun?.task.value
+        await Self.step(window, redo: false, sleeper)
         if redo {
-            window.history.batchSheetDismissed()
-            #expect(window.announcements == ["Undid \(name)"])
-            window.history.redo()
-            await window.history.batchRun?.task.value
+            await Self.dismiss(window, sleeper, expecting: "Undid \(name)")
+            await Self.step(window, redo: true, sleeper)
         }
-        let before = window.announcements
+        // The save has finished; the sheet hasn't started closing yet.
         #expect(window.history.closingProgress?.isShown == true)
         #expect(window.history.batchProgress == nil)
-        #expect(before.count == (redo ? 1 : 0), "Not before the sheet closes")
-        window.history.batchSheetDismissed()
-        #expect(window.announcements == before + [redo ? "Redid \(name)" : "Undid \(name)"])
-        #expect(window.history.closingProgress == nil)
+        #expect(window.announcements.count == (redo ? 1 : 0), "Not before the sheet closes")
+        await Self.dismiss(window, sleeper, expecting: redo ? "Redid \(name)" : "Undid \(name)")
     }
 }
