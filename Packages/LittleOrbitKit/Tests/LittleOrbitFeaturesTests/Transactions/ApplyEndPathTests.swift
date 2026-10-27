@@ -43,6 +43,10 @@ struct ApplyEndPathTests {
         let instant = ContinuousClock.now
         model.progressClock = { instant }
         model.progressShowDelay = nil
+        // Neither the announcement's fallback nor `settle()`'s cap can run out on its own while the main actor is held
+        // up beside this test (Tester2 on 0d676f8).
+        model.progressSleep = ManualSleeper.holding([BatchProgress.announcementFallbackDelay])
+        updates.sleep = ManualSleeper.holding([LedgerUpdates.settleLimit])
         model.editsCategory = true
         model.categoryID = DefaultCategoryID.food
         model.announce = { [updates] _ in
@@ -59,7 +63,7 @@ struct ApplyEndPathTests {
                 window.history.markBulkEdit(change)
             }
         }
-        await RealTime.until(seconds: 10) { model.closingProgress != nil }
+        await RealTime.eventually { model.closingProgress != nil }
         // Saved, and the sheet asked to close: nothing installed, nothing posted, still busy.
         try #require(model.closingProgress?.isShown == true)
         #expect(model.closeRequested)
@@ -69,7 +73,7 @@ struct ApplyEndPathTests {
         #expect(register.recomputes == loads)
 
         model.sheetClosed()
-        await RealTime.until(seconds: 10) { builds.started == 1 }
+        await RealTime.eventually { builds.started == 1 }
         // The counted refresh, held: the batch hasn't ended and nothing is announced yet.
         try #require(builds.started == 1, "The counted refresh")
         #expect(updates.isBatchRunning, "Busy until the refresh has finished")

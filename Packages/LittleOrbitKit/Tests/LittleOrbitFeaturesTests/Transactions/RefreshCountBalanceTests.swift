@@ -19,14 +19,14 @@ struct RefreshCountBalanceTests {
 
         updates.changed()
         updates.changed()
-        await ManualSleeper.until { builds.started == 2 }
+        await RealTime.eventually { builds.started == 2 }
         try #require(builds.started == 2)
         #expect(updates.refreshesRunning == 2)
         // The newer one shows first; the older one then finishes stale and shows nothing.
         builds.finishNewest()
-        await ManualSleeper.until { updates.refreshesRunning == 1 }
+        await RealTime.eventually { updates.refreshesRunning == 1 }
         builds.finishAll()
-        await RealTime.until(seconds: 1) { updates.refreshesRunning == 0 }
+        await RealTime.eventually { updates.refreshesRunning == 0 }
         #expect(updates.refreshesRunning == 0, "The stale refresh ended its count")
         #expect(register.seenRevision == updates.revision)
         #expect(await updates.settle() == false, "Not at the limit")
@@ -49,7 +49,7 @@ struct RefreshCountBalanceTests {
 
         updates.changed()
         #expect(updates.refreshesRunning == 1)
-        await RealTime.until(seconds: 1) { updates.refreshesRunning == 0 }
+        await RealTime.eventually { updates.refreshesRunning == 0 }
         #expect(updates.refreshesRunning == 0, "The failed refresh ended its count")
         #expect(register.errorMessage != nil)
         #expect(await updates.settle() == false, "Not at the limit")
@@ -59,6 +59,17 @@ struct RefreshCountBalanceTests {
 /// Waits in real time, polling each millisecond, until `done` holds or `seconds` have passed.
 @MainActor
 enum RealTime {
+    /// How long `eventually` waits at most: only a guard against a hang, never a bound on how long anything takes.
+    /// The parallel run on macOS holds the main actor up for seconds at a time beside these tests (the SwiftData
+    /// suites' main-actor writes, the real-`UndoManager` suites turning the main run loop), so a deadline of a second
+    /// or so ran out before the work it waited for had a turn (Tester2 and Tester on 0d676f8: 12–15 s).
+    static let hangGuard = 45.0
+
+    /// Until `done` holds, for a state the test is sure to reach; `hangGuard` at most, so a regression fails.
+    static func eventually(_ done: () -> Bool) async {
+        await until(seconds: hangGuard, done)
+    }
+
     static func until(seconds: Double, _ done: () -> Bool) async {
         let clock = ContinuousClock()
         let deadline = clock.now + .milliseconds(Int(seconds * 1_000))
