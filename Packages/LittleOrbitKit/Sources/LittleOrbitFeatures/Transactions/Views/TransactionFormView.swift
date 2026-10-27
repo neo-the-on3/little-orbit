@@ -16,7 +16,6 @@
             self.onSaved = onSaved
         }
         @Environment(\.dismiss) private var dismiss
-        @Environment(WindowUndoHistory.self) private var undoHistory: WindowUndoHistory?
         @Environment(\.dynamicTypeSize) private var dynamicTypeSize
         @State private var confirmingDiscard = false
         /// The category picker on show (iOS, #24). It reads the categories once, when the row is tapped.
@@ -50,7 +49,7 @@
                         }
                         ToolbarItem(placement: .confirmationAction) {
                             Button("Save", action: save)
-                                .disabled(!model.canSave || undoHistory?.isBatchRunning == true)
+                                .disabled(!model.canSave || model.isWaitingForBatch)
                         }
                     }
             }
