@@ -58,8 +58,10 @@ struct LedgerRefreshRegistrationTests {
 
         clock.now = 101.4
         builds.finishAll()
+        // Fails fast, well inside the 2 s limit, if the last `refreshEnded()` stops waking `settle()` (m6).
+        await RealTime.until(seconds: 1) { !history.isBatchRunning }
+        try #require(!history.isBatchRunning, "The last refresh's end woke settle()")
         await history.batchRun?.task.value
-        #expect(!history.isBatchRunning)
         #expect(updates.refreshesRunning == 0)
         #expect(updates.lastBatch == 100...101.4, "Ends once the register has refreshed")
         #expect(register.seenRevision == updates.revision)
@@ -105,7 +107,7 @@ struct LedgerRefreshRegistrationTests {
     }
 
     @Test("settle() waits for the last refresh to end, then one turn, with no timer")
-    func settleEndsWithRefresh() async {
+    func settleEndsWithRefresh() async throws {
         let updates = LedgerUpdates()
         let sleeper = ManualSleeper()
         updates.sleep = sleeper.sleep
@@ -117,7 +119,8 @@ struct LedgerRefreshRegistrationTests {
         #expect(sleeper.waiting == [LedgerUpdates.settleLimit], "One refresh still running")
         updates.refreshEnded()
         await ManualSleeper.until { sleeper.waiting == [BatchProgress.uiTurnLength] }
-        #expect(sleeper.waiting == [BatchProgress.uiTurnLength], "The cap is cancelled; one turn follows")
+        // Without the wake-up only the cap would still wait: fail here rather than hang on `settle.value` (m6).
+        try #require(sleeper.waiting == [BatchProgress.uiTurnLength], "The cap is cancelled; one turn follows")
         await sleeper.advance()
         #expect(await settle.value == false)
     }
@@ -152,6 +155,11 @@ final class HeldRegisterBuilds {
     private func hold() async {
         started += 1
         await withCheckedContinuation { held.append($0) }
+    }
+
+    /// Finishes the newest held build only.
+    func finishNewest() {
+        held.popLast()?.resume()
     }
 
     func finishAll() {

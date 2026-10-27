@@ -10,7 +10,7 @@ import Testing
 /// batch now ends once every window has refreshed and main is free, and a mouse-up just after the end whose press
 /// began inside the batch is dropped too. Made-up data.
 @MainActor
-@Suite("Undo and Redo queued during a batch's refresh")
+@Suite("Undo and Redo queued during a batch's refresh", .timeLimit(.minutes(1)))
 struct QueuedCommandRefreshTests {
     typealias Policy = QueuedCommandPolicy
 
@@ -112,6 +112,9 @@ struct QueuedCommandRefreshTests {
         #expect(refresh.isRunning)
         #expect(history.isBatchRunning, "Busy while the windows refresh")
         #expect(!history.canUndo && !history.canRedo)
+        // Fails fast, inside the 2 s limit, if the refresh's end stops waking `settle()` (m6).
+        await RealTime.until(seconds: 1) { !history.isBatchRunning }
+        try #require(!history.isBatchRunning, "The refresh's end woke settle()")
         await history.batchRun?.task.value
         #expect(!history.isBatchRunning)
         #expect(updates.lastBatch == 100...101.4, "Ends once the refresh is done, not at the install")
