@@ -42,6 +42,7 @@ extension WindowUndoHistory {
         let progress = BatchProgress(
             kind: undoing ? .undoing : .redoing,
             total: step.change.transactionIDs.count,
+            showAfter: progressShowDelay,
             now: progressClock,
         )
         batchProgress = progress

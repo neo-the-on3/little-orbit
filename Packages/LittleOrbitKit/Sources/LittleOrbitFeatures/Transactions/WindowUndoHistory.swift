@@ -59,6 +59,8 @@ public final class WindowUndoHistory {
     @ObservationIgnored var batchRun: (task: Task<Void, Never>, step: Step)?
     /// The clock a batch's progress times the sheet with; tests stop it.
     @ObservationIgnored var progressClock: () -> ContinuousClock.Instant = { .now }
+    /// How long a batch runs before its sheet shows, `BatchProgress.showDelay`; tests that expect none raise it.
+    @ObservationIgnored var progressShowDelay = BatchProgress.showDelay
 
     final class Step {
         let id = UUID()

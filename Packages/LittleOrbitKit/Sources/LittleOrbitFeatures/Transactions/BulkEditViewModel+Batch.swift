@@ -18,7 +18,12 @@ extension BulkEditViewModel {
             return nil
         }
         let span = BatchTrace.begin("batch.apply")
-        let progress = BatchProgress(kind: .applying, total: request.selection.count, now: progressClock)
+        let progress = BatchProgress(
+            kind: .applying,
+            total: request.selection.count,
+            showAfter: progressShowDelay,
+            now: progressClock,
+        )
         self.progress = progress
         defer {
             span.end()
