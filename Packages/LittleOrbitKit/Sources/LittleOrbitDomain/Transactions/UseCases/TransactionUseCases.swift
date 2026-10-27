@@ -83,6 +83,10 @@ public protocol TransactionChangesUseCase {
     /// that inverse's outcome. A stale change writes nothing. Fields the change didn't touch keep the values
     /// another window gave them.
     func revert(_ change: TransactionChange, expecting outcome: ChangeOutcome) throws -> RevertResult
+    /// `revert(_:expecting:)`, with an edit's rows checked off the main actor and one write on it (#285, D398).
+    /// Cancelled before that write, it writes nothing and throws `CancellationError`.
+    func revert(_ change: TransactionChange, expecting outcome: ChangeOutcome, reporting reporter: LedgerBatchReporter)
+        async throws -> RevertResult
     /// The accounts, transactions and transfers the change touches, before and after it (D166.3).
     func impact(of change: TransactionChange) throws -> ChangeImpact
 }
@@ -226,7 +230,7 @@ public struct DefaultAccountHistoryUseCase: AccountHistoryUseCase {
 
 @MainActor
 public struct DefaultTransactionChangesUseCase: TransactionChangesUseCase {
-    private let repository: any LedgerRepository
+    let repository: any LedgerRepository
     /// Undoes and redoes a save of the Scheduled form (D351.1). Without it, such a step can't be reverted.
     private let schedule: (any ScheduleRepository)?
 
@@ -292,7 +296,7 @@ public struct DefaultTransactionChangesUseCase: TransactionChangesUseCase {
             switch change.core {
             case .removed(let items): items.map(\.transaction)
             case .replaced(let previous):
-                previous + current.filter { now in previous.contains { $0.id == now.id } }
+                previous + current.filter { [ids = Set(previous.map(\.id))] now in ids.contains(now.id) }
             case .added(let ids): current.filter { ids.contains($0.id) }
             // Whole-account changes carry their account in the change itself.
             case .removedAccount, .addedAccount, .createdPayees, .removedPayees: []
@@ -419,28 +423,5 @@ public struct DefaultTransactionChangesUseCase: TransactionChangesUseCase {
             // Reverted by `revert` in the scheduled store, never inside this batch.
             throw LedgerValidationError.missingScheduledItem
         }
-    }
-
-    private func revertEdits(_ previous: [Transaction], expecting outcome: ChangeOutcome) throws -> TransactionChange {
-        let current = Dictionary(uniqueKeysWithValues: try repository.transactions().map { ($0.id, $0) })
-        var inverse: [Transaction] = []
-        for old in previous {
-            guard let now = current[old.id] else {
-                continue
-            }
-            inverse.append(now)
-            guard now != outcome.transactions[old.id] else {
-                // Nothing else changed it: the earlier version goes back as it was.
-                try repository.saveTransaction(old)
-                continue
-            }
-            // Another window changed fields this change didn't touch; those keep their new values.
-            var merged = now
-            for field in outcome.touchedFields[old.id] ?? Set(TransactionField.allCases) {
-                field.copy(from: old, into: &merged)
-            }
-            try repository.saveTransaction(merged)
-        }
-        return .replaced(inverse)
     }
 }

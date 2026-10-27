@@ -27,6 +27,10 @@ public final class BulkEditViewModel {
     /// Set once the alert is dismissed in any way while `alertClosesForm`: the sheet closes (D394).
     public private(set) var closeRequested = false
     public private(set) var accountOptions: [TransactionAccountOption] = []
+    /// While Apply runs as a batch, for the progress that replaces the sheet's fields (#285, D398.3).
+    public internal(set) var progress: BatchProgress?
+    /// Shared by every window: on while Apply runs, so no other write lands meanwhile (D398).
+    @ObservationIgnored var updates: LedgerUpdates?
 
     @ObservationIgnored private let loadLedger: any LoadTransactionLedgerUseCase
     @ObservationIgnored private let applyBulkEdit: any ApplyBulkEditUseCase
@@ -211,11 +215,24 @@ public final class BulkEditViewModel {
     /// elsewhere, nothing is written and it returns `nil`, so no Undo step is recorded, with `alert` set (D393).
     @discardableResult
     public func apply() -> TransactionChange? {
+        guard let request = request() else {
+            return nil
+        }
+        do {
+            return try applyBulkEdit.apply(request)
+        } catch {
+            refused(error)
+            return nil
+        }
+    }
+
+    /// The ticked fields for the selection, or `nil` when Apply is off.
+    func request() -> BulkEditRequest? {
         alertClosesForm = false
         guard canApply else {
             return nil
         }
-        let request = BulkEditRequest(
+        return BulkEditRequest(
             selection: selection,
             changes: changes,
             payeeName: payeeText,
@@ -223,21 +240,24 @@ public final class BulkEditViewModel {
             timeZoneID: timeZone.identifier,
             now: now(),
         )
-        do {
-            return try applyBulkEdit.apply(request)
-        } catch let deleted as BulkEditSelectionDeleted {
+    }
+
+    /// What a refused Apply shows: the alert when selected transactions were deleted elsewhere (D393), otherwise
+    /// the error. Nothing was written.
+    func refused(_ error: any Error) {
+        if let deleted = error as? BulkEditSelectionDeleted {
             deletedIDs = deleted.ids
             alertClosesForm = selection.allSatisfy { deleted.ids.contains($0.id) }
             alert = CategoryAlert(
                 title: BulkEditText.couldntApplyTitle,
                 message: BulkEditText.deletedMessage(count: deleted.ids.count),
             )
-            return nil
-        } catch {
+        } else {
             errorMessage = AccountHistoryViewModel.message(for: error)
-            return nil
         }
     }
+
+    var applyUseCase: any ApplyBulkEditUseCase { applyBulkEdit }
 
     /// Whether the alert shows, for its `isPresented` binding. Any dismissal, OK or Esc, clears it and drops the
     /// deleted transactions from the selection; the ticked fields and their values stay, so Apply works again on

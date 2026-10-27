@@ -11,6 +11,12 @@ public struct BulkEditSelectionDeleted: Error, Equatable, Sendable {
     }
 }
 
+/// Bulk Edit's Apply, run as a batch, was refused because the data changed while it was built and the change no
+/// longer passes the shared rules on the data as it is now. Nothing was written (D399).
+public struct BulkEditDataChanged: Error, Equatable, Sendable {
+    public init() {}
+}
+
 /// One Apply of the macOS "Edit N Transactions" sheet: its ticked fields for the transactions it opened with.
 public struct BulkEditRequest: Equatable, Sendable {
     /// The selected transactions as the sheet read them.
@@ -55,11 +61,24 @@ public protocol ApplyBulkEditUseCase {
     /// Only the ticked fields change, on the rows as stored at Apply time (D395): a field another window changed
     /// since the sheet opened keeps that value. Undo restores only the ticked fields, and Redo reapplies them.
     func apply(_ request: BulkEditRequest) throws -> TransactionChange
+    /// `apply(_:)` with the rows checked off the main actor, reporting as it goes, then one write on the main
+    /// actor (#285, D398). Cancelled before that write, it writes nothing and throws `CancellationError`.
+    func apply(_ request: BulkEditRequest, reporting reporter: LedgerBatchReporter) async throws -> TransactionChange
+}
+
+extension ApplyBulkEditUseCase {
+    /// `apply(_:)` on the main actor, for a use case without a batch path.
+    public func apply(
+        _ request: BulkEditRequest,
+        reporting _: LedgerBatchReporter,
+    ) async throws -> TransactionChange {
+        try apply(request)
+    }
 }
 
 @MainActor
 public struct DefaultApplyBulkEditUseCase: ApplyBulkEditUseCase {
-    private let repository: any LedgerRepository
+    let repository: any LedgerRepository
     private let save: DefaultSaveTransactionsUseCase
 
     public init(repository: any LedgerRepository) {
@@ -67,8 +86,13 @@ public struct DefaultApplyBulkEditUseCase: ApplyBulkEditUseCase {
         save = DefaultSaveTransactionsUseCase(repository: repository)
     }
 
+    /// The same steps as `apply(_:reporting:)`, all on the main actor in one change (#285). A store without the
+    /// batch path saves the rows one by one instead.
     public func apply(_ request: BulkEditRequest) throws -> TransactionChange {
-        try repository.atomically {
+        guard repository.revision == nil else {
+            return try commit(nil, for: request)
+        }
+        return try repository.atomically {
             // Every selected row, changed by this edit or not: the sheet's count and its rows must still be stored.
             let stored = Dictionary(
                 try repository.transactions().filter { $0.deletedAt == nil }.map { ($0.id, $0) },

@@ -13,6 +13,7 @@
         /// (`discardChanges(after:)`), so nothing is half-written, in the store or in memory, and the next read loads the
         /// store again.
         func write(_ snapshot: LedgerSnapshot) throws {
+            writes &+= 1
             let current = try storedLedger()
             let changes = LedgerWriteSet(from: current.snapshot, to: snapshot)
             let deletePath = deletePathOverride ?? LedgerWriteTuning.deletePath(forDeleting: changes.deletedCount)
