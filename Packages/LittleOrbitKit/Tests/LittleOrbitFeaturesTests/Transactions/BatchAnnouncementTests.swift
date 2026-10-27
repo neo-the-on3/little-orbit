@@ -71,9 +71,11 @@ struct BatchAnnouncementTests {
             transactionIDs: rows.map(\.id),
         )
         model.announce = { heard.texts.append($0) }
-        // A clock that stands still, so a slow parallel run can't pass the quarter of a second that shows the sheet.
+        // A clock that stands still, so a slow parallel run can't pass the quarter of a second that shows the sheet,
+        // and a sheet timer that doesn't fire (review 5666870090). Past 750 rows the sheet still shows before the save.
         let instant = ContinuousClock.now
         model.progressClock = { instant }
+        model.progressShowDelay = .seconds(60)
         model.editsCategory = true
         model.categoryID = DefaultCategoryID.food
         return model

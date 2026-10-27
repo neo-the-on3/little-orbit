@@ -111,6 +111,8 @@ struct BulkEditBatchTests {
             timeZone: F.zone,
         )
         let model = feature.makeBulkEdit(rows.map(\.id))
+        // No sheet for 5 rows: its timer mustn't fire on a slow run (review 5666870090).
+        model.progressShowDelay = .seconds(60)
         model.editsCategory = true
         model.categoryID = DefaultCategoryID.food
         let window = feature.makeUndoHistory()
@@ -130,6 +132,16 @@ struct BulkEditBatchTests {
         #expect(window.undoSteps.last?.runsInBatch == true)
         #expect(undoManager.undoNames == ["Edit 5 Transactions in Everyday Savings"])
         #expect(try repository.transactions().allSatisfy { $0.categoryID == DefaultCategoryID.food })
+    }
+
+    @Test("Apply and a window's Undo and Redo time the sheet with the app's half second unless a test sets it")
+    func defaultShowDelay() throws {
+        let repository = try F.repository(Self.rows(1))
+        let feature = TransactionsFeature(
+            useCases: TransactionUseCases(repository: repository, categoryNames: CatalogDefaultCategoryNames())
+        )
+        #expect(feature.makeBulkEdit([]).progressShowDelay == .milliseconds(500))
+        #expect(feature.makeUndoHistory().progressShowDelay == .milliseconds(500))
     }
 
     @Test("While another batch runs, Apply starts nothing")

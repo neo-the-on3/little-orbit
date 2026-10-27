@@ -42,6 +42,8 @@ struct EditMenuDuringBatchTests {
             transactionIDs: Self.rows.map(\.id),
         )
         model.updates = updates
+        // No sheet: its timer mustn't fire on a slow run (review 5666870090).
+        model.progressShowDelay = .seconds(60)
         model.editsCategory = true
         model.categoryID = DefaultCategoryID.food
         let apply = Task { await model.applyInBackground() }
