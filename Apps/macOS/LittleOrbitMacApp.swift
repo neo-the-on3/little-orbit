@@ -10,6 +10,10 @@ struct LittleOrbitMacApp: App {
     @State private var isPickingBackupFile = false
 
     init() {
+        // The app's NSApplication, which NSPrincipalClass names (macOS.xcconfig), so each Undo or Redo can tell the
+        // event it was dispatched with from an Accessibility action (B5 on bab2ad8). Named here so the linker keeps
+        // it; if it isn't in place, nothing drops and `ledger.command.dispatch` logs -2.
+        _ = LittleOrbitApplication.self
         features = AppComposition.make()
     }
 

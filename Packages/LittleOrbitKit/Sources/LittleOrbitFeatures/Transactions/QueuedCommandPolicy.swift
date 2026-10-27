@@ -5,18 +5,23 @@ import Foundation
 #endif
 
 /// Whether an Undo or Redo was asked for while the last batch ran (#285, D398, D403, Tester2's N5 at c8c6594,
-/// comment 6440723910; Tech Architect's reviews 5666694381 and 5670733886, and the press-time ruling on 3dc318b).
+/// comment 6440723910; Tech Architect's reviews 5666694381 and 5670733886, the press-time ruling on 3dc318b, and B5 on
+/// bab2ad8).
 ///
 /// While a batch saves, or the windows refresh after it, the main thread is blocked, so a click in an Edit menu left
 /// open, or a ⌘Z, waits in the event queue. It's handled once the batch has ended and the busy flag is off, and would
-/// undo one step more. So such a command is dropped:
+/// undo one step more. So such a command is dropped. What decides is what AppKit is dispatching as the command runs
+/// (`EventDispatch`), never how old `NSApp.currentEvent` is:
 ///
-/// - From the keyboard, or any event that isn't the mouse's: when its event's time falls inside the last batch,
-///   `batch.start ≤ time ≤ batch.end`. An event drops at most one command.
-/// - From the left mouse button, a menu item chosen with a click: when the press that chose it fell inside the batch,
-///   `batch.start ≤ pressTime ≤ batch.end`, however late its mouse-up is handled (Tester2 on 3dc318b: pressed just
-///   before the end, released after it, and it ran). A press after the end goes through, however soon. A press drops
-///   at most one command.
+/// - Nothing being dispatched: the command came from Accessibility (VoiceOver, Voice Control, an AXPress), or
+///   anything else not driven by an input event. It never drops, whatever event came last (B4 on 0d676f8).
+/// - A key event, or any event but the left mouse button's: drops when that event's own time falls inside the last
+///   batch, `batch.start ≤ time ≤ batch.end`. An event drops at most one command.
+/// - The left mouse button, as a menu item chosen with a click: drops when the left button's last press fell inside
+///   the batch, `batch.start ≤ pressTime ≤ batch.end`, however late its mouse-up is handled and whichever mouse event
+///   is being dispatched. A menu's tracking runs inside the dispatch of the mouse-down that opened it, which may be
+///   from before the batch (Tester2 on bab2ad8, B5), so that event's time says nothing about when the item was
+///   chosen. A press after the end goes through, however soon. A press drops at most one command.
 /// - The right and other buttons count as the keyboard does, by their own event's time (Tech Architect's m9 on
 ///   0d676f8): the press time is only the left button's, so another button's command, such as a context menu's,
 ///   never borrows a left press from inside the batch.
@@ -27,17 +32,13 @@ import Foundation
 ///
 /// Every time here is seconds since the system started, on one clock: `NSEvent.timestamp`,
 /// `ProcessInfo.systemUptime`, which `LedgerUpdates` stamps the batch's start and end with, and so `pressTime`.
-///
-/// AppKit never clears `NSApp.currentEvent`, so a command not driven by an event of its own (VoiceOver, Voice
-/// Control or any other Accessibility press) sees whatever event came last. Only an event newer than both the one the
-/// last command was handled with and the one current when the last batch ended counts (`fresh(_:after:)`, B4 on
-/// 0d676f8); a stale one counts as no event, and no event never drops. One from before the batch isn't inside it
-/// either, so the command goes through.
 enum QueuedCommandPolicy {
-    /// The event a command is handled with: when it happened, and whether it's the mouse's.
+    /// The input event a command is handled with: when it happened, and whether it's the left mouse button's.
     struct Event: Equatable, Sendable {
         var time: TimeInterval
         var isMouse = false
+        /// The `NSEvent.EventType` raw value, for the signposts only; -1 when unknown.
+        var type = -1
     }
 
     /// How far apart two readings of one press can be, from the event source's clock and `systemUptime` being read
@@ -59,33 +60,11 @@ enum QueuedCommandPolicy {
         return press
     }
 
-    /// The event, if it's newer than the one the last command was handled with (`last`); otherwise `nil`, as for a
-    /// command with no event: the stale event an Accessibility press sees (condition 1).
-    static func fresh(_ event: Event?, after last: TimeInterval?) -> Event? {
-        guard let event else {
-            return nil
-        }
-        guard let last else {
-            return event
-        }
-        return event.time > last ? event : nil
-    }
-
-    /// The later of two times an event must be newer than to count, either of them possibly unknown.
-    static func newest(_ first: TimeInterval?, _ second: TimeInterval?) -> TimeInterval? {
-        guard let first else {
-            return second
-        }
-        guard let second else {
-            return first
-        }
-        return max(first, second)
-    }
-
-    /// Whether to drop the command, for its fresh event. A mouse event drops when the press (`pressTime`) fell inside
-    /// the last batch, the event came with or after it, and that press hasn't dropped a command already. Any other
-    /// event drops when its own time fell inside the batch and it hasn't dropped one already. With no event, no
-    /// batch yet, or a mouse event and no press time, it goes through.
+    /// Whether to drop the command, for the input event being dispatched as it runs. A left mouse event drops when
+    /// the press (`pressTime`) fell inside the last batch and that press hasn't dropped a command already, whenever
+    /// the event itself happened (B5). Any other event drops when its own time fell inside the batch and it hasn't
+    /// dropped one already. With no event being dispatched, no batch yet, or a mouse event and no press time, it
+    /// goes through.
     static func dropsCommand(
         event: Event?,
         pressTime: TimeInterval?,
@@ -99,7 +78,7 @@ enum QueuedCommandPolicy {
         guard event.isMouse else {
             return lastBatch.contains(event.time) && event.time != lastDroppedEventTime
         }
-        guard let pressTime, lastBatch.contains(pressTime), event.time >= pressTime - pressTolerance else {
+        guard let pressTime, lastBatch.contains(pressTime) else {
             return false
         }
         if let lastDroppedPressTime, abs(pressTime - lastDroppedPressTime) <= pressTolerance {
@@ -140,13 +119,11 @@ enum QueuedCommandPolicy {
         Event(time: time, isMouse: source == .leftMouse)
     }
 
-    /// The event being handled now, on the `systemUptime` clock: the Mac's current event, `nil` elsewhere.
-    @MainActor
-    static func currentEvent() -> Event? {
-        #if canImport(AppKit) && os(macOS)
-            guard let event = NSApp?.currentEvent else {
-                return nil
-            }
+    #if canImport(AppKit) && os(macOS)
+        /// The input event for an event AppKit dispatches, on the `systemUptime` clock: a mouse button's or the
+        /// keyboard's. `nil` for any other kind, which drives no command of its own.
+        @MainActor
+        static func event(for event: NSEvent) -> Event? {
             let source: Source
             switch event.type {
             case .leftMouseDown, .leftMouseUp, .leftMouseDragged:
@@ -154,22 +131,24 @@ enum QueuedCommandPolicy {
             case .rightMouseDown, .rightMouseUp, .rightMouseDragged, .otherMouseDown, .otherMouseUp,
                 .otherMouseDragged:
                 source = .otherMouseButton
-            default:
+            case .keyDown, .keyUp, .flagsChanged:
                 source = .other
+            default:
+                return nil
             }
-            return Self.event(at: event.timestamp, from: source)
-        #else
-            nil
-        #endif
-    }
+            var input = Self.event(at: event.timestamp, from: source)
+            input.type = Int(event.type.rawValue)
+            return input
+        }
+    #endif
 
     /// Seconds since the left mouse button last went down anywhere in the login session: the Mac's event source,
     /// `nil` elsewhere, where there's no mouse.
     ///
     /// Session-wide, so a press in another app counts too (condition 2). That's acceptable: a command is dropped for
-    /// a press only when it comes with a fresh mouse event of ours, and then at most once per press. A press elsewhere
-    /// inside the batch, followed by a click of ours on Undo after it, is a newer press, after the end, and goes
-    /// through.
+    /// a press only while one of our left mouse events is being dispatched, and then at most once per press. A press
+    /// elsewhere inside the batch, followed by a click of ours on Undo after it, is a newer press, after the end, and
+    /// goes through.
     @MainActor
     static func secondsSinceLeftMouseDown() -> Double? {
         #if canImport(AppKit) && os(macOS)

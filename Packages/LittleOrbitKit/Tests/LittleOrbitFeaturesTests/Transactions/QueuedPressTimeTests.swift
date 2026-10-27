@@ -7,7 +7,8 @@ import Testing
 /// Tester2's D403 on 3dc318b (comment 6448338326), and Tech Architect's press-time ruling with its four conditions: a
 /// menu Undo or Redo pressed just before a batch's end, and released after it, still ran. A mouse command is now
 /// dropped when its press fell inside the batch, however late its mouse-up is handled; a press after the end goes
-/// through. The press time is `uptime − seconds since the last left mouse-down`. Literal times, made-up data.
+/// through. The press time is `uptime − seconds since the last left mouse-down`, read while a left mouse event is
+/// being dispatched (B5 on bab2ad8). Literal times, made-up data.
 @MainActor
 @Suite("Undo and Redo pressed during a batch", .timeLimit(.minutes(1)))
 struct QueuedPressTimeTests {
@@ -49,10 +50,12 @@ struct QueuedPressTimeTests {
         #expect(!Self.drops(Policy.Event(time: 99.95, isMouse: true), press: 99.9))
     }
 
-    @Test("A mouse event from before its press isn't the press's: it goes through")
+    @Test("A left mouse event from before its press, as a menu opened before the batch: the press decides (B5)")
     func eventBeforePress() {
-        #expect(!Self.drops(Policy.Event(time: 99.8, isMouse: true), press: 100.5))
-        #expect(Self.drops(Policy.Event(time: 100.495, isMouse: true), press: 100.5), "Within the tolerance")
+        // The mouse-down at 99.8 s opened the Edit menu; its tracking runs inside that dispatch, and Undo is chosen
+        // with a press at 100.5 s, inside the batch (Tester2 on bab2ad8).
+        #expect(Self.drops(Policy.Event(time: 99.8, isMouse: true), press: 100.5))
+        #expect(!Self.drops(Policy.Event(time: 99.8, isMouse: true), press: 101.2), "Chosen after the end")
     }
 
     @Test("Key events keep the timestamp rule; no event, no batch or no press time never drops")
@@ -102,16 +105,6 @@ struct QueuedPressTimeTests {
             #expect(Policy.pressTime(now: 102, secondsSince: bad, launch: 50) == nil, "\(bad)")
         }
         #expect(Policy.pressTime(now: 102, secondsSince: nil, launch: 50) == nil, "No source, as on iOS")
-    }
-
-    @Test("Only an event newer than the last command's counts; a stale one is no event")
-    func freshEvent() {
-        let event = Policy.Event(time: 99.8, isMouse: true)
-        #expect(Policy.fresh(event, after: nil) == event)
-        #expect(Policy.fresh(event, after: 99.7) == event)
-        #expect(Policy.fresh(event, after: 99.8) == nil)
-        #expect(Policy.fresh(event, after: 101) == nil)
-        #expect(Policy.fresh(nil, after: 99) == nil)
     }
 
     /// A batch Undo from 10 s to 11 s, started by ⌘Z at 10 s.
@@ -164,20 +157,21 @@ struct QueuedPressTimeTests {
         #expect(setup.window.undoManager.undoNames.count == undoNames.count + 1, "Exactly one step redone")
     }
 
-    @Test("A stale mouse-up as the current event, with an Accessibility Redo after the batch: it goes through")
+    @Test("A dropped menu Redo, then an Accessibility Redo after the batch, with nothing dispatched: it goes through")
     func staleMouseUpAccessibility() async throws {
         let (setup, clock) = try await Self.endedBatch()
         // A menu Redo pressed inside the batch, at 10.9 s, is dropped with its mouse-up at 11.1 s.
         #expect(!(await Self.menuRedo(setup, clock, press: 10.9, mouseUp: 11.1)))
-        // Then a press in another app reads as 10.97 s, inside the batch too; a VoiceOver Redo at 12 s sees the old
-        // mouse-up, already handled, as the current event.
+        // Then a press in another app reads as 10.97 s, inside the batch too; a VoiceOver Redo at 12 s arrives outside
+        // any dispatch, though AppKit's current event is still the old mouse-up.
         let redoNames = setup.window.undoManager.redoNames
+        clock.eventTime = nil
         clock.pressTime = 10.97
         clock.now = 12
         setup.window.undoManager.redo()
         setup.window.settle()
         await setup.window.history.batchRun?.task.value
-        #expect(setup.window.undoManager.redoNames != redoNames, "The stale event is no event, so it ran")
+        #expect(setup.window.undoManager.redoNames != redoNames, "No event is being dispatched, so it ran")
     }
 
     @Test(

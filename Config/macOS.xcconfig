@@ -11,6 +11,9 @@ INFOPLIST_KEY_CFBundleDisplayName = Little Orbit
 // The exported .littleorbit-backup type (D195a.1, L19). Generated keys are merged into it. No document types:
 // opening a backup from Files or Finder is the follow-up to #40 (D197.3, L39).
 INFOPLIST_FILE = Config/LittleOrbit-Info.plist
+// The app's NSApplication subclass, from LittleOrbitFeatures: it records the event being dispatched, for the Undo and
+// Redo dropped after a batch (B5 on #286).
+INFOPLIST_KEY_NSPrincipalClass = LittleOrbitApplication
 SDKROOT = macosx
 MACOSX_DEPLOYMENT_TARGET = 27.0
 ENABLE_HARDENED_RUNTIME = YES
