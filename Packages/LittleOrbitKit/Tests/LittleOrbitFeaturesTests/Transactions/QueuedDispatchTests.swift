@@ -4,12 +4,12 @@ import Testing
 
 @testable import LittleOrbitFeatures
 
-/// Tech Architect's B5 on bab2ad8, from Tester2's macOS run (comment 6452073697): an Edit menu Undo or Redo pressed
-/// inside a batch, with the menu opened before it, ran an extra step once the batch ended, 0 of 3 dropped. The menu's
-/// tracking runs inside the dispatch of the mouse-down that opened it, so `NSApp.currentEvent` was no newer than the
-/// event current at the end, and B4's freshness check took it for an Accessibility press. A command is now decided by
-/// the event being dispatched as it runs (`EventDispatch`), driven here as `LittleOrbitApplication.sendEvent` does.
-/// Each test has its own `EventDispatch`. Literal times on the `systemUptime` clock, made-up data.
+/// A ⌘Z that waited in the event queue while a batch blocked the main thread, dispatched once it ended, is dropped
+/// (D403, kept by D407 for this one path). It's told by the key-down being dispatched as the command runs
+/// (`EventDispatch`, B5 on bab2ad8), driven here as `LittleOrbitApplication.sendEvent` does. A menu choice, by mouse
+/// or keyboard, or an Accessibility action, sees no key-down and never drops: Edit › Undo and Redo are off during the
+/// batch for those instead (`UndoCommandGateTests`). Each test has its own `EventDispatch`. Literal times on the
+/// `systemUptime` clock, made-up data.
 @MainActor
 @Suite("Undo and Redo by the event being dispatched", .timeLimit(.minutes(1)))
 struct QueuedDispatchTests {
@@ -73,7 +73,9 @@ struct QueuedDispatchTests {
         static let appKitDefined = 13
     }
 
-    static let opener = Policy.Event(time: 9.5, isMouse: true, type: Kind.leftMouseDown)
+    static func key(_ time: TimeInterval) -> Policy.Event {
+        Policy.Event(time: time, type: Kind.keyDown)
+    }
 
     private static func endedBatch() async throws -> Ended {
         let updates = LedgerUpdates()
@@ -84,8 +86,7 @@ struct QueuedDispatchTests {
         dispatch.nextTopLevelTurn = turns.add
         updates.dispatchingEvent = { dispatch.current }
         let setup = try await QueuedCommandTests.setup(updates: updates)
-        let key = Policy.Event(time: 10, type: Kind.keyDown)
-        dispatch.dispatching(EventDispatch.Entry(type: Kind.keyDown, input: key)) {
+        dispatch.dispatching(EventDispatch.Entry(type: Kind.keyDown, input: key(10))) {
             setup.window.undoManager.undo()
         }
         #expect(setup.window.history.isBatchRunning)
@@ -99,161 +100,90 @@ struct QueuedDispatchTests {
         return Ended(setup: setup, clock: clock, dispatch: dispatch, turns: turns)
     }
 
-    @Test("Tester2's case: a menu opened before the batch, Undo's item pressed inside it, sent after the end: dropped")
-    func menuOpenedBeforePressedInside() async throws {
-        let ended = try await Self.endedBatch()
-        let undoNames = ended.undoNames
-        // The Edit menu was opened by the mouse-down at 9.5 s; its item is pressed at 10.95 s, and the action is sent
-        // at 11.4 s, still inside that mouse-down's dispatch.
-        ended.clock.pressTime = 10.95
-        let ran = await ended.redo(at: 11.4) { send in ended.dispatching(Kind.leftMouseDown, Self.opener, send) }
-        #expect(!ran, "Dropped")
-        #expect(ended.undoNames == undoNames, "Nothing redone")
-        #expect(try ended.setup.details(0) == "Earlier edit")
-    }
-
-    @Test("A menu press mid-batch, its mouse-up dispatched after the end: dropped, once per press")
-    func menuPressMidBatch() async throws {
-        let ended = try await Self.endedBatch()
-        ended.clock.pressTime = 10.5
-        let mouseUp = Policy.Event(time: 10.56, isMouse: true, type: Kind.leftMouseUp)
-        #expect(!(await ended.redo(at: 11.3) { send in ended.dispatching(Kind.leftMouseUp, mouseUp, send) }))
-        // Another command off the same press goes through.
-        #expect(await ended.redo(at: 11.35) { send in ended.dispatching(Kind.leftMouseUp, mouseUp, send) })
-    }
-
     @Test("A ⌘Z typed inside the batch, dispatched after the end: dropped; the same key-down drops no other")
     func keyInsideBatch() async throws {
         let ended = try await Self.endedBatch()
         let undoNames = ended.undoNames
-        let key = Policy.Event(time: 10.8, type: Kind.keyDown)
+        let key = Self.key(10.8)
         ended.clock.now = 11.2
         ended.dispatching(Kind.keyDown, key) { ended.setup.window.undoManager.undo() }
         ended.setup.window.settle()
         #expect(ended.undoNames == undoNames, "Nothing undone")
+        #expect(try ended.setup.details(0) == "Earlier edit")
         ended.dispatching(Kind.keyDown, key) { ended.setup.window.undoManager.undo() }
         ended.setup.window.settle()
         #expect(ended.undoNames.count == undoNames.count - 1, "One drop per event")
     }
 
-    @Test("A menu press, or a ⌘⇧Z, after the end: the Redo runs once")
-    func pressAfterEnd() async throws {
+    @Test("A ⌘Z, or a ⇧⌘Z, after the end: the command runs once")
+    func keyAfterEnd() async throws {
         let ended = try await Self.endedBatch()
         let undoNames = ended.undoNames
-        ended.clock.pressTime = 11.05
-        let ran = await ended.redo(at: 11.1) { send in ended.dispatching(Kind.leftMouseDown, Self.opener, send) }
-        #expect(ran)
-        #expect(ended.undoNames.count == undoNames.count + 1, "Exactly one step redone")
+        ended.clock.now = 11.2
+        ended.dispatching(Kind.keyDown, Self.key(11.15)) { ended.setup.window.undoManager.undo() }
+        ended.setup.window.settle()
+        #expect(ended.undoNames.count == undoNames.count - 1, "Exactly one step undone")
+        #expect(try ended.setup.details(0) == nil)
 
         let other = try await Self.endedBatch()
-        let key = Policy.Event(time: 11.2, type: Kind.keyDown)
-        #expect(await other.redo(at: 11.21) { send in other.dispatching(Kind.keyDown, key, send) })
+        let redoNames = other.redoNames
+        #expect(await other.redo(at: 11.21) { send in other.dispatching(Kind.keyDown, Self.key(11.2), send) })
+        #expect(other.redoNames.count == redoNames.count - 1, "Exactly one step redone")
+    }
+
+    @Test("A menu item chosen with the mouse after the end, outside any key-down: it runs (D407: off during the batch)")
+    func menuChoiceRuns() async throws {
+        let ended = try await Self.endedBatch()
+        // Sent from the menu's own tracking loop, or inside a mouse event's dispatch: no key-down either way.
+        #expect(await ended.redo(at: 11.4))
+        let other = try await Self.endedBatch()
+        let mouseUp: (() -> Void) -> Void = { send in other.dispatching(Kind.leftMouseUp, nil, send) }
+        #expect(await other.redo(at: 11.4, in: mouseUp))
     }
 
     @Test("An unused click inside the batch, then an Accessibility Redo after the end: it runs (B4)")
     func unusedClickThenAccessibility() async throws {
         let ended = try await Self.endedBatch()
         // A click on the sheet at 10.55 s, inside the batch: dispatched then, and no command.
-        ended.clock.pressTime = 10.55
-        ended.dispatching(Kind.leftMouseDown, Policy.Event(time: 10.55, isMouse: true, type: Kind.leftMouseDown)) {}
+        ended.dispatching(Kind.leftMouseDown, nil) {}
         #expect(await ended.redo(at: 12), "Outside any dispatch")
     }
 
     @Test("An unused key press inside the batch, then an Accessibility Redo after the end: it runs (B4)")
     func unusedKeyThenAccessibility() async throws {
         let ended = try await Self.endedBatch()
-        ended.dispatching(Kind.keyDown, Policy.Event(time: 10.6, type: Kind.keyDown)) {}
+        ended.dispatching(Kind.keyDown, Self.key(10.6)) {}
         #expect(await ended.redo(at: 12), "Outside any dispatch")
     }
 
-    @Test("Nested: an app-defined event inside a menu's mouse-down hides nothing; a key-down inside it is what counts")
+    @Test("Nested: an app-defined event inside a key-down's dispatch hides nothing")
     func nestedDispatch() async throws {
         let ended = try await Self.endedBatch()
-        ended.clock.pressTime = 10.9
         let inner: (() -> Void) -> Void = { send in
-            ended.dispatching(Kind.leftMouseDown, Self.opener) {
+            ended.dispatching(Kind.keyDown, Self.key(10.9)) {
                 ended.dispatching(Kind.appKitDefined, nil, send)
             }
         }
-        #expect(!(await ended.redo(at: 11.3, in: inner)), "The mouse-down's press, inside the batch: dropped")
-
-        let other = try await Self.endedBatch()
-        other.clock.pressTime = 10.9
-        // A key equivalent typed after the end, inside the tracking of a menu opened by that mouse-down.
-        let key = Policy.Event(time: 11.25, type: Kind.keyDown)
-        let keyInside: (() -> Void) -> Void = { send in
-            other.dispatching(Kind.leftMouseDown, Self.opener) {
-                other.dispatching(Kind.keyDown, key, send)
-            }
-        }
-        #expect(await other.redo(at: 11.3, in: keyInside), "The key-down's own time, after the end: it runs")
+        #expect(!(await ended.redo(at: 11.3, in: inner)), "The key-down's time, inside the batch: dropped")
     }
 
-    @Test("Edge (b): Return chosen in a menu opened by a click before the batch, pressed inside it: dropped, once")
-    func keyboardChoiceInClickedMenu() async throws {
+    @Test(
+        "m13: a key-down time that can't be right, never inside a batch, fails open",
+        arguments: [0, -0.5, Double.nan, Double.infinity, -Double.infinity, 1e9],
+    )
+    func badKeyTimeFailsOpen(time: Double) async throws {
         let ended = try await Self.endedBatch()
-        let undoNames = ended.undoNames
-        // The opening click at 9.5 s, then the arrow keys and Return, the last key-down at 10.8 s, inside the batch.
-        ended.clock.pressTime = 9.5
-        ended.clock.keyTime = 10.8
-        let inMenu: (() -> Void) -> Void = { send in ended.dispatching(Kind.leftMouseDown, Self.opener, send) }
-        #expect(!(await ended.redo(at: 11.3, in: inMenu)), "Dropped")
-        #expect(ended.undoNames == undoNames, "Nothing redone")
-        #expect(await ended.redo(at: 11.35, in: inMenu), "That key-down drops no other")
-    }
-
-    @Test("Edge (b): Return, or a VoiceOver key, in a menu opened before the batch, pressed after the end: it runs")
-    func keyboardChoiceAfterEnd() async throws {
-        let ended = try await Self.endedBatch()
-        ended.clock.pressTime = 9.5
-        ended.clock.keyTime = 11.2
-        let inMenu: (() -> Void) -> Void = { send in ended.dispatching(Kind.leftMouseDown, Self.opener, send) }
-        #expect(await ended.redo(at: 11.25, in: inMenu))
-    }
-
-    @Test("Edge (b): a click inside the batch after an earlier key-down still goes by the click; a later key wins")
-    func latestInputDecides() {
-        #expect(Policy.latestInput(pressTime: 10.5, keyTime: 9) == 10.5)
-        #expect(Policy.latestInput(pressTime: 9.5, keyTime: 10.8) == 10.8)
-        #expect(Policy.latestInput(pressTime: nil, keyTime: 10.8) == 10.8)
-        #expect(Policy.latestInput(pressTime: 10.5, keyTime: nil) == 10.5)
-        #expect(Policy.latestInput(pressTime: nil, keyTime: nil) == nil)
-        let mouse = Policy.Event(time: 9.5, isMouse: true)
-        let batch: ClosedRange<TimeInterval> = 10...11
-        let drops = { (press: TimeInterval?, key: TimeInterval?) in
-            Policy.dropsCommand(
-                event: mouse,
-                pressTime: press,
-                keyTime: key,
-                lastBatch: batch,
-                lastDroppedEventTime: nil,
-                lastDroppedPressTime: nil,
-            )
-        }
-        #expect(drops(9.5, 10.8), "Return inside the batch")
-        #expect(!drops(9.5, 11.2), "Return after the end")
-        #expect(!drops(10.5, 11.2), "A key after the end, later than the press inside")
-        #expect(drops(10.5, 9), "A press inside, after an earlier key")
-        #expect(
-            Policy.dropsCommand(
-                event: Policy.Event(time: 10.5),
-                pressTime: nil,
-                keyTime: 11.2,
-                lastBatch: batch,
-                lastDroppedEventTime: nil,
-                lastDroppedPressTime: nil,
-            ),
-            "A key event still goes by its own time, not the later key-down",
-        )
+        #expect(await ended.redo(at: 11.3) { send in ended.dispatching(Kind.keyDown, Self.key(time), send) })
+        #expect(!Policy.dropsCommand(eventTime: time, lastBatch: 10...11, lastDroppedEventTime: nil))
     }
 
     @Test("m11: a dispatch whose end was skipped inside another is taken off when that one ends")
     func skippedEndNested() {
         let dispatch = EventDispatch()
-        let outer = dispatch.enter(EventDispatch.Entry(type: Kind.keyDown, input: Policy.Event(time: 5)))
+        let outer = dispatch.enter(EventDispatch.Entry(type: Kind.leftMouseDown, input: nil))
         // An exception unwinds the inner dispatch without its end.
-        _ = dispatch.enter(EventDispatch.Entry(type: Kind.leftMouseDown, input: Self.opener))
-        #expect(dispatch.current == Self.opener)
+        _ = dispatch.enter(EventDispatch.Entry(type: Kind.keyDown, input: Self.key(5)))
+        #expect(dispatch.current == Self.key(5))
         dispatch.leave(outer)
         #expect(dispatch.entries.isEmpty)
         #expect(dispatch.current == nil)
@@ -262,11 +192,8 @@ struct QueuedDispatchTests {
     @Test("m11: an outermost dispatch whose end was skipped is cleared at the next top-level turn; AX then runs")
     func skippedEndOutermost() async throws {
         let ended = try await Self.endedBatch()
-        // A click on the sheet at 10.55 s, inside the batch, whose dispatch an exception unwinds without its end.
-        ended.clock.pressTime = 10.55
-        _ = ended.dispatch.enter(
-            EventDispatch.Entry(type: Kind.leftMouseDown, input: Policy.Event(time: 10.55, isMouse: true))
-        )
+        // A key-down at 10.55 s, inside the batch, whose dispatch an exception unwinds without its end.
+        _ = ended.dispatch.enter(EventDispatch.Entry(type: Kind.keyDown, input: Self.key(10.55)))
         #expect(ended.dispatch.current != nil, "Left behind")
         // The run loop's next default-mode turn, with no dispatch running.
         try #require(ended.turns.blocks.count == 1, "One clear asked for")
@@ -284,19 +211,21 @@ struct QueuedDispatchTests {
         #expect(!dispatch.isInstalled && dispatch.outermostType == -2, "Absent at launch: still fails open")
         dispatch.reportSource(live: true)
         #expect(dispatch.isInstalled && dispatch.outermostType == -1, "Live")
-        let key = Policy.Event(time: 5, type: Kind.keyDown)
-        dispatch.dispatching(EventDispatch.Entry(type: Kind.leftMouseDown, input: Self.opener)) {
-            #expect(dispatch.current == Self.opener)
+        let key = Self.key(5)
+        dispatch.dispatching(EventDispatch.Entry(type: Kind.leftMouseDown, input: nil)) {
+            #expect(dispatch.current == nil, "A mouse event is never a key-down")
             dispatch.dispatching(EventDispatch.Entry(type: Kind.keyDown, input: key)) {
                 #expect(dispatch.current == key)
                 dispatch.dispatching(EventDispatch.Entry(type: Kind.appKitDefined, input: nil)) {
                     #expect(dispatch.current == key, "Not an input event: the key-down still counts")
+                    #expect(dispatch.innermostType == Kind.appKitDefined)
                 }
             }
-            #expect(dispatch.current == Self.opener)
+            #expect(dispatch.current == nil)
             #expect(dispatch.outermostType == Kind.leftMouseDown)
         }
         #expect(dispatch.current == nil)
         #expect(dispatch.entries.isEmpty)
+        #expect(dispatch.innermostType == -1)
     }
 }

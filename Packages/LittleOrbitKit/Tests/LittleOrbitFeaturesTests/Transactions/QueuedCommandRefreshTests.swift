@@ -7,8 +7,8 @@ import Testing
 /// Tester2's N5 at 1f2eae8 (comment 6445268985), D403.1 FAIL: a batch Undo or Redo ended at the install, but the
 /// windows then refreshed on the main actor, with the sheet still up, for about 0.45 s more. A menu Undo or Redo
 /// clicked then ran a second step once main was free: its event came after the recorded end, and busy was off. The
-/// batch now ends once every window has refreshed and main is free. A click whose press began inside the batch is
-/// dropped too, however late its mouse-up (`QueuedPressTimeTests`). Made-up data.
+/// batch now ends once every window has refreshed and main is free, and the Edit menu's items are off until then
+/// (D407, `UndoCommandGateTests`). Made-up data.
 @MainActor
 @Suite("Undo and Redo queued during a batch's refresh", .timeLimit(.minutes(1)))
 struct QueuedCommandRefreshTests {
