@@ -45,13 +45,18 @@ extension DefaultApplyBulkEditUseCase {
         guard offMain else {
             return try commit(changeSet, for: request)
         }
-        return try await commitOffMain(changeSet, for: request)
+        return try await commitOffMain(changeSet, for: request, reporting: reporter)
     }
 
     /// `commit(_:for:)` for a store that saves off the main actor (#285, B): the revision check, and the rebuild
     /// if the store moved, run on the main actor right before the hand-off, with no suspension in between. If
-    /// the store still moved by then, nothing is written and it's built again. One write or none.
-    func commitOffMain(_ prepared: BulkEditChangeSet, for request: BulkEditRequest) async throws -> TransactionChange {
+    /// the store still moved by then, nothing is written and it's built again. One write or none. `handingOff` is
+    /// reported before each hand-off (B1).
+    func commitOffMain(
+        _ prepared: BulkEditChangeSet,
+        for request: BulkEditRequest,
+        reporting reporter: LedgerBatchReporter,
+    ) async throws -> TransactionChange {
         let span = BatchTrace.begin("batch.commit")
         defer { span.end() }
         var candidate: BulkEditChangeSet? = prepared
@@ -60,6 +65,7 @@ extension DefaultApplyBulkEditUseCase {
             if changeSet.changesNoRow {
                 return .replaced([])
             }
+            reporter.handingOff()
             let written = try await repository.writeBatchOffMain(
                 changeSet.result.snapshot,
                 expectedRevision: changeSet.revision,

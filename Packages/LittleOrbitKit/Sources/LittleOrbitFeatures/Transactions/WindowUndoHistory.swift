@@ -56,7 +56,7 @@ public final class WindowUndoHistory {
     /// The progress of a batch that just ended, while its sheet closes: it stays drawn, and holds the announcement
     /// until the sheet has gone (Tester2 on c8c6594).
     public internal(set) var closingProgress: BatchProgress?
-    @ObservationIgnored var batchRun: (task: Task<Void, Never>, step: Step)?
+    @ObservationIgnored var batchRun: BatchRun?
     /// The clock a batch's progress times the sheet with; tests stop it.
     @ObservationIgnored var progressClock: () -> ContinuousClock.Instant = { .now }
     /// How long a batch runs before its sheet shows, `BatchProgress.showDelay`; tests that expect none set `nil`,
@@ -118,9 +118,12 @@ public final class WindowUndoHistory {
         updates.add(self)
     }
 
-    /// A batch Undo or Redo still running stops before its write; its task then ends the batch (#285).
+    /// A batch Undo or Redo still running stops before its write; its task then ends the batch (#285). One already
+    /// handed off to the background save runs to its end, and its task posts the change (B1).
     isolated deinit {
-        batchRun?.task.cancel()
+        if batchRun?.isHandedOff == false {
+            batchRun?.task.cancel()
+        }
     }
 
     // MARK: Window
