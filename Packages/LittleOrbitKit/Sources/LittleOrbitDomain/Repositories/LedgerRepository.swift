@@ -103,6 +103,14 @@ public protocol LedgerRepository: AnyObject {
     /// the store moved, it writes nothing and returns `false`, so the caller builds the batch again. Otherwise it
     /// writes, all or nothing, and returns `true` once the ledger in memory has the result.
     func writeBatchOffMain(_ snapshot: LedgerSnapshot, expectedRevision: UInt64) async throws -> Bool
+    /// `writeBatchOffMain(_:expectedRevision:)`, awaiting `beforeInstall` once the save off the main actor has
+    /// finished and before the ledger in memory takes its result (`LedgerBatchReporter.willInstall`). A store that
+    /// saves on the main actor never calls it.
+    func writeBatchOffMain(
+        _ snapshot: LedgerSnapshot,
+        expectedRevision: UInt64,
+        beforeInstall: @escaping @MainActor @Sendable () async -> Void,
+    ) async throws -> Bool
 }
 
 extension LedgerRepository {
@@ -129,6 +137,15 @@ extension LedgerRepository {
 
     /// Saves on the main actor.
     public var savesBatchesOffMain: Bool { false }
+
+    /// Without a separate install step: `beforeInstall` isn't called.
+    public func writeBatchOffMain(
+        _ snapshot: LedgerSnapshot,
+        expectedRevision: UInt64,
+        beforeInstall _: @escaping @MainActor @Sendable () async -> Void,
+    ) async throws -> Bool {
+        try await writeBatchOffMain(snapshot, expectedRevision: expectedRevision)
+    }
 
     /// `writeBatch(_:)` in one change on the main actor, after the revision check.
     public func writeBatchOffMain(_ snapshot: LedgerSnapshot, expectedRevision: UInt64) async throws -> Bool {

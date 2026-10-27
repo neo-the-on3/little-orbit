@@ -33,17 +33,23 @@ public struct LedgerBatchReporter: Sendable {
     public var willSave: @MainActor @Sendable (_ changedRows: Int) async -> Void
     public var willSaveOffMain: (@MainActor @Sendable (_ changedRows: Int) async -> Void)?
     public var handingOff: @MainActor @Sendable () -> Void
+    /// A save off the main actor has finished, and its result isn't in the ledger in memory yet: the caller can
+    /// take its sheet down and wait for it to go first, so the install's main-actor work runs after it (Tester2's
+    /// D405 on 3dc318b). Busy is held throughout; nothing else writes meanwhile.
+    public var willInstall: @MainActor @Sendable () async -> Void
 
     public init(
         rowsDone: @escaping @Sendable (Int) -> Void = { _ in },
         willSave: @escaping @MainActor @Sendable (_ changedRows: Int) async -> Void = { _ in },
         willSaveOffMain: (@MainActor @Sendable (_ changedRows: Int) async -> Void)? = nil,
         handingOff: @escaping @MainActor @Sendable () -> Void = {},
+        willInstall: @escaping @MainActor @Sendable () async -> Void = {},
     ) {
         self.rowsDone = rowsDone
         self.willSave = willSave
         self.willSaveOffMain = willSaveOffMain
         self.handingOff = handingOff
+        self.willInstall = willInstall
     }
 
     /// Just before the save: `willSaveOffMain` when the save runs off the main actor and it's given, otherwise

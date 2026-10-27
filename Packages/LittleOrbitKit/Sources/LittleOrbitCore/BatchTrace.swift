@@ -81,6 +81,20 @@ public enum BatchTrace {
         #endif
     }
 
+    /// An event `name` whose value is the seconds until the main queue next gets to run: main-thread work already
+    /// queued, such as a torn-down context's cleanup, as opposed to idle waiting. Nothing on Linux.
+    @MainActor
+    public static func mainBacklog(_ name: StaticString) {
+        #if canImport(OSLog)
+            let start = ContinuousClock.now
+            Task { @MainActor in
+                let waited = ContinuousClock.now - start
+                let seconds = Double(waited.components.seconds) + Double(waited.components.attoseconds) / 1e18
+                event(name, value: seconds)
+            }
+        #endif
+    }
+
     #if canImport(OSLog)
         /// The `untilNextTurn` intervals still open; the next turn ends them all.
         @MainActor private static var openTurns: [Span] = []

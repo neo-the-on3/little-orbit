@@ -92,7 +92,12 @@ extension DefaultTransactionChangesUseCase {
             }
             let left = ChangeChecker.outcome(of: revert.inverse, among: revert.snapshot.transactionsVisible())
             reporter.handingOff()
-            if try await repository.writeBatchOffMain(revert.snapshot, expectedRevision: revert.revision) {
+            let written = try await repository.writeBatchOffMain(
+                revert.snapshot,
+                expectedRevision: revert.revision,
+                beforeInstall: reporter.willInstall,
+            )
+            if written {
                 return .reverted(revert.inverse, left)
             }
             candidate = revert

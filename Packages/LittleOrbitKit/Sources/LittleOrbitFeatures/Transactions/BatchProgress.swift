@@ -221,9 +221,14 @@ public final class BatchProgress {
         }
         BatchTrace.event("batch.sheet.onDismiss")
         dismissWait = Task { [self] in
+            // The value is how long past one turn this waited: the main actor busy with the dismissal, not idle.
+            let clock = ContinuousClock()
+            let asked = clock.now
             await sleep(Self.uiTurnLength)
-            BatchTrace.event("batch.sheet.dismissTurn")
+            BatchTrace.event("batch.sheet.dismissTurn", value: Self.seconds(clock.now - asked - Self.uiTurnLength))
+            let idle = BatchTrace.begin("batch.sheet.dismissIdle")
             await sleep(Self.dismissSettle)
+            idle.end()
             guard !Task.isCancelled else {
                 return
             }
@@ -239,6 +244,10 @@ public final class BatchProgress {
         await withCheckedContinuation { continuation in
             announceAfterSheet("") { _ in continuation.resume() }
         }
+    }
+
+    static func seconds(_ duration: Duration) -> Double {
+        Double(duration.components.seconds) + Double(duration.components.attoseconds) / 1e18
     }
 
     private func postPendingAnnouncement() {
