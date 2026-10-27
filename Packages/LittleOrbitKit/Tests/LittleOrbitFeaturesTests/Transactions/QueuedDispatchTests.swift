@@ -21,6 +21,8 @@ struct QueuedDispatchTests {
         let setup: QueuedCommandTests.Setup
         let clock: UptimeClock
         let dispatch: EventDispatch
+        /// The run loop's next default-mode turns the dispatch asked for, held until a test runs them.
+        let turns: PendingTurns
 
         var undoNames: [String] { setup.window.undoManager.undoNames }
         var redoNames: [String] { setup.window.undoManager.redoNames }
@@ -45,6 +47,24 @@ struct QueuedDispatchTests {
         }
     }
 
+    /// The default-mode turns `EventDispatch` asks for, run when a test says no dispatch is running.
+    @MainActor
+    final class PendingTurns {
+        private(set) var blocks: [@MainActor () -> Void] = []
+
+        func add(_ block: @escaping @MainActor () -> Void) {
+            blocks.append(block)
+        }
+
+        func runAll() {
+            let due = blocks
+            blocks.removeAll()
+            for block in due {
+                block()
+            }
+        }
+    }
+
     /// `NSEvent.EventType` raw values, as AppKit's are.
     enum Kind {
         static let leftMouseDown = 1
@@ -60,6 +80,8 @@ struct QueuedDispatchTests {
         let clock = UptimeClock(now: 10)
         clock.drive(updates)
         let dispatch = EventDispatch()
+        let turns = PendingTurns()
+        dispatch.nextTopLevelTurn = turns.add
         updates.dispatchingEvent = { dispatch.current }
         let setup = try await QueuedCommandTests.setup(updates: updates)
         let key = Policy.Event(time: 10, type: Kind.keyDown)
@@ -71,7 +93,10 @@ struct QueuedDispatchTests {
         await setup.window.history.batchRun?.task.value
         #expect(updates.lastBatch == 10...11)
         #expect(dispatch.current == nil, "Nothing is being dispatched after the batch")
-        return Ended(setup: setup, clock: clock, dispatch: dispatch)
+        // The run loop's turn after the ⌘Z's dispatch: it finds nothing to clear.
+        turns.runAll()
+        #expect(turns.blocks.isEmpty)
+        return Ended(setup: setup, clock: clock, dispatch: dispatch, turns: turns)
     }
 
     @Test("Tester2's case: a menu opened before the batch, Undo's item pressed inside it, sent after the end: dropped")
@@ -164,13 +189,43 @@ struct QueuedDispatchTests {
         #expect(await other.redo(at: 11.3, in: keyInside), "The key-down's own time, after the end: it runs")
     }
 
+    @Test("m11: a dispatch whose end was skipped inside another is taken off when that one ends")
+    func skippedEndNested() {
+        let dispatch = EventDispatch()
+        let outer = dispatch.enter(EventDispatch.Entry(type: Kind.keyDown, input: Policy.Event(time: 5)))
+        // An exception unwinds the inner dispatch without its end.
+        _ = dispatch.enter(EventDispatch.Entry(type: Kind.leftMouseDown, input: Self.opener))
+        #expect(dispatch.current == Self.opener)
+        dispatch.leave(outer)
+        #expect(dispatch.entries.isEmpty)
+        #expect(dispatch.current == nil)
+    }
+
+    @Test("m11: an outermost dispatch whose end was skipped is cleared at the next top-level turn; AX then runs")
+    func skippedEndOutermost() async throws {
+        let ended = try await Self.endedBatch()
+        // A click on the sheet at 10.55 s, inside the batch, whose dispatch an exception unwinds without its end.
+        ended.clock.pressTime = 10.55
+        _ = ended.dispatch.enter(
+            EventDispatch.Entry(type: Kind.leftMouseDown, input: Policy.Event(time: 10.55, isMouse: true))
+        )
+        #expect(ended.dispatch.current != nil, "Left behind")
+        // The run loop's next default-mode turn, with no dispatch running.
+        try #require(ended.turns.blocks.count == 1, "One clear asked for")
+        ended.turns.runAll()
+        #expect(ended.dispatch.current == nil, "Cleared")
+        #expect(await ended.redo(at: 12), "An Accessibility Redo after the end runs")
+    }
+
     @Test("The dispatch is a stack: each event is taken off as its dispatch returns, inner ones first")
     func dispatchStack() {
         let dispatch = EventDispatch()
         #expect(dispatch.current == nil)
         #expect(dispatch.outermostType == -2, "No sendEvent wrapper yet")
-        dispatch.installed()
-        #expect(dispatch.outermostType == -1)
+        dispatch.reportSource(live: false)
+        #expect(!dispatch.isInstalled && dispatch.outermostType == -2, "Absent at launch: still fails open")
+        dispatch.reportSource(live: true)
+        #expect(dispatch.isInstalled && dispatch.outermostType == -1, "Live")
         let key = Policy.Event(time: 5, type: Kind.keyDown)
         dispatch.dispatching(EventDispatch.Entry(type: Kind.leftMouseDown, input: Self.opener)) {
             #expect(dispatch.current == Self.opener)

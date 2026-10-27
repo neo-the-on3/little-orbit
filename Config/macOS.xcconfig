@@ -12,7 +12,8 @@ INFOPLIST_KEY_CFBundleDisplayName = Little Orbit
 // opening a backup from Files or Finder is the follow-up to #40 (D197.3, L39).
 INFOPLIST_FILE = Config/LittleOrbit-Info.plist
 // The app's NSApplication subclass, from LittleOrbitFeatures: it records the event being dispatched, for the Undo and
-// Redo dropped after a batch (B5 on #286).
+// Redo dropped after a batch (B5 on #286). SwiftUI's App.main() doesn't read it (Tester2 on 4ea9bd6), so the app's
+// entry point makes the subclass the shared app itself (LittleOrbitMacMain); this keeps the two in agreement.
 INFOPLIST_KEY_NSPrincipalClass = LittleOrbitApplication
 SDKROOT = macosx
 MACOSX_DEPLOYMENT_TARGET = 27.0
