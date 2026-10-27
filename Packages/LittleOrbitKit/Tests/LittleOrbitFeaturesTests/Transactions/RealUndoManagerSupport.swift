@@ -19,7 +19,9 @@
                 updates: updates,
                 later: { queue($0) },
             )
-            queue = { [unowned self] in self.pending.append($0) }
+            // Weak, as in `TestWindow`: something left for later after the window has gone is dropped, not read
+            // through a freed reference (Tech Architect's n5 on bab2ad8).
+            queue = { [weak self] in self?.pending.append($0) }
             history.attach(undoManager)
         }
 

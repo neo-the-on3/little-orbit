@@ -79,7 +79,7 @@ struct BatchAnnouncementTests {
         model.progressShowDelay = nil
         // The announcement's fallback can't run out on its own: on macOS the SwiftData timing suites hold the main
         // actor for seconds beside this test, and it then closed the sheet before the test could (Tester2 on 0d676f8).
-        model.progressSleep = ManualSleeper.holding([BatchProgress.announcementFallbackDelay])
+        model.progressSleep = ManualSleeper(holding: [BatchProgress.announcementFallbackDelay]).sleep
         model.editsCategory = true
         model.categoryID = DefaultCategoryID.food
         return model

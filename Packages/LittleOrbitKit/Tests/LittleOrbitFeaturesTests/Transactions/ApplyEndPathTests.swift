@@ -45,8 +45,15 @@ struct ApplyEndPathTests {
         model.progressShowDelay = nil
         // Neither the announcement's fallback nor `settle()`'s cap can run out on its own while the main actor is held
         // up beside this test (Tester2 on 0d676f8).
-        model.progressSleep = ManualSleeper.holding([BatchProgress.announcementFallbackDelay])
-        updates.sleep = ManualSleeper.holding([LedgerUpdates.settleLimit])
+        let fallback = ManualSleeper(holding: [BatchProgress.announcementFallbackDelay])
+        let cap = ManualSleeper(holding: [LedgerUpdates.settleLimit])
+        model.progressSleep = fallback.sleep
+        updates.sleep = cap.sleep
+        // A regression fails at a `#require` below; what it held then runs to its end (m10).
+        defer {
+            fallback.release()
+            cap.release()
+        }
         model.editsCategory = true
         model.categoryID = DefaultCategoryID.food
         model.announce = { [updates] _ in
@@ -79,6 +86,9 @@ struct ApplyEndPathTests {
         #expect(updates.isBatchRunning, "Busy until the refresh has finished")
         #expect(log.entries == ["record sheet=gone busy=true"])
         builds.finishAll()
+        // Fails here, rather than hanging on the held cap, if the refresh's end stops waking `settle()` (m10).
+        await RealTime.eventually { !updates.isBatchRunning }
+        try #require(!updates.isBatchRunning, "The refresh's end woke settle(), and the batch ended")
         let change = try #require(await applying.value)
         #expect(change.transactionIDs.count == rows.count)
         #expect(memory.revision != revision, "Installed once the sheet had gone")
@@ -93,6 +103,26 @@ struct ApplyEndPathTests {
         let batch = try #require(updates.lastBatch)
         #expect(batch.lowerBound <= batch.upperBound)
         #expect(window.undoManager.undoNames.count == 1)
+    }
+
+    @Test("A sheet that never reports closing: the fallback ends Apply, which lets go of its finished progress (n2)")
+    func fallbackLetsGoOfProgress() async throws {
+        let rows = BulkEditBatchTests.rows(BatchSheetPolicy.rowsThatShowSheet)
+        let heard = BatchAnnouncementTests.Heard()
+        let model = BatchAnnouncementTests.applyModel(try F.repository(rows), rows: rows, heard: heard)
+        let sleeper = ManualSleeper()
+        model.progressSleep = sleeper.sleep
+        defer { sleeper.release() }
+        let applying = Task { await model.applyInBackground() }
+        await RealTime.eventually { model.closingProgress != nil }
+        try #require(model.closingProgress != nil, "The sheet was asked to close")
+        // No `sheetClosed()`: the turn, then the fallback's wait, with the sheet's view not drawn.
+        #expect(await sleeper.advance() == BatchProgress.uiTurnLength)
+        #expect(await sleeper.advance() == BatchProgress.announcementFallbackDelay)
+        await RealTime.eventually { !heard.texts.isEmpty }
+        try #require(heard.texts == ["Changed \(rows.count) transactions."])
+        _ = try #require(await applying.value)
+        #expect(model.closingProgress == nil, "Nothing holds on to it once the sheet has gone")
     }
 
     @Test("Refused: the sheet stays with its fields, the batch ends, and nothing is announced")

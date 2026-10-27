@@ -78,7 +78,10 @@ struct BatchHistoryReleaseTests {
     func goneDuringInstall() async throws {
         let updates = LedgerUpdates()
         UptimeClock(now: 100).drive(updates)
-        updates.sleep = ManualSleeper.holding([LedgerUpdates.settleLimit])
+        let cap = ManualSleeper(holding: [LedgerUpdates.settleLimit])
+        updates.sleep = cap.sleep
+        // A regression fails at a `#require` below; the held cap then lets the batch run to its end (m10).
+        defer { cap.release() }
         let gate = SaveGate()
         let heard = Heard()
         let rows = (0..<5).map { F.expense(Decimal(100 * ($0 + 1)), on: F.date(2026, 10, 10 + $0)) }
@@ -139,7 +142,7 @@ struct BatchHistoryReleaseTests {
         #expect(updates.isBatchRunning, "Busy until the refresh has finished")
         builds.finishAll()
         await RealTime.eventually { !updates.isBatchRunning }
-        #expect(!updates.isBatchRunning, "The batch ended")
+        try #require(!updates.isBatchRunning, "The batch ended")
         #expect(try memory.transactions().allSatisfy { $0.details != "Bulk" }, "The Undo was installed")
         #expect(heard.texts.isEmpty, "No one to announce to: the history went")
     }
