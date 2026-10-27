@@ -90,6 +90,9 @@ public final class ScheduledListViewModel {
     /// list keeps showing it if it comes back. The Mac's detail column may report the list disappearing and
     /// appearing again while it stays on screen, and that mustn't take away a hint that's still in view.
     @ObservationIgnored private var keepsHintAfterLeaving = false
+    /// The deferred "left the Scheduled screens" check from the last `screenDisappeared(.list)`, kept so tests can
+    /// await it instead of guessing how many yields it needs.
+    @ObservationIgnored private(set) var leavingCheck: Task<Void, Never>?
     public let platform: ScheduledPlatform
 
     @ObservationIgnored private let useCases: ScheduledScreenUseCases
@@ -171,7 +174,7 @@ public final class ScheduledListViewModel {
         guard screen == .list, visibleScreens.isEmpty else {
             return
         }
-        Task { @MainActor [weak self] in
+        leavingCheck = Task { @MainActor [weak self] in
             await Task.yield()
             if let self, self.visibleScreens.isEmpty {
                 self.leftScheduled()
