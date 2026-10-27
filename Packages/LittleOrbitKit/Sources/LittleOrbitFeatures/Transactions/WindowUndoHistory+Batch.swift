@@ -12,6 +12,8 @@ import LittleOrbitDomain
 
 extension WindowUndoHistory {
     /// From a failure until its alert is dismissed, or while a batch runs in any window: Undo and Redo are off.
+    /// The system Edit menu validates against the window's `UndoManager`, which still holds the steps, so a menu
+    /// opened before the batch can show them enabled; choosing one reaches `run`, which applies nothing (D399).
     var isBusy: Bool { failure.isBlocked || updates.isBatchRunning }
 
     /// A Bulk Edit, or its Undo or Redo, is running in some window: ledger writes are off in every window.
