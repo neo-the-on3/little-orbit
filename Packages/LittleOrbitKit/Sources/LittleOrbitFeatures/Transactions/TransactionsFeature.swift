@@ -36,16 +36,10 @@ public final class TransactionsFeature {
     }
 
     public func makeHistory(accountID: UUID) -> AccountHistoryViewModel {
-        let model = AccountHistoryViewModel(
-            useCases: useCases,
-            accountID: accountID,
-            locale: locale,
-            timeZone: timeZone,
-            now: now,
-        )
-        // Each change starts its refresh as it's posted, so a batch can't end before it (B2 on 0389f40).
-        updates.add(model)
-        return model
+        // Not registered with `updates` here: SwiftUI makes and drops one each time the view is made again, and a
+        // dropped one still held as the view's initial value refreshed after each change too (Tester2's five windows
+        // at 3dc318b). Its view registers the one it keeps (`appeared(in:)`).
+        AccountHistoryViewModel(useCases: useCases, accountID: accountID, locale: locale, timeZone: timeZone, now: now)
     }
 
     public func makeForm(_ mode: TransactionFormMode) -> TransactionFormViewModel {

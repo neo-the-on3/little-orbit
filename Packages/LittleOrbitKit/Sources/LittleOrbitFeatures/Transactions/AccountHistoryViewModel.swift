@@ -55,6 +55,10 @@ public final class AccountHistoryViewModel {
     @ObservationIgnored public var seenRevision = 0
     /// Moves on with each load, so a slower refresh never shows over a newer one.
     @ObservationIgnored var generation = 0
+    /// Whether it has loaded once, so its view appearing again doesn't load it twice (`appeared(in:)`).
+    @ObservationIgnored var hasLoaded = false
+    /// Full loads and refreshes so far, each a `window.recompute` interval; skips don't count. For tests.
+    @ObservationIgnored var recomputes = 0
     /// Builds a refresh's rows off the main actor. Tests swap it to finish two refreshes in a chosen order.
     @ObservationIgnored var buildContent: AccountHistoryContentBuilder = AccountHistoryViewModel.contentOffMain
 
@@ -129,6 +133,7 @@ public final class AccountHistoryViewModel {
     public func load() {
         let span = BatchTrace.begin("window.recompute")
         defer { span.end() }
+        countRecompute()
         generation &+= 1
         do {
             guard let (page, today) = try readPage() else {

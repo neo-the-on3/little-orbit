@@ -29,6 +29,29 @@ extension AccountHistoryViewModel {
         await runRefresh(after: updates)
     }
 
+    /// Its view appeared, or the account's row changed: it's registered, so each change starts its refresh as it's
+    /// posted (B2 on 0389f40), and it loads unless it already shows the current revision. A row changes with the
+    /// change that moved its balance, whose refresh has already started, so that doesn't load it a second time
+    /// (Tester2's five windows at 3dc318b: two full recomputes per window per change).
+    public func appeared(in updates: LedgerUpdates) {
+        updates.add(self)
+        guard !hasLoaded || seenRevision != updates.revision else {
+            return
+        }
+        seenRevision = updates.revision
+        load()
+    }
+
+    /// Its view went: its refreshes stop starting with each change.
+    public func disappeared(from updates: LedgerUpdates) {
+        updates.remove(self)
+    }
+
+    func countRecompute() {
+        hasLoaded = true
+        recomputes += 1
+    }
+
     /// The part of a refresh that runs as the change is posted: `true`, counting it as running
     /// (`LedgerUpdates.refreshStarted()`), when the change touched this account and `runRefresh` should follow.
     /// `false` when it's already up to date, or the change didn't touch it.
@@ -54,6 +77,7 @@ extension AccountHistoryViewModel {
             updates.refreshEnded()
             span.end()
         }
+        countRecompute()
         generation &+= 1
         let loading = generation
         do {
