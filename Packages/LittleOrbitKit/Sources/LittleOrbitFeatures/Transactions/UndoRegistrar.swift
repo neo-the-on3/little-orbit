@@ -110,6 +110,10 @@ public final class LedgerUpdates {
     @ObservationIgnored var uptime: @MainActor () -> TimeInterval = { ProcessInfo.processInfo.systemUptime }
     /// The time of the event being handled; tests set it.
     @ObservationIgnored var currentEventTime: @MainActor () -> TimeInterval? = QueuedCommandPolicy.currentEventTime
+    /// Window refreshes running now, after a change (`refreshStarted`), so a batch can end once they're done.
+    @ObservationIgnored private(set) var refreshesRunning = 0
+    /// How `settle()` waits; tests may step it by hand.
+    @ObservationIgnored var sleep: @MainActor (Duration) async -> Void = { try? await Task.sleep(for: $0) }
     @ObservationIgnored private var histories: [WeakHistory] = []
     @ObservationIgnored private var replacedHandlers: [(id: UUID, run: @MainActor () -> Void)] = []
     @ObservationIgnored private var changedHandlers: [@MainActor () -> Void] = []
@@ -135,6 +139,9 @@ public final class LedgerUpdates {
         return true
     }
 
+    /// Ends the batch, recording its end now. A batch Undo or Redo calls it once its change has been posted, every
+    /// window has refreshed and the main actor is free again (`settle()`), so the busy flag and the drop window cover
+    /// everything the user sees as busy (D403.1; Tester2 on 1f2eae8). Bulk Edit's Apply calls it as it returns.
     func endBatch() {
         guard isBatchRunning else {
             return
@@ -144,6 +151,36 @@ public final class LedgerUpdates {
         lastBatch = min(batchStart ?? end, end)...end
         batchStart = nil
         refreshHistories()
+    }
+
+    /// The longest `settle()` waits for window refreshes, so a refresh that never ends can't hold busy on for good.
+    static let settleLimit = Duration.seconds(2)
+    /// How long `settle()` first waits for the windows' `onChange` to start their refreshes: about three frames, so
+    /// a SwiftUI update held to the next frame still starts them first.
+    static let settleStart = Duration.milliseconds(50)
+
+    /// After a change was posted: waits `settleStart`, so every window's `onChange` has started its refresh, then
+    /// turns of the main run loop until no refresh is running (`settleLimit` at most), then one more turn, so the
+    /// table updates that follow them have been committed and the main actor is free. Signposted as `ledger.settle`.
+    func settle() async {
+        let span = BatchTrace.begin("ledger.settle")
+        defer { span.end() }
+        let clock = ContinuousClock()
+        let started = clock.now
+        await sleep(Self.settleStart)
+        while refreshesRunning > 0, clock.now - started < Self.settleLimit {
+            await sleep(BatchProgress.uiTurnLength)
+        }
+        await sleep(BatchProgress.uiTurnLength)
+    }
+
+    /// A window's refresh after a change started; `refreshEnded()` when it's done.
+    func refreshStarted() {
+        refreshesRunning += 1
+    }
+
+    func refreshEnded() {
+        refreshesRunning = max(refreshesRunning - 1, 0)
     }
 
     /// Whether the command being handled was asked for while the last batch ran, so it waited in the event queue

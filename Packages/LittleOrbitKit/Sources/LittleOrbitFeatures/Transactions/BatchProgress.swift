@@ -232,6 +232,15 @@ public final class BatchProgress {
         }
     }
 
+    /// Returns once the sheet has gone, when a held announcement would be posted (`announceAfterSheet`): at once with
+    /// no sheet, or one already closed; otherwise after `sheetDismissed()` and `dismissSettle`, after `sheetClosed()`,
+    /// or by the fallback. A batch Undo or Redo posts its change, so the windows refresh, only then (D405 on 1f2eae8).
+    func sheetHasGone() async {
+        await withCheckedContinuation { continuation in
+            announceAfterSheet("") { _ in continuation.resume() }
+        }
+    }
+
     private func postPendingAnnouncement() {
         guard let pending = pendingAnnouncement else {
             return
