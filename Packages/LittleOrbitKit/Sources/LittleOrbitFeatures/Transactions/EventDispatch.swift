@@ -74,14 +74,31 @@ final class EventDispatch {
     /// The check that always runs, whatever the entry point did (Tech Architect's m12 on 4839e5d): on the first
     /// queued-command decision, whether `NSApp` is a `LittleOrbitApplication`. Signposted once as
     /// `ledger.command.dispatchWiring`, tagged `live` or `absent`; absent is also logged as a fault and stops a
-    /// Debug build. Nothing with no app at all, as under `swift test`, and nothing off the Mac.
+    /// Debug build. Only in the app itself, run from its `.app` bundle: not under `swift test`, where the test
+    /// runner has no app or a plain `NSApplication` a window test made (Tester2 on f43b0c4), and nothing off the Mac.
     func checkWiringOnce() {
         #if canImport(AppKit) && os(macOS)
-            guard !wiringChecked, let app = NSApp else {
-                return
-            }
-            checkWiring(appIsSubclass: app is LittleOrbitApplication)
+            let app: NSApplication? = NSApp
+            checkWiringOnce(
+                runsAsApp: Self.runsAsAppBundle(Bundle.main.bundleURL),
+                appIsSubclass: app.map { $0 is LittleOrbitApplication },
+            )
         #endif
+    }
+
+    /// `checkWiringOnce()` for a process that is, or isn't, the app, with an app that is the subclass, isn't, or
+    /// with none (`nil`): it checks only the app's own `NSApplication`.
+    func checkWiringOnce(runsAsApp: Bool, appIsSubclass: Bool?) {
+        guard !wiringChecked, runsAsApp, let appIsSubclass else {
+            return
+        }
+        checkWiring(appIsSubclass: appIsSubclass)
+    }
+
+    /// Whether the process runs from an app bundle, as Little Orbit does; a test runner (`xctest`,
+    /// `swiftpm-testing-helper`, a `.xctest` bundle) doesn't.
+    nonisolated static func runsAsAppBundle(_ bundleURL: URL) -> Bool {
+        bundleURL.pathExtension == "app"
     }
 
     /// `checkWiringOnce()` for an app that is, or isn't, the subclass: only the first call checks.

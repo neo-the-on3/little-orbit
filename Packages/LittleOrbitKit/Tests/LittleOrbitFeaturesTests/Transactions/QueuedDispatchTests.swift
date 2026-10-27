@@ -223,6 +223,29 @@ struct QueuedDispatchTests {
         #expect(live.wiringChecked && failures.count == 1, "A live app checks once, and passes")
     }
 
+    @Test("m12 under swift test on the Mac: a test runner's own NSApplication is never checked; the app's is")
+    func wiringCheckedOnlyInTheApp() {
+        #expect(EventDispatch.runsAsAppBundle(URL(fileURLWithPath: "/Applications/Little Orbit.app")))
+        #expect(
+            !EventDispatch.runsAsAppBundle(URL(fileURLWithPath: "/Applications/Xcode.app/Contents/Developer/usr/bin"))
+        )
+        #expect(!EventDispatch.runsAsAppBundle(URL(fileURLWithPath: "/usr/bin")))
+        #expect(
+            !EventDispatch.runsAsAppBundle(URL(fileURLWithPath: "/tmp/.build/debug/LittleOrbitKitPackageTests.xctest"))
+        )
+        let dispatch = EventDispatch()
+        var failures: [String] = []
+        dispatch.wiringFailed = { failures.append($0) }
+        // A window test made a plain NSApplication in the test runner (Tester2 on f43b0c4).
+        dispatch.checkWiringOnce(runsAsApp: false, appIsSubclass: false)
+        dispatch.checkWiringOnce(runsAsApp: true, appIsSubclass: nil)
+        #expect(!dispatch.wiringChecked && failures.isEmpty, "Not the app: no check, no assertion")
+        dispatch.checkWiringOnce(runsAsApp: true, appIsSubclass: false)
+        #expect(dispatch.wiringChecked && failures.count == 1, "The app with a plain NSApplication: reported")
+        dispatch.checkWiringOnce(runsAsApp: true, appIsSubclass: false)
+        #expect(failures.count == 1, "Once")
+    }
+
     @Test("The dispatch is a stack: each event is taken off as its dispatch returns, inner ones first")
     func dispatchStack() {
         let dispatch = EventDispatch()
