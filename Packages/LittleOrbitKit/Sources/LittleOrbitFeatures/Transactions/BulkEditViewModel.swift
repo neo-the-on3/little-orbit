@@ -40,6 +40,9 @@ public final class BulkEditViewModel {
     /// How long Apply runs before its sheet shows, `BatchProgress.showDelay`; tests that expect no sheet set `nil`,
     /// so no timer runs at all.
     @ObservationIgnored var progressShowDelay: Duration? = BatchProgress.showDelay
+    /// How the progress's announcement waits sleep (`BatchProgress.sleep`); `nil`, `Task.sleep`, in the app. Tests
+    /// hold its fallback, so a main actor held up beside them can't let it run out first (Tester2 on 0d676f8).
+    @ObservationIgnored var progressSleep: (@MainActor (Duration) async -> Void)?
     /// Posts a VoiceOver announcement; the Mac sheet passes `AccessibilityNotification.Announcement` (N5).
     @ObservationIgnored public var announce: @MainActor (String) -> Void = { _ in }
 

@@ -34,6 +34,9 @@ extension BulkEditViewModel {
             showAfter: progressShowDelay,
             now: progressClock,
         )
+        if let progressSleep {
+            progress.sleep = progressSleep
+        }
         self.progress = progress
         do {
             var reporter = progress.start()
@@ -71,6 +74,8 @@ extension BulkEditViewModel {
         await updates?.settle()
         refresh.end()
         updates?.endBatch()
+        // Its sheet has gone, as after a batch Undo or Redo: nothing holds on to the finished progress (n2 on 0d676f8).
+        closingProgress = nil
         // VoiceOver hears that Apply finished, and how many rows changed (Tester2, N5), after the sheet has closed
         // (Tester2 on c8c6594) and the windows have redrawn.
         BatchTrace.event("batch.announce.afterRefresh")
