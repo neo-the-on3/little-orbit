@@ -17,18 +17,25 @@ import Foundation
 ///   anything else not driven by an input event. It never drops, whatever event came last (B4 on 0d676f8).
 /// - A key event, or any event but the left mouse button's: drops when that event's own time falls inside the last
 ///   batch, `batch.start ≤ time ≤ batch.end`. An event drops at most one command.
-/// - The left mouse button, as a menu item chosen with a click: drops when the left button's last press fell inside
-///   the batch, `batch.start ≤ pressTime ≤ batch.end`, however late its mouse-up is handled and whichever mouse event
-///   is being dispatched. A menu's tracking runs inside the dispatch of the mouse-down that opened it, which may be
-///   from before the batch (Tester2 on bab2ad8, B5), so that event's time says nothing about when the item was
-///   chosen. A press after the end goes through, however soon. A press drops at most one command.
+/// - The left mouse button, as a menu item chosen with a click: drops when the latest physical input, the left
+///   button's last press or the last key-down, whichever came later, fell inside the batch,
+///   `batch.start ≤ input ≤ batch.end`, however late its mouse-up is handled and whichever mouse event is being
+///   dispatched. A menu's tracking runs inside the dispatch of the mouse-down that opened it, which may be from before
+///   the batch (Tester2 on bab2ad8, B5), so that event's time says nothing about when the item was chosen. The item
+///   may be chosen with the keyboard too, arrow keys and Return, so the last key-down counts as well (Tech
+///   Architect's edge (b) on 4ea9bd6). An input after the end goes through, however soon. An input drops at most one
+///   command.
+/// - A VoiceOver choice in a menu opened with a click runs inside that click's dispatch too, and goes by the same
+///   rule: VoiceOver's own keys are key-downs, so a choice made after the end goes through. It drops only when the
+///   latest input was inside the batch, which can't be told apart from a press inside the batch released after the
+///   end, and D403.1 drops that (edge (a), accepted on 4ea9bd6). A menu opened by VoiceOver runs outside any dispatch.
 /// - The right and other buttons count as the keyboard does, by their own event's time (Tech Architect's m9 on
 ///   0d676f8): the press time is only the left button's, so another button's command, such as a context menu's,
 ///   never borrows a left press from inside the batch.
 ///
 /// `pressTime` is `systemUptime − CGEventSource.secondsSinceLastEventType(.combinedSessionState, .leftMouseDown)`:
-/// when the left button last went down. A menu's tracking loop may never pass its mouse-down to the app, so the
-/// event source is asked instead of the app's events.
+/// when the left button last went down, and `keyTime` the same for `.keyDown`. A menu's tracking loop may never pass
+/// its mouse-down or key-downs to the app, so the event source is asked instead of the app's events.
 ///
 /// Every time here is seconds since the system started, on one clock: `NSEvent.timestamp`,
 /// `ProcessInfo.systemUptime`, which `LedgerUpdates` stamps the batch's start and end with, and so `pressTime`.
@@ -68,6 +75,7 @@ enum QueuedCommandPolicy {
     static func dropsCommand(
         event: Event?,
         pressTime: TimeInterval?,
+        keyTime: TimeInterval? = nil,
         lastBatch: ClosedRange<TimeInterval>?,
         lastDroppedEventTime: TimeInterval?,
         lastDroppedPressTime: TimeInterval?,
@@ -78,13 +86,25 @@ enum QueuedCommandPolicy {
         guard event.isMouse else {
             return lastBatch.contains(event.time) && event.time != lastDroppedEventTime
         }
-        guard let pressTime, lastBatch.contains(pressTime) else {
+        guard let input = latestInput(pressTime: pressTime, keyTime: keyTime), lastBatch.contains(input) else {
             return false
         }
-        if let lastDroppedPressTime, abs(pressTime - lastDroppedPressTime) <= pressTolerance {
+        if let lastDroppedPressTime, abs(input - lastDroppedPressTime) <= pressTolerance {
             return false
         }
         return true
+    }
+
+    /// The latest physical input a left mouse event's command goes by: the last left press or the last key-down,
+    /// whichever came later; either may be unknown (edge (b) on 4ea9bd6).
+    static func latestInput(pressTime: TimeInterval?, keyTime: TimeInterval?) -> TimeInterval? {
+        guard let pressTime else {
+            return keyTime
+        }
+        guard let keyTime else {
+            return pressTime
+        }
+        return max(pressTime, keyTime)
     }
 
     /// `dropsCommand(event:pressTime:lastBatch:lastDroppedEventTime:lastDroppedPressTime:)` for an event that isn't
@@ -153,6 +173,18 @@ enum QueuedCommandPolicy {
     static func secondsSinceLeftMouseDown() -> Double? {
         #if canImport(AppKit) && os(macOS)
             CGEventSource.secondsSinceLastEventType(.combinedSessionState, eventType: .leftMouseDown)
+        #else
+            nil
+        #endif
+    }
+
+    /// Seconds since a key last went down anywhere in the login session, from the same event source and so on the
+    /// same clock as the press: `nil` off the Mac. Session-wide too, and read only while one of our left mouse events
+    /// is being dispatched.
+    @MainActor
+    static func secondsSinceKeyDown() -> Double? {
+        #if canImport(AppKit) && os(macOS)
+            CGEventSource.secondsSinceLastEventType(.combinedSessionState, eventType: .keyDown)
         #else
             nil
         #endif

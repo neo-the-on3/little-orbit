@@ -189,6 +189,64 @@ struct QueuedDispatchTests {
         #expect(await other.redo(at: 11.3, in: keyInside), "The key-down's own time, after the end: it runs")
     }
 
+    @Test("Edge (b): Return chosen in a menu opened by a click before the batch, pressed inside it: dropped, once")
+    func keyboardChoiceInClickedMenu() async throws {
+        let ended = try await Self.endedBatch()
+        let undoNames = ended.undoNames
+        // The opening click at 9.5 s, then the arrow keys and Return, the last key-down at 10.8 s, inside the batch.
+        ended.clock.pressTime = 9.5
+        ended.clock.keyTime = 10.8
+        let inMenu: (() -> Void) -> Void = { send in ended.dispatching(Kind.leftMouseDown, Self.opener, send) }
+        #expect(!(await ended.redo(at: 11.3, in: inMenu)), "Dropped")
+        #expect(ended.undoNames == undoNames, "Nothing redone")
+        #expect(await ended.redo(at: 11.35, in: inMenu), "That key-down drops no other")
+    }
+
+    @Test("Edge (b): Return, or a VoiceOver key, in a menu opened before the batch, pressed after the end: it runs")
+    func keyboardChoiceAfterEnd() async throws {
+        let ended = try await Self.endedBatch()
+        ended.clock.pressTime = 9.5
+        ended.clock.keyTime = 11.2
+        let inMenu: (() -> Void) -> Void = { send in ended.dispatching(Kind.leftMouseDown, Self.opener, send) }
+        #expect(await ended.redo(at: 11.25, in: inMenu))
+    }
+
+    @Test("Edge (b): a click inside the batch after an earlier key-down still goes by the click; a later key wins")
+    func latestInputDecides() {
+        #expect(Policy.latestInput(pressTime: 10.5, keyTime: 9) == 10.5)
+        #expect(Policy.latestInput(pressTime: 9.5, keyTime: 10.8) == 10.8)
+        #expect(Policy.latestInput(pressTime: nil, keyTime: 10.8) == 10.8)
+        #expect(Policy.latestInput(pressTime: 10.5, keyTime: nil) == 10.5)
+        #expect(Policy.latestInput(pressTime: nil, keyTime: nil) == nil)
+        let mouse = Policy.Event(time: 9.5, isMouse: true)
+        let batch: ClosedRange<TimeInterval> = 10...11
+        let drops = { (press: TimeInterval?, key: TimeInterval?) in
+            Policy.dropsCommand(
+                event: mouse,
+                pressTime: press,
+                keyTime: key,
+                lastBatch: batch,
+                lastDroppedEventTime: nil,
+                lastDroppedPressTime: nil,
+            )
+        }
+        #expect(drops(9.5, 10.8), "Return inside the batch")
+        #expect(!drops(9.5, 11.2), "Return after the end")
+        #expect(!drops(10.5, 11.2), "A key after the end, later than the press inside")
+        #expect(drops(10.5, 9), "A press inside, after an earlier key")
+        #expect(
+            Policy.dropsCommand(
+                event: Policy.Event(time: 10.5),
+                pressTime: nil,
+                keyTime: 11.2,
+                lastBatch: batch,
+                lastDroppedEventTime: nil,
+                lastDroppedPressTime: nil,
+            ),
+            "A key event still goes by its own time, not the later key-down",
+        )
+    }
+
     @Test("m11: a dispatch whose end was skipped inside another is taken off when that one ends")
     func skippedEndNested() {
         let dispatch = EventDispatch()
