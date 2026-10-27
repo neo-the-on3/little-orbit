@@ -40,10 +40,16 @@
                     continue
                 }
                 let children = parent[keyPath: link] ?? []
-                parent[keyPath: link] =
-                    adding
-                    ? children + change.added.compactMap { index.transactions[$0] }
-                    : children.filter { !change.removed.contains($0.id) }
+                if adding {
+                    parent[keyPath: link] = children + change.added.compactMap { index.transactions[$0] }
+                } else {
+                    // By persistent ID, which every child has without being read: comparing each child's `id`
+                    // read every transaction the parent holds, thousands for a category (N5 on #286).
+                    let leaving = Set(change.removed.compactMap { index.transactions[$0]?.persistentModelID })
+                    parent[keyPath: link] = TransactionParentLinkPlan.keeping(children, without: leaving) {
+                        $0.persistentModelID
+                    }
+                }
             }
         }
     }

@@ -130,12 +130,7 @@
                     index.accounts,
                     { $0.makeAccount() },
                 ),
-                let transactions = reread(
-                    snapshot.transactions,
-                    changes.transactions.upsertedIDs,
-                    index.transactions,
-                    { $0.makeTransaction() },
-                ),
+                let transactions = rereadTransactions(snapshot, after: changes, from: index),
                 let categories = reread(
                     snapshot.categories,
                     changes.categories.upsertedIDs,
@@ -167,6 +162,41 @@
                 budgets: budgets,
                 scheduledItems: items,
             )
+        }
+
+        /// The transactions with each written one read back from its record, reading only the fields the write
+        /// changed (`readBack`, N5 on #286), or `nil` when one has no record. `index.snapshot` is still the ledger
+        /// as read before this write.
+        private func rereadTransactions(
+            _ snapshot: LedgerSnapshot,
+            after changes: LedgerWriteSet,
+            from index: SwiftDataStoredLedger,
+        ) -> [Transaction]? {
+            let changed = changes.transactions.upsertedIDs
+            guard !changed.isEmpty else {
+                return snapshot.transactions
+            }
+            var before: [UUID: Transaction] = [:]
+            before.reserveCapacity(changed.count)
+            for transaction in index.snapshot.transactions where changed.contains(transaction.id) {
+                before[transaction.id] = transaction
+            }
+            let moved = LedgerWriteSet.accountsWithMovedCurrency(from: index.snapshot.accounts, to: snapshot.accounts)
+            var result: [Transaction] = []
+            result.reserveCapacity(snapshot.transactions.count)
+            for value in snapshot.transactions {
+                guard changed.contains(value.id) else {
+                    result.append(value)
+                    continue
+                }
+                guard let record = index.transactions[value.id] else {
+                    return nil
+                }
+                let currencyMoved = [value.accountID, value.transferAccountID]
+                    .contains { $0.map(moved.contains) == true }
+                result.append(record.readBack(value, stored: before[value.id], currencyMoved: currencyMoved))
+            }
+            return result
         }
 
         /// `values` with each of `changed` read back from its record, or `nil` when one has no record.
