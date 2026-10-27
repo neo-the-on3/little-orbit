@@ -1,5 +1,6 @@
 #if canImport(SwiftData)
     import Foundation
+    import LittleOrbitCore
     import LittleOrbitDomain
     import SwiftData
 
@@ -15,7 +16,7 @@
         func write(_ snapshot: LedgerSnapshot) throws {
             writes &+= 1
             let current = try storedLedger()
-            let changes = LedgerWriteSet(from: current.snapshot, to: snapshot)
+            let changes = BatchTrace.interval("write.diff") { LedgerWriteSet(from: current.snapshot, to: snapshot) }
             let deletePath = deletePathOverride ?? LedgerWriteTuning.deletePath(forDeleting: changes.deletedCount)
             if current.needsWholeStoreWrite || changes.wholeStoreReason != nil || deletePath == .wholeStore {
                 try writeWholeStore(try withAttachmentBytes(snapshot))
@@ -28,29 +29,38 @@
                 let linked = changes.transactions.upserted
                 let fromParents =
                     linksFromParentsOverride ?? LedgerWriteTuning.linksFromParents(forLinking: linked.count)
-                try LedgerWriteValidation.validate(
-                    changes,
-                    of: snapshot,
-                    storedAttachmentIDs: Set(current.attachments.keys),
-                )
-                try writeFields(changes, of: snapshot, to: current)
-                insertCreated()
+                try BatchTrace.interval("write.validate") {
+                    try LedgerWriteValidation.validate(
+                        changes,
+                        of: snapshot,
+                        storedAttachmentIDs: Set(current.attachments.keys),
+                    )
+                }
+                try BatchTrace.interval("write.fields", count: linked.count) {
+                    try writeFields(changes, of: snapshot, to: current)
+                    insertCreated()
+                }
                 try afterStep?(.fieldsWritten)
-                try linkWritten(
-                    changes,
-                    in: current,
-                    fromParents: fromParents ? Self.plan(linked, over: current) : nil,
-                )
+                let linkName: StaticString = fromParents ? "link.fromParents" : "link.perTransaction"
+                try BatchTrace.interval(linkName, count: linked.count) {
+                    try linkWritten(
+                        changes,
+                        in: current,
+                        fromParents: fromParents ? Self.plan(linked, over: current) : nil,
+                    )
+                }
                 try afterStep?(.linked)
-                try removeDeleted(changes, from: current, path: deletePath)
+                try BatchTrace.interval("write.delete", count: changes.deletedCount) {
+                    try removeDeleted(changes, from: current, path: deletePath)
+                }
                 try beforeSave?(snapshot)
-                try context.save()
+                try BatchTrace.interval("write.save") { try context.save() }
             } catch {
                 discardChanges(after: error)
                 throw error
             }
             afterSave?()
-            refresh(current, after: changes, to: snapshot)
+            BatchTrace.interval("write.reread") { refresh(current, after: changes, to: snapshot) }
         }
 
         /// The links of `upserted` as stored, against the ones the write sets.

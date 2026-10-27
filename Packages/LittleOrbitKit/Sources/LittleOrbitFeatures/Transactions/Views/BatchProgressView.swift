@@ -1,4 +1,5 @@
 #if canImport(SwiftUI) && os(macOS)
+    import LittleOrbitCore
     import LittleOrbitTheme
     import SwiftUI
 
@@ -21,6 +22,7 @@
             }
             .padding(Layout.marginMacOS)
             .frame(minWidth: 460, alignment: .leading)
+            .onAppear { BatchTrace.event("batch.sheet.firstFrame") }
         }
     }
 

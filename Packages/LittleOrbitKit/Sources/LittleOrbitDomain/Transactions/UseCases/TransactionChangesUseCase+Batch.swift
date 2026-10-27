@@ -1,4 +1,5 @@
 import Foundation
+import LittleOrbitCore
 
 /// An Undo or Redo of an edit built off the main actor (#285): the ledger to write, the change's inverse for the
 /// next Undo or Redo, and the store revision it was built from.
@@ -70,7 +71,9 @@ extension DefaultTransactionChangesUseCase {
         of change: TransactionChange,
         expecting outcome: ChangeOutcome,
     ) throws -> RevertResult {
-        try repository.atomically {
+        let span = BatchTrace.begin("batch.commit")
+        defer { span.end() }
+        return try repository.atomically {
             let checker = ChangeChecker(repository: repository)
             let revert: PreparedRevert
             if let prepared, prepared.revision == repository.revision {
