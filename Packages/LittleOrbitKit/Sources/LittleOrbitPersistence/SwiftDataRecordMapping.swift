@@ -68,34 +68,34 @@
             sourceCurrency: String,
             destinationCurrency: String?,
         ) throws {
-            id = transaction.id
-            transactionType = transaction.type.rawValue
+            update(\.id, to: transaction.id)
+            update(\.transactionType, to: transaction.type.rawValue)
             let amount = try StoredAmount.stored(transaction.amount, currencyCode: sourceCurrency)
-            amountMinor = amount.minorUnits
-            amountScale = amount.scale
-            date = transaction.date
-            timeZoneID = transaction.timeZoneID
-            details = transaction.details
-            note = transaction.note
+            update(\.amountMinor, to: amount.minorUnits)
+            update(\.amountScale, to: amount.scale)
+            update(\.date, to: transaction.date)
+            update(\.timeZoneID, to: transaction.timeZoneID)
+            update(\.details, to: transaction.details)
+            update(\.note, to: transaction.note)
             if let destinationAmount = transaction.destinationAmount {
                 let storedDestination = try StoredAmount.stored(
                     destinationAmount,
                     currencyCode: destinationCurrency ?? sourceCurrency,
                 )
-                destinationAmountMinor = storedDestination.minorUnits
-                destinationAmountScale = storedDestination.scale
+                update(\.destinationAmountMinor, to: storedDestination.minorUnits)
+                update(\.destinationAmountScale, to: storedDestination.scale)
             } else {
-                destinationAmountMinor = nil
-                destinationAmountScale = nil
+                update(\.destinationAmountMinor, to: nil)
+                update(\.destinationAmountScale, to: nil)
             }
-            scheduledTemplateID = transaction.scheduledTemplateID
-            scheduledOccurrenceDate = transaction.scheduledOccurrenceDate
-            status = transaction.status.rawValue
-            refundOfID = transaction.refundOfID
-            isRefund = transaction.isRefund
-            createdAt = transaction.createdAt
-            updatedAt = transaction.updatedAt
-            deletedAt = transaction.deletedAt
+            update(\.scheduledTemplateID, to: transaction.scheduledTemplateID)
+            update(\.scheduledOccurrenceDate, to: transaction.scheduledOccurrenceDate)
+            update(\.status, to: transaction.status.rawValue)
+            update(\.refundOfID, to: transaction.refundOfID)
+            update(\.isRefund, to: transaction.isRefund)
+            update(\.createdAt, to: transaction.createdAt)
+            update(\.updatedAt, to: transaction.updatedAt)
+            update(\.deletedAt, to: transaction.deletedAt)
         }
 
         func makeTransaction() -> Transaction {

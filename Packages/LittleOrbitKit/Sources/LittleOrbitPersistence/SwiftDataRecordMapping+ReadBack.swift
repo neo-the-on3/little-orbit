@@ -3,6 +3,17 @@
     import LittleOrbitDomain
     import SwiftData
 
+    extension PersistentModel {
+        /// Sets `keyPath` only when it holds another value (N5 on #286). A set marks the record changed for
+        /// that key, which the save then copies into the store's object and observers hear, so a Bulk Edit of
+        /// one field no longer has every field of every row copied.
+        func update<Value: Equatable>(_ keyPath: ReferenceWritableKeyPath<Self, Value>, to value: Value) {
+            if self[keyPath: keyPath] != value {
+                self[keyPath: keyPath] = value
+            }
+        }
+    }
+
     extension LittleOrbitSchemaV1.TransactionRecord {
         /// `makeTransaction()`, reading only what the write changed (N5 on #286). `stored` is how this record was
         /// last read, and `written` what the write gave it. Where `written` has what `stored` has, the write gave the

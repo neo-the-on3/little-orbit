@@ -100,6 +100,9 @@ struct LedgerWriteSet: Equatable {
         duplicates: inout Bool,
         forcing: (Value) -> Bool = { _ in false },
     ) -> RecordChanges<Value> where Value.ID == UUID {
+        if let aligned = alignedChanges(from: base, to: target, duplicates: &duplicates, forcing: forcing) {
+            return aligned
+        }
         var stored: [UUID: Value] = [:]
         stored.reserveCapacity(base.count)
         for value in base where stored.updateValue(value, forKey: value.id) != nil {
@@ -118,6 +121,34 @@ struct LedgerWriteSet: Equatable {
         }
         for id in stored.keys where !kept.contains(id) {
             result.deleted.insert(id)
+        }
+        return result
+    }
+
+    /// `changes(from:to:)` when both sides list the same ids in the same order, as a ledger edited in place does
+    /// (N5 on #286): each value is compared with the one at its index, without copying the stored side into a
+    /// dictionary. The same result; `nil` when the ids don't line up, for the general path.
+    private static func alignedChanges<Value: Identifiable & Hashable>(
+        from base: [Value],
+        to target: [Value],
+        duplicates: inout Bool,
+        forcing: (Value) -> Bool,
+    ) -> RecordChanges<Value>? where Value.ID == UUID {
+        guard base.count == target.count, zip(base, target).allSatisfy({ $0.id == $1.id }) else {
+            return nil
+        }
+        var ids: Set<UUID> = []
+        ids.reserveCapacity(target.count)
+        var result = RecordChanges<Value>()
+        for (stored, value) in zip(base, target) {
+            if !ids.insert(value.id).inserted {
+                // An id twice on one side is twice on both; the general path finds the same values to write.
+                duplicates = true
+                return nil
+            }
+            if stored != value || forcing(value) {
+                result.upserted.append(value)
+            }
         }
         return result
     }
