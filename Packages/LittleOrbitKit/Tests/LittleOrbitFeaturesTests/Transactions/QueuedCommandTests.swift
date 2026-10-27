@@ -250,23 +250,38 @@ struct QueuedCommandTests {
     }
 }
 
-/// The uptime clock and the current event's time, moved by hand. Isolated to the main actor, so the `@MainActor`
-/// closures `LedgerUpdates` reads them through capture it safely, and it can be changed after they do.
+/// The uptime clock, the current event's time and the last press, moved by hand. Isolated to the main actor, so the
+/// `@MainActor` closures `LedgerUpdates` reads them through capture it safely, and it can be changed after they do.
 @MainActor
 final class UptimeClock {
     var now: TimeInterval
     var eventTime: TimeInterval?
-    /// Whether the current event is a mouse-up.
-    var isMouseUp = false
-    /// Whether a mouse button is held, as `LedgerUpdates.mouseButtonHeld` gives it.
-    var buttonHeld = false
+    /// Whether the current event is the mouse's.
+    var isMouse = false
+    /// When the left button last went down, on the same clock; `nil` for no press source.
+    var pressTime: TimeInterval?
+    /// What the press source reports instead, when set: a reading that can't be right.
+    var rawSecondsSince: Double?
 
     /// The current event, as `LedgerUpdates.currentEvent` gives it.
     var event: QueuedCommandPolicy.Event? {
-        eventTime.map { QueuedCommandPolicy.Event(time: $0, isMouseUp: isMouseUp) }
+        eventTime.map { QueuedCommandPolicy.Event(time: $0, isMouse: isMouse) }
+    }
+
+    /// The seconds since the press, as `LedgerUpdates.secondsSincePress` gives it.
+    var secondsSincePress: Double? {
+        rawSecondsSince ?? pressTime.map { now - $0 }
     }
 
     init(now: TimeInterval) {
         self.now = now
+    }
+
+    /// Reads the clock, current event and press source for `updates`, which started at uptime 0.
+    func drive(_ updates: LedgerUpdates) {
+        updates.uptime = { self.now }
+        updates.currentEvent = { self.event }
+        updates.secondsSincePress = { self.secondsSincePress }
+        updates.launchUptime = 0
     }
 }
