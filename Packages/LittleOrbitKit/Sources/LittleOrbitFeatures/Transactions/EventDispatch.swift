@@ -205,10 +205,40 @@ final class EventDispatch {
         /// too, and its key equivalent beeps (D407.1). Every other action, and these once the batch ends, as AppKit
         /// finds it.
         override public func target(forAction action: Selector, to target: Any?, from sender: Any?) -> Any? {
-            guard UndoCommandGate.shared.allows(action: NSStringFromSelector(action)) else {
+            let name = NSStringFromSelector(action)
+            let gate = UndoCommandGate.shared
+            let watched = gate.isClosed || UndoCommandGate.mainIsTracking()
+            if watched, let command = UndoCommandGate.command(forAction: name) {
+                traceValidation(command, sender: sender)
+            }
+            guard gate.allows(action: name) else {
                 return nil
             }
             return super.target(forAction: action, to: target, from: sender)
+        }
+
+        /// The signpost `ledger.editMenu.validate`, for each lookup of Undo's or Redo's target while the gate is
+        /// closed or a menu is tracking, as AppKit's validation, or anything else, asks: tagged `undo` or `redo`, with,
+        /// in order: whether the gate is closed, whether a menu is tracking, whether the sender is a menu item, its
+        /// enabled state and whether its title is the bare "Undo" or "Redo" (1 or 0, -1 for no menu item), whether
+        /// it's the gate's own refresh asking (1 or 0), and the item's identity (`UndoCommandGate.itemID`, -1 for
+        /// none). Tester2's 2b on e291012: a validation of the open menu that never shows here went another way.
+        private func traceValidation(_ command: UndoCommandGate.Command, sender: Any?) {
+            let item = sender as? NSMenuItem
+            let bare = command == .undo ? "Undo" : "Redo"
+            BatchTrace.event(
+                "ledger.editMenu.validate",
+                command == .undo ? "undo" : "redo",
+                values: [
+                    UndoCommandGate.shared.isClosed ? 1 : 0,
+                    UndoCommandGate.mainIsTracking() ? 1 : 0,
+                    item == nil ? 0 : 1,
+                    item.map { $0.isEnabled ? 1.0 : 0 } ?? -1,
+                    item.map { $0.title == bare ? 1.0 : 0 } ?? -1,
+                    UndoCommandGate.shared.isRefreshing ? 1 : 0,
+                    item.map(UndoCommandGate.itemID) ?? -1,
+                ],
+            )
         }
 
         /// Undo and Redo sent while a batch runs do nothing, however they got past validation. Each one sent is

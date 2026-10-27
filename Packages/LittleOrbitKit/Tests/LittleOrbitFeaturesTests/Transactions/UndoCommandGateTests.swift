@@ -61,7 +61,7 @@ struct UndoCommandGateTests {
     @Test("New Transaction, and every other command, stays on during a batch (D407.3)")
     func otherCommandsStayOn() {
         let probe = Probe()
-        probe.gate.batchStarted()
+        probe.gate.batchStarted(at: 10)
         for action in ["newDocument:", "copy:", "paste:", "selectAll:", "performClose:", "undoTyping", "redo"] {
             #expect(probe.gate.allows(action: action), "\(action)")
         }
@@ -73,9 +73,9 @@ struct UndoCommandGateTests {
     @Test("Ended while a menu is open: off until it closes, so an item pressed during the batch runs nothing")
     func endWhileMenuOpen() throws {
         let probe = Probe()
-        probe.gate.batchStarted()
+        probe.gate.batchStarted(at: 10)
         probe.tracking = true
-        probe.gate.batchEnded()
+        probe.gate.batchEnded(at: 11)
         #expect(!probe.gate.isBatchRunning)
         #expect(!probe.undoAndRedoOn, "The mouse-up or Return handled after the end finds Undo off")
         #expect(probe.phases == ["start", "endWhileTracking"])
@@ -90,14 +90,14 @@ struct UndoCommandGateTests {
     @Test("A batch that starts before the open menu closes keeps Undo off")
     func nextBatchBeforeMenuCloses() {
         let probe = Probe()
-        probe.gate.batchStarted()
+        probe.gate.batchStarted(at: 10)
         probe.tracking = true
-        probe.gate.batchEnded()
-        probe.gate.batchStarted()
+        probe.gate.batchEnded(at: 11)
+        probe.gate.batchStarted(at: 10)
         probe.runTurns()
         #expect(!probe.undoAndRedoOn)
         probe.tracking = false
-        probe.gate.batchEnded()
+        probe.gate.batchEnded(at: 11)
         #expect(probe.undoAndRedoOn)
     }
 
@@ -149,5 +149,69 @@ struct UndoCommandGateTests {
                 .allSatisfy { $0.categoryID == DefaultCategoryID.food },
             "The Bulk Edit is applied again, all of it",
         )
+    }
+
+    // MARK: m14, a menu opened by a press made during a batch
+
+    /// A probe after a batch from 10 s to 11 s, now at 11.5 s, with the last left press `pressedAt`.
+    private static func afterBatch(pressedAt press: Double?) -> Probe {
+        let probe = Probe()
+        probe.gate.uptime = { 11.5 }
+        probe.gate.secondsSinceLeftMouseDown = { press.map { 11.5 - $0 } }
+        probe.gate.batchStarted(at: 10)
+        probe.gate.batchEnded(at: 11)
+        return probe
+    }
+
+    @Test("m14: a menu opened after the end by a press made during the batch holds Undo off until it closes")
+    func pressInBatchHoldsMenu() throws {
+        let probe = Self.afterBatch(pressedAt: 10.6)
+        #expect(probe.undoAndRedoOn, "Open after the end")
+        #expect(probe.gate.menuBeganTracking() == .held)
+        #expect(!probe.undoAndRedoOn, "Off while that menu tracks")
+        #expect(probe.phases.last == "heldByMenu")
+        #expect(probe.gate.menuBeganTracking() == .held && probe.turns.count == 1, "Held once")
+        probe.runTurns()
+        #expect(probe.undoAndRedoOn, "On once it closes")
+        #expect(probe.phases.last == "afterTracking")
+    }
+
+    @Test("m14: a press during the batch running now also holds the menu past the end")
+    func pressInRunningBatchHoldsPastEnd() {
+        let probe = Probe()
+        probe.gate.uptime = { 10.5 }
+        probe.gate.secondsSinceLeftMouseDown = { 0.2 }
+        probe.gate.batchStarted(at: 10)
+        #expect(probe.gate.menuBeganTracking() == .held)
+        probe.gate.batchEnded(at: 11)
+        #expect(!probe.undoAndRedoOn, "Still held by the open menu")
+        probe.runTurns()
+        #expect(probe.undoAndRedoOn)
+    }
+
+    @Test("m14: a press before the batch, or after its end, holds nothing", arguments: [9.9, 11.01, 11.4])
+    func pressOutsideBatch(press: Double) {
+        let probe = Self.afterBatch(pressedAt: press)
+        #expect(probe.gate.menuBeganTracking() == .passed)
+        #expect(probe.undoAndRedoOn && probe.turns.isEmpty)
+    }
+
+    @Test(
+        "m14: a reading that can't be right holds nothing (fail open)",
+        arguments: [nil, 0, -0.5, Double.nan, Double.infinity, 1e9] as [Double?],
+    )
+    func badReadingFailsOpen(secondsSince: Double?) {
+        let probe = Self.afterBatch(pressedAt: nil)
+        probe.gate.secondsSinceLeftMouseDown = { secondsSince }
+        #expect(probe.gate.menuBeganTracking() == .noReading)
+        #expect(probe.undoAndRedoOn)
+    }
+
+    @Test("A batch that starts with a menu open is tagged so")
+    func startWhileTracking() {
+        let probe = Probe()
+        probe.tracking = true
+        probe.gate.batchStarted(at: 10)
+        #expect(probe.phases == ["startWhileTracking"])
     }
 }

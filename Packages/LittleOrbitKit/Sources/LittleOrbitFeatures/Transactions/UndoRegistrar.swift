@@ -160,7 +160,7 @@ public final class LedgerUpdates {
         batchStart = start
         BatchTrace.event("ledger.batch.start", value: start)
         refreshHistories()
-        commandGate.batchStarted()
+        commandGate.batchStarted(at: start)
         return true
     }
 
@@ -177,7 +177,7 @@ public final class LedgerUpdates {
         BatchTrace.event("ledger.batch.end", value: end)
         batchStart = nil
         refreshHistories()
-        commandGate.batchEnded()
+        commandGate.batchEnded(at: end)
     }
 
     /// The longest `settle()` waits for window refreshes, so a refresh that never ends can't hold busy on for good.
