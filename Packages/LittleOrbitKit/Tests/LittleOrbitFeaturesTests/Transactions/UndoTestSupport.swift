@@ -1,6 +1,7 @@
 import Foundation
 import LittleOrbitDomain
-import LittleOrbitFeatures
+
+@testable import LittleOrbitFeatures
 
 /// Stands in for a window's `UndoManager` on every platform, Linux included, with the same rules: a step
 /// registered while undoing goes on Redo, while redoing on Undo, and otherwise on Undo, clearing Redo. A
@@ -110,6 +111,9 @@ final class TestWindow {
         )
         queue = { [unowned self] in self.pending.append($0) }
         history.attach(undoManager)
+        // A clock that stands still: a slow parallel run mustn't show a batch's sheet, which holds its announcement.
+        let instant = ContinuousClock.now
+        history.progressClock = { instant }
         history.announce = { [unowned self] in self.announcements.append($0) }
         undoManager.afterAction = { [unowned self] in self.settle() }
     }

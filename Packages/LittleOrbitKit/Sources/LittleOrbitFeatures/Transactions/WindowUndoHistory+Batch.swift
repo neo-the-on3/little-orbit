@@ -39,7 +39,11 @@ extension WindowUndoHistory {
         }
         register(step, as: step.name)
         alert = nil
-        let progress = BatchProgress(kind: undoing ? .undoing : .redoing, total: step.change.transactionIDs.count)
+        let progress = BatchProgress(
+            kind: undoing ? .undoing : .redoing,
+            total: step.change.transactionIDs.count,
+            now: progressClock,
+        )
         batchProgress = progress
         let reporter = progress.start()
         let changes = changes
@@ -93,13 +97,15 @@ extension WindowUndoHistory {
             return
         }
         batchRun = nil
+        let progress = batchProgress
         endBatch()
         switch result {
         case .success(.reverted(let inverse, let outcome)):
             step.change = inverse
             step.outcome = outcome
             notice = noticeAfterApplying(step)
-            announce(undoing ? UndoText.undid(shown) : UndoText.redid(shown))
+            // Once the sheet has closed if it showed, now if it didn't (Tester2 on c8c6594).
+            announceAfterSheet(undoing ? UndoText.undid(shown) : UndoText.redid(shown), progress: progress)
             // One notification for the whole batch, with the rows and accounts it touched (N5).
             updates.changed(Self.delta(of: step))
         case .success(.stale(let reason)):
@@ -120,6 +126,23 @@ extension WindowUndoHistory {
             )
         }
         refreshMenu()
+    }
+
+    private func announceAfterSheet(_ text: String, progress: BatchProgress?) {
+        guard let progress else {
+            announce(text)
+            return
+        }
+        if progress.isShown {
+            closingProgress = progress
+        }
+        progress.announceAfterSheet(text) { [weak self] in self?.announce($0) }
+    }
+
+    /// The progress sheet has closed: an announcement held for it is posted now.
+    public func batchSheetDismissed() {
+        closingProgress?.sheetClosed()
+        closingProgress = nil
     }
 
     private func endBatch() {

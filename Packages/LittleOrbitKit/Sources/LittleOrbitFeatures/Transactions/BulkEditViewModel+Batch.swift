@@ -18,7 +18,7 @@ extension BulkEditViewModel {
             return nil
         }
         let span = BatchTrace.begin("batch.apply")
-        let progress = BatchProgress(kind: .applying, total: request.selection.count)
+        let progress = BatchProgress(kind: .applying, total: request.selection.count, now: progressClock)
         self.progress = progress
         defer {
             span.end()
@@ -31,8 +31,15 @@ extension BulkEditViewModel {
             // The phase first: the UI draws Applying before any work starts (N5).
             await BatchProgress.uiTurn()
             let change = try await applyUseCase.apply(request, reporting: reporter)
-            // VoiceOver hears that Apply finished, and how many rows changed (Tester2, N5).
-            announce(BulkEditText.appliedAnnouncement(count: change.transactionIDs.count))
+            // VoiceOver hears that Apply finished, and how many rows changed (Tester2, N5): once the sheet has
+            // closed if the progress showed, now if it didn't (Tester2 on c8c6594).
+            if progress.isShown {
+                closingProgress = progress
+            }
+            progress.announceAfterSheet(
+                BulkEditText.appliedAnnouncement(count: change.transactionIDs.count),
+                post: announce,
+            )
             return change
         } catch is CancellationError {
             return nil
@@ -40,5 +47,11 @@ extension BulkEditViewModel {
             refused(error)
             return nil
         }
+    }
+
+    /// The Bulk Edit sheet has closed: an announcement held for it is posted now.
+    public func sheetClosed() {
+        closingProgress?.sheetClosed()
+        closingProgress = nil
     }
 }

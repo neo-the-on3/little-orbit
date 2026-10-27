@@ -58,6 +58,15 @@ public final class BatchProgress {
     @ObservationIgnored private var timer: Task<Void, Never>?
     /// Set when the sheet's progress view appears.
     @ObservationIgnored private(set) var hasAppeared = false
+    /// What VoiceOver hears once the sheet has closed, and how it's posted (Tester2 on c8c6594).
+    @ObservationIgnored private var pendingAnnouncement: (text: String, post: @MainActor (String) -> Void)?
+    /// Posts a held announcement if the sheet never reports that it closed.
+    @ObservationIgnored private var announcementFallback: Task<Void, Never>?
+    /// Set once the sheet has closed.
+    @ObservationIgnored private(set) var sheetHasClosed = false
+
+    /// How long a held announcement waits for the sheet to close before it's posted anyway.
+    static let announcementFallbackDelay = Duration.milliseconds(1_500)
 
     init(
         kind: Kind,
@@ -108,6 +117,40 @@ public final class BatchProgress {
         hasAppeared = true
     }
 
+    /// Posts `text`, how a batch ended, after its sheet has closed, so VoiceOver hears it over the window and not
+    /// over a sheet that's going away (Tester2 on c8c6594). With no sheet, or one already closed, it's posted now.
+    /// If the sheet never reports closing, it's posted after `announcementFallbackDelay` all the same.
+    func announceAfterSheet(_ text: String, post: @escaping @MainActor (String) -> Void) {
+        guard isShown, !sheetHasClosed else {
+            post(text)
+            return
+        }
+        pendingAnnouncement = (text, post)
+        announcementFallback = Task { [self] in
+            try? await Task.sleep(for: Self.announcementFallbackDelay)
+            guard !Task.isCancelled else {
+                return
+            }
+            postPendingAnnouncement()
+        }
+    }
+
+    /// The sheet has closed: a held announcement is posted now.
+    public func sheetClosed() {
+        sheetHasClosed = true
+        announcementFallback?.cancel()
+        announcementFallback = nil
+        postPendingAnnouncement()
+    }
+
+    private func postPendingAnnouncement() {
+        guard let pending = pendingAnnouncement else {
+            return
+        }
+        pendingAnnouncement = nil
+        pending.post(pending.text)
+    }
+
     /// Stops following the batch. The sheet goes with the model.
     func finish() {
         continuation?.finish()
@@ -155,8 +198,10 @@ public final class BatchProgress {
     /// Turns of the run loop until the sheet's view appears, for `sheetAppearLimit` at most, then `sheetSettle`
     /// for it to draw. The signpost says whether it appeared in time.
     private func waitForSheet() async {
-        let asked = now()
-        while !hasAppeared, now() - asked < Self.sheetAppearLimit, !Task.isCancelled {
+        // The real clock, not `now`, which tests may stop: the wait must always end.
+        let clock = ContinuousClock()
+        let asked = clock.now
+        while !hasAppeared, clock.now - asked < Self.sheetAppearLimit, !Task.isCancelled {
             await Self.uiTurn()
         }
         if hasAppeared {

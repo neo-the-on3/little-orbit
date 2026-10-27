@@ -53,7 +53,12 @@ public final class WindowUndoHistory {
     @ObservationIgnored public var announce: (String) -> Void = { _ in }
     /// The Undo or Redo of a Bulk Edit while it runs, for its progress sheet (#285, `WindowUndoHistory+Batch.swift`).
     public internal(set) var batchProgress: BatchProgress?
+    /// The progress of a batch that just ended, while its sheet closes: it stays drawn, and holds the announcement
+    /// until the sheet has gone (Tester2 on c8c6594).
+    public internal(set) var closingProgress: BatchProgress?
     @ObservationIgnored var batchRun: (task: Task<Void, Never>, step: Step)?
+    /// The clock a batch's progress times the sheet with; tests stop it.
+    @ObservationIgnored var progressClock: () -> ContinuousClock.Instant = { .now }
 
     final class Step {
         let id = UUID()

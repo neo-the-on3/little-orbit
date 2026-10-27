@@ -36,9 +36,12 @@
         /// window stops work that hasn't written yet.
         func batchProgressSheet(_ history: WindowUndoHistory) -> some View {
             sheet(
-                isPresented: Binding(get: { history.batchProgress?.isShown ?? false }, set: { _ in })
+                isPresented: Binding(get: { history.batchProgress?.isShown ?? false }, set: { _ in }),
+                // VoiceOver hears "Undid …" or "Redid …" once the sheet has gone (Tester2 on c8c6594).
+                onDismiss: { history.batchSheetDismissed() },
             ) {
-                if let progress = history.batchProgress {
+                // The ended batch's progress stays drawn while the sheet closes.
+                if let progress = history.batchProgress ?? history.closingProgress {
                     BatchProgressView(progress: progress)
                         .interactiveDismissDisabled()
                 }
