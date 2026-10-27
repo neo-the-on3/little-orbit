@@ -168,5 +168,32 @@
                 #expect(stored.first { $0.id == other.id }?.details == "Edited during the save")
             }
         }
+
+        @Test("The store's guard: a stale expected revision writes nothing and returns false (m1)")
+        func staleExpectedRevision() async throws {
+            let store = try Store()
+            defer { store.remove() }
+            let repository = store.repository
+            var target = try repository.batchBase().snapshot
+            target =
+                try LedgerBook.updatingTransactions(
+                    store.rows.prefix(3)
+                        .map { row in
+                            var changed = row
+                            changed.details = "Not written"
+                            return changed
+                        },
+                    in: target,
+                    now: SwiftDataBackgroundSaveTests.day,
+                    progress: nil,
+                )
+                .snapshot
+            let revision = try #require(repository.revision)
+            #expect(try await !repository.writeBatchOffMain(target, expectedRevision: revision &- 1))
+            #expect(repository.revision == revision)
+            for reader in [repository, try store.reopened()] {
+                #expect(try Self.sorted(reader.transactions()) == Self.sorted(store.rows))
+            }
+        }
     }
 #endif
