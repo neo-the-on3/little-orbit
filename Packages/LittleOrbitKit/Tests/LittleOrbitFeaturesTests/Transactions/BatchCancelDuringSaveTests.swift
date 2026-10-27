@@ -10,7 +10,8 @@ import Testing
 /// during the save leaves busy on until the save ends; then the batch ends, its step goes without an alert or
 /// announcement, and the change it wrote is posted once, so every window shows it. Made-up data.
 @MainActor
-@Suite("Cancelling a batch Undo or Redo during its background save (B1)")
+// A guard taken out hangs a test instead of failing it, so the suite has a limit (Tech Architect n1, 5668982251).
+@Suite("Cancelling a batch Undo or Redo during its background save (B1)", .timeLimit(.minutes(1)))
 struct BatchCancelDuringSaveTests {
     typealias F = TransactionFeatureFixture  // swiftlint:disable:this type_name
 
