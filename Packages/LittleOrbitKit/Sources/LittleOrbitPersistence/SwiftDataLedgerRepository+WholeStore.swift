@@ -11,6 +11,7 @@
         /// a record changes; on any error the context is dropped (`discardChanges(after:)`), never rolled back, so nothing
         /// is half-written. The stored ledger is dropped either way, so the next read loads the store again.
         func writeWholeStore(_ snapshot: LedgerSnapshot, attachmentBytes: (any BackupAttachmentReading)? = nil) throws {
+            writes &+= 1
             stored = nil
             do {
                 try LedgerWriteValidation.validateWholeStore(snapshot)

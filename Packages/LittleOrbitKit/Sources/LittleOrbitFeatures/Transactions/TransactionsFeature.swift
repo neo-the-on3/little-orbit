@@ -50,13 +50,15 @@ public final class TransactionsFeature {
     }
 
     public func makeBulkEdit(_ transactionIDs: [UUID]) -> BulkEditViewModel {
-        BulkEditViewModel(
+        let model = BulkEditViewModel(
             useCases: useCases,
             transactionIDs: transactionIDs,
             locale: locale,
             timeZone: timeZone,
             now: now,
         )
+        model.updates = updates
+        return model
     }
 }
 

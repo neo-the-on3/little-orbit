@@ -34,6 +34,8 @@
         var stored: SwiftDataStoredLedger?
         /// Records an incremental write made, until it inserts them (`insertCreated`); empty between writes.
         var createdRecords: [any PersistentModel] = []
+        /// Moves on at every write of the store, kept or failed, and when a failed one drops the context (#285).
+        var writes: UInt64 = 0
         /// For tests: runs inside a write after the records are changed and before the one `save()`, with the
         /// snapshot being written. A throw here is a failure in the middle of a write (#235).
         var beforeSave: ((LedgerSnapshot) throws -> Void)?
@@ -271,6 +273,7 @@
         /// and a write's parent and link lists are locals. Logs the error's type only. The caller throws `error` on, unchanged.
         func discardChanges(after error: any Error) {
             StoreLog.failureType(.writeDiscarded, error)
+            writes &+= 1
             context = Self.writerContext(container)
             stored = nil
             createdRecords = []

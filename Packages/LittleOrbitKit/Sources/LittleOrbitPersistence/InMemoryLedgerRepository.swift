@@ -4,7 +4,11 @@ import LittleOrbitDomain
 /// Process-local ledger. Used on Linux and in tests. It applies the same `LedgerBook` rules as the SwiftData store.
 @MainActor
 public final class InMemoryLedgerRepository: LedgerRepository {
-    private var snapshot = LedgerSnapshot()
+    private var snapshot = LedgerSnapshot() {
+        didSet { writes &+= 1 }
+    }
+    /// Every assignment of `snapshot`, a restore after a failed change included (#285).
+    private var writes: UInt64 = 0
     /// The pending-seed marker as a flag (D293): a new in-memory store is a brand-new store, so it starts pending.
     public private(set) var isDefaultSeedPending: Bool
     private let now: @MainActor () -> Date
@@ -149,6 +153,16 @@ public final class InMemoryLedgerRepository: LedgerRepository {
 
     public func netWorth(today: CalendarDay) throws -> [String: Decimal] {
         try AccountBalance.currentNetWorth(in: snapshot, today: today)
+    }
+
+    public var revision: UInt64? { writes }
+
+    public func batchBase() throws -> LedgerBatchBase {
+        LedgerBatchBase(snapshot: snapshot, revision: writes, now: now())
+    }
+
+    public func writeBatch(_ snapshot: LedgerSnapshot) throws {
+        self.snapshot = snapshot
     }
 
     public func atomically<T>(_ body: () throws -> T) throws -> T {

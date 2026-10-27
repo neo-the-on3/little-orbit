@@ -82,6 +82,18 @@ public protocol LedgerRepository: AnyObject {
     /// throws, none is. Reads inside `body` see its earlier writes. A nested call joins the outer one; if
     /// it throws, its own writes are undone, and the outer change keeps going only if its caller catches the error.
     func atomically<T>(_ body: () throws -> T) throws -> T
+
+    /// Moves on with every write of the store, kept or failed, so a batch built off the main actor from
+    /// `batchBase()` can tell at its commit whether anything wrote since (#285). `nil` for a store without the
+    /// batch path, which `batchBase()` and `writeBatch(_:)` then refuse; the use cases save it row by row.
+    var revision: UInt64? { get }
+    /// The ledger as one value, with the store's clock and `revision`, for a batch built off the main actor
+    /// (#285). Inside `atomically` it's the change's own snapshot. Attachments may come without their bytes.
+    func batchBase() throws -> LedgerBatchBase
+    /// Stores `snapshot`, which `LedgerBook` built from `batchBase()`, as one write with the store's own checks
+    /// (#285). Call it inside `atomically`, after comparing `revision` with the base's, so nothing lands between
+    /// the check and the write.
+    func writeBatch(_ snapshot: LedgerSnapshot) throws
 }
 
 extension LedgerRepository {
@@ -93,6 +105,17 @@ extension LedgerRepository {
             }
             try saveTransaction(transaction)
         }
+    }
+
+    /// No batch path: the use cases save row by row, as before #285.
+    public var revision: UInt64? { nil }
+
+    public func batchBase() throws -> LedgerBatchBase {
+        throw LedgerBatchUnsupported()
+    }
+
+    public func writeBatch(_: LedgerSnapshot) throws {
+        throw LedgerBatchUnsupported()
     }
 
     /// One by one, for a repository without a batch path.
@@ -129,4 +152,9 @@ extension LedgerRepository {
             }
         }
     }
+}
+
+/// `batchBase()` or `writeBatch(_:)` on a store without the batch path (`LedgerRepository.revision` is `nil`).
+public struct LedgerBatchUnsupported: Error, Equatable, Sendable {
+    public init() {}
 }

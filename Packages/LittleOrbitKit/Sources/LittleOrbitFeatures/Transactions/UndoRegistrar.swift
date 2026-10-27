@@ -95,6 +95,9 @@ public enum UndoEvent: Equatable, Sendable {
 @Observable
 public final class LedgerUpdates {
     public private(set) var revision = 0
+    /// A Bulk Edit, or its Undo or Redo, is being built or saved in some window. Until it ends, every window's
+    /// ledger writes are off, Undo and Redo included; nothing queues (#285, D398).
+    public private(set) var isBatchRunning = false
     @ObservationIgnored private var histories: [WeakHistory] = []
     @ObservationIgnored private var replacedHandlers: [(id: UUID, run: @MainActor () -> Void)] = []
     @ObservationIgnored private var changedHandlers: [@MainActor () -> Void] = []
@@ -104,6 +107,30 @@ public final class LedgerUpdates {
     }
 
     public init() {}
+
+    /// Starts a batch: writes go off in every window. `false` when one is already running, which starts nothing.
+    func beginBatch() -> Bool {
+        guard !isBatchRunning else {
+            return false
+        }
+        isBatchRunning = true
+        refreshHistories()
+        return true
+    }
+
+    func endBatch() {
+        guard isBatchRunning else {
+            return
+        }
+        isBatchRunning = false
+        refreshHistories()
+    }
+
+    private func refreshHistories() {
+        for entry in histories {
+            entry.history?.refreshMenu()
+        }
+    }
 
     func changed() {
         revision += 1

@@ -21,7 +21,7 @@ public final class WindowUndoHistory {
     /// What this window shows, for the names and the notice.
     public private(set) var screen: UndoScreen = .list(visible: [])
     public private(set) var toast: UndoToast?
-    public private(set) var notice: UndoNotice?
+    public internal(set) var notice: UndoNotice?
     public internal(set) var alert: UndoAlert?
     /// What the toolbar's Undo and Redo show, as the Edit menu does. Kept here and updated only from the
     /// window's `UndoManager` notifications and this history's own steps, never read from the `UndoManager`
@@ -43,13 +43,16 @@ public final class WindowUndoHistory {
     @ObservationIgnored private var observation: AnyObject?
     /// A failed Undo or Redo and what queued behind it (`WindowUndoHistory+Failure.swift`).
     @ObservationIgnored var failure = UndoFailureBlock()
-    @ObservationIgnored private let changes: any TransactionChangesUseCase
+    @ObservationIgnored let changes: any TransactionChangesUseCase
     @ObservationIgnored let loadLedger: any LoadTransactionLedgerUseCase
-    @ObservationIgnored private let updates: LedgerUpdates
+    @ObservationIgnored let updates: LedgerUpdates
     /// Runs work after the current Undo or Redo returns, when the `UndoManager` takes steps again.
     @ObservationIgnored let later: (@escaping @MainActor () -> Void) -> Void
     /// Speaks "Undid …" and "Redid …" for VoiceOver (D162.4); the window sets it.
     @ObservationIgnored public var announce: (String) -> Void = { _ in }
+    /// The Undo or Redo of a Bulk Edit while it runs, for its progress sheet (#285, `WindowUndoHistory+Batch.swift`).
+    public internal(set) var batchProgress: BatchProgress?
+    @ObservationIgnored var batchRun: (task: Task<Void, Never>, step: Step)?
 
     final class Step {
         let id = UUID()
@@ -66,6 +69,8 @@ public final class WindowUndoHistory {
         let subject: String?
         /// The name the `UndoManager` shows for it now.
         var title = ""
+        /// A Bulk Edit: its Undo and Redo are built off the main actor, with progress (#285, D398).
+        var runsInBatch = false
 
         init(
             change: TransactionChange,
@@ -104,6 +109,11 @@ public final class WindowUndoHistory {
         updates.add(self)
     }
 
+    /// A batch Undo or Redo still running stops before its write; its task then ends the batch (#285).
+    isolated deinit {
+        batchRun?.task.cancel()
+    }
+
     // MARK: Window
 
     /// The window's `UndoManager`. When the window gets a new one, the old one's steps go with it.
@@ -119,6 +129,7 @@ public final class WindowUndoHistory {
 
     /// Removes every step of this window from its `UndoManager`, after the ledger was replaced.
     func clear() {
+        cancelBatch()
         endFailure()
         for step in undoSteps + redoSteps {
             registrar?.removeSteps(for: step)
@@ -142,8 +153,8 @@ public final class WindowUndoHistory {
         let managerCanRedo = registrar?.canRedo ?? false
         // From a failure until its alert is dismissed, Undo and Redo are off; the titles still name the steps
         // (X8b, D193).
-        let nextCanUndo = managerCanUndo && !failure.isBlocked
-        let nextCanRedo = managerCanRedo && !failure.isBlocked
+        let nextCanUndo = managerCanUndo && !isBusy
+        let nextCanRedo = managerCanRedo && !isBusy
         let nextUndoTitle = registrar.flatMap {
             managerCanUndo && !$0.undoActionName.isEmpty ? $0.undoActionName : nil
         }
@@ -223,7 +234,7 @@ public final class WindowUndoHistory {
 
     /// The toolbar Undo: the window's own Undo, as Cmd-Z.
     public func undo() {
-        guard !failure.isBlocked else {
+        guard !isBusy else {
             return
         }
         registrar?.undo()
@@ -231,7 +242,7 @@ public final class WindowUndoHistory {
     }
 
     public func redo() {
-        guard !failure.isBlocked else {
+        guard !isBusy else {
             return
         }
         registrar?.redo()
@@ -261,13 +272,17 @@ public final class WindowUndoHistory {
         let shown = step.title
         undoSteps.removeAll { $0 === step }
         redoSteps.removeAll { $0 === step }
-        if failure.isBlocked {
-            // A command queued behind a failure, or given before its alert was dismissed: applies nothing (X8b).
+        if isBusy {
+            // A command queued behind a failure, or given before its alert was dismissed, or while a batch runs:
+            // applies nothing (X8b, D398).
             swallow(step, undoing: undoing, title: shown)
             return
         }
         closeFeedback()
         refreshMenu()
+        if step.runsInBatch {
+            return runInBatch(step, undoing: undoing, title: shown)
+        }
         do {
             switch try changes.revert(step.change, expecting: step.outcome) {
             case .reverted(let inverse, let outcome):
@@ -354,42 +369,8 @@ public final class WindowUndoHistory {
         notice = nil
     }
 
-    private func closeFeedback() {
+    func closeFeedback() {
         toast = nil
         notice = nil
-    }
-
-    /// "Restored 5 transactions in Household Card" when the step is in an account other than the one on this
-    /// window's screen, by the same test as the names; `nil` when it's on screen, even scrolled out of view
-    /// (D187.6, N1, N2).
-    private func noticeAfterApplying(_ step: Step) -> UndoNotice? {
-        if let account = step.account {
-            if screen == .account(account.id) {
-                return nil
-            }
-            let restoring = if case .addedAccount = step.change.core { true } else { false }
-            return UndoNotice(
-                message: restoring ? UndoText.restoredAccount(account.name) : UndoText.deletedAccount(account.name),
-                accountID: restoring ? account.id : nil,
-            )
-        }
-        let accounts = step.impact.accounts
-        guard !accounts.isEmpty, UndoActionTitle.isOffScreen(step.impact, on: screen) else {
-            return nil
-        }
-        let count = step.change.transactionIDs.count
-        // `step.change` is the inverse now: an Undo of a delete leaves `.added`, and so on.
-        let effect: UndoText.Effect =
-            switch step.change.core {
-            case .added: .restored
-            case .removed: .deleted
-            case .replaced, .removedAccount, .addedAccount, .createdPayees, .removedPayees, .savedScheduledItem,
-                .revertedScheduledItemSave:
-                .updated
-            }
-        return UndoNotice(
-            message: UndoActionTitle.placed(UndoText.notice(effect, count: count), step.impact),
-            accountID: accounts.first?.id,
-        )
     }
 }
