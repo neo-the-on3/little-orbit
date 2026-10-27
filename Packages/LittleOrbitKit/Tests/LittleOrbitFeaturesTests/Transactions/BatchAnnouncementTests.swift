@@ -88,11 +88,15 @@ struct BatchAnnouncementTests {
         let repository = try F.repository(rows)
         let heard = Heard()
         let model = Self.applyModel(repository, rows: rows, heard: heard)
-        _ = try #require(await model.applyInBackground())
+        // Apply waits for its sheet to go before it ends (D403), so the sheet closes while it runs.
+        let applying = Task { await model.applyInBackground() }
+        await RealTime.until(seconds: 10) { model.closingProgress != nil }
         #expect(heard.texts.isEmpty, "Not before the sheet closes")
         #expect(model.progress == nil)
+        #expect(model.closeRequested)
         #expect(model.closingProgress?.isShown == true, "The progress, not the fields, while the sheet closes")
         model.sheetClosed()
+        _ = try #require(await applying.value)
         #expect(heard.texts == ["Changed 750 transactions."])
         #expect(model.closingProgress == nil)
     }
