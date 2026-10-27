@@ -13,7 +13,15 @@ struct ChangeChecker {
     /// `outcome(of:)` over `transactions`, the ledger's visible transactions, for a batch whose save runs off the
     /// main actor: its outcome is read from the ledger it writes, before the hand-off (#285, B).
     static func outcome(of change: TransactionChange, among transactions: [Transaction]) -> ChangeOutcome {
-        let current = Dictionary(transactions.map { ($0.id, $0) }, uniquingKeysWith: { first, _ in first })
+        // `transactionsVisible()` is unique by id, so either side would be the same row; a duplicate means the
+        // ledger is corrupt, which debug builds stop on rather than mask (Tech Architect's review 5667872455, m2).
+        let current = Dictionary(
+            transactions.map { ($0.id, $0) },
+            uniquingKeysWith: { first, _ in
+                assertionFailure("ChangeChecker.outcome: two visible transactions share an id")
+                return first
+            },
+        )
         var outcome = ChangeOutcome()
         // The payees a save created have their own, silent rule (D191.4a); the check is on the change.
         switch change.core {
