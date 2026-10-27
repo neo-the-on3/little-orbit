@@ -1,6 +1,6 @@
 import Foundation
 
-/// The Scheduled form's inline errors (D334.12).
+/// The Scheduled form's inline errors (D334.12) and its discard prompt's message (D388.1).
 extension ScheduledText {
     static var enterAmount: String {
         FeatureText.string(
@@ -44,5 +44,17 @@ extension ScheduledText {
             "Pick an end date on or after the start date.",
             comment: "Scheduled form error: the end date is earlier than the start date.",
         )
+    }
+
+    /// The Edit form's “Discard Changes?” message (D388.1), naming the item as it was saved when the form opened:
+    /// “Your changes to Rent won’t be saved.”, or “Your changes won’t be saved.” when it has no name.
+    static func discardMessage(_ name: String) -> String {
+        guard !name.isEmpty else {
+            return FeatureText.string(
+                "Your changes won’t be saved.",
+                comment: "Discard Changes? message on an edit sheet whose item has no name. Under “Discard Changes?”.",
+            )
+        }
+        return FeatureText.format("Your changes to %@ won’t be saved.", name)
     }
 }

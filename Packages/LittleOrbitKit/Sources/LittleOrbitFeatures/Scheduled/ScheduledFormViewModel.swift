@@ -98,6 +98,8 @@ public final class ScheduledFormViewModel: Identifiable {
     public private(set) var alertClosesForm = false
     /// Set once the deleted-item alert has been dismissed by any route, for the view to close the form (#258).
     public private(set) var closeRequested = false
+    /// “Discard Changes?” for Cancel, Esc on the Mac or a swipe down with unsaved edits (D300.1, #248).
+    public var discard = DiscardConfirmation()
 
     @ObservationIgnored let useCases: ScheduledScreenUseCases
     @ObservationIgnored private let listing: ScheduledListing
@@ -474,7 +476,7 @@ public final class ScheduledFormViewModel: Identifiable {
     }
 
     /// The edited item's short name, as the Delete confirmation names it.
-    private var itemName: String {
+    var itemName: String {
         original.map { ScheduledPresenter(listing: listing, locale: locale).shortName(of: $0) } ?? ""
     }
 

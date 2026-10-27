@@ -10,7 +10,8 @@
     /// New and Edit Scheduled Item (#26 frame "New scheduled – form, 31st rule preview"): type, amount, payee (the #23
     /// autocomplete with Create, #197), category and account; then Schedule (Starts, Repeat with its stepper row,
     /// Ends and End Date), the Next Due Dates preview with its month-end footnote (D24), and Process automatically.
-    /// Standard Form controls only.
+    /// Standard Form controls only. With unsaved edits, Cancel (Esc on the Mac) or a swipe down on iOS asks
+    /// “Discard Changes?” first, and an Edit form's prompt names the item (D300.1, D388.1); with none it closes.
     struct ScheduledFormView: View {
         @Bindable var model: ScheduledFormViewModel
         @Environment(\.dismiss) private var dismiss
@@ -111,6 +112,14 @@
                 }
             }
             .formStyle(.grouped)
+            #if os(iOS)
+                // A swipe down with unsaved edits asks first too (D300 amendment); with none it just closes.
+                .confirmsDiscardingChanges(
+                    isDirty: model.hasUnsavedEdits,
+                    confirmation: $model.discard,
+                    message: model.discardMessage,
+                ) { dismiss() }
+            #endif
             .onChange(of: scenePhase) { _, phase in
                 // Back from Settings, where notifications may have been turned on.
                 if phase == .active {
@@ -123,7 +132,14 @@
             #endif
             .toolbar {
                 ToolbarItem(placement: .cancellationAction) {
-                    Button(model.cancelTitle) { dismiss() }
+                    Button(model.cancelTitle) {
+                        if model.requestDismiss(from: .cancel) {
+                            dismiss()
+                        }
+                    }
+                    .discardsChangesFromCancel(confirmation: $model.discard, message: model.discardMessage) {
+                        dismiss()
+                    }
                 }
                 ToolbarItem(placement: .confirmationAction) {
                     Button(model.confirmTitle) {

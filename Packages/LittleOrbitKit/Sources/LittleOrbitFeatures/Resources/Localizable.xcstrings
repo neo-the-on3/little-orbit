@@ -3674,7 +3674,7 @@
       }
     },
     "Discard Changes?": {
-      "comment": "Edit sheet confirmation title: Cancel or a swipe down with unsaved edits. It has no message.",
+      "comment": "Edit sheet confirmation title: Cancel, Esc on the Mac or a swipe down with unsaved edits. The Scheduled item’s Edit sheet adds a message under it (“Your changes to %@ won’t be saved.”); other sheets have none.",
       "extractionState": "manual",
       "generatesSymbol": false,
       "localizations": {
@@ -7554,6 +7554,30 @@
           "stringUnit": {
             "state": "translated",
             "value": "Your change was saved, but couldn’t be read back, so it can’t be undone."
+          }
+        }
+      }
+    },
+    "Your changes to %@ won’t be saved.": {
+      "comment": "Discard Changes? message on a scheduled item’s Edit sheet: Cancel, Esc on the Mac or a swipe down with unsaved edits. %@ is the item’s name as it was saved when the sheet opened, not the edited one, for example “Rent”. Its buttons are Discard Changes and Keep Editing.",
+      "extractionState": "manual",
+      "localizations": {
+        "en": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Your changes to %@ won’t be saved."
+          }
+        }
+      }
+    },
+    "Your changes won’t be saved.": {
+      "comment": "Discard Changes? message on an edit sheet whose item has no name. Under “Discard Changes?”.",
+      "extractionState": "manual",
+      "localizations": {
+        "en": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Your changes won’t be saved."
           }
         }
       }

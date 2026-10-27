@@ -1,10 +1,12 @@
 import Foundation
 
 /// The system discard prompt for an edit sheet (D300.1): Cancel, or a swipe down, with unsaved edits asks
-/// “Discard Changes?” with Discard Changes and Keep Editing, and no message; with none, the sheet just closes.
-/// The sheet applies it with `confirmsDiscardingChanges(isDirty:confirmation:onDiscard:)` and puts
-/// `discardsChangesFromCancel(confirmation:onDiscard:)` on its Cancel button, on iOS. Each has its own dialog, so
-/// the one from Cancel points at Cancel and the one from a swipe shows at the top centre.
+/// “Discard Changes?” with Discard Changes and Keep Editing; with none, the sheet just closes. It has no message
+/// unless the sheet gives one, as the Scheduled form's Edit sheet does (D388.1). On iOS the sheet applies it with
+/// `confirmsDiscardingChanges(isDirty:confirmation:message:onDiscard:)` and puts
+/// `discardsChangesFromCancel(confirmation:message:onDiscard:)` on its Cancel button. Each has its own dialog, so
+/// the one from Cancel points at Cancel and the one from a swipe shows at the top centre. A Mac sheet has only
+/// the Cancel button's.
 public struct DiscardConfirmation: Equatable, Sendable {
     /// What asked to close the sheet.
     public enum Source: Equatable, Sendable {
@@ -58,7 +60,7 @@ enum DiscardText {
     static var title: String {
         FeatureText.string(
             "Discard Changes?",
-            comment: "Edit sheet confirmation title: Cancel or a swipe down with unsaved edits. It has no message.",
+            comment: "Edit sheet confirmation title: Cancel, Esc on the Mac or a swipe down with unsaved edits.",
         )
     }
 
