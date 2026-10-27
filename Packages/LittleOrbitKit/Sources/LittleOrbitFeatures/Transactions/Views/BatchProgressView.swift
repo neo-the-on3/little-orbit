@@ -41,6 +41,8 @@
                 // A save waiting for the sheet starts once it has drawn (D401).
                 progress.sheetAppeared()
             }
+            // A held announcement's fallback waits while the sheet is still drawn.
+            .onDisappear { progress.sheetDisappeared() }
         }
     }
 
