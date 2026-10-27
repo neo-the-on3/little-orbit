@@ -108,8 +108,8 @@ public final class LedgerUpdates {
     @ObservationIgnored private var lastDroppedEventTime: TimeInterval?
     /// The `systemUptime` clock; tests set it.
     @ObservationIgnored var uptime: @MainActor () -> TimeInterval = { ProcessInfo.processInfo.systemUptime }
-    /// The time of the event being handled; tests set it.
-    @ObservationIgnored var currentEventTime: @MainActor () -> TimeInterval? = QueuedCommandPolicy.currentEventTime
+    /// The event being handled; tests set it.
+    @ObservationIgnored var currentEvent: @MainActor () -> QueuedCommandPolicy.Event? = QueuedCommandPolicy.currentEvent
     /// Window refreshes running now, after a change (`refreshStarted`), so a batch can end once they're done.
     @ObservationIgnored private(set) var refreshesRunning = 0
     /// How `settle()` waits; tests may step it by hand.
@@ -187,14 +187,14 @@ public final class LedgerUpdates {
     /// while the save blocked the main thread: an Undo or Redo then does nothing (`QueuedCommandPolicy`). A `true`
     /// uses up the event, so the next command it's seen with goes through.
     func dropsQueuedCommand() -> Bool {
-        let eventTime = currentEventTime()
+        let event = currentEvent()
         let drops = QueuedCommandPolicy.dropsCommand(
-            eventTime: eventTime,
+            event: event,
             lastBatch: lastBatch,
             lastDroppedEventTime: lastDroppedEventTime,
         )
         if drops {
-            lastDroppedEventTime = eventTime
+            lastDroppedEventTime = event?.time
         }
         return drops
     }

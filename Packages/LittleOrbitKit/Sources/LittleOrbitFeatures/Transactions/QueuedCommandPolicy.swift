@@ -7,36 +7,75 @@ import Foundation
 /// Whether an Undo or Redo was asked for while the last batch ran (#285, D398, D403, Tester2's N5 at c8c6594,
 /// comment 6440723910; Tech Architect's review 5666694381).
 ///
-/// While a batch saves, the main thread is blocked, so a click in an Edit menu left open, or a ⌘Z, waits in the
-/// event queue. It's handled once the batch has ended and the busy flag is off, and would undo one step more. The
-/// event still carries the time it happened, so a command whose event falls inside the last batch, from its start
-/// to its end, is dropped. Event times and the batch's start and end are all seconds since the system started:
-/// `NSEvent.timestamp` and `ProcessInfo.systemUptime` share that clock.
+/// While a batch saves, or the windows refresh after it, the main thread is blocked, so a click in an Edit menu left
+/// open, or a ⌘Z, waits in the event queue. It's handled once the batch has ended and the busy flag is off, and would
+/// undo one step more. The event still carries the time it happened, so a command whose event falls inside the last
+/// batch, from its start to its end, is dropped. Event times and the batch's start and end are all seconds since the
+/// system started: `NSEvent.timestamp` and `ProcessInfo.systemUptime` share that clock.
+///
+/// A menu item chosen with the mouse can be handled with the mouse-up as its event, later than the press that chose it
+/// (Tester2 on 1f2eae8: a Redo pressed at +0.626 s, before the batch's end at +0.676 s, still ran). A mouse-up up to
+/// `pressAllowance` after the end is taken to finish a press that began inside the batch, so it's dropped too.
 ///
 /// AppKit never clears `NSApp.currentEvent`, so a command not driven by an event of its own (VoiceOver, Voice
 /// Control or any other Accessibility press) sees whatever event came last. One from before the batch isn't
 /// inside it, so the command goes through. One from inside the batch has already dropped its own command, so an
 /// event drops at most one: the same timestamp again goes through.
 enum QueuedCommandPolicy {
-    /// Whether to drop the command: its event happened while the last batch ran, `batch.start ≤ eventTime ≤
-    /// batch.end`, and hasn't dropped a command already. With no current event, or no batch yet, it goes through.
+    /// The event a command is handled with: when it happened, and whether it's a mouse button going up.
+    struct Event: Equatable, Sendable {
+        var time: TimeInterval
+        var isMouseUp = false
+    }
+
+    /// How long after a batch's end a mouse-up still counts as the end of a press that began inside it: a click
+    /// held about as long as a deliberate one. A later click goes through.
+    static let pressAllowance: TimeInterval = 0.3
+
+    /// Whether to drop the command: its event happened while the last batch ran, `batch.start ≤ time ≤ batch.end`,
+    /// or it's a mouse-up within `pressAllowance` after the end, and it hasn't dropped a command already. With no
+    /// current event, or no batch yet, it goes through.
+    static func dropsCommand(
+        event: Event?,
+        lastBatch: ClosedRange<TimeInterval>?,
+        lastDroppedEventTime: TimeInterval?,
+    ) -> Bool {
+        guard let event, let lastBatch, event.time != lastDroppedEventTime else {
+            return false
+        }
+        if lastBatch.contains(event.time) {
+            return true
+        }
+        return event.isMouseUp && event.time > lastBatch.upperBound
+            && event.time - lastBatch.upperBound <= pressAllowance
+    }
+
+    /// `dropsCommand(event:lastBatch:lastDroppedEventTime:)` for an event that isn't a mouse-up.
     static func dropsCommand(
         eventTime: TimeInterval?,
         lastBatch: ClosedRange<TimeInterval>?,
         lastDroppedEventTime: TimeInterval?,
     ) -> Bool {
-        guard let eventTime, let lastBatch else {
-            return false
-        }
-        return lastBatch.contains(eventTime) && eventTime != lastDroppedEventTime
+        dropsCommand(
+            event: eventTime.map { Event(time: $0) },
+            lastBatch: lastBatch,
+            lastDroppedEventTime: lastDroppedEventTime,
+        )
     }
 
-    /// The time of the event being handled now, on the `systemUptime` clock: the Mac's current event, `nil`
-    /// elsewhere.
+    /// The event being handled now, on the `systemUptime` clock: the Mac's current event, `nil` elsewhere.
     @MainActor
-    static func currentEventTime() -> TimeInterval? {
+    static func currentEvent() -> Event? {
         #if canImport(AppKit) && os(macOS)
-            NSApp?.currentEvent?.timestamp
+            guard let event = NSApp?.currentEvent else {
+                return nil
+            }
+            switch event.type {
+            case .leftMouseUp, .rightMouseUp, .otherMouseUp:
+                return Event(time: event.timestamp, isMouseUp: true)
+            default:
+                return Event(time: event.timestamp)
+            }
         #else
             nil
         #endif
