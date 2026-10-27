@@ -48,6 +48,11 @@ struct RecomputeCountTests {
     @Test("Three windows on the edited account and one elsewhere, after an account switch: one recompute each")
     func oneRecomputePerWindow() async throws {
         let updates = LedgerUpdates()
+        // The cap can't end the wait on its own, so the batch ends only when the refreshes wake `settle()`; a
+        // regression fails at the `#require` below and releases it, rather than hanging the run (m10 on 4ea9bd6).
+        let cap = ManualSleeper(holding: [LedgerUpdates.settleLimit])
+        updates.sleep = cap.sleep
+        defer { cap.release() }
         let setup = try await QueuedCommandTests.setup(updates: updates)
         let useCases = TransactionUseCases(repository: setup.disk, categoryNames: CatalogDefaultCategoryNames())
         let feature = TransactionsFeature(
@@ -70,8 +75,9 @@ struct RecomputeCountTests {
 
         // A batch Undo from the first window.
         setup.window.history.undo()
+        await RealTime.eventually { !setup.window.history.isBatchRunning }
+        try #require(!setup.window.history.isBatchRunning, "The windows' refreshes woke settle(), and the batch ended")
         await setup.window.history.batchRun?.task.value
-        #expect(!setup.window.history.isBatchRunning)
         for window in windows {
             await window.viewUpdates()
         }
