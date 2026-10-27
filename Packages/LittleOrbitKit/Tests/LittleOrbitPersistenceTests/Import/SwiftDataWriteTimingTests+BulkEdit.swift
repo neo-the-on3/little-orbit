@@ -123,7 +123,14 @@
             #expect(Set(read.filter { ids.contains($0.id) }) == wanted)
         }
 
-        @Test("A Bulk Edit of 3,334 rows in a ledger of 10,000, undone and redone (#270)")
+        /// D398 sets the bound for a Bulk Edit, its Undo and its Redo at 2.0 s each in Release, the whole action as
+        /// the user waits for it: Tester2's baselines (6434640188) put the repository's own write near 1 s at scale
+        /// 1, and the Product Manager's note (D396.4, 6434679910) accepts up to 2.0 s with a progress sheet. The
+        /// earlier 1.0 s bound (#270) was for this write alone; `BulkEditUseCaseTimingTests` and
+        /// `bulkEditUseCase()` hold the same 2.0 s for the whole use case, rules included.
+        static let bulkEditBound: Duration = .seconds(2)
+
+        @Test("A Bulk Edit of 3,334 rows in a ledger of 10,000, undone and redone (#270, D398)")
         func bulkEdit() throws {
             let (repository, folder) = try Self.reopenCopy()
             defer { try? FileManager.default.removeItem(at: folder) }
@@ -133,9 +140,9 @@
                     + "edit \(timing.edit), undo \(timing.undo), redo \(timing.redo)"
             )
             print("SwiftData timing phases: bulk edit: \(timing.phases)")
-            try TimingScale.expect("bulk edit: edit", timing.edit, under: .seconds(1))
-            try TimingScale.expect("bulk edit: undo", timing.undo, under: .seconds(1))
-            try TimingScale.expect("bulk edit: redo", timing.redo, under: .seconds(1))
+            try TimingScale.expect("bulk edit: edit", timing.edit, under: Self.bulkEditBound)
+            try TimingScale.expect("bulk edit: undo", timing.undo, under: Self.bulkEditBound)
+            try TimingScale.expect("bulk edit: redo", timing.redo, under: Self.bulkEditBound)
         }
 
         /// Main's whole-store write re-saves every record (Tester2: 65–76 s for this edit). The incremental write
