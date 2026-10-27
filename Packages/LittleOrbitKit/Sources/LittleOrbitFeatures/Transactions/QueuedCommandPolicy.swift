@@ -13,10 +13,13 @@ import Foundation
 ///
 /// - From the keyboard, or any event that isn't the mouse's: when its event's time falls inside the last batch,
 ///   `batch.start ≤ time ≤ batch.end`. An event drops at most one command.
-/// - From the mouse, a menu item chosen with a click: when the press that chose it fell inside the batch,
+/// - From the left mouse button, a menu item chosen with a click: when the press that chose it fell inside the batch,
 ///   `batch.start ≤ pressTime ≤ batch.end`, however late its mouse-up is handled (Tester2 on 3dc318b: pressed just
 ///   before the end, released after it, and it ran). A press after the end goes through, however soon. A press drops
 ///   at most one command.
+/// - The right and other buttons count as the keyboard does, by their own event's time (Tech Architect's m9 on
+///   0d676f8): the press time is only the left button's, so another button's command, such as a context menu's,
+///   never borrows a left press from inside the batch.
 ///
 /// `pressTime` is `systemUptime − CGEventSource.secondsSinceLastEventType(.combinedSessionState, .leftMouseDown)`:
 /// when the left button last went down. A menu's tracking loop may never pass its mouse-down to the app, so the
@@ -121,6 +124,22 @@ enum QueuedCommandPolicy {
         )
     }
 
+    /// What drove an event, for whether its command goes by the press time.
+    enum Source: Equatable, Sendable {
+        /// The left mouse button: the press time's.
+        case leftMouse
+        /// The right or another mouse button: the press time isn't theirs (m9).
+        case otherMouseButton
+        /// The keyboard, or anything else.
+        case other
+    }
+
+    /// The event for a time and what drove it: only the left button's goes by the press time; any other, the right
+    /// and other mouse buttons included, by its own time (m9).
+    static func event(at time: TimeInterval, from source: Source) -> Event {
+        Event(time: time, isMouse: source == .leftMouse)
+    }
+
     /// The event being handled now, on the `systemUptime` clock: the Mac's current event, `nil` elsewhere.
     @MainActor
     static func currentEvent() -> Event? {
@@ -128,13 +147,17 @@ enum QueuedCommandPolicy {
             guard let event = NSApp?.currentEvent else {
                 return nil
             }
+            let source: Source
             switch event.type {
-            case .leftMouseDown, .leftMouseUp, .leftMouseDragged, .rightMouseDown, .rightMouseUp, .otherMouseDown,
-                .otherMouseUp:
-                return Event(time: event.timestamp, isMouse: true)
+            case .leftMouseDown, .leftMouseUp, .leftMouseDragged:
+                source = .leftMouse
+            case .rightMouseDown, .rightMouseUp, .rightMouseDragged, .otherMouseDown, .otherMouseUp,
+                .otherMouseDragged:
+                source = .otherMouseButton
             default:
-                return Event(time: event.timestamp)
+                source = .other
             }
+            return Self.event(at: event.timestamp, from: source)
         #else
             nil
         #endif
