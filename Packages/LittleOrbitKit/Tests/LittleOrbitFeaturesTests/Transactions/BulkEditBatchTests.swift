@@ -196,4 +196,17 @@ struct BatchProgressTests {
         #expect(clock.now - start >= .milliseconds(20))
         progress.finish()
     }
+
+    @Test("Saving… gives the UI a turn of the run loop even before the sheet shows, so it draws first (N5)")
+    func turnBeforeSave() async {
+        let progress = BatchProgress(kind: .applying, total: 10, showAfter: .seconds(60))
+        let reporter = progress.start()
+        let clock = ContinuousClock()
+        let start = clock.now
+        await reporter.willSave()
+        #expect(clock.now - start >= BatchProgress.uiTurnLength)
+        #expect(progress.stage == .saving)
+        #expect(!progress.isShown)
+        progress.finish()
+    }
 }
