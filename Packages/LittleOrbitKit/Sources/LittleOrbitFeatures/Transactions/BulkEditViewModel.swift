@@ -26,7 +26,7 @@ public final class BulkEditViewModel {
     /// as the edit form does when its transaction is gone (#262, #266). Reset at the start of each apply.
     public private(set) var alertClosesForm = false
     /// Set once the alert is dismissed in any way while `alertClosesForm`: the sheet closes (D394).
-    public private(set) var closeRequested = false
+    public internal(set) var closeRequested = false
     public private(set) var accountOptions: [TransactionAccountOption] = []
     /// While Apply runs as a batch, for the progress that replaces the sheet's fields (#285, D398.3).
     public internal(set) var progress: BatchProgress?

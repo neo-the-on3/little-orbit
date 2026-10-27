@@ -34,7 +34,10 @@
             // same, nothing is written.
             .interactiveDismissDisabled(model.isApplying)
             .onDisappear {
-                applying?.cancel()
+                // Once Apply has asked the sheet to close, its save is written or being installed: it finishes.
+                if !model.closeRequested {
+                    applying?.cancel()
+                }
                 // "Changed ‹N› transactions." once the sheet has closed (Tester2 on c8c6594).
                 model.sheetClosed()
             }
@@ -129,17 +132,13 @@
             .frame(minWidth: 460)
         }
 
-        /// One Undo step for the whole edit, whose Undo and Redo run as a batch too (#285).
+        /// One Undo step for the whole edit, whose Undo and Redo run as a batch too (#285). The model closes the
+        /// sheet (`closeRequested`) once Apply has written, before the windows redraw (D403).
         private func apply() async {
-            guard let change = await model.applyInBackground() else {
-                return
-            }
-            // No row changed: nothing to undo, so no “Undo Edit 0 Transactions” step (Tester2, N5).
-            if !change.changesNoTransaction {
+            _ = await model.applyInBackground { change in
                 onApplied(change)
                 undoHistory?.markBulkEdit(change)
             }
-            dismiss()
         }
 
         @ViewBuilder private var categoryRow: some View {
