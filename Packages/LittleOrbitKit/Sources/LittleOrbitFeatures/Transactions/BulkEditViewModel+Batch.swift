@@ -27,7 +27,10 @@ extension BulkEditViewModel {
             updates?.endBatch()
         }
         do {
-            return try await applyUseCase.apply(request, reporting: progress.start())
+            let reporter = progress.start()
+            // The phase first: the UI draws Applying before any work starts (N5).
+            await BatchProgress.uiTurn()
+            return try await applyUseCase.apply(request, reporting: reporter)
         } catch is CancellationError {
             return nil
         } catch {

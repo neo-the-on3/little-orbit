@@ -50,6 +50,8 @@ extension WindowUndoHistory {
             defer { span.end() }
             let result: Result<RevertResult, any Error>
             do {
+                // The phase first: the UI draws Undoing or Redoing before any work starts (N5).
+                await BatchProgress.uiTurn()
                 result = .success(try await changes.revert(change, expecting: outcome, reporting: reporter))
             } catch {
                 result = .failure(error)
