@@ -10,7 +10,7 @@
     /// some tagged, some split, a few with an attachment, reopened as at launch. A single save stays under
     /// 100 ms, a 5,000-row import's commit under 2 s, its Undo Import under 1 s, the Redo of that Undo (the
     /// same rows put back, the same write as the commit) under 2 s, and a Bulk Edit of 3,334 rows, its Undo
-    /// and its Redo each under 1 s (`+BulkEdit`). Wall-clock bounds, so the suite runs one test at a time and
+    /// and its Redo each under 2 s (`+BulkEdit`, D398). Wall-clock bounds, so the suite runs one test at a time and
     /// prints the timings for the PR. Every bound goes through `TimingScale`: 1 on Tester2's Mac, which gates the
     /// real bounds, and 3 on CI's slower runner (`LITTLE_ORBIT_TIMING_SCALE`, set only in ci.yml).
     ///

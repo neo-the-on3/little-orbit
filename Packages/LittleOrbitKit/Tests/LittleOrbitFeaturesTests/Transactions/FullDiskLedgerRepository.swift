@@ -112,4 +112,13 @@ final class FullDiskLedgerRepository: LedgerRepository {
     }
     func netWorth(today: CalendarDay) throws -> [String: Decimal] { try base.netWorth(today: today) }
     func atomically<T>(_ body: () throws -> T) throws -> T { try base.atomically(body) }
+
+    /// Set to take the in-memory store's batch path (#285), whose one write fails as the others do.
+    var hasBatchPath = false
+    var revision: UInt64? { hasBatchPath ? base.revision : nil }
+    func batchBase() throws -> LedgerBatchBase { try base.batchBase() }
+    func writeBatch(_ snapshot: LedgerSnapshot) throws {
+        try write()
+        try base.writeBatch(snapshot)
+    }
 }
