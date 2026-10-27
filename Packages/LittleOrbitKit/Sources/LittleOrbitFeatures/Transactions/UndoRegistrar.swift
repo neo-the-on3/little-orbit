@@ -120,6 +120,8 @@ public final class LedgerUpdates {
     }
     /// Seconds since the left mouse button last went down: the event source on the Mac, `nil` on iOS; tests set it.
     @ObservationIgnored var secondsSincePress: @MainActor () -> Double? = QueuedCommandPolicy.secondsSinceLeftMouseDown
+    /// Seconds since a key last went down: the same event source on the Mac, `nil` on iOS; tests set it.
+    @ObservationIgnored var secondsSinceKeyDown: @MainActor () -> Double? = QueuedCommandPolicy.secondsSinceKeyDown
     /// Window refreshes running now, by the revision of the change that started them (`refreshStarted(for:)`), so
     /// a batch ends once its own change's refreshes are done, and one still running for an earlier change, in any
     /// window, doesn't hold it (Tech Architect on 0d676f8).

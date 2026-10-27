@@ -265,6 +265,8 @@ final class UptimeClock {
     var pressTime: TimeInterval?
     /// What the press source reports instead, when set: a reading that can't be right.
     var rawSecondsSince: Double?
+    /// When a key last went down, on the same clock; `nil` for none.
+    var keyTime: TimeInterval?
 
     /// The event being dispatched, as `LedgerUpdates.dispatchingEvent` gives it.
     var event: QueuedCommandPolicy.Event? {
@@ -285,6 +287,7 @@ final class UptimeClock {
         updates.uptime = { self.now }
         updates.dispatchingEvent = { self.event }
         updates.secondsSincePress = { self.secondsSincePress }
+        updates.secondsSinceKeyDown = { self.keyTime.map { self.now - $0 } }
         updates.launchUptime = 0
     }
 }
