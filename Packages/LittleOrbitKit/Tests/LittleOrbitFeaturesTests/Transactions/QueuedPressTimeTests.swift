@@ -65,6 +65,35 @@ struct QueuedPressTimeTests {
         #expect(!Self.drops(Policy.Event(time: 101.1, isMouse: true), press: nil))
     }
 
+    @Test("Only the left button's events go by the press time; the right and other buttons' by their own time (m9)")
+    func otherButtons() {
+        #expect(Policy.event(at: 101.2, from: .leftMouse) == Policy.Event(time: 101.2, isMouse: true))
+        let rightClick = Policy.event(at: 101.2, from: .otherMouseButton)
+        #expect(rightClick == Policy.Event(time: 101.2))
+        #expect(Policy.event(at: 101.2, from: .other) == Policy.Event(time: 101.2))
+        #expect(!Self.drops(rightClick, press: 100.5), "A left press inside the batch isn't the right button's")
+        #expect(
+            Self.drops(Policy.event(at: 100.7, from: .otherMouseButton), press: nil),
+            "Queued from inside the batch, by its own time",
+        )
+    }
+
+    @Test("A context-menu Redo after the end, with a left press inside the batch: it runs (m9)")
+    func contextMenuAfterEnd() async throws {
+        let (setup, clock) = try await Self.endedBatch()
+        let redoNames = setup.window.undoManager.redoNames
+        // A left press in another app at 10.9 s, inside the batch; then a right-click menu's Redo at 11.6 s.
+        clock.pressTime = 10.9
+        let event = Policy.event(at: 11.6, from: .otherMouseButton)
+        clock.eventTime = event.time
+        clock.isMouse = event.isMouse
+        clock.now = 11.62
+        setup.window.undoManager.redo()
+        setup.window.settle()
+        await setup.window.history.batchRun?.task.value
+        #expect(setup.window.undoManager.redoNames != redoNames, "Redone once")
+    }
+
     @Test("The press time fails open: zero, negative, not a number, or outside launch to now gives none")
     func pressTimeFailsOpen() {
         #expect(Policy.pressTime(now: 102, secondsSince: 1.05, launch: 50) == 100.95)
