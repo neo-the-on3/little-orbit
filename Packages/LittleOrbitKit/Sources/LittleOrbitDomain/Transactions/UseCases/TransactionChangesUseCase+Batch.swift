@@ -59,7 +59,7 @@ extension DefaultTransactionChangesUseCase {
             try Self.preparedRevert(of: change, expecting: outcome, from: base, progress: rowsDone)
         }
         try Task.checkCancellation()
-        await reporter.willSave()
+        await reporter.willSave(prepared.inverse.transactionIDs.count)
         try Task.checkCancellation()
         return try commitRevert(prepared, of: change, expecting: outcome)
     }

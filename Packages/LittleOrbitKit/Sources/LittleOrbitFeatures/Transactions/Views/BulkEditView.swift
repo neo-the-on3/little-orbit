@@ -21,7 +21,8 @@
 
         var body: some View {
             Group {
-                // After half a second, the progress takes the fields' place in the same sheet (D398.3).
+                // After half a second, or just before a long save, the progress takes the fields' place in the
+                // same sheet (D398.3, D401).
                 if let progress = model.progress, progress.isShown {
                     BatchProgressView(progress: progress)
                 } else {

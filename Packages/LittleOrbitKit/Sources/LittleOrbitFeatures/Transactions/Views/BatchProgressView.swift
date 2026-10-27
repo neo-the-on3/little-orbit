@@ -22,13 +22,18 @@
             }
             .padding(Layout.marginMacOS)
             .frame(minWidth: 460, alignment: .leading)
-            .onAppear { BatchTrace.event("batch.sheet.firstFrame") }
+            .onAppear {
+                BatchTrace.event("batch.sheet.firstFrame")
+                // A save waiting for the sheet starts once it has drawn (D401).
+                progress.sheetAppeared()
+            }
         }
     }
 
     extension View {
-        /// The progress sheet for this window's Bulk Edit Undo or Redo, once it has run for half a second. It
-        /// can't be dismissed; it goes when the work ends. Closing the window stops work that hasn't written yet.
+        /// The progress sheet for this window's Bulk Edit Undo or Redo, once it has run for half a second, or just
+        /// before a long save (`BatchSheetPolicy`). It can't be dismissed; it goes when the work ends. Closing the
+        /// window stops work that hasn't written yet.
         func batchProgressSheet(_ history: WindowUndoHistory) -> some View {
             sheet(
                 isPresented: Binding(get: { history.batchProgress?.isShown ?? false }, set: { _ in })

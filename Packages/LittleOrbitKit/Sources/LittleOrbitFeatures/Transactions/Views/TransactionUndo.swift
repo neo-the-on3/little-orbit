@@ -76,7 +76,7 @@
                     Text(alert.message)
                 }
                 #if os(macOS)
-                    // A Bulk Edit's Undo or Redo that runs longer than half a second (#285, D398.3).
+                    // A Bulk Edit's Undo or Redo that runs longer than half a second (#285, D398.3, D401).
                     .batchProgressSheet(history)
                 #endif
         }

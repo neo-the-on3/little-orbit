@@ -17,14 +17,15 @@ public struct LedgerBatchBase: Equatable, Sendable {
 
 /// How a batch reports while it runs, for a progress sheet (#285, D398.3). `rowsDone` may be called off the main
 /// actor, every `LedgerBook.batchProgressStride` rows. `willSave` runs on the main actor just before the one
-/// write, which blocks it, so a sheet can show "Saving…" first.
+/// write, which blocks it, with the number of rows the write changes, so a sheet can show "Saving…" first, or
+/// decide that it needn't show at all (D401, D402).
 public struct LedgerBatchReporter: Sendable {
     public var rowsDone: @Sendable (Int) -> Void
-    public var willSave: @MainActor @Sendable () async -> Void
+    public var willSave: @MainActor @Sendable (_ changedRows: Int) async -> Void
 
     public init(
         rowsDone: @escaping @Sendable (Int) -> Void = { _ in },
-        willSave: @escaping @MainActor @Sendable () async -> Void = {},
+        willSave: @escaping @MainActor @Sendable (_ changedRows: Int) async -> Void = { _ in },
     ) {
         self.rowsDone = rowsDone
         self.willSave = willSave
