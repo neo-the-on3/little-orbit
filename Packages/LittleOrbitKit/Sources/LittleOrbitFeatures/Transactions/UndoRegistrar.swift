@@ -99,6 +99,12 @@ public final class LedgerUpdates {
     /// A Bulk Edit, or its Undo or Redo, is being built or saved in some window. Until it ends, every window's
     /// ledger writes are off, Undo and Redo included; nothing queues (#285, D398).
     public private(set) var isBatchRunning = false
+    /// When the last batch ended, on the `systemUptime` clock, for `dropsQueuedCommand` (Tester2, c8c6594).
+    @ObservationIgnored private(set) var lastBatchEnd: TimeInterval?
+    /// The `systemUptime` clock; tests set it.
+    @ObservationIgnored var uptime: @MainActor () -> TimeInterval = { ProcessInfo.processInfo.systemUptime }
+    /// The time of the event being handled; tests set it.
+    @ObservationIgnored var currentEventTime: @MainActor () -> TimeInterval? = QueuedCommandPolicy.currentEventTime
     @ObservationIgnored private var histories: [WeakHistory] = []
     @ObservationIgnored private var replacedHandlers: [(id: UUID, run: @MainActor () -> Void)] = []
     @ObservationIgnored private var changedHandlers: [@MainActor () -> Void] = []
@@ -128,7 +134,14 @@ public final class LedgerUpdates {
             return
         }
         isBatchRunning = false
+        lastBatchEnd = uptime()
         refreshHistories()
+    }
+
+    /// Whether the command being handled was asked for before the last batch ended, so it waited in the event queue
+    /// while the save blocked the main thread: an Undo or Redo then does nothing (`QueuedCommandPolicy`).
+    func dropsQueuedCommand() -> Bool {
+        QueuedCommandPolicy.dropsCommand(eventTime: currentEventTime(), lastBatchEnd: lastBatchEnd)
     }
 
     private func refreshHistories() {
