@@ -59,9 +59,64 @@ extension DefaultTransactionChangesUseCase {
             try Self.preparedRevert(of: change, expecting: outcome, from: base, progress: rowsDone)
         }
         try Task.checkCancellation()
-        await reporter.willSave(prepared.inverse.transactionIDs.count)
+        let offMain = repository.savesBatchesOffMain
+        await reporter.reportSaving(prepared.inverse.transactionIDs.count, offMain: offMain)
         try Task.checkCancellation()
-        return try commitRevert(prepared, of: change, expecting: outcome)
+        guard offMain else {
+            return try commitRevert(prepared, of: change, expecting: outcome)
+        }
+        return try await commitRevertOffMain(prepared, of: change, expecting: outcome)
+    }
+
+    /// `commitRevert` for a store that saves off the main actor (#285, B): the stale check, and the rebuild if the
+    /// store moved, run on the main actor right before the hand-off, with no suspension in between. What the
+    /// revert leaves is read from the ledger it writes, as `commitRevert` reads it inside its change. If the
+    /// store still moved by the hand-off, nothing is written and it's checked and built again.
+    func commitRevertOffMain(
+        _ prepared: PreparedRevert,
+        of change: TransactionChange,
+        expecting outcome: ChangeOutcome,
+    ) async throws -> RevertResult {
+        let span = BatchTrace.begin("batch.commit")
+        defer { span.end() }
+        var candidate: PreparedRevert? = prepared
+        for _ in 0..<LedgerBatchBase.handOffAttempts {
+            let revert: PreparedRevert
+            switch try current(candidate, of: change, expecting: outcome) {
+            case .stale(let reason):
+                return .stale(reason)
+            case .ready(let ready):
+                revert = ready
+            }
+            let left = ChangeChecker.outcome(of: revert.inverse, among: revert.snapshot.transactionsVisible())
+            if try await repository.writeBatchOffMain(revert.snapshot, expectedRevision: revert.revision) {
+                return .reverted(revert.inverse, left)
+            }
+            candidate = revert
+        }
+        throw LedgerBatchStale()
+    }
+
+    private enum CurrentRevert {
+        case stale(StaleReason)
+        case ready(PreparedRevert)
+    }
+
+    /// `prepared` if the store hasn't moved since it was built, otherwise the step checked and built again now.
+    private func current(
+        _ prepared: PreparedRevert?,
+        of change: TransactionChange,
+        expecting outcome: ChangeOutcome,
+    ) throws -> CurrentRevert {
+        if let prepared, prepared.revision == repository.revision {
+            return .ready(prepared)
+        }
+        if case .stale(let reason) = try ChangeChecker(repository: repository).check(change, expecting: outcome) {
+            return .stale(reason)
+        }
+        return .ready(
+            try Self.preparedRevert(of: change, expecting: outcome, from: repository.batchBase(), progress: nil)
+        )
     }
 
     /// Writes `prepared`, or, if the store's revision has moved since, checks the step and builds it again now,
@@ -76,18 +131,11 @@ extension DefaultTransactionChangesUseCase {
         return try repository.atomically {
             let checker = ChangeChecker(repository: repository)
             let revert: PreparedRevert
-            if let prepared, prepared.revision == repository.revision {
-                revert = prepared
-            } else {
-                if case .stale(let reason) = try checker.check(change, expecting: outcome) {
-                    return .stale(reason)
-                }
-                revert = try Self.preparedRevert(
-                    of: change,
-                    expecting: outcome,
-                    from: repository.batchBase(),
-                    progress: nil,
-                )
+            switch try current(prepared, of: change, expecting: outcome) {
+            case .stale(let reason):
+                return .stale(reason)
+            case .ready(let ready):
+                revert = ready
             }
             try repository.writeBatch(revert.snapshot)
             return .reverted(revert.inverse, try checker.outcome(of: revert.inverse))

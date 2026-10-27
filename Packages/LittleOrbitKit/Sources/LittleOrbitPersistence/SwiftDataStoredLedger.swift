@@ -94,6 +94,111 @@
                 || ownedOccurrences != occurrenceRecords.count
         }
 
+        /// `snapshot` with no records yet, for `installing`, which sets them.
+        private init(snapshot: LedgerSnapshot) {
+            self.snapshot = snapshot
+            accounts = [:]
+            transactions = [:]
+            categories = [:]
+            payees = [:]
+            tags = [:]
+            splits = [:]
+            attachments = [:]
+            budgets = [:]
+            limits = [:]
+            scheduledItems = [:]
+            occurrences = [:]
+            needsWholeStoreWrite = false
+        }
+
+        /// After a background batch save (#285, B): `snapshot`, the ledger already built and read back, with the
+        /// records of `old` found again in `context`, a fresh one, by identifier, so nothing is fetched; the payees
+        /// the save added join them and the ones it removed leave. `nil` when one isn't found, so the next read
+        /// loads the store again.
+        static func installing(
+            _ snapshot: LedgerSnapshot,
+            replacing old: SwiftDataStoredLedger,
+            createdPayees: [UUID: PersistentIdentifier],
+            removedPayees: Set<UUID>,
+            in context: ModelContext,
+        ) -> SwiftDataStoredLedger? {
+            var payeeIDs = identifiers(old.payees)
+            for id in removedPayees {
+                payeeIDs.removeValue(forKey: id)
+            }
+            payeeIDs.merge(createdPayees) { _, created in created }
+            guard let accounts = rehomed(old.accounts, in: context),
+                let transactions = rehomed(old.transactions, in: context),
+                let categories = rehomed(old.categories, in: context),
+                let payees = records(payeeIDs, of: LittleOrbitSchemaV1.PayeeRecord.self, in: context),
+                let tags = rehomed(old.tags, in: context),
+                let splits = rehomed(old.splits, in: context),
+                let attachments = rehomed(old.attachments, in: context),
+                let budgets = rehomed(old.budgets, in: context),
+                let limits = rehomed(old.limits, in: context),
+                let scheduledItems = rehomed(old.scheduledItems, in: context),
+                let occurrences = rehomed(old.occurrences, in: context)
+            else {
+                return nil
+            }
+            let ledger = SwiftDataStoredLedger(snapshot: snapshot)
+            ledger.accounts = accounts
+            ledger.transactions = transactions
+            ledger.categories = categories
+            ledger.payees = payees
+            ledger.tags = tags
+            ledger.splits = splits
+            ledger.attachments = attachments
+            ledger.budgets = budgets
+            ledger.limits = limits
+            ledger.scheduledItems = scheduledItems
+            ledger.occurrences = occurrences
+            return ledger
+        }
+
+        /// The identifier of the stored record for `id`, for a background batch plan (#285, B).
+        func recordID(_ kind: BackgroundBatchPlan<PersistentIdentifier>.Kind, _ id: UUID) -> PersistentIdentifier? {
+            switch kind {
+            case .account: accounts[id]?.persistentModelID
+            case .category: categories[id]?.persistentModelID
+            case .payee: payees[id]?.persistentModelID
+            case .tag: tags[id]?.persistentModelID
+            case .transaction: transactions[id]?.persistentModelID
+            }
+        }
+
+        private static func identifiers<Record: PersistentModel>(
+            _ records: [UUID: Record]
+        ) -> [UUID: PersistentIdentifier] {
+            records.mapValues(\.persistentModelID)
+        }
+
+        /// The same records, found again in `context` by identifier.
+        private static func rehomed<Record: PersistentModel>(
+            _ old: [UUID: Record],
+            in context: ModelContext,
+        ) -> [UUID: Record]? {
+            records(identifiers(old), of: Record.self, in: context)
+        }
+
+        /// Each identifier's record in `context`, which hands back the registered record, or one it reads only
+        /// when a field is first used; `nil` when one isn't a record of this type.
+        private static func records<Record: PersistentModel>(
+            _ identifiers: [UUID: PersistentIdentifier],
+            of _: Record.Type,
+            in context: ModelContext,
+        ) -> [UUID: Record]? {
+            var records: [UUID: Record] = [:]
+            records.reserveCapacity(identifiers.count)
+            for (id, identifier) in identifiers {
+                guard let record = context.model(for: identifier) as? Record else {
+                    return nil
+                }
+                records[id] = record
+            }
+            return records
+        }
+
         private static func byID<Record: IdentifiedLedgerRecord>(_ records: [Record]) -> [UUID: Record] {
             var byID: [UUID: Record] = [:]
             byID.reserveCapacity(records.count)

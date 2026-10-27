@@ -165,6 +165,24 @@ public final class InMemoryLedgerRepository: LedgerRepository {
         self.snapshot = snapshot
     }
 
+    /// For tests (#285, B): when set, a batch saves through `writeBatchOffMain`, which awaits this where a store's
+    /// background save runs, between the hand-off and the install. A throw writes nothing. This store holds one
+    /// copy of the ledger, so a write landing during it is overwritten by the install.
+    public var offMainSave: (@MainActor () async throws -> Void)?
+
+    public var savesBatchesOffMain: Bool { offMainSave != nil }
+
+    public func writeBatchOffMain(_ snapshot: LedgerSnapshot, expectedRevision: UInt64) async throws -> Bool {
+        guard writes == expectedRevision else {
+            return false
+        }
+        if let offMainSave {
+            try await offMainSave()
+        }
+        self.snapshot = snapshot
+        return true
+    }
+
     public func atomically<T>(_ body: () throws -> T) throws -> T {
         let saved = snapshot
         do {

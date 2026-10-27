@@ -14,7 +14,10 @@
     /// Single writer: this repository's one long-lived context is the only thing that writes the store. A widget,
     /// extension or App Group reader that writes the store file, or any feature that replaces the file or the
     /// container, would leave the records and the in-memory ledger stale; such a change must reload or rebuild
-    /// the repository. Other contexts on the container may only read.
+    /// the repository. Other contexts on the container may only read, except the repository's own background writer
+    /// (#285, B): a Bulk Edit, its Undo or its Redo saves through a model actor of its own while the shared busy
+    /// flag holds every other write, then the long-lived context is swapped for a fresh one
+    /// (`SwiftDataLedgerRepository+Background`).
     @MainActor
     public final class SwiftDataLedgerRepository: LedgerRepository {
         /// `ModelContext` does not keep the container alive. Dropping it crashes the next fetch.
@@ -50,6 +53,10 @@
         /// For the timing ladder: runs right after an incremental write's `save()`, before the in-memory ledger is
         /// reread, so the two can be timed apart (#265). It can't fail the write, which is saved by then.
         var afterSave: (() -> Void)?
+        /// For tests: a background batch save fails after changing its records, before its one save (#285, B).
+        var backgroundSaveFails = false
+        /// For tests: runs on the main actor once a background batch save is done, before its install (#285, B).
+        var beforeBackgroundInstall: (() -> Void)?
         /// The store's pending-seed marker file (D293, `StoreLocation.pendingSeedMarkerURL`), or `nil` for a store
         /// with none, which counts as seeded. An in-memory container keeps the marker as `pendingInMemory`.
         private let seedMarkerURL: URL?
@@ -277,6 +284,12 @@
             context = Self.writerContext(container)
             stored = nil
             createdRecords = []
+        }
+
+        /// Makes `fresh`, a new context with autosave off (`writerContext`), the repository's own, after a
+        /// background batch save (#285, B). The old one is dropped unsaved, as in `discardChanges(after:)`.
+        func adoptContext(_ fresh: ModelContext) {
+            context = fresh
         }
 
         func storedLedger() throws -> SwiftDataStoredLedger {

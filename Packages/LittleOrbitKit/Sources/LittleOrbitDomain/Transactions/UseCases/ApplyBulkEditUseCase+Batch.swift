@@ -39,9 +39,38 @@ extension DefaultApplyBulkEditUseCase {
             try Self.changeSet(for: request, from: base, progress: rowsDone)
         }
         try Task.checkCancellation()
-        await reporter.willSave(changeSet.changesNoRow ? 0 : changeSet.result.previous.count)
+        let offMain = repository.savesBatchesOffMain
+        await reporter.reportSaving(changeSet.changesNoRow ? 0 : changeSet.result.previous.count, offMain: offMain)
         try Task.checkCancellation()
-        return try commit(changeSet, for: request)
+        guard offMain else {
+            return try commit(changeSet, for: request)
+        }
+        return try await commitOffMain(changeSet, for: request)
+    }
+
+    /// `commit(_:for:)` for a store that saves off the main actor (#285, B): the revision check, and the rebuild
+    /// if the store moved, run on the main actor right before the hand-off, with no suspension in between. If
+    /// the store still moved by then, nothing is written and it's built again. One write or none.
+    func commitOffMain(_ prepared: BulkEditChangeSet, for request: BulkEditRequest) async throws -> TransactionChange {
+        let span = BatchTrace.begin("batch.commit")
+        defer { span.end() }
+        var candidate: BulkEditChangeSet? = prepared
+        for _ in 0..<LedgerBatchBase.handOffAttempts {
+            let changeSet = try current(candidate, for: request)
+            if changeSet.changesNoRow {
+                return .replaced([])
+            }
+            let written = try await repository.writeBatchOffMain(
+                changeSet.result.snapshot,
+                expectedRevision: changeSet.revision,
+            )
+            if written {
+                return .saved(.replaced(changeSet.result.previous), creating: changeSet.created)
+            }
+            // Built from a store that has moved since: it's built again from the store as it is now (D399).
+            candidate = changeSet
+        }
+        throw LedgerBatchStale()
     }
 
     /// Writes `prepared`, or, if the store's revision has moved since it was built, the change set built again
@@ -51,18 +80,7 @@ extension DefaultApplyBulkEditUseCase {
         let span = BatchTrace.begin("batch.commit")
         defer { span.end() }
         return try repository.atomically {
-            let changeSet: BulkEditChangeSet
-            if let prepared, prepared.revision == repository.revision {
-                changeSet = prepared
-            } else {
-                let base = try repository.batchBase()
-                do {
-                    changeSet = try Self.changeSet(for: request, from: base, progress: nil)
-                } catch is LedgerValidationError where prepared != nil {
-                    // It passed the rules as built; the data changed since and it no longer does (D399).
-                    throw BulkEditDataChanged()
-                }
-            }
+            let changeSet = try current(prepared, for: request)
             // No row changed: write nothing, not even a payee the edit typed, so an Apply with no Undo step leaves
             // nothing behind (N5).
             if changeSet.changesNoRow {
@@ -71,6 +89,21 @@ extension DefaultApplyBulkEditUseCase {
             try repository.writeBatch(changeSet.result.snapshot)
             // A payee this edit created goes with it on Undo, unless something else uses it by then (D191.4).
             return .saved(.replaced(changeSet.result.previous), creating: changeSet.created)
+        }
+    }
+
+    /// `prepared` if the store hasn't moved since it was built, otherwise the change set built again now, from
+    /// the store as it is. If that rebuild breaks a rule, it throws `BulkEditDataChanged` (D399).
+    private func current(_ prepared: BulkEditChangeSet?, for request: BulkEditRequest) throws -> BulkEditChangeSet {
+        if let prepared, prepared.revision == repository.revision {
+            return prepared
+        }
+        let base = try repository.batchBase()
+        do {
+            return try Self.changeSet(for: request, from: base, progress: nil)
+        } catch is LedgerValidationError where prepared != nil {
+            // It passed the rules as built; the data changed since and it no longer does (D399).
+            throw BulkEditDataChanged()
         }
     }
 

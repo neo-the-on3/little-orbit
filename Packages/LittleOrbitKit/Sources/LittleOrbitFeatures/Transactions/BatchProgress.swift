@@ -7,7 +7,9 @@ import Observation
 /// "Saving…" with the bar full while the one write runs. While the rows are built, off the main actor, the sheet
 /// shows once the work has run for `showDelay`, so a quick one never flashes it. The save blocks the main actor,
 /// so that timer can't fire during it: just before the save, `BatchSheetPolicy` decides whether the sheet goes up
-/// first, and the save then waits until it has drawn (D401).
+/// first, and the save then waits until it has drawn (D401). A store that saves off the main actor (#285, B)
+/// leaves the main actor free: then the sheet needn't be drawn first, the timer keeps running through the save,
+/// and the bar moves while it runs. The sheet goes up once at most, whichever asks first.
 @MainActor
 @Observable
 public final class BatchProgress {
@@ -20,7 +22,7 @@ public final class BatchProgress {
     public enum Stage: Equatable, Sendable {
         /// Checking the rows, off the main actor.
         case updating
-        /// The one write, on the main actor.
+        /// The one write: on the main actor, or off it (`savesOffMain`).
         case saving
     }
 
@@ -48,6 +50,10 @@ public final class BatchProgress {
     public private(set) var done = 0
     public private(set) var stage = Stage.updating
     public private(set) var isShown = false
+    /// Whether the save runs off the main actor, so the bar can move while it runs (#285, B).
+    public private(set) var savesOffMain = false
+    /// How many times the sheet went up: once at most (#285, B).
+    @ObservationIgnored private(set) var timesShown = 0
 
     @ObservationIgnored private let delay: Duration
     @ObservationIgnored private let now: () -> ContinuousClock.Instant
@@ -80,6 +86,13 @@ public final class BatchProgress {
         self.now = now
     }
 
+    /// Whether the bar is the indeterminate "Saving…" one (#285, B; UI Designer's approval): once the save runs off
+    /// the main actor. It switches once and never back: `stage` doesn't leave `.saving` and `savesOffMain` is never
+    /// cleared, so a late row count or a save that falls back to the main actor keeps it.
+    public var showsIndeterminateBar: Bool {
+        stage == .saving && savesOffMain
+    }
+
     /// The bar's value, from 0 to `total`; full while saving.
     public var value: Double {
         Double(stage == .saving ? total : min(done, total))
@@ -103,12 +116,13 @@ public final class BatchProgress {
             guard !Task.isCancelled, let self, !self.isShown else {
                 return
             }
-            self.isShown = true
+            self.show()
             BatchTrace.event("batch.sheet.shown", "timer")
         }
         return LedgerBatchReporter(
             rowsDone: { continuation.yield($0) },
             willSave: { [weak self] rows in await self?.willSave(changing: rows) },
+            willSaveOffMain: { [weak self] rows in await self?.willSaveOffMain(changing: rows) },
         )
     }
 
@@ -162,6 +176,15 @@ public final class BatchProgress {
         cancelTimer()
     }
 
+    /// Puts the sheet up, unless it's up already.
+    private func show() {
+        guard !isShown else {
+            return
+        }
+        isShown = true
+        timesShown += 1
+    }
+
     private func cancelTimer() {
         timer?.cancel()
         timer = nil
@@ -187,12 +210,34 @@ public final class BatchProgress {
         case .keepShown, .skip:
             await Self.uiTurn()
         case .show:
-            isShown = true
+            show()
             await waitForSheet()
         case .none:
             // Nothing will be written: an Apply that changes no row never shows the sheet (D402).
             isShown = false
         }
+    }
+
+    /// "Saving…" for a save off the main actor (#285, B), which leaves the main actor free: the sheet goes up now
+    /// if `BatchSheetPolicy` says so, without waiting for it to draw, and the half-second timer keeps running, so a
+    /// save that runs long still shows it. Both run on the main actor and check `isShown`, so it goes up once. The
+    /// UI gets a turn so "Saving…" is drawn. With no row to change, there's no sheet at all (D402).
+    private func willSaveOffMain(changing rows: Int) async {
+        done = total
+        stage = .saving
+        savesOffMain = true
+        let elapsed = startedAt.map { now() - $0 } ?? .zero
+        switch BatchSheetPolicy.beforeSave(elapsed: elapsed, changedRows: rows, isShown: isShown) {
+        case .keepShown, .skip:
+            break
+        case .show:
+            show()
+            BatchTrace.event("batch.sheet.shown", "beforeSave")
+        case .none:
+            cancelTimer()
+            isShown = false
+        }
+        await Self.uiTurn()
     }
 
     /// Turns of the run loop until the sheet's view appears, for `sheetAppearLimit` at most, then `sheetSettle`
