@@ -169,7 +169,7 @@ struct ScheduledCatchUpHintTests {
         #expect(scene.notices.notice()?.shown == false)
         // The Mac's detail column reports the list disappearing and appearing again before the hint is drawn.
         list.screenDisappeared(.list)
-        await Self.settle()
+        await list.leavingCheck?.value
         list.screenAppeared(.list)
         list.load()
         #expect(list.catchUpHint != nil)
@@ -179,7 +179,7 @@ struct ScheduledCatchUpHintTests {
         #expect(scene.notices.notice()?.shown == true)
         // Re-shown in place after it was drawn: it stays in this list, and the notice is used up.
         list.screenDisappeared(.list)
-        await Self.settle()
+        await list.leavingCheck?.value
         list.screenAppeared(.list)
         list.load()
         #expect(list.catchUpHint != nil)
@@ -189,13 +189,6 @@ struct ScheduledCatchUpHintTests {
         next.screenAppeared(.list)
         next.load()
         #expect(next.catchUpHint == nil)
-    }
-
-    /// Lets the list's deferred "left the Scheduled screens" check run.
-    private static func settle() async {
-        for _ in 0..<5 {
-            await Task.yield()
-        }
     }
 
     @Test("Tech Architect NB 1: a restore clears a pending catch-up hint")
