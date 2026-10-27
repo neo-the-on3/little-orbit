@@ -226,12 +226,13 @@ jobs:
 
       - name: Build and test iOS, macOS, and watchOS
         # #265: the #235 timing bounds are for Tester2's Mac, which checks them at scale 1 in its build notes.
-        # This runner is about 1.5-2x slower, so CI runs them at 2x and catches only gross regressions. This is
-        # the only place the scale is set. swift test (mise run test) inherits LITTLE_ORBIT_TIMING_SCALE.
+        # This runner is about 1.5-2x slower and varies run to run, so CI runs them at 3x (the helper's maximum,
+        # #282) and catches only gross regressions. This is the only place the scale is set. swift test
+        # (mise run test) inherits LITTLE_ORBIT_TIMING_SCALE.
         # xcodebuild test passes TEST_RUNNER_<name> to the test process as <name>.
         env:
-          LITTLE_ORBIT_TIMING_SCALE: "2"
-          TEST_RUNNER_LITTLE_ORBIT_TIMING_SCALE: "2"
+          LITTLE_ORBIT_TIMING_SCALE: "3"
+          TEST_RUNNER_LITTLE_ORBIT_TIMING_SCALE: "3"
         run: |
           set -euo pipefail
 

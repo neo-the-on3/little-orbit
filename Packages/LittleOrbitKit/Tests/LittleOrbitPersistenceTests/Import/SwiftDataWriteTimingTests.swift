@@ -12,7 +12,7 @@
     /// same rows put back, the same write as the commit) under 2 s, and a Bulk Edit of 3,334 rows, its Undo
     /// and its Redo each under 1 s (`+BulkEdit`). Wall-clock bounds, so the suite runs one test at a time and
     /// prints the timings for the PR. Every bound goes through `TimingScale`: 1 on Tester2's Mac, which gates the
-    /// real bounds, and 2 on CI's slower runner (`LITTLE_ORBIT_TIMING_SCALE`, set only in ci.yml).
+    /// real bounds, and 3 on CI's slower runner (`LITTLE_ORBIT_TIMING_SCALE`, set only in ci.yml).
     ///
     /// Only with `LITTLE_ORBIT_TIMING_LADDER=1`, never in CI, it also times every write path at several sizes
     /// (by default 100, 500, 1,000 and 5,000 rows; `LITTLE_ORBIT_TIMING_SIZES=100,500` picks others), with a

@@ -2,9 +2,10 @@ import Foundation
 import Testing
 
 /// #265: the one place the #235 timing suite compares a measured time with its wall-clock bound. The bounds are
-/// for Tester2's Mac, and its build notes check them at scale 1. A hosted CI runner is about 1.5–2x slower, so
-/// only `.github/workflows/ci.yml` sets `LITTLE_ORBIT_TIMING_SCALE=2`, and CI then catches only gross
-/// regressions. Nothing else sets it, so local and tester runs use the real bounds.
+/// for Tester2's Mac, and its build notes check them at scale 1. macOS CI runners have been seen up to about 2.2x
+/// slower (#278, run 40448359202), so only `.github/workflows/ci.yml` sets `LITTLE_ORBIT_TIMING_SCALE=3`, and CI
+/// then catches only gross regressions. 3 is also the clamp maximum, so a further CI miss is a decision under
+/// #282, not another bump. Nothing else sets it, so local and tester runs use the real bounds.
 ///
 /// Unset means 1. A number is clamped to 1–3, so a scale can never tighten a bound or hide a 10x regression. Any
 /// other value throws, which fails the test instead of quietly running at 1.
