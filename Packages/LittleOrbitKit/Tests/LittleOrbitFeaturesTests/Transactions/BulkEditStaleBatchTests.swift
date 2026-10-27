@@ -25,7 +25,7 @@ struct BulkEditStaleBatchTests {
         let fresh = try F.repository(Self.rows)
         let added = Self.newRow()
         let request = BulkEditBatchTests.request(Self.rows, accounts: try repository.accounts())
-        let reporter = LedgerBatchReporter(willSave: { try? repository.saveNewTransactions([added]) })
+        let reporter = LedgerBatchReporter(willSave: { _ in try? repository.saveNewTransactions([added]) })
         let change = try await DefaultApplyBulkEditUseCase(repository: repository).apply(request, reporting: reporter)
         try fresh.saveNewTransactions([added])
         #expect(change == (try DefaultApplyBulkEditUseCase(repository: fresh).apply(request)))
@@ -38,7 +38,7 @@ struct BulkEditStaleBatchTests {
         let repository = try F.repository(Self.rows)
         let restored = try F.repository(Array(Self.rows.dropFirst())).batchBase().snapshot
         let request = BulkEditBatchTests.request(Self.rows, accounts: try repository.accounts())
-        let reporter = LedgerBatchReporter(willSave: { try? repository.replaceLedger(with: restored) })
+        let reporter = LedgerBatchReporter(willSave: { _ in try? repository.replaceLedger(with: restored) })
         await #expect(throws: BulkEditSelectionDeleted(ids: [Self.rows[0].id])) {
             try await DefaultApplyBulkEditUseCase(repository: repository).apply(request, reporting: reporter)
         }
@@ -51,7 +51,7 @@ struct BulkEditStaleBatchTests {
         let deletedOnly = try F.repository(Self.rows)
         try deletedOnly.deleteCategory(id: DefaultCategoryID.food, reassigningTo: nil)
         let request = BulkEditBatchTests.request(Self.rows, accounts: try repository.accounts())
-        let reporter = LedgerBatchReporter(willSave: {
+        let reporter = LedgerBatchReporter(willSave: { _ in
             try? repository.deleteCategory(id: DefaultCategoryID.food, reassigningTo: nil)
         })
         await #expect(throws: BulkEditDataChanged()) {
@@ -69,7 +69,7 @@ struct BulkEditStaleBatchTests {
         let change = try useCases.bulkEdit.apply(request)
         let outcome = try useCases.changes.outcome(of: change)
         let added = Self.newRow()
-        let reporter = LedgerBatchReporter(willSave: { try? repository.saveNewTransactions([added]) })
+        let reporter = LedgerBatchReporter(willSave: { _ in try? repository.saveNewTransactions([added]) })
         let result = try await useCases.changes.revert(change, expecting: outcome, reporting: reporter)
         guard case .reverted = result else {
             Issue.record("Expected the Undo to revert, got \(result)")
@@ -90,7 +90,7 @@ struct BulkEditStaleBatchTests {
         var restored = try repository.batchBase().snapshot
         let index = try #require(restored.transactions.firstIndex { $0.id == Self.rows[2].id })
         restored.transactions[index].categoryID = nil
-        let reporter = LedgerBatchReporter(willSave: { try? repository.replaceLedger(with: restored) })
+        let reporter = LedgerBatchReporter(willSave: { _ in try? repository.replaceLedger(with: restored) })
         let result = try await useCases.changes.revert(change, expecting: outcome, reporting: reporter)
         guard case .stale = result else {
             Issue.record("Expected a stale step, got \(result)")

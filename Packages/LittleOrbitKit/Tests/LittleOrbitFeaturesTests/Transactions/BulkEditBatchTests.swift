@@ -60,7 +60,7 @@ struct BulkEditBatchTests {
         let rows = Self.rows(10)
         let repository = try F.repository(rows)
         let request = Self.request(rows, accounts: try repository.accounts())
-        let reporter = LedgerBatchReporter(willSave: { try? repository.deleteTransaction(id: rows[3].id) })
+        let reporter = LedgerBatchReporter(willSave: { _ in try? repository.deleteTransaction(id: rows[3].id) })
         await #expect(throws: BulkEditSelectionDeleted(ids: [rows[3].id])) {
             try await DefaultApplyBulkEditUseCase(repository: repository).apply(request, reporting: reporter)
         }
@@ -78,7 +78,7 @@ struct BulkEditBatchTests {
             row.details = "Changed elsewhere"
             try store.saveTransaction(row)
         }
-        let reporter = LedgerBatchReporter(willSave: { try? elsewhere(repository) })
+        let reporter = LedgerBatchReporter(willSave: { _ in try? elsewhere(repository) })
         let change = try await DefaultApplyBulkEditUseCase(repository: repository).apply(request, reporting: reporter)
         try elsewhere(fresh)
         let expected = try DefaultApplyBulkEditUseCase(repository: fresh).apply(request)
@@ -93,7 +93,7 @@ struct BulkEditBatchTests {
         let repository = try F.repository(rows)
         let revision = repository.revision
         let request = Self.request(rows, accounts: try repository.accounts(), payee: "New Shop")
-        let reporter = LedgerBatchReporter(willSave: { withUnsafeCurrentTask { $0?.cancel() } })
+        let reporter = LedgerBatchReporter(willSave: { _ in withUnsafeCurrentTask { $0?.cancel() } })
         await #expect(throws: CancellationError.self) {
             try await DefaultApplyBulkEditUseCase(repository: repository).apply(request, reporting: reporter)
         }
@@ -155,7 +155,9 @@ struct BulkEditBatchTests {
 struct BatchProgressTests {
     @Test("Rows done, then Saving… with the bar full")
     func phases() async {
-        let progress = BatchProgress(kind: .undoing, total: 3_334, showAfter: .seconds(60))
+        // A clock that stands still: the parallel suite can be slow, and a quarter of a second would show the sheet.
+        let instant = ContinuousClock.now
+        let progress = BatchProgress(kind: .undoing, total: 3_334, showAfter: .seconds(60), now: { instant })
         let reporter = progress.start()
         #expect(progress.title == "Undoing Changes…")
         #expect(progress.message == "Updating 3334 transactions." || progress.message == "Updating 3,334 transactions.")
@@ -165,7 +167,7 @@ struct BatchProgressTests {
         }
         #expect(progress.value == 128)
         #expect(progress.stage == .updating)
-        await reporter.willSave()
+        await reporter.willSave(10)
         #expect(progress.stage == .saving)
         #expect(progress.value == 3_334)
         #expect(progress.message == "Saving…")
@@ -199,11 +201,12 @@ struct BatchProgressTests {
 
     @Test("Saving… gives the UI a turn of the run loop even before the sheet shows, so it draws first (N5)")
     func turnBeforeSave() async {
-        let progress = BatchProgress(kind: .applying, total: 10, showAfter: .seconds(60))
+        let instant = ContinuousClock.now
+        let progress = BatchProgress(kind: .applying, total: 10, showAfter: .seconds(60), now: { instant })
         let reporter = progress.start()
         let clock = ContinuousClock()
         let start = clock.now
-        await reporter.willSave()
+        await reporter.willSave(10)
         #expect(clock.now - start >= BatchProgress.uiTurnLength)
         #expect(progress.stage == .saving)
         #expect(!progress.isShown)

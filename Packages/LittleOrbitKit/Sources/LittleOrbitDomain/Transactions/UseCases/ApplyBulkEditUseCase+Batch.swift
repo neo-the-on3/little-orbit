@@ -39,7 +39,7 @@ extension DefaultApplyBulkEditUseCase {
             try Self.changeSet(for: request, from: base, progress: rowsDone)
         }
         try Task.checkCancellation()
-        await reporter.willSave()
+        await reporter.willSave(changeSet.changesNoRow ? 0 : changeSet.result.previous.count)
         try Task.checkCancellation()
         return try commit(changeSet, for: request)
     }
