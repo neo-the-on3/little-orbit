@@ -93,11 +93,15 @@
                 }
                 .onChange(of: history.balanceText) { onChange() }
                 // Any change to the shared store, from this window or another, reloads it (#87 B1, D187.4).
+                // Skipped when the change didn't touch this account; else built off the main actor (N5).
                 .onChange(of: transactions.updates.revision) {
-                    history.load()
+                    Task { await history.refresh(after: transactions.updates) }
                     onChange()
                 }
-                .task(id: row) { history.load() }
+                .task(id: row) {
+                    history.seenRevision = transactions.updates.revision
+                    history.load()
+                }
                 // The toast and notice say where a change happened when it wasn't on this account (D165.1).
                 .task(id: row.id) { undoHistory.setScreen(.account(row.id)) }
                 // Leaving the list closes its toast (D164.2), but not the account delete toast that the

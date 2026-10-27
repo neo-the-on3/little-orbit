@@ -40,6 +40,8 @@ public final class AccountsViewModel {
     @ObservationIgnored private let plannedItems: any PlannedItemsSource
     @ObservationIgnored private let formatter: MoneyFormatter
     @ObservationIgnored private var accounts: [Account] = []
+    /// The shared revision last loaded through `load(at:)`.
+    @ObservationIgnored private var loadedRevision: Int?
     /// Tells every window an account changed, as a transaction change does (D187.4, D327.1).
     @ObservationIgnored private let changed: () -> Void
 
@@ -109,6 +111,16 @@ public final class AccountsViewModel {
 
     public func account(id: UUID) -> Account? {
         accounts.first { $0.id == id }
+    }
+
+    /// Loads once per shared revision (N5 on #286): one model serves every window, and each window's `onChange`
+    /// asks, so the first loads and the rest find it done.
+    public func load(at revision: Int) {
+        guard loadedRevision != revision else {
+            return
+        }
+        load()
+        loadedRevision = revision
     }
 
     public func load() {

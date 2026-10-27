@@ -30,27 +30,31 @@ public struct BulkDeletePrompt: Equatable, Sendable, Identifiable {
 @Observable
 public final class AccountHistoryViewModel {
     public let accountID: UUID
-    public private(set) var accountName = ""
-    public private(set) var currencyCode = ""
-    public private(set) var balanceText = ""
-    public private(set) var balanceTone: AmountTone = .neutral
+    public internal(set) var accountName = ""
+    public internal(set) var currencyCode = ""
+    public internal(set) var balanceText = ""
+    public internal(set) var balanceTone: AmountTone = .neutral
     /// "After upcoming: ₹1,07,490.00", shown only when there are Upcoming rows.
-    public private(set) var afterUpcomingText: String?
-    public private(set) var upcomingTotalText: String?
-    public private(set) var upcoming: [TransactionRowModel] = []
-    public private(set) var sections: [TransactionDaySection] = []
-    public private(set) var accountExists = true
+    public internal(set) var afterUpcomingText: String?
+    public internal(set) var upcomingTotalText: String?
+    public internal(set) var upcoming: [TransactionRowModel] = []
+    public internal(set) var sections: [TransactionDaySection] = []
+    public internal(set) var accountExists = true
     public var selection: Set<UUID> = []
     public var deletePrompt: BulkDeletePrompt?
     public var errorMessage: String?
 
-    @ObservationIgnored private let accountHistory: any AccountHistoryUseCase
+    @ObservationIgnored let accountHistory: any AccountHistoryUseCase
     @ObservationIgnored private let loadLedger: any LoadTransactionLedgerUseCase
     @ObservationIgnored private let changes: any TransactionChangesUseCase
-    @ObservationIgnored private let formatter: MoneyFormatter
-    @ObservationIgnored private let text: TransactionText
-    @ObservationIgnored private let timeZone: TimeZone
-    @ObservationIgnored private let now: () -> Date
+    @ObservationIgnored let formatter: MoneyFormatter
+    @ObservationIgnored let text: TransactionText
+    @ObservationIgnored let timeZone: TimeZone
+    @ObservationIgnored let now: () -> Date
+    /// The shared revision this window has shown, so `refresh(after:)` can tell what changed since (N5).
+    @ObservationIgnored public var seenRevision = 0
+    /// Moves on with each load, so a slower refresh never shows over a newer one.
+    @ObservationIgnored var generation = 0
 
     public init(
         accountHistory: any AccountHistoryUseCase,
@@ -118,58 +122,21 @@ public final class AccountHistoryViewModel {
         return count == 0 ? nil : "\(count) selected"
     }
 
+    /// Reads the history and shows it, on the main actor. A change to the shared store reloads through
+    /// `refresh(after:)` instead, which skips or builds the rows off the main actor (N5).
     public func load() {
         let span = BatchTrace.begin("window.recompute")
         defer { span.end() }
+        generation &+= 1
         do {
-            let today = TransactionTiming.today(now(), timeZone: timeZone)
-            let found = try BatchTrace.interval("history.domain") {
-                try accountHistory.history(of: accountID, today: today)
-            }
-            guard let page = found else {
-                accountExists = false
-                upcoming = []
-                sections = []
+            guard let (page, today) = try readPage() else {
                 return
             }
-            let account = page.account
-            let history = page.history
-            accountExists = true
-            accountName = account.name
-            currencyCode = account.currencyCode
-            let context = TransactionRowContext(
-                account: account,
-                accounts: page.ledger.accounts,
-                categories: page.ledger.categories,
-                payees: page.ledger.payees,
-                formatter: formatter,
-                text: text,
-                today: today,
+            show(
+                BatchTrace.interval("history.rows") {
+                    Self.content(of: page, today: today, formatter: formatter, text: text)
+                }
             )
-            let currency = account.currencyCode
-            balanceText = formatter.string(history.currentBalance, currencyCode: currency)
-            balanceTone = history.currentBalance < 0 ? .negative : .neutral
-            afterUpcomingText = history.balanceAfterUpcoming.map {
-                "After upcoming: " + formatter.string($0, currencyCode: currency)
-            }
-            upcomingTotalText =
-                history.upcoming.isEmpty
-                ? nil : formatter.string(history.upcomingTotal, currencyCode: currency, showsPlus: true)
-            let rows = BatchTrace.begin("history.rows")
-            upcoming = history.upcoming.map { context.row($0, isUpcoming: true) }
-            sections = history.days.map { day in
-                TransactionDaySection(
-                    id: day.day,
-                    title: text.dayTitle(day.day, today: today),
-                    netChangeText: formatter.string(day.netChange, currencyCode: currency, showsPlus: true),
-                    netChangeTone: day.netChange < 0 ? .negative : day.netChange > 0 ? .positive : .neutral,
-                    rows: day.entries.map { context.row($0, isUpcoming: false) },
-                )
-            }
-            rows.end()
-            BatchTrace.untilNextTurn("ui.table.update")
-            let visible = Set(allRows.map(\.id))
-            selection = selection.intersection(visible)
         } catch {
             errorMessage = Self.message(for: error)
         }

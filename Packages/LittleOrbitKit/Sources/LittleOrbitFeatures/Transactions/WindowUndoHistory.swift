@@ -178,6 +178,12 @@ public final class WindowUndoHistory {
 
     // MARK: Recording
 
+    /// What a step's change touched, for the windows (N5): its rows and the accounts on either side, or everything
+    /// when its accounts couldn't be read.
+    static func delta(of step: Step) -> LedgerDelta {
+        LedgerDelta(step.change, accountIDs: step.impact.accountIDs.isEmpty ? nil : step.accountIDs)
+    }
+
     /// Records a change the user just made in this window and returns its step's id. Any toast or notice
     /// closes (D164.2). Deleting an account replaces this window's steps for it with this one (D187.9). `name`
     /// replaces the name the change would get, and `subject` is what a stale alert names: a Scheduled form save
@@ -221,7 +227,7 @@ public final class WindowUndoHistory {
             undoSteps.append(step)
             register(step, as: title(of: step))
         }
-        updates.changed()
+        updates.changed(Self.delta(of: step))
         refreshMenu()
         return step.id
     }
@@ -301,7 +307,7 @@ public final class WindowUndoHistory {
                 // Registered while the `UndoManager` undoes, it lands on Redo, and the other way round.
                 register(step, as: title(of: step))
                 announce(undoing ? UndoText.undid(shown) : UndoText.redid(shown))
-                updates.changed()
+                updates.changed(Self.delta(of: step))
             case .stale(let reason):
                 // Nothing was written, and the step goes (D187.5).
                 dropAfterwards(step)

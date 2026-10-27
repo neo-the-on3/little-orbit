@@ -90,7 +90,7 @@
             }
             .task { model.load() }
             // Balances follow any change to the shared store, from any window (#87 B1, D187.4).
-            .onChange(of: transactions.updates.revision) { model.load() }
+            .onChange(of: transactions.updates.revision) { model.load(at: transactions.updates.revision) }
             // A screen that isn't one account shows no transactions yet, so the toast and notice say where (D165.1).
             .onChange(of: selection, initial: true) {
                 // Each visit to Scheduled starts on the list, as when the stack was rebuilt.

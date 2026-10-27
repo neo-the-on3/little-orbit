@@ -158,7 +158,7 @@
             .accountDeleteAlert(deleteConfirmation, model: model, isActive: formSheet == nil, onDeleted: deleted)
             .task { model.load() }
             // Balances follow any change to the shared store, from any window (#87 B1, D187.4).
-            .onChange(of: transactions.updates.revision) { model.load() }
+            .onChange(of: transactions.updates.revision) { model.load(at: transactions.updates.revision) }
         }
 
         // MARK: - Sections
