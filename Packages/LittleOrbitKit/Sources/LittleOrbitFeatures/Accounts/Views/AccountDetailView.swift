@@ -93,10 +93,11 @@
                 }
                 .onChange(of: history.balanceText) { onChange() }
                 // Any change to the shared store, from this window or another, reloads it (#87 B1, D187.4).
-                // Skipped when the change didn't touch this account; else built off the main actor (N5).
+                // Skipped when the change didn't touch this account; else built off the main actor (N5). The
+                // account list isn't reloaded here: the sidebar's `load(at:)` loads it once per change for every
+                // window, where each window's detail used to load it again (Tester2's N5 at 4c6a128).
                 .onChange(of: transactions.updates.revision) {
                     Task { await history.refresh(after: transactions.updates) }
-                    onChange()
                 }
                 .task(id: row) {
                     history.seenRevision = transactions.updates.revision

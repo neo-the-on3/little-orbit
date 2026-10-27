@@ -25,6 +25,8 @@ final class FakeAccountUseCases {
     private(set) var updatedIDs: [UUID] = []
     private(set) var deletedIDs: [UUID] = []
     private(set) var moves: [Move] = []
+    /// How many times the list was read.
+    private(set) var listCalls = 0
 
     var useCases: AccountUseCases {
         AccountUseCases(
@@ -38,6 +40,7 @@ final class FakeAccountUseCases {
     }
 
     func listAccounts(showHidden: Bool) throws -> AccountListing {
+        listCalls += 1
         if let listingError {
             throw listingError
         }

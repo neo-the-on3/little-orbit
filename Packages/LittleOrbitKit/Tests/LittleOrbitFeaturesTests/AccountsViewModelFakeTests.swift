@@ -61,4 +61,19 @@ struct AccountsViewModelFakeTests {
         confirmation.confirm()
         #expect(fake.deletedIDs == [first.id])
     }
+
+    @Test("The list loads once per shared revision, however many windows ask (Tester2's N5 at 4c6a128)")
+    func loadsOncePerRevision() {
+        let fake = FakeAccountUseCases()
+        let model = AccountsViewModel(useCases: fake.useCases, locale: FeatureFixture.india)
+        // Five windows each see revision 1, then revision 2.
+        for _ in 0..<5 {
+            model.load(at: 1)
+        }
+        #expect(fake.listCalls == 1)
+        for _ in 0..<5 {
+            model.load(at: 2)
+        }
+        #expect(fake.listCalls == 2)
+    }
 }
