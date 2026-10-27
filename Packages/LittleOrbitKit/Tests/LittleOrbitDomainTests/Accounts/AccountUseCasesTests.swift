@@ -102,7 +102,18 @@ struct AccountUseCasesTests {
     @Test("Reordering the shown rows keeps hidden accounts in the section in place (D109)")
     func reorderKeepsHidden() throws {
         let names = [("A", false), ("Hidden", true), ("B", false), ("C", false)]
-        let accounts = names.map { Account(name: $0.0, type: .savings, isHidden: $0.1, sortOrder: 0) }
+        // Every `sortOrder` ties, so the move has to renumber the section. Distinct creation times fix the starting
+        // order to the array order (#277): with `Date()` two accounts can share a timestamp, and the id then decides.
+        let accounts = names.enumerated()
+            .map { offset, name in
+                Account(
+                    name: name.0,
+                    type: .savings,
+                    isHidden: name.1,
+                    sortOrder: 0,
+                    createdAt: Date(timeIntervalSinceReferenceDate: Double(offset)),
+                )
+            }
         let repository = try FakeLedgerRepository(accounts: accounts)
         let shown = accounts.filter { !$0.isHidden }.map(\.id)
         try useCases(repository).reorderAccounts
@@ -114,6 +125,28 @@ struct AccountUseCasesTests {
             )
         let listing = try useCases(repository).listAccounts.listAccounts(showHidden: true)
         #expect(listing.assets.map(\.account.name) == ["A", "Hidden", "C", "B"])
+    }
+
+    @Test("A reorder with sortOrder and creation time both tied follows the listed order (#277)")
+    func reorderFullyTied() throws {
+        let createdAt = Date(timeIntervalSinceReferenceDate: 0)
+        let names = [("A", false), ("Hidden", true), ("B", false), ("C", false)]
+        let accounts = names.map {
+            Account(name: $0.0, type: .savings, isHidden: $0.1, sortOrder: 0, createdAt: createdAt)
+        }
+        let repository = try FakeLedgerRepository(accounts: accounts)
+        let useCases = useCases(repository)
+        // The list hands the use case its rows in display order, which the id decides here.
+        let before = try useCases.listAccounts.listAccounts(showHidden: true).assets.map(\.account)
+        // Fully tied, `AccountOrder` falls back to the id, so the listing starts in ascending id order.
+        #expect(before.map(\.id) == accounts.map(\.id).sorted { $0.uuidString < $1.uuidString })
+        let shown = before.filter { !$0.isHidden }
+        try useCases.reorderAccounts
+            .move(in: .assets, shown: shown.map(\.id), fromOffsets: IndexSet(integer: 2), toOffset: 1)
+        var expected = before.filter { $0.id != shown[2].id }
+        expected.insert(shown[2], at: try #require(expected.firstIndex { $0.id == shown[1].id }))
+        let after = try useCases.listAccounts.listAccounts(showHidden: true).assets.map(\.account.id)
+        #expect(after == expected.map(\.id))
     }
 
     @Test("Deleting reports the D19 counts first, then removes the account")
