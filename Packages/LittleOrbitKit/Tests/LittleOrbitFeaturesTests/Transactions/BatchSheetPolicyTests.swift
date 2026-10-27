@@ -1,4 +1,6 @@
 import Foundation
+import LittleOrbitDomain
+import LittleOrbitPersistence
 import Testing
 
 @testable import LittleOrbitFeatures
@@ -106,4 +108,63 @@ struct BatchSheetPolicyTests {
         #expect(clock.now - start >= BatchProgress.sheetAppearLimit)
         progress.finish()
     }
+}
+
+/// D402: an Apply whose plan changes no row never shows the sheet.
+@MainActor
+@Suite("Batch sheet for an Apply that changes nothing")
+struct BatchSheetNoRowTests {
+    typealias F = TransactionFeatureFixture  // swiftlint:disable:this type_name
+
+    @Test("No changed rows: no sheet, however long it ran, and one already up closes")
+    func zeroRowDecision() {
+        #expect(BatchSheetPolicy.beforeSave(elapsed: .zero, changedRows: 0, isShown: false) == .none)
+        #expect(BatchSheetPolicy.beforeSave(elapsed: .seconds(3), changedRows: 0, isShown: false) == .none)
+        #expect(BatchSheetPolicy.beforeSave(elapsed: .seconds(3), changedRows: 0, isShown: true) == .none)
+    }
+
+    @Test("A 0-row plan stops the timer, so the sheet never shows afterwards")
+    func zeroRowStopsTimer() async throws {
+        let progress = BatchProgress(kind: .applying, total: 3_334, showAfter: .milliseconds(30))
+        let reporter = progress.start()
+        await reporter.willSave(0)
+        #expect(!progress.isShown)
+        try await Task.sleep(for: .milliseconds(120))
+        #expect(!progress.isShown)
+        progress.finish()
+    }
+
+    @Test("A 0-row plan closes a sheet the timer already showed")
+    func zeroRowClosesSheet() async throws {
+        let progress = BatchProgress(kind: .applying, total: 3_334, showAfter: .milliseconds(1))
+        let reporter = progress.start()
+        let clock = ContinuousClock()
+        let start = clock.now
+        while !progress.isShown, clock.now - start < .seconds(10) {
+            try await Task.sleep(for: .milliseconds(5))
+        }
+        #expect(progress.isShown)
+        await reporter.willSave(0)
+        #expect(!progress.isShown)
+        progress.finish()
+    }
+
+    @Test("Apply reports how many rows its save changes: none for a 0-row Apply, every row otherwise")
+    func applyReportsChangedRows() async throws {
+        let rows = BulkEditBatchTests.rows(5)
+        let repository = try F.repository(rows)
+        let request = BulkEditBatchTests.request(rows, accounts: try repository.accounts())
+        let counts = RowCounts()
+        let reporter = LedgerBatchReporter(willSave: { counts.values.append($0) })
+        _ = try await DefaultApplyBulkEditUseCase(repository: repository).apply(request, reporting: reporter)
+        // The same edit again changes nothing: every row already has that category.
+        _ = try await DefaultApplyBulkEditUseCase(repository: repository).apply(request, reporting: reporter)
+        #expect(counts.values == [5, 0])
+    }
+}
+
+/// What a reporter heard, on the main actor.
+@MainActor
+final class RowCounts {
+    var values: [Int] = []
 }

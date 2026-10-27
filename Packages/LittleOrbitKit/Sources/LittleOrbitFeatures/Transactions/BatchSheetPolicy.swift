@@ -15,6 +15,8 @@ enum BatchSheetPolicy {
         case show
         /// No sheet: the run will end in well under half a second.
         case skip
+        /// The save changes no row, so nothing is written: no sheet, and one the timer showed closes (D402).
+        case none
     }
 
     /// Time already spent before the save at which the sheet shows. The save and the refresh after it still take
@@ -32,6 +34,9 @@ enum BatchSheetPolicy {
     /// The decision once the rows are built: `elapsed` since the batch started, `changedRows` the save will write,
     /// and whether the timer has already shown the sheet.
     static func beforeSave(elapsed: Duration, changedRows: Int, isShown: Bool) -> Decision {
+        if changedRows <= 0 {
+            return .none
+        }
         if isShown {
             return .keepShown
         }
