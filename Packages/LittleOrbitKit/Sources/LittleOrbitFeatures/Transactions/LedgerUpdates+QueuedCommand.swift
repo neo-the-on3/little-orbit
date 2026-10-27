@@ -8,12 +8,15 @@ extension LedgerUpdates {
     /// VoiceOver, Voice Control or an AXPress, it never drops. A `true` uses up the key-down, so the next command
     /// it's seen with goes through.
     ///
+    /// The first check also makes sure the app records its dispatches (`checkDispatchWiring`, m12 on 4839e5d).
+    ///
     /// Signposted on every check: `ledger.command.dispatch`, tagged `dropped`, `passed` or `noDispatch`, with, in
     /// order: the dispatched key-down's `NSEvent.EventType` raw value and time, the outermost event being
     /// dispatched's type (any kind), and the last batch's start and end; -1 for each one there's none of, and -2 as
     /// the outermost type when the app's `sendEvent` wrapper isn't in place; then `ledger.command.dropped` or
     /// `.passed` with the key-down's time (-1 for none).
     func dropsQueuedCommand() -> Bool {
+        checkDispatchWiring()
         let event = dispatchingEvent()
         let drops = QueuedCommandPolicy.dropsCommand(
             event: event,

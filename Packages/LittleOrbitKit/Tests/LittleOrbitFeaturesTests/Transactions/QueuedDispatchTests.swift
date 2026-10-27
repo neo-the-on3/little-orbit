@@ -202,6 +202,27 @@ struct QueuedDispatchTests {
         #expect(await ended.redo(at: 12), "An Accessibility Redo after the end runs")
     }
 
+    @Test("m12: the first queued-command check reports an app that isn't the subclass, once, whatever launch did")
+    func wiringCheckedOnFirstDecision() async throws {
+        let dispatch = EventDispatch()
+        var failures: [String] = []
+        dispatch.wiringFailed = { failures.append($0) }
+        let updates = LedgerUpdates()
+        updates.dispatchingEvent = { dispatch.current }
+        updates.checkDispatchWiring = { dispatch.checkWiring(appIsSubclass: false) }
+        #expect(!dispatch.wiringChecked)
+        #expect(!updates.dropsQueuedCommand())
+        #expect(dispatch.wiringChecked && failures.count == 1, "Reported, and stopped a Debug build")
+        #expect(!updates.dropsQueuedCommand())
+        #expect(failures.count == 1, "Once")
+
+        let live = EventDispatch()
+        live.wiringFailed = { failures.append($0) }
+        live.checkWiring(appIsSubclass: true)
+        live.checkWiring(appIsSubclass: false)
+        #expect(live.wiringChecked && failures.count == 1, "A live app checks once, and passes")
+    }
+
     @Test("The dispatch is a stack: each event is taken off as its dispatch returns, inner ones first")
     func dispatchStack() {
         let dispatch = EventDispatch()
