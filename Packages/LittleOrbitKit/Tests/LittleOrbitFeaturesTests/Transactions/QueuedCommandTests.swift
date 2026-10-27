@@ -8,7 +8,8 @@ import Testing
 /// Tester2's N5 at c8c6594 (comment 6440723910): an Edit › Undo clicked, or a ⌘Z pressed, while a batch Undo
 /// saved waited in the event queue and undid one step more once the batch ended. A command whose event falls
 /// inside the last batch, start to end, is dropped, and an event drops at most one command (Tech Architect's
-/// rulings; review 5666694381 for the stale `NSApp.currentEvent` an Accessibility press sees).
+/// rulings). The event is the one being dispatched as the command runs (B5 on bab2ad8): an Accessibility press has
+/// none, whatever `NSApp.currentEvent` still says.
 @MainActor
 @Suite("Undo and Redo queued during a batch")
 struct QueuedCommandTests {
@@ -108,7 +109,7 @@ struct QueuedCommandTests {
         let clock = UptimeClock(now: 100)
         clock.eventTime = 100
         updates.uptime = { clock.now }
-        updates.currentEvent = { clock.event }
+        updates.dispatchingEvent = { clock.event }
         let setup = try await Self.setup(updates: updates)
         let history = setup.window.history
 
@@ -150,7 +151,7 @@ struct QueuedCommandTests {
         let clock = UptimeClock(now: 10)
         clock.eventTime = 10
         updates.uptime = { clock.now }
-        updates.currentEvent = { clock.event }
+        updates.dispatchingEvent = { clock.event }
         let setup = try await Self.setup(updates: updates)
         let history = setup.window.history
         // Undo both steps: the Bulk Edit (a batch, ending at 11 s), then the earlier edit at 12 s.
@@ -190,15 +191,14 @@ struct QueuedCommandTests {
         )
     }
 
-    @Test("An AX Undo after a batch, seeing a current event from before it started, goes through")
-    func staleEventBeforeBatchGoesThrough() async throws {
+    @Test("An AX Undo after a batch, with no event being dispatched, goes through")
+    func accessibilityAfterBatchGoesThrough() async throws {
         let updates = LedgerUpdates()
         let clock = UptimeClock(now: 100)
-        // The last real event: the click at 99.5 s that started the batch Undo. AppKit keeps it as the current
-        // event, so a VoiceOver, Voice Control or AXPress Undo after the batch sees it.
-        let eventTime: TimeInterval? = 99.5
+        // A VoiceOver, Voice Control or AXPress Undo arrives outside any event's dispatch, so it sees none, whatever
+        // event AppKit still keeps as its current one.
         updates.uptime = { clock.now }
-        updates.currentEvent = { eventTime.map { Policy.Event(time: $0) } }
+        updates.dispatchingEvent = { nil }
         let setup = try await Self.setup(updates: updates)
         // The toolbar Undo of the Bulk Edit runs as a batch from 100 s to 101 s.
         setup.window.history.undo()
@@ -217,13 +217,13 @@ struct QueuedCommandTests {
         #expect(setup.window.history.alert == nil)
     }
 
-    @Test("An in-batch event drops one queued Undo; a second command seen with the same event goes through")
+    @Test("An in-batch event drops one queued Undo; an AX Undo after it, with nothing dispatched, goes through")
     func sameEventDropsOnce() async throws {
         let updates = LedgerUpdates()
         let clock = UptimeClock(now: 100)
         clock.eventTime = 99.5
         updates.uptime = { clock.now }
-        updates.currentEvent = { clock.event }
+        updates.dispatchingEvent = { clock.event }
         let setup = try await Self.setup(updates: updates)
         // The toolbar Undo of the Bulk Edit runs as a batch from 100 s to 101 s.
         setup.window.history.undo()
@@ -240,7 +240,9 @@ struct QueuedCommandTests {
         #expect(try setup.details(0) == "Earlier edit", "The queued click undoes nothing")
         #expect(setup.window.undoManager.undoNames == undoNames)
 
-        // An AX Undo next, with no real event since: the current event is still that click. It goes through.
+        // An AX Undo next: AppKit's current event is still that click, but nothing is being dispatched. It goes
+        // through.
+        clock.eventTime = nil
         clock.now = 102
         setup.window.undoManager.undo()
         setup.window.settle()
@@ -250,20 +252,21 @@ struct QueuedCommandTests {
     }
 }
 
-/// The uptime clock, the current event's time and the last press, moved by hand. Isolated to the main actor, so the
+/// The uptime clock, the time of the event being dispatched (`nil` for none, as for an Accessibility action) and the
+/// last press, moved by hand. Isolated to the main actor, so the
 /// `@MainActor` closures `LedgerUpdates` reads them through capture it safely, and it can be changed after they do.
 @MainActor
 final class UptimeClock {
     var now: TimeInterval
     var eventTime: TimeInterval?
-    /// Whether the current event is the mouse's.
+    /// Whether the event being dispatched is the left mouse button's.
     var isMouse = false
     /// When the left button last went down, on the same clock; `nil` for no press source.
     var pressTime: TimeInterval?
     /// What the press source reports instead, when set: a reading that can't be right.
     var rawSecondsSince: Double?
 
-    /// The current event, as `LedgerUpdates.currentEvent` gives it.
+    /// The event being dispatched, as `LedgerUpdates.dispatchingEvent` gives it.
     var event: QueuedCommandPolicy.Event? {
         eventTime.map { QueuedCommandPolicy.Event(time: $0, isMouse: isMouse) }
     }
@@ -277,10 +280,10 @@ final class UptimeClock {
         self.now = now
     }
 
-    /// Reads the clock, current event and press source for `updates`, which started at uptime 0.
+    /// Reads the clock, the event being dispatched and the press source for `updates`, which started at uptime 0.
     func drive(_ updates: LedgerUpdates) {
         updates.uptime = { self.now }
-        updates.currentEvent = { self.event }
+        updates.dispatchingEvent = { self.event }
         updates.secondsSincePress = { self.secondsSincePress }
         updates.launchUptime = 0
     }

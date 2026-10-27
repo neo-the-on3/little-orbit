@@ -81,6 +81,17 @@ public enum BatchTrace {
         #endif
     }
 
+    /// A point in time with a fixed word and several numbers that aren't from the ledger, such as a decision and the
+    /// times it was made from, in one line: the tag, then the values in order, separated by spaces.
+    public static func event(_ name: StaticString, _ tag: StaticString, values: [Double]) {
+        #if canImport(OSLog)
+            let numbers = values.map { String($0) }.joined(separator: " ")
+            signposter.emitEvent(name, "\(tag.description, privacy: .public) \(numbers, privacy: .public)")
+        #else
+            _ = (tag, values)
+        #endif
+    }
+
     /// An event `name` whose value is the seconds until the main queue next gets to run: main-thread work already
     /// queued, such as a torn-down context's cleanup, as opposed to idle waiting. Nothing on Linux.
     @MainActor
