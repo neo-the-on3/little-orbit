@@ -22,7 +22,7 @@ struct BatchAnnouncementFallbackTests {
         limit: Duration = .seconds(30),
         drawn: Bool,
     ) async -> BatchProgress {
-        let progress = BatchProgress(kind: .undoing, total: 3_334, showAfter: .seconds(60))
+        let progress = BatchProgress(kind: .undoing, total: 3_334, showAfter: nil)
         progress.fallbackDelay = delay
         progress.fallbackLimit = limit
         let reporter = progress.start()

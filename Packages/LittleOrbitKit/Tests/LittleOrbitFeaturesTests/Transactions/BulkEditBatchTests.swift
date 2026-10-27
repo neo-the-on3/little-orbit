@@ -111,8 +111,8 @@ struct BulkEditBatchTests {
             timeZone: F.zone,
         )
         let model = feature.makeBulkEdit(rows.map(\.id))
-        // No sheet for 5 rows: its timer mustn't fire on a slow run (review 5666870090).
-        model.progressShowDelay = .seconds(60)
+        // No sheet for 5 rows, and no timer that could show one on a slow run (review 5666870090).
+        model.progressShowDelay = nil
         model.editsCategory = true
         model.categoryID = DefaultCategoryID.food
         let window = feature.makeUndoHistory()
@@ -144,6 +144,18 @@ struct BulkEditBatchTests {
         #expect(feature.makeUndoHistory().progressShowDelay == .milliseconds(500))
     }
 
+    @Test("No show delay runs no sheet timer at all, so a slow run can't show a sheet a test doesn't expect")
+    func noTimer() {
+        let none = BatchProgress(kind: .undoing, total: 5, showAfter: nil)
+        _ = none.start()
+        #expect(none.timer == nil)
+        none.finish()
+        let app = BatchProgress(kind: .undoing, total: 5)
+        _ = app.start()
+        #expect(app.timer != nil, "The app's half second still runs")
+        app.finish()
+    }
+
     @Test("While another batch runs, Apply starts nothing")
     func busy() async throws {
         let rows = Self.rows(3)
@@ -169,7 +181,7 @@ struct BatchProgressTests {
     func phases() async {
         // A clock that stands still: the parallel suite can be slow, and a quarter of a second would show the sheet.
         let instant = ContinuousClock.now
-        let progress = BatchProgress(kind: .undoing, total: 3_334, showAfter: .seconds(60), now: { instant })
+        let progress = BatchProgress(kind: .undoing, total: 3_334, showAfter: nil, now: { instant })
         let reporter = progress.start()
         #expect(progress.title == "Undoing Changes…")
         #expect(progress.message == "Updating 3334 transactions." || progress.message == "Updating 3,334 transactions.")
@@ -214,7 +226,7 @@ struct BatchProgressTests {
     @Test("Saving… gives the UI a turn of the run loop even before the sheet shows, so it draws first (N5)")
     func turnBeforeSave() async {
         let instant = ContinuousClock.now
-        let progress = BatchProgress(kind: .applying, total: 10, showAfter: .seconds(60), now: { instant })
+        let progress = BatchProgress(kind: .applying, total: 10, showAfter: nil, now: { instant })
         let reporter = progress.start()
         let clock = ContinuousClock()
         let start = clock.now

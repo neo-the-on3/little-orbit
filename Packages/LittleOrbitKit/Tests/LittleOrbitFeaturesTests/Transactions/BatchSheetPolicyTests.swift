@@ -58,7 +58,7 @@ struct BatchSheetPolicyTests {
     )
     func showsBeforeSave(kind: BatchProgress.Kind) async {
         let clock = ManualClock()
-        let progress = BatchProgress(kind: kind, total: 3_334, showAfter: .seconds(60), now: { clock.instant })
+        let progress = BatchProgress(kind: kind, total: 3_334, showAfter: nil, now: { clock.instant })
         let reporter = progress.start()
         clock.advance(.milliseconds(100))
         progress.sheetAppeared()
@@ -72,7 +72,7 @@ struct BatchSheetPolicyTests {
     @Test("A build that ran a quarter of a second shows the sheet for a small save too")
     func elapsedShowsBeforeSave() async {
         let clock = ManualClock()
-        let progress = BatchProgress(kind: .undoing, total: 20, showAfter: .seconds(60), now: { clock.instant })
+        let progress = BatchProgress(kind: .undoing, total: 20, showAfter: nil, now: { clock.instant })
         let reporter = progress.start()
         clock.advance(.milliseconds(300))
         progress.sheetAppeared()
@@ -98,7 +98,7 @@ struct BatchSheetPolicyTests {
     @Test("The save waits at most a short, bounded time for a sheet that doesn't appear (D401.4)")
     func boundedWait() async {
         #expect(BatchProgress.sheetAppearLimit + BatchProgress.sheetSettle < .milliseconds(750))
-        let progress = BatchProgress(kind: .redoing, total: 3_334, showAfter: .seconds(60))
+        let progress = BatchProgress(kind: .redoing, total: 3_334, showAfter: nil)
         let reporter = progress.start()
         let clock = ContinuousClock()
         let start = clock.now

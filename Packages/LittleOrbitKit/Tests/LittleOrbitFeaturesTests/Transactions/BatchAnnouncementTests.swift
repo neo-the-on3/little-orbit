@@ -20,7 +20,7 @@ struct BatchAnnouncementTests {
     @Test("No sheet: posted at once")
     func noSheet() {
         let heard = Heard()
-        let progress = BatchProgress(kind: .applying, total: 3, showAfter: .seconds(60))
+        let progress = BatchProgress(kind: .applying, total: 3, showAfter: nil)
         progress.announceAfterSheet("Changed 3 transactions.") { heard.texts.append($0) }
         #expect(heard.texts == ["Changed 3 transactions."])
     }
@@ -28,7 +28,7 @@ struct BatchAnnouncementTests {
     @Test("A sheet showed: held until it has closed, then posted once")
     func heldUntilClosed() async {
         let heard = Heard()
-        let progress = BatchProgress(kind: .undoing, total: 3_334, showAfter: .seconds(60))
+        let progress = BatchProgress(kind: .undoing, total: 3_334, showAfter: nil)
         let reporter = progress.start()
         progress.sheetAppeared()
         await reporter.willSave(3_334)
@@ -46,7 +46,7 @@ struct BatchAnnouncementTests {
     func fallback() async throws {
         #expect(BatchProgress.announcementFallbackDelay == .milliseconds(1_500))
         let heard = Heard()
-        let progress = BatchProgress(kind: .redoing, total: 3_334, showAfter: .seconds(60))
+        let progress = BatchProgress(kind: .redoing, total: 3_334, showAfter: nil)
         let reporter = progress.start()
         progress.sheetAppeared()
         await reporter.willSave(3_334)
@@ -73,10 +73,10 @@ struct BatchAnnouncementTests {
         )
         model.announce = { heard.texts.append($0) }
         // A clock that stands still, so a slow parallel run can't pass the quarter of a second that shows the sheet,
-        // and a sheet timer that doesn't fire (review 5666870090). Past 750 rows the sheet still shows before the save.
+        // and no sheet timer at all (review 5666870090). Past 750 rows the sheet still shows before the save.
         let instant = ContinuousClock.now
         model.progressClock = { instant }
-        model.progressShowDelay = .seconds(60)
+        model.progressShowDelay = nil
         model.editsCategory = true
         model.categoryID = DefaultCategoryID.food
         return model

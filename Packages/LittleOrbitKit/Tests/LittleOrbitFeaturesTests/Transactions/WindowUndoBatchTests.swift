@@ -86,6 +86,9 @@ struct WindowUndoBatchTests {
         setup.history.redo()
         #expect(setup.window.undoManager.undoNames == [Self.name])
         #expect(setup.history.batchProgress?.kind == .redoing)
+        // Mac full runs at 929d812: the half-second timer fired under load, showed the sheet, and held "Redid …"
+        // for a dismissal no test sends. The fixture runs no timer, so that can't happen.
+        #expect(setup.history.batchProgress?.timer == nil)
         await finish(setup.history)
         #expect(try setup.stored().allSatisfy { $0.details == "Bulk" })
         #expect(setup.history.undoTitle == Self.name)

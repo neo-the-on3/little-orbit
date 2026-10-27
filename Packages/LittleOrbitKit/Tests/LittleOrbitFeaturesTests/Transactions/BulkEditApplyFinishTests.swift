@@ -24,11 +24,11 @@ struct BulkEditApplyFinishTests {
             transactionIDs: rows.map(\.id),
         )
         model.announce = heard
-        // A clock that stands still, and a sheet timer that doesn't fire: a slow parallel run mustn't show the sheet,
+        // A clock that stands still, and no sheet timer at all: a slow parallel run mustn't show the sheet,
         // which would hold the announcement (review 5666870090).
         let instant = ContinuousClock.now
         model.progressClock = { instant }
-        model.progressShowDelay = .seconds(60)
+        model.progressShowDelay = nil
         model.editsCategory = true
         model.categoryID = DefaultCategoryID.food
         return model

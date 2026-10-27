@@ -37,8 +37,9 @@ public final class BulkEditViewModel {
     @ObservationIgnored var updates: LedgerUpdates?
     /// The clock the progress times the sheet with; tests stop it.
     @ObservationIgnored var progressClock: () -> ContinuousClock.Instant = { .now }
-    /// How long Apply runs before its sheet shows, `BatchProgress.showDelay`; tests that expect no sheet raise it.
-    @ObservationIgnored var progressShowDelay = BatchProgress.showDelay
+    /// How long Apply runs before its sheet shows, `BatchProgress.showDelay`; tests that expect no sheet set `nil`,
+    /// so no timer runs at all.
+    @ObservationIgnored var progressShowDelay: Duration? = BatchProgress.showDelay
     /// Posts a VoiceOver announcement; the Mac sheet passes `AccessibilityNotification.Announcement` (N5).
     @ObservationIgnored public var announce: @MainActor (String) -> Void = { _ in }
 
