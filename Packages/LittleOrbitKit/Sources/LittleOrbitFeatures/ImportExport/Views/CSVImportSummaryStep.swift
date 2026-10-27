@@ -64,6 +64,7 @@
             if model.canUndo {
                 Section {
                     Button(undoLabel, role: .destructive) { model.requestUndo() }
+                        .disabled(model.isWaitingForBatch)
                         .accessibilityFocused($isUndoFocused)
                         .onChange(of: isUndoFocused) { _, isFocused in
                             model.isUndoFocused = isFocused

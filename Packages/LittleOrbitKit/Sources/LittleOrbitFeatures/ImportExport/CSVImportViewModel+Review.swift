@@ -66,8 +66,14 @@ extension CSVImportViewModel {
         platform == .mac ? ImportExportText.nothingSavedMac : ImportExportText.nothingSaved
     }
 
+    /// Off while a batch runs in any window; the sheet keeps its choices until it ends (D399).
     public var canImport: Bool {
-        step == .review && readyCount > 0 && !isWorking
+        step == .review && readyCount > 0 && !isWorking && !isWaitingForBatch
+    }
+
+    /// A Bulk Edit, or its Undo or Redo, is running in some window, so this sheet's writes wait (D399).
+    public var isWaitingForBatch: Bool {
+        isLedgerBusy()
     }
 
     /// A row issue in the file format's wording.

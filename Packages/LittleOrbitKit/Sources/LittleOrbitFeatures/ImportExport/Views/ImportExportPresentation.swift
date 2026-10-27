@@ -10,8 +10,16 @@
     public final class ImportExportRequests {
         public var isPickingImport = false
         public var isExporting = false
+        @ObservationIgnored private let feature: ImportExportFeature?
 
-        public init() {}
+        public init(feature: ImportExportFeature? = nil) {
+            self.feature = feature
+        }
+
+        /// File › Import… is off while a Bulk Edit, or its Undo or Redo, runs in any window (D399).
+        public var importEnabled: Bool {
+            feature?.importEnabled ?? true
+        }
     }
 
     extension FocusedValues {
@@ -77,7 +85,12 @@
     /// CSV import and export for one window: the picker, the sheets, and the requests the File menu sends.
     struct ImportExportPresenter: ViewModifier {
         let feature: ImportExportFeature
-        @State private var requests = ImportExportRequests()
+        @State private var requests: ImportExportRequests
+
+        init(feature: ImportExportFeature) {
+            self.feature = feature
+            _requests = State(initialValue: ImportExportRequests(feature: feature))
+        }
 
         func body(content: Content) -> some View {
             content
@@ -109,7 +122,7 @@
                     requests?.isPickingImport = true
                 }
                 .keyboardShortcut("i", modifiers: [.command, .shift])
-                .disabled(requests == nil)
+                .disabled(requests?.importEnabled != true)
                 Button(ImportExportText.exportMenu) {
                     requests?.isExporting = true
                 }

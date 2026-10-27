@@ -13,14 +13,14 @@ extension WindowUndoHistory {
     /// From a failure until its alert is dismissed, or while a batch runs in any window: Undo and Redo are off.
     var isBusy: Bool { failure.isBlocked || updates.isBatchRunning }
 
-    /// Records a Bulk Edit just applied in this window, as `record(_:)`; its Undo and Redo then run as a batch.
-    @discardableResult
-    public func recordBulkEdit(_ change: TransactionChange) -> UUID {
-        let id = record(change)
-        if let step = undoSteps.last, step.id == id {
+    /// A Bulk Edit, or its Undo or Redo, is running in some window: ledger writes are off in every window.
+    public var isBatchRunning: Bool { updates.isBatchRunning }
+
+    /// Marks the step just recorded for `change`, a Bulk Edit, so its Undo and Redo run as a batch.
+    public func markBulkEdit(_ change: TransactionChange) {
+        if let step = undoSteps.last, step.change == change {
             step.runsInBatch = true
         }
-        return id
     }
 
     func runInBatch(_ step: Step, undoing: Bool, title shown: String) {

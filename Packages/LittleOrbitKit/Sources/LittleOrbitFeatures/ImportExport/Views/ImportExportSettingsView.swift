@@ -15,6 +15,7 @@
                     } label: {
                         Label(ImportExportText.importRow, systemImage: "square.and.arrow.down")
                     }
+                    .disabled(!feature.importEnabled)
                     Button {
                         isExporting = true
                     } label: {

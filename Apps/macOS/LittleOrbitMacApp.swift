@@ -19,7 +19,11 @@ struct LittleOrbitMacApp: App {
             RootView(features: features)
         }
         .commands {
-            RestoreFromBackupCommand(isPickingFile: $isPickingBackupFile)
+            // Off while a Bulk Edit, or its Undo or Redo, runs in any window (D399).
+            RestoreFromBackupCommand(
+                isPickingFile: $isPickingBackupFile,
+                ledgerUpdates: (try? features.get())?.transactions.updates,
+            )
             ImportExportCommands()
             #if DEBUG
                 ScheduledReminderTapCommand(features: features)
@@ -36,7 +40,11 @@ struct LittleOrbitMacApp: App {
                         ScheduledReminderSettingsTab(feature: features.scheduled, upcoming: features.scheduledUpcoming)
                     }
                     Tab("Backups", systemImage: "clock.arrow.circlepath") {
-                        BackupsSettingsTab(model: features.backups, isPickingFile: $isPickingBackupFile)
+                        BackupsSettingsTab(
+                            model: features.backups,
+                            ledgerUpdates: features.transactions.updates,
+                            isPickingFile: $isPickingBackupFile,
+                        )
                     }
                 }
             }

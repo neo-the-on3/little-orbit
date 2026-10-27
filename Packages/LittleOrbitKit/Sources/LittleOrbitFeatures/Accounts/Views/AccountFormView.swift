@@ -7,6 +7,8 @@
     public struct AccountFormView: View {
         @State private var model: AccountFormViewModel
         @Environment(\.dismiss) private var dismiss
+        /// Save and Delete Account… wait while a Bulk Edit, or its Undo or Redo, runs in any window (D399).
+        @Environment(WindowUndoHistory.self) private var undoHistory: WindowUndoHistory?
         private let onSaved: (Account) -> Void
         private let onDelete: ((UUID) -> Void)?
 
@@ -155,7 +157,7 @@
                         }
                         ToolbarItem(placement: .confirmationAction) {
                             Button(model.confirmTitle, action: save)
-                                .disabled(!model.canSave)
+                                .disabled(!model.canSave || undoHistory?.isBatchRunning == true)
                         }
                     }
                 }
@@ -211,6 +213,7 @@
                     Section {
                         // The presenter confirms over this sheet and closes it after Hide or Delete (bug 3).
                         Button("Delete Account…", role: .destructive) { onDelete(id) }
+                            .disabled(undoHistory?.isBatchRunning == true)
                     }
                 }
             }
@@ -250,13 +253,14 @@
                     HStack {
                         if model.isEditing, case .edit(let id) = model.mode, let onDelete {
                             Button("Delete Account…", role: .destructive) { onDelete(id) }
+                                .disabled(undoHistory?.isBatchRunning == true)
                         }
                         Spacer()
                         Button("Cancel") { dismiss() }
                             .keyboardShortcut(.cancelAction)
                         Button(model.confirmTitle, action: save)
                             .keyboardShortcut(.defaultAction)
-                            .disabled(!model.canSave)
+                            .disabled(!model.canSave || undoHistory?.isBatchRunning == true)
                     }
                 }
                 .padding(Layout.marginMacOS)

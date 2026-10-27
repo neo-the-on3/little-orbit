@@ -9602,6 +9602,90 @@
           }
         }
       }
+    },
+    "Applying Changes…": {
+      "comment": "Bulk edit on the Mac: title of the progress sheet while Apply changes the selected transactions. It shows only when the change takes more than half a second, and has no Cancel button (D398.3).",
+      "extractionState": "manual",
+      "localizations": {
+        "en": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Applying Changes…"
+          }
+        }
+      }
+    },
+    "Undoing Changes…": {
+      "comment": "Bulk edit on the Mac: title of the progress sheet while Undo puts a Bulk Edit’s transactions back. It shows only when Undo takes more than half a second, and has no Cancel button (D398.3).",
+      "extractionState": "manual",
+      "localizations": {
+        "en": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Undoing Changes…"
+          }
+        }
+      }
+    },
+    "Redoing Changes…": {
+      "comment": "Bulk edit on the Mac: title of the progress sheet while Redo applies a Bulk Edit again. It shows only when Redo takes more than half a second, and has no Cancel button (D398.3).",
+      "extractionState": "manual",
+      "localizations": {
+        "en": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Redoing Changes…"
+          }
+        }
+      }
+    },
+    "Saving…": {
+      "comment": "Bulk edit on the Mac: progress sheet message for the last step, when every transaction is checked and the changes are being written; the bar is full (D398.3).",
+      "extractionState": "manual",
+      "localizations": {
+        "en": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Saving…"
+          }
+        }
+      }
+    },
+    "Updating %lld transactions.": {
+      "comment": "Bulk edit on the Mac: progress sheet message under “Applying Changes…”, “Undoing Changes…” or “Redoing Changes…”. %lld is how many transactions are being changed (1 or more). Translate the whole sentence for each plural form (D398.3).",
+      "extractionState": "manual",
+      "localizations": {
+        "en": {
+          "variations": {
+            "plural": {
+              "one": {
+                "stringUnit": {
+                  "state": "translated",
+                  "value": "Updating %lld transaction."
+                }
+              },
+              "other": {
+                "stringUnit": {
+                  "state": "translated",
+                  "value": "Updating %lld transactions."
+                }
+              }
+            }
+          }
+        }
+      }
+    },
+    "Your data changed while the changes were being applied. Nothing was changed.": {
+      "comment": "Bulk edit on the Mac: message under “Couldn’t Apply Changes” when other changes were saved while Apply ran and the edit no longer fits the data as it is now; nothing was changed. The alert has only an OK button (D399).",
+      "extractionState": "manual",
+      "localizations": {
+        "en": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Your data changed while the changes were being applied. Nothing was changed."
+          }
+        }
+      }
     }
   },
   "version": "1.0"

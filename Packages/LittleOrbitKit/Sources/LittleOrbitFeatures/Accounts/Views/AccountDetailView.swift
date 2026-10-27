@@ -416,7 +416,7 @@
                         Label("Edit Transactions…", systemImage: "pencil")
                     }
                     .keyboardShortcut("e", modifiers: .command)
-                    .disabled(history.selection.isEmpty)
+                    .disabled(history.selection.isEmpty || transactions.updates.isBatchRunning)
                     .help("Edit the selected transactions (⌘E)")
                     Button("Edit Account", action: onEdit)
                 }

@@ -18,8 +18,9 @@
             window.model
         }
 
-        public init(model: BackupsViewModel, isPickingFile: Binding<Bool>) {
-            _window = State(initialValue: BackupsWindow(model: model))
+        /// `ledgerUpdates` turns Restore… and Restore from File… off while a batch runs in any window (D399).
+        public init(model: BackupsViewModel, ledgerUpdates: LedgerUpdates? = nil, isPickingFile: Binding<Bool>) {
+            _window = State(initialValue: BackupsWindow(model: model, ledgerUpdates: ledgerUpdates))
             _isPickingFile = isPickingFile
         }
 
@@ -91,7 +92,7 @@
                     }
                     Spacer()
                     Button(BackupPresentation.restoreFromFile) { isPickingFile = true }
-                        .disabled(!model.actionsEnabled)
+                        .disabled(!window.restoreEnabled)
                 }
                 GroupBox(BackupPresentation.keepHeader) {
                     VStack(alignment: .leading, spacing: Spacing.space2) {
@@ -130,7 +131,7 @@
             Button(BackupPresentation.restoreEllipsis) {
                 Task { await window.requestRestore(id) }
             }
-            .disabled(!model.actionsEnabled || !canRestore)
+            .disabled(!window.restoreEnabled || !canRestore)
             Button(BackupPresentation.exportEllipsis) {
                 Task { await window.requestExport(id) }
             }
@@ -146,10 +147,13 @@
     /// File > Restore from Backup… (S64): opens Settings on the Backups tab with its file panel.
     public struct RestoreFromBackupCommand: Commands {
         @Binding var isPickingFile: Bool
+        /// Off while a Bulk Edit, or its Undo or Redo, runs in any window (D399).
+        let ledgerUpdates: LedgerUpdates?
         @Environment(\.openSettings) private var openSettings
 
-        public init(isPickingFile: Binding<Bool>) {
+        public init(isPickingFile: Binding<Bool>, ledgerUpdates: LedgerUpdates? = nil) {
             _isPickingFile = isPickingFile
+            self.ledgerUpdates = ledgerUpdates
         }
 
         public var body: some Commands {
@@ -158,6 +162,7 @@
                     openSettings()
                     isPickingFile = true
                 }
+                .disabled(ledgerUpdates?.isBatchRunning == true)
             }
         }
     }

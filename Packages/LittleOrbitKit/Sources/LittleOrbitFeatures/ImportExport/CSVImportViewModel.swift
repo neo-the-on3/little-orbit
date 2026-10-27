@@ -85,6 +85,8 @@ public final class CSVImportViewModel {
     @ObservationIgnored let locale: Locale
     @ObservationIgnored let timeZone: TimeZone
     @ObservationIgnored let changed: () -> Void
+    /// On while a Bulk Edit, or its Undo or Redo, runs in any window: Import and Undo Import wait (D399).
+    @ObservationIgnored public var isLedgerBusy: @MainActor () -> Bool = { false }
     /// The shared store-change signal's value now, and its value just after this import's own change (D381.4).
     @ObservationIgnored let revision: @MainActor () -> Int
     @ObservationIgnored var importRevision: Int?
