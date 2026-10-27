@@ -1,4 +1,5 @@
 import Foundation
+import LittleOrbitCore
 
 /// A Bulk Edit Apply built from one ledger value (#285): the rows to write, checked with the shared rules, and
 /// any payee the typed name creates. It's built off the main actor; the commit writes it on the main actor.
@@ -47,7 +48,9 @@ extension DefaultApplyBulkEditUseCase {
     /// now, inside the same change, so nothing lands between the check and the write. One write or none: any
     /// throw writes nothing (D398.3). If that rebuild breaks a rule, it throws `BulkEditDataChanged` (D399).
     func commit(_ prepared: BulkEditChangeSet?, for request: BulkEditRequest) throws -> TransactionChange {
-        try repository.atomically {
+        let span = BatchTrace.begin("batch.commit")
+        defer { span.end() }
+        return try repository.atomically {
             let changeSet: BulkEditChangeSet
             if let prepared, prepared.revision == repository.revision {
                 changeSet = prepared

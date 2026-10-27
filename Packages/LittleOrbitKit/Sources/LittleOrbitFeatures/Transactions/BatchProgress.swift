@@ -1,4 +1,5 @@
 import Foundation
+import LittleOrbitCore
 import LittleOrbitDomain
 import Observation
 
@@ -65,6 +66,7 @@ public final class BatchProgress {
                     return
                 }
                 self?.isShown = true
+                BatchTrace.event("batch.sheet.shown")
             }
         )
         return LedgerBatchReporter(

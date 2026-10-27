@@ -1,4 +1,5 @@
 import Foundation
+import LittleOrbitCore
 import LittleOrbitDomain
 import Observation
 
@@ -111,6 +112,8 @@ public final class AccountsViewModel {
     }
 
     public func load() {
+        let span = BatchTrace.begin("accounts.load")
+        defer { span.end() }
         do {
             let listing = try listAccounts.listAccounts(showHidden: showHidden)
             accounts = (listing.assets + listing.credit).map(\.account)

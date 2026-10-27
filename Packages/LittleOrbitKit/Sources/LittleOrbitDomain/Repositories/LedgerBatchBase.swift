@@ -1,4 +1,5 @@
 import Foundation
+import LittleOrbitCore
 
 /// The ledger a batch is built from off the main actor (#285): the snapshot, the store's clock for the
 /// timestamps it sets, and the store's revision, so the commit can tell whether anything wrote in between.
@@ -39,7 +40,7 @@ extension LedgerBatchBase {
     static func build<Result: Sendable>(
         _ build: @escaping @Sendable () throws -> Result
     ) async throws -> Result {
-        let task = Task.detached(priority: .userInitiated) { try build() }
+        let task = Task.detached(priority: .userInitiated) { try BatchTrace.interval("batch.build") { try build() } }
         return try await withTaskCancellationHandler {
             try await task.value
         } onCancel: {

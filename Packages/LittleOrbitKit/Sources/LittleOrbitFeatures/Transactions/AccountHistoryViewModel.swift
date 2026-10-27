@@ -1,4 +1,5 @@
 import Foundation
+import LittleOrbitCore
 import LittleOrbitDomain
 import Observation
 
@@ -118,9 +119,14 @@ public final class AccountHistoryViewModel {
     }
 
     public func load() {
+        let span = BatchTrace.begin("window.recompute")
+        defer { span.end() }
         do {
             let today = TransactionTiming.today(now(), timeZone: timeZone)
-            guard let page = try accountHistory.history(of: accountID, today: today) else {
+            let found = try BatchTrace.interval("history.domain") {
+                try accountHistory.history(of: accountID, today: today)
+            }
+            guard let page = found else {
                 accountExists = false
                 upcoming = []
                 sections = []
@@ -149,6 +155,7 @@ public final class AccountHistoryViewModel {
             upcomingTotalText =
                 history.upcoming.isEmpty
                 ? nil : formatter.string(history.upcomingTotal, currencyCode: currency, showsPlus: true)
+            let rows = BatchTrace.begin("history.rows")
             upcoming = history.upcoming.map { context.row($0, isUpcoming: true) }
             sections = history.days.map { day in
                 TransactionDaySection(
@@ -159,6 +166,8 @@ public final class AccountHistoryViewModel {
                     rows: day.entries.map { context.row($0, isUpcoming: false) },
                 )
             }
+            rows.end()
+            BatchTrace.untilNextTurn("ui.table.update")
             let visible = Set(allRows.map(\.id))
             selection = selection.intersection(visible)
         } catch {

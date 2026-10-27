@@ -1,4 +1,5 @@
 import Foundation
+import LittleOrbitCore
 import LittleOrbitDomain
 import Observation
 
@@ -183,16 +184,18 @@ public final class WindowUndoHistory {
     /// is "New Scheduled Item Rent", named for its item as the list shows it (D351.1).
     @discardableResult
     public func record(_ change: TransactionChange, named name: String? = nil, subject: String? = nil) -> UUID {
+        let span = BatchTrace.begin("batch.record")
+        defer { span.end() }
         var impact = ChangeImpact()
         var newAlert: UndoAlert?
         do {
-            impact = try changes.impact(of: change)
+            impact = try BatchTrace.interval("record.impact") { try changes.impact(of: change) }
         } catch {
             // The step still records; its name just can't say where the change was, so say so.
             newAlert = UndoAlert(title: Self.changeFailedTitle, message: Self.unreadablePlace)
         }
         // Without what the change left, Undo couldn't tell a stale step, so there is no step (D187.5).
-        let outcome: ChangeOutcome? = try? changes.outcome(of: change)
+        let outcome: ChangeOutcome? = BatchTrace.interval("record.outcome") { try? changes.outcome(of: change) }
         if outcome == nil {
             newAlert = UndoAlert(title: Self.changeFailedTitle, message: Self.unreadableChange)
         }

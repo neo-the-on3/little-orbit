@@ -1,4 +1,5 @@
 import Foundation
+import LittleOrbitCore
 import LittleOrbitDomain
 
 // MARK: The Undo and Redo of a Bulk Edit (#285, D398)
@@ -45,6 +46,8 @@ extension WindowUndoHistory {
         let updates = updates
         refreshMenu()
         let task = Task { [weak self] in
+            let span = BatchTrace.begin(undoing ? "batch.undo" : "batch.redo")
+            defer { span.end() }
             let result: Result<RevertResult, any Error>
             do {
                 result = .success(try await changes.revert(change, expecting: outcome, reporting: reporter))

@@ -1,4 +1,5 @@
 import Foundation
+import LittleOrbitCore
 import LittleOrbitDomain
 
 extension BulkEditViewModel {
@@ -16,9 +17,11 @@ extension BulkEditViewModel {
         guard updates?.beginBatch() ?? true else {
             return nil
         }
+        let span = BatchTrace.begin("batch.apply")
         let progress = BatchProgress(kind: .applying, total: request.selection.count)
         self.progress = progress
         defer {
+            span.end()
             progress.finish()
             self.progress = nil
             updates?.endBatch()

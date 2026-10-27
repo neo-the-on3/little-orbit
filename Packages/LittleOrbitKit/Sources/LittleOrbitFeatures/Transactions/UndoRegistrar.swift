@@ -1,4 +1,5 @@
 import Foundation
+import LittleOrbitCore
 import Observation
 
 /// What a window's undo history needs from the window's `UndoManager` (`@Environment(\.undoManager)`). The
@@ -133,7 +134,10 @@ public final class LedgerUpdates {
     }
 
     func changed() {
+        let span = BatchTrace.begin("ledger.notify")
+        defer { span.end() }
         revision += 1
+        BatchTrace.event("ledger.notify.post")
         runChangedHandlers()
     }
 
