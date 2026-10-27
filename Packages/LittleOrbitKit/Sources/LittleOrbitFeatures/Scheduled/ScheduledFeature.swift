@@ -57,7 +57,7 @@ public final class ScheduledFeature: PlannedItemsSource {
     private let updates: LedgerUpdates?
     /// Keeps the pending reminders current (D340.7); `nil` where nothing posts notifications.
     private let reminders: ScheduledReminders?
-    private let locale: Locale
+    let locale: Locale
     /// Called when a catch-up couldn't run or left some items unrecorded; the App logs it with no user data.
     private let onCatchUpProblem: (ScheduledCatchUpProblem) -> Void
     /// The clock-ahead line is logged once per launch, not on every activation (Tech Architect NB 1). The feature

@@ -21,11 +21,17 @@
                 #else
                     let watchLink: (any WatchCompanionLink)? = nil
                 #endif
-                return try AppFeatures(
+                let features = try AppFeatures(
                     repository: repository,
                     backupStorage: FileBackupStorage.appDefault(),
                     watchLink: watchLink,
                 )
+                #if DEBUG
+                    // `-LittleOrbitDeleteScheduledItemName <name> -LittleOrbitDeleteScheduledItemAfter <seconds>`
+                    // deletes that item later, as another window would (#258 testing). Not in release builds.
+                    features.scheduled.startLaunchDelete()
+                #endif
+                return features
             }
         }
 
