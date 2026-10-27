@@ -80,9 +80,19 @@ extension LedgerBook {
     }
 
     /// `keepingZoneID` is the stored zone ID an edit keeps unchanged; it passes even when it isn't recognised.
+    /// Builds the index for this one check; a save or a batch that has one passes it instead (#285).
     static func validate(
         _ transaction: Transaction,
         in snapshot: LedgerSnapshot,
+        keepingZoneID keptZoneID: String? = nil,
+    ) throws {
+        try validate(transaction, in: LedgerIndex(snapshot), keepingZoneID: keptZoneID)
+    }
+
+    /// The transaction rules, read from `index` (#285). Every save, single or batched, runs these.
+    static func validate(
+        _ transaction: Transaction,
+        in index: LedgerIndex,
         keepingZoneID keptZoneID: String? = nil,
     ) throws {
         if transaction.amount <= 0 {
@@ -93,40 +103,38 @@ extension LedgerBook {
         guard TimeZone(identifier: transaction.timeZoneID) != nil || transaction.timeZoneID == keptZoneID else {
             throw LedgerValidationError.invalidTimeZone
         }
-        guard let account = transaction.accountID.flatMap({ activeAccount($0, in: snapshot) }) else {
+        guard let account = transaction.accountID.flatMap({ index.account($0) }) else {
             throw LedgerValidationError.missingAccount
         }
         try MinorUnitDecimal.validate(transaction.amount, currencyCode: account.currencyCode)
-        try validateTags(of: transaction, in: snapshot)
+        try validateTags(of: transaction, in: index)
         if transaction.refundOfID != nil && !transaction.isRefund {
             // Before the category: a mismatched pair is its own error, never read as a plain income (D33.1).
             throw LedgerValidationError.refundLinkWithoutRefundFlag
         }
         switch transaction.type {
         case .expense, .income:
-            try validateCategorised(transaction, in: snapshot)
+            try validateCategorised(transaction, in: index)
         case .transfer:
-            try validateTransfer(transaction, source: account, in: snapshot)
+            try validateTransfer(transaction, source: account, in: index)
         }
-        try validateRefund(transaction, in: snapshot)
-        let existingSplits = snapshot.splits.filter {
-            $0.transactionID == transaction.id && $0.deletedAt == nil
-        }
+        try validateRefund(transaction, in: index)
+        let existingSplits = index.liveSplits(of: transaction.id)
         if !existingSplits.isEmpty {
-            try validate(existingSplits, for: transaction, in: snapshot)
+            try validate(existingSplits, for: transaction, in: index)
         }
-        try validateOriginal(transaction, in: snapshot)
+        try validateOriginal(transaction, in: index)
     }
 
-    static func validateTags(of transaction: Transaction, in snapshot: LedgerSnapshot) throws {
+    static func validateTags(of transaction: Transaction, in index: LedgerIndex) throws {
         for tagID in transaction.tagIDs {
-            guard snapshot.tags.contains(where: { $0.id == tagID && $0.deletedAt == nil }) else {
+            guard index.hasTag(tagID) else {
                 throw LedgerValidationError.missingTag
             }
         }
     }
 
-    static func validateCategorised(_ transaction: Transaction, in snapshot: LedgerSnapshot) throws {
+    static func validateCategorised(_ transaction: Transaction, in index: LedgerIndex) throws {
         if transaction.transferAccountID != nil {
             throw LedgerValidationError.transferAccountNotAllowed
         }
@@ -134,18 +142,18 @@ extension LedgerBook {
             throw LedgerValidationError.unexpectedDestinationAmount
         }
         if let payeeID = transaction.payeeID {
-            guard snapshot.payees.contains(where: { $0.id == payeeID && $0.deletedAt == nil }) else {
+            guard index.hasPayee(payeeID) else {
                 throw LedgerValidationError.missingPayee
             }
         }
-        try validateCategory(of: transaction, in: snapshot)
+        try validateCategory(of: transaction, in: index)
     }
 
-    static func validateCategory(of transaction: Transaction, in snapshot: LedgerSnapshot) throws {
+    static func validateCategory(of transaction: Transaction, in index: LedgerIndex) throws {
         guard let categoryID = transaction.categoryID else {
             return
         }
-        guard let category = activeCategory(categoryID, in: snapshot) else {
+        guard let category = index.category(categoryID) else {
             throw LedgerValidationError.missingCategory
         }
         // A refund keeps its expense's category: the one income that uses an expense category, and never an
@@ -159,7 +167,7 @@ extension LedgerBook {
     static func validateTransfer(
         _ transaction: Transaction,
         source: Account,
-        in snapshot: LedgerSnapshot,
+        in index: LedgerIndex,
     ) throws {
         if transaction.categoryID != nil {
             throw LedgerValidationError.transferCategoryNotAllowed
@@ -173,7 +181,7 @@ extension LedgerBook {
         if destinationID == source.id {
             throw LedgerValidationError.sameTransferAccount
         }
-        guard let destination = activeAccount(destinationID, in: snapshot) else {
+        guard let destination = index.account(destinationID) else {
             throw LedgerValidationError.missingTransferAccount
         }
         try validateDestinationAmount(transaction, source: source, destination: destination)
@@ -276,13 +284,21 @@ extension LedgerBook {
         for transaction: Transaction,
         in snapshot: LedgerSnapshot,
     ) throws {
+        try validate(splits, for: transaction, in: LedgerIndex(snapshot))
+    }
+
+    static func validate(
+        _ splits: [TransactionSplit],
+        for transaction: Transaction,
+        in index: LedgerIndex,
+    ) throws {
         if transaction.type == .transfer {
             throw LedgerValidationError.splitsNotAllowedOnTransfer
         }
         if transaction.categoryID != nil {
             throw LedgerValidationError.splitsRequireUncategorised
         }
-        guard let account = transaction.accountID.flatMap({ activeAccount($0, in: snapshot) }) else {
+        guard let account = transaction.accountID.flatMap({ index.account($0) }) else {
             throw LedgerValidationError.missingAccount
         }
         var sum = Decimal(0)
@@ -293,7 +309,7 @@ extension LedgerBook {
             try MinorUnitDecimal.validate(split.amount, currencyCode: account.currencyCode)
             try LedgerText.validateNote(split.note)
             if let categoryID = split.categoryID {
-                guard let category = activeCategory(categoryID, in: snapshot) else {
+                guard let category = index.category(categoryID) else {
                     throw LedgerValidationError.missingCategory
                 }
                 if !category.kind.matches(transaction.type) {

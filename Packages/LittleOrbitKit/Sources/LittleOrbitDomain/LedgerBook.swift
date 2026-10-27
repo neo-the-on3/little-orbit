@@ -112,10 +112,18 @@ public enum LedgerBook {
         in snapshot: LedgerSnapshot,
         now: Date,
     ) throws -> LedgerSnapshot {
-        var snapshot = snapshot
+        var index = LedgerIndex(snapshot)
+        try savingTransaction(transaction, in: &index, now: now)
+        return index.snapshot
+    }
+
+    /// The one save of a transaction, on an index (#285): a single save builds one, and a batch keeps one for all
+    /// its rows. If it throws, `index` is unchanged.
+    static func savingTransaction(_ transaction: Transaction, in index: inout LedgerIndex, now: Date) throws {
         var transaction = normalize(transaction)
         var keptZoneID: String?
-        if let existing = snapshot.transactions.first(where: { $0.id == transaction.id }) {
+        if let position = index.position(of: transaction.id) {
+            let existing = index.snapshot.transactions[position]
             // An edit keeps the stored zone ID as it is, even one this device doesn't recognise, such as one a
             // backup restored; its day reads as UTC (`TransactionCalendar.storedTimeZone`, D230).
             if transaction.timeZoneID == LedgerText.trimmed(existing.timeZoneID) {
@@ -131,11 +139,10 @@ public enum LedgerBook {
             transaction.createdAt = existing.createdAt
             transaction.updatedAt = now
         }
-        try validate(transaction, in: snapshot, keepingZoneID: keptZoneID)
-        touchPayee(for: transaction, in: &snapshot, now: now)
-        replaceOrAppend(&snapshot.transactions, with: transaction)
-        applyingOriginal(transaction, to: &snapshot, now: now)
-        return snapshot
+        try validate(transaction, in: index, keepingZoneID: keptZoneID)
+        touchPayee(for: transaction, in: &index, now: now)
+        index.replaceOrAppend(transaction)
+        applyingOriginal(transaction, to: &index, now: now)
     }
 
     /// Changes a transaction that's already stored, as `savingTransaction(_:in:now:)` does. One that isn't stored,
@@ -147,10 +154,17 @@ public enum LedgerBook {
         in snapshot: LedgerSnapshot,
         now: Date,
     ) throws -> LedgerSnapshot {
-        guard snapshot.transactions.contains(where: { $0.id == transaction.id && $0.deletedAt == nil }) else {
+        var index = LedgerIndex(snapshot)
+        try updatingTransaction(transaction, in: &index, now: now)
+        return index.snapshot
+    }
+
+    /// `updatingTransaction(_:in:now:)` on an index, for a single edit and for each row of a batch (#285).
+    static func updatingTransaction(_ transaction: Transaction, in index: inout LedgerIndex, now: Date) throws {
+        guard index.liveTransaction(transaction.id) != nil else {
             throw LedgerValidationError.missingTransaction
         }
-        return try savingTransaction(transaction, in: snapshot, now: now)
+        try savingTransaction(transaction, in: &index, now: now)
     }
 
     /// Deletes the transaction with its splits and attachments. Its refunds stay, unlinked, with `isRefund`
@@ -187,14 +201,18 @@ public enum LedgerBook {
         var reference = snapshot
         reference.transactions = []
         reference.splits = []
+        // One index for the whole batch: the reference doesn't change while the rows are checked (#285).
+        let index = LedgerIndex(reference)
+        var payees = LedgerIndex(LedgerSnapshot(payees: snapshot.payees))
         var result = snapshot
         result.transactions.reserveCapacity(snapshot.transactions.count + transactions.count)
         for transaction in transactions {
             let transaction = normalize(transaction)
-            try validate(transaction, in: reference)
-            touchPayee(for: transaction, in: &result, now: now)
+            try validate(transaction, in: index)
+            touchPayee(for: transaction, in: &payees, now: now)
             result.transactions.append(transaction)
         }
+        result.payees = payees.snapshot.payees
         return result
     }
 
@@ -221,22 +239,17 @@ public enum LedgerBook {
         return snapshot
     }
 
-    private static func touchPayee(
-        for transaction: Transaction,
-        in snapshot: inout LedgerSnapshot,
-        now: Date,
-    ) {
+    private static func touchPayee(for transaction: Transaction, in index: inout LedgerIndex, now: Date) {
         guard transaction.deletedAt == nil, transaction.type != .transfer, let payeeID = transaction.payeeID else {
             return
         }
-        guard let index = snapshot.payees.firstIndex(where: { $0.id == payeeID && $0.deletedAt == nil }) else {
-            return
+        index.updatePayee(payeeID) { payee in
+            payee.lastUsedAt = transaction.date
+            if transaction.categoryID != nil {
+                payee.defaultCategoryID = transaction.categoryID
+            }
+            payee.updatedAt = now
         }
-        snapshot.payees[index].lastUsedAt = transaction.date
-        if transaction.categoryID != nil {
-            snapshot.payees[index].defaultCategoryID = transaction.categoryID
-        }
-        snapshot.payees[index].updatedAt = now
     }
 
     static func replace<T: Identifiable>(_ items: inout [T], with item: T) {
