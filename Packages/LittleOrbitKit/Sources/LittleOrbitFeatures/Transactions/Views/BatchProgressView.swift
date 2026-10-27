@@ -4,21 +4,35 @@
     import SwiftUI
 
     /// The progress of a Bulk Edit, its Undo or its Redo (#285, D398.3): the title, then a determinate bar
-    /// labelled “Updating 3,334 transactions.” and, for the write, “Saving…” with the bar full. It has no Cancel.
+    /// labelled “Updating 3,334 transactions.” and, for the write, “Saving…” with the bar full, or moving when the
+    /// save runs off the main actor (#285, B). It has no Cancel.
     struct BatchProgressView: View {
         let progress: BatchProgress
+
+        private var message: some View {
+            Text(progress.message)
+                .font(.theme(Typography.MacOS.footnote))
+                .foregroundStyle(Color(ThemeColor.labelSecondary))
+        }
 
         var body: some View {
             VStack(alignment: .leading, spacing: Spacing.space3) {
                 Text(progress.title)
                     .font(.theme(Typography.MacOS.headline))
                     .accessibilityAddTraits(.isHeader)
-                ProgressView(value: progress.value, total: Double(max(progress.total, 1))) {
-                    Text(progress.message)
-                        .font(.theme(Typography.MacOS.footnote))
-                        .foregroundStyle(Color(ThemeColor.labelSecondary))
+                if progress.showsIndeterminateBar {
+                    // The save runs off the main actor (#285, B), so the bar moves while it runs. It switches once, and
+                    // VoiceOver still reads the same "Saving…" label.
+                    ProgressView {
+                        message
+                    }
+                    .progressViewStyle(.linear)
+                } else {
+                    ProgressView(value: progress.value, total: Double(max(progress.total, 1))) {
+                        message
+                    }
+                    .progressViewStyle(.linear)
                 }
-                .progressViewStyle(.linear)
             }
             .padding(Layout.marginMacOS)
             .frame(minWidth: 460, alignment: .leading)

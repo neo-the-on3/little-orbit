@@ -94,6 +94,15 @@ public protocol LedgerRepository: AnyObject {
     /// (#285). Call it inside `atomically`, after comparing `revision` with the base's, so nothing lands between
     /// the check and the write.
     func writeBatch(_ snapshot: LedgerSnapshot) throws
+    /// Whether `writeBatchOffMain(_:expectedRevision:)` saves off the main actor, so a progress sheet can draw and
+    /// animate during the save instead of going up before it (#285, B).
+    var savesBatchesOffMain: Bool { get }
+    /// Stores `snapshot` as one write, as `writeBatch(_:)` does, but the save itself may run off the main actor
+    /// (#285, B). Call it outside `atomically`, right after building `snapshot` from a base whose revision is
+    /// `expectedRevision`. Before its first suspension, on the main actor, it compares that with `revision`: if
+    /// the store moved, it writes nothing and returns `false`, so the caller builds the batch again. Otherwise it
+    /// writes, all or nothing, and returns `true` once the ledger in memory has the result.
+    func writeBatchOffMain(_ snapshot: LedgerSnapshot, expectedRevision: UInt64) async throws -> Bool
 }
 
 extension LedgerRepository {
@@ -116,6 +125,18 @@ extension LedgerRepository {
 
     public func writeBatch(_: LedgerSnapshot) throws {
         throw LedgerBatchUnsupported()
+    }
+
+    /// Saves on the main actor.
+    public var savesBatchesOffMain: Bool { false }
+
+    /// `writeBatch(_:)` in one change on the main actor, after the revision check.
+    public func writeBatchOffMain(_ snapshot: LedgerSnapshot, expectedRevision: UInt64) async throws -> Bool {
+        guard revision == expectedRevision else {
+            return false
+        }
+        try atomically { try writeBatch(snapshot) }
+        return true
     }
 
     /// One by one, for a repository without a batch path.

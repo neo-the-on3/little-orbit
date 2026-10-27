@@ -236,7 +236,9 @@ set -euo pipefail
 # #265: SwiftDataLedgerRepository owns its ModelContext, with autosave off, and drops it after a failed write.
 # Nothing else in the apps may use a context of the store: no mainContext, @Query or SwiftUI modelContext. The
 # repository's own file may name mainContext only in its /// documentation lines. Tests may read a record's
-# modelContext.
+# modelContext. #285 B: the one exception is BackgroundLedgerWriter.swift, the BackgroundLedgerWriter model actor
+# the repository makes for one batch save, which may name its own modelContext. mainContext and @Query are still
+# refused there, and no other file is exempt.
 status=0
 context_paths=()
 for path in Apps Packages/LittleOrbitKit/Sources; do
@@ -247,6 +249,8 @@ done
 if [ -n "${context_paths[*]:-}" ]; then
   context_uses="$(grep -rnE --include='*.swift' '(\bmainContext\b|@Query\b|\bmodelContext\b)' "${context_paths[@]}" \
     | grep -vE '^Packages/LittleOrbitKit/Sources/LittleOrbitPersistence/SwiftDataLedgerRepository\.swift:[0-9]+:[[:space:]]*///' \
+    | awk -v writer='Packages/LittleOrbitKit/Sources/LittleOrbitPersistence/BackgroundLedgerWriter.swift:' \
+      'index($0, writer) != 1 || /mainContext|@Query/' \
     || true)"
   if [ -n "$context_uses" ]; then
     echo "error: app code uses a SwiftData context; only SwiftDataLedgerRepository may (docs/persistence-migration.md, Writes):" >&2
