@@ -9,12 +9,14 @@ import LittleOrbitCore
 #endif
 
 /// The events AppKit is dispatching right now, outermost first (Tech Architect's B5 on bab2ad8), so an Undo or Redo
-/// can tell what drove it (`QueuedCommandPolicy`). Each one is added as `NSApplication.sendEvent(_:)` starts and taken
-/// off as it returns (`LittleOrbitApplication`). A menu's tracking and a key equivalent run nested inside the dispatch
-/// of the mouse-down or key-down that started them, so a command they send sees that event here. An Accessibility
-/// action (VoiceOver, Voice Control, an AXPress) arrives outside any dispatch, and sees none. The Mac app's entry point
-/// makes the subclass the shared app before SwiftUI starts (`LittleOrbitApplication.makeShared()`), and reports at
-/// launch whether it took (`reportSource(live:)`).
+/// can tell a queued ⌘Z from anything else (`QueuedCommandPolicy`). Each one is added as
+/// `NSApplication.sendEvent(_:)` starts and taken off as it returns (`LittleOrbitApplication`). A key equivalent is
+/// matched inside its key-down's dispatch, so a command it sends sees that key-down here. A menu item chosen with the
+/// mouse or keyboard is sent from the menu's own tracking loop, outside `sendEvent` (Tester2 on 4839e5d), and an
+/// Accessibility action (VoiceOver, Voice Control, an AXPress) outside any dispatch: they see none, and Edit › Undo
+/// and Redo are off during a batch for them instead (`UndoCommandGate`, D407). The Mac app's entry point makes the
+/// subclass the shared app before SwiftUI starts (`LittleOrbitApplication.makeShared()`), and reports at launch
+/// whether it took (`reportSource(live:)`).
 ///
 /// A sendEvent override rather than a local event monitor: a monitor sees an event as it arrives, but not when its
 /// dispatch ends, so it can't tell a command sent while handling that event from one sent after it.
@@ -30,8 +32,7 @@ final class EventDispatch {
     /// The app's, which `LittleOrbitApplication` fills in.
     static let shared = EventDispatch()
 
-    /// One event being dispatched: its `NSEvent.EventType` raw value, and the input event, if it's a mouse button's
-    /// or the keyboard's.
+    /// One event being dispatched: its `NSEvent.EventType` raw value, and the key-down, if it's one.
     struct Entry: Equatable {
         var type: Int
         var input: QueuedCommandPolicy.Event?
@@ -113,8 +114,8 @@ final class EventDispatch {
         #endif
     }
 
-    /// The innermost input event being dispatched: what a command running now was driven by. An event of another
-    /// kind dispatched inside it, such as an app-defined one, doesn't hide it. `nil` when none is, as for an
+    /// The innermost key-down being dispatched: what a command running now was driven by. An event of another kind
+    /// dispatched inside it, such as an app-defined one, doesn't hide it. `nil` when none is, as for a menu or an
     /// Accessibility action.
     var current: QueuedCommandPolicy.Event? {
         entries.last { $0.input != nil }?.input
@@ -128,11 +129,17 @@ final class EventDispatch {
         }
         return entries.first?.type ?? -1
     }
+
+    /// The innermost event being dispatched, of any kind, as its raw type; -1 for none. For the signposts only.
+    var innermostType: Int {
+        entries.last?.type ?? -1
+    }
 }
 
 #if canImport(AppKit) && os(macOS)
     /// The app's `NSApplication`: it records each event it dispatches in `EventDispatch.shared` for as long as
-    /// `sendEvent(_:)` runs (B5 on bab2ad8). The `@objc` name is the one `NSPrincipalClass` gives.
+    /// `sendEvent(_:)` runs (B5 on bab2ad8), and holds Edit › Undo and Redo off while a batch runs (D407,
+    /// `UndoCommandGate`). The `@objc` name is the one `NSPrincipalClass` gives.
     @objc(LittleOrbitApplication)
     public final class LittleOrbitApplication: NSApplication {
         /// Makes this class the app's `NSApplication`, as AppKit documents for a subclass: `shared` sent to it before
@@ -156,6 +163,55 @@ final class EventDispatch {
             EventDispatch.shared.dispatching(entry) {
                 super.sendEvent(event)
             }
+        }
+
+        /// No target for Undo or Redo while a batch runs: AppKit's menu validation then dims the item, for VoiceOver
+        /// too, and its key equivalent beeps (D407.1). Every other action, and these once the batch ends, as AppKit
+        /// finds it.
+        override public func target(forAction action: Selector, to target: Any?, from sender: Any?) -> Any? {
+            guard UndoCommandGate.shared.allows(action: NSStringFromSelector(action)) else {
+                return nil
+            }
+            return super.target(forAction: action, to: target, from: sender)
+        }
+
+        /// Undo and Redo sent while a batch runs do nothing, however they got past validation. Each one sent is
+        /// signposted as `ledger.editMenu.action` (`traceAction`).
+        override public func sendAction(_ action: Selector, to target: Any?, from sender: Any?) -> Bool {
+            let name = NSStringFromSelector(action)
+            guard let command = UndoCommandGate.command(forAction: name) else {
+                return super.sendAction(action, to: target, from: sender)
+            }
+            let allowed = UndoCommandGate.shared.allows(command)
+            traceAction(command, allowed: allowed)
+            return allowed && super.sendAction(action, to: target, from: sender)
+        }
+
+        /// The signpost `ledger.editMenu.action`, tagged `undoSent`, `undoBlocked`, `redoSent` or `redoBlocked`,
+        /// with, in order: `NSApp.currentEvent`'s type and timestamp, the outermost and innermost events being
+        /// dispatched's types, the dispatched key-down's time, and whether the gate is closed (1 or 0); -1 for each
+        /// one there's none of, and -2 as the outer type with no `sendEvent` wrapper.
+        private func traceAction(_ command: UndoCommandGate.Command, allowed: Bool) {
+            let tag: StaticString =
+                switch (command, allowed) {
+                case (.undo, true): "undoSent"
+                case (.undo, false): "undoBlocked"
+                case (.redo, true): "redoSent"
+                case (.redo, false): "redoBlocked"
+                }
+            let dispatch = EventDispatch.shared
+            BatchTrace.event(
+                "ledger.editMenu.action",
+                tag,
+                values: [
+                    currentEvent.map { Double($0.type.rawValue) } ?? -1,
+                    currentEvent?.timestamp ?? -1,
+                    Double(dispatch.outermostType),
+                    Double(dispatch.innermostType),
+                    dispatch.current?.time ?? -1,
+                    UndoCommandGate.shared.isClosed ? 1 : 0,
+                ],
+            )
         }
     }
 #endif

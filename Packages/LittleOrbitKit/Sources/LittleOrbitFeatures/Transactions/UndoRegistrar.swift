@@ -105,23 +105,17 @@ public final class LedgerUpdates {
     @ObservationIgnored private(set) var lastBatch: ClosedRange<TimeInterval>?
     /// When the batch running now started.
     @ObservationIgnored private var batchStart: TimeInterval?
-    /// The event whose command was dropped last: it drops no other.
+    /// The key-down whose command was dropped last: it drops no other.
     @ObservationIgnored var lastDroppedEventTime: TimeInterval?
-    /// The press whose command was dropped last: it drops no other.
-    @ObservationIgnored var lastDroppedPressTime: TimeInterval?
     /// The `systemUptime` clock; tests set it.
     @ObservationIgnored var uptime: @MainActor () -> TimeInterval = { ProcessInfo.processInfo.systemUptime }
-    /// When the app started, on that clock: a press time before it is wrong, and drops nothing; tests set it.
-    @ObservationIgnored var launchUptime = ProcessInfo.processInfo.systemUptime
-    /// The input event AppKit is dispatching now (`EventDispatch`), `nil` for none, as for an Accessibility action
-    /// and always on iOS; tests set it (B5 on bab2ad8).
+    /// The key-down AppKit is dispatching now (`EventDispatch`), `nil` for none, as for a menu, an Accessibility
+    /// action and always on iOS; tests set it (B5 on bab2ad8).
     @ObservationIgnored var dispatchingEvent: @MainActor () -> QueuedCommandPolicy.Event? = {
         EventDispatch.shared.current
     }
-    /// Seconds since the left mouse button last went down: the event source on the Mac, `nil` on iOS; tests set it.
-    @ObservationIgnored var secondsSincePress: @MainActor () -> Double? = QueuedCommandPolicy.secondsSinceLeftMouseDown
-    /// Seconds since a key last went down: the same event source on the Mac, `nil` on iOS; tests set it.
-    @ObservationIgnored var secondsSinceKeyDown: @MainActor () -> Double? = QueuedCommandPolicy.secondsSinceKeyDown
+    /// Turns Edit › Undo and Redo off while a batch runs, and on again as it ends (D407.1); tests give their own.
+    @ObservationIgnored var commandGate = UndoCommandGate.shared
     /// Window refreshes running now, by the revision of the change that started them (`refreshStarted(for:)`), so
     /// a batch ends once its own change's refreshes are done, and one still running for an earlier change, in any
     /// window, doesn't hold it (Tech Architect on 0d676f8).
@@ -164,6 +158,7 @@ public final class LedgerUpdates {
         batchStart = start
         BatchTrace.event("ledger.batch.start", value: start)
         refreshHistories()
+        commandGate.batchStarted()
         return true
     }
 
@@ -180,6 +175,7 @@ public final class LedgerUpdates {
         BatchTrace.event("ledger.batch.end", value: end)
         batchStart = nil
         refreshHistories()
+        commandGate.batchEnded()
     }
 
     /// The longest `settle()` waits for window refreshes, so a refresh that never ends can't hold busy on for good.

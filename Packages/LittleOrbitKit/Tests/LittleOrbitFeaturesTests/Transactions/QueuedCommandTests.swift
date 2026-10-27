@@ -21,7 +21,7 @@ struct QueuedCommandTests {
 
     @Test("An event during the batch, or at its very start or end, is dropped")
     func duringBatch() {
-        // A ⌘Z key press, or a menu click, at 100.6 s, during the batch.
+        // A ⌘Z key-down at 100.6 s, during the batch.
         #expect(Policy.dropsCommand(eventTime: 100.6, lastBatch: Self.batch, lastDroppedEventTime: nil))
         #expect(Policy.dropsCommand(eventTime: 100.0, lastBatch: Self.batch, lastDroppedEventTime: nil))
         #expect(Policy.dropsCommand(eventTime: 101.0, lastBatch: Self.batch, lastDroppedEventTime: nil))
@@ -252,42 +252,26 @@ struct QueuedCommandTests {
     }
 }
 
-/// The uptime clock, the time of the event being dispatched (`nil` for none, as for an Accessibility action) and the
-/// last press, moved by hand. Isolated to the main actor, so the
-/// `@MainActor` closures `LedgerUpdates` reads them through capture it safely, and it can be changed after they do.
+/// The uptime clock and the time of the key-down being dispatched (`nil` for none, as for a menu or an Accessibility
+/// action), moved by hand. Isolated to the main actor, so the `@MainActor` closures `LedgerUpdates` reads them
+/// through capture it safely, and it can be changed after they do.
 @MainActor
 final class UptimeClock {
     var now: TimeInterval
     var eventTime: TimeInterval?
-    /// Whether the event being dispatched is the left mouse button's.
-    var isMouse = false
-    /// When the left button last went down, on the same clock; `nil` for no press source.
-    var pressTime: TimeInterval?
-    /// What the press source reports instead, when set: a reading that can't be right.
-    var rawSecondsSince: Double?
-    /// When a key last went down, on the same clock; `nil` for none.
-    var keyTime: TimeInterval?
 
-    /// The event being dispatched, as `LedgerUpdates.dispatchingEvent` gives it.
+    /// The key-down being dispatched, as `LedgerUpdates.dispatchingEvent` gives it.
     var event: QueuedCommandPolicy.Event? {
-        eventTime.map { QueuedCommandPolicy.Event(time: $0, isMouse: isMouse) }
-    }
-
-    /// The seconds since the press, as `LedgerUpdates.secondsSincePress` gives it.
-    var secondsSincePress: Double? {
-        rawSecondsSince ?? pressTime.map { now - $0 }
+        eventTime.map { QueuedCommandPolicy.Event(time: $0) }
     }
 
     init(now: TimeInterval) {
         self.now = now
     }
 
-    /// Reads the clock, the event being dispatched and the press source for `updates`, which started at uptime 0.
+    /// Reads the clock and the key-down being dispatched for `updates`.
     func drive(_ updates: LedgerUpdates) {
         updates.uptime = { self.now }
         updates.dispatchingEvent = { self.event }
-        updates.secondsSincePress = { self.secondsSincePress }
-        updates.secondsSinceKeyDown = { self.keyTime.map { self.now - $0 } }
-        updates.launchUptime = 0
     }
 }
