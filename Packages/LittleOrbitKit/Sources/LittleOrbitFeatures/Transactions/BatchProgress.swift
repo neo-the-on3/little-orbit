@@ -50,7 +50,8 @@ public final class BatchProgress {
     public private(set) var done = 0
     public private(set) var stage = Stage.updating
     public private(set) var isShown = false
-    /// Whether the save runs off the main actor, so the bar can move while it runs (#285, B).
+    /// Whether the batch was handed off to a save off the main actor, so the bar moves while it runs (#285, B).
+    /// Set at the hand-off (`LedgerBatchReporter.handingOff`), not when "Saving…" starts (D405.5).
     public private(set) var savesOffMain = false
     /// How many times the sheet went up: once at most (#285, B).
     @ObservationIgnored private(set) var timesShown = 0
@@ -98,8 +99,9 @@ public final class BatchProgress {
         self.now = now
     }
 
-    /// Whether the bar is the indeterminate "Saving…" one (#285, B; UI Designer's approval): once the save runs off
-    /// the main actor. It switches once and never back: `stage` doesn't leave `.saving` and `savesOffMain` is never
+    /// Whether the bar is the indeterminate "Saving…" one (#285, B; UI Designer's approval; D405.5): only once the
+    /// batch is handed off to the save off the main actor. While the rows are checked and "Saving…" starts, it's
+    /// determinate. It switches once and never back: `stage` doesn't leave `.saving` and `savesOffMain` is never
     /// cleared, so a late row count or a save that falls back to the main actor keeps it.
     public var showsIndeterminateBar: Bool {
         stage == .saving && savesOffMain
@@ -137,6 +139,7 @@ public final class BatchProgress {
             rowsDone: { continuation.yield($0) },
             willSave: { [weak self] rows in await self?.willSave(changing: rows) },
             willSaveOffMain: { [weak self] rows in await self?.willSaveOffMain(changing: rows) },
+            handingOff: { [weak self] in self?.handedOff() },
         )
     }
 
@@ -253,12 +256,13 @@ public final class BatchProgress {
 
     /// "Saving…" for a save off the main actor (#285, B), which leaves the main actor free: the sheet goes up now
     /// if `BatchSheetPolicy` says so, without waiting for it to draw, and the half-second timer keeps running, so a
-    /// save that runs long still shows it. Both run on the main actor and check `isShown`, so it goes up once. The
-    /// UI gets a turn so "Saving…" is drawn. With no row to change, there's no sheet at all (D402).
+    /// save that runs long still shows it. Both run on the main actor and check `isShown`, so it goes up once. With
+    /// no row to change, there's no sheet at all (D402). It returns without a turn of the run loop: the batch is
+    /// handed off at once, and the sheet is presented and drawn while the save runs, instead of before it (Tester2
+    /// on 8728d1f: Undo and Redo spent about 0.35 s on main between the sheet going up and the hand-off).
     private func willSaveOffMain(changing rows: Int) async {
         done = total
         stage = .saving
-        savesOffMain = true
         let elapsed = startedAt.map { now() - $0 } ?? .zero
         switch BatchSheetPolicy.beforeSave(elapsed: elapsed, changedRows: rows, isShown: isShown) {
         case .keepShown, .skip:
@@ -270,7 +274,14 @@ public final class BatchProgress {
             cancelTimer()
             isShown = false
         }
-        await Self.uiTurn()
+    }
+
+    /// The batch is being handed off to the save off the main actor: the bar turns indeterminate now, once (D405.5).
+    private func handedOff() {
+        guard stage == .saving else {
+            return
+        }
+        savesOffMain = true
     }
 
     /// Turns of the run loop until the sheet's view appears, for `sheetAppearLimit` at most, then `sheetSettle`

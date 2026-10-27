@@ -128,6 +128,7 @@ struct BatchCancelDuringSaveTests {
     func cancelDuringSave(undoing: Bool, how: Cancel) async throws {
         let setup = try await Setup()
         let task = try await Self.startHeld(setup, undoing: undoing)
+        #expect(setup.window.history.batchProgress?.showsIndeterminateBar == true, "Handed off (D405.5)")
         let revision = setup.updates.revision
         let announced = setup.window.announcements.count
 

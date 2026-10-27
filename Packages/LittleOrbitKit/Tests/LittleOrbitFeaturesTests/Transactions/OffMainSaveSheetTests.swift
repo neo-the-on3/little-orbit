@@ -33,9 +33,11 @@ struct OffMainSaveSheetTests {
         await reporter.reportSaving(3_334, offMain: true)
         #expect(progress.isShown)
         #expect(progress.stage == .saving)
+        #expect(!progress.savesOffMain, "Not until the hand-off (D405.5)")
+        reporter.handingOff()
         #expect(progress.savesOffMain, "The bar moves while the save runs")
         // The save is still running when the timer's half second (60 ms here) passes.
-        try await Task.sleep(for: .milliseconds(150))
+        await progress.timer?.value
         #expect(progress.isShown)
         #expect(progress.timesShown == 1)
         progress.finish()
@@ -50,13 +52,17 @@ struct OffMainSaveSheetTests {
         await reporter.reportSaving(20, offMain: true)
         #expect(!progress.isShown, "No flash for a quick, small batch")
         #expect(progress.timesShown == 0)
-        try await Task.sleep(for: .milliseconds(200))
+        reporter.handingOff()
+        // The timer's own task, not a real-time sleep, so a loaded run can't reorder them.
+        await progress.timer?.value
         #expect(progress.isShown, "The timer still runs during a save off the main actor")
         #expect(progress.timesShown == 1)
         progress.finish()
     }
 
-    @Test("The bar turns indeterminate once, at the save, and never back; the title and \"Saving…\" stay (UI Designer)")
+    @Test(
+        "The bar turns indeterminate once, at the hand-off, and never back; the title and \"Saving…\" stay (D405.5)"
+    )
     func indeterminateOneWay() async throws {
         let progress = BatchProgress(kind: .undoing, total: 4, showAfter: nil)
         let reporter = progress.start()
@@ -71,14 +77,20 @@ struct OffMainSaveSheetTests {
         #expect(progress.value == 2)
         #expect(progress.message == "Updating 4 transactions.")
         await reporter.reportSaving(4, offMain: true)
+        #expect(!progress.showsIndeterminateBar, "Still determinate, and full, until the batch is handed off")
+        #expect(progress.value == 4)
+        reporter.handingOff()
         var seen = [progress.showsIndeterminateBar]
-        // A row count that arrives late, then a save that falls back to the main actor.
+        #expect(progress.message == "Saving…", "Saving… once it's indeterminate")
+        // A row count that arrives late, then a save that falls back to the main actor, then another hand-off.
         reporter.rowsDone(3)
         try await Task.sleep(for: .milliseconds(50))
         seen.append(progress.showsIndeterminateBar)
         await reporter.willSave(4)
         seen.append(progress.showsIndeterminateBar)
-        #expect(seen == [true, true, true], "One switch, no flicker back to determinate")
+        reporter.handingOff()
+        seen.append(progress.showsIndeterminateBar)
+        #expect(seen == [true, true, true, true], "One switch, no flicker back to determinate")
         #expect(progress.stage == .saving)
         #expect(progress.value == 4)
         #expect(progress.message == "Saving…", "VoiceOver still reads Saving…")
