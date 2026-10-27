@@ -103,7 +103,7 @@ extension UndoCommandGate {
                 queue: .main,
             ) { _ in
                 MainActor.assumeIsolated {
-                    UndoCommandGate.shared.menuBeganTracking()
+                    _ = UndoCommandGate.shared.menuBeganTracking()
                 }
             }
         #endif
