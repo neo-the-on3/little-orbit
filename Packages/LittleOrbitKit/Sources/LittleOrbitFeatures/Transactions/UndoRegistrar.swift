@@ -100,21 +100,25 @@ public final class LedgerUpdates {
     /// ledger writes are off, Undo and Redo included; nothing queues (#285, D398).
     public private(set) var isBatchRunning = false
     /// When the last batch ran, start to end, on the `systemUptime` clock, for `dropsQueuedCommand` (Tester2,
-    /// c8c6594; review 5666694381).
+    /// c8c6594; review 5666694381). The same clock as the events' timestamps and the press time
+    /// (`QueuedCommandPolicy`), so they compare directly (Tech Architect's condition 4 on 3dc318b).
     @ObservationIgnored private(set) var lastBatch: ClosedRange<TimeInterval>?
-    /// Whether a mouse button was held as the last batch ended, so a mouse-up just after it finishes a press made
-    /// inside it (B3 on 0389f40).
-    @ObservationIgnored private(set) var heldAtLastEnd = false
     /// When the batch running now started.
     @ObservationIgnored private var batchStart: TimeInterval?
     /// The event whose command was dropped last: it drops no other.
     @ObservationIgnored private var lastDroppedEventTime: TimeInterval?
+    /// The press whose command was dropped last: it drops no other.
+    @ObservationIgnored private var lastDroppedPressTime: TimeInterval?
+    /// The newest event an Undo or Redo was handled with, so an older or the same one is stale (condition 1).
+    @ObservationIgnored private var lastCommandEventTime: TimeInterval?
     /// The `systemUptime` clock; tests set it.
     @ObservationIgnored var uptime: @MainActor () -> TimeInterval = { ProcessInfo.processInfo.systemUptime }
+    /// When the app started, on that clock: a press time before it is wrong, and drops nothing; tests set it.
+    @ObservationIgnored var launchUptime = ProcessInfo.processInfo.systemUptime
     /// The event being handled; tests set it.
     @ObservationIgnored var currentEvent: @MainActor () -> QueuedCommandPolicy.Event? = QueuedCommandPolicy.currentEvent
-    /// Whether a mouse button is held now; tests set it.
-    @ObservationIgnored var mouseButtonHeld: @MainActor () -> Bool = QueuedCommandPolicy.isMouseButtonHeld
+    /// Seconds since the left mouse button last went down: the event source on the Mac, `nil` on iOS; tests set it.
+    @ObservationIgnored var secondsSincePress: @MainActor () -> Double? = QueuedCommandPolicy.secondsSinceLeftMouseDown
     /// Window refreshes running now, after a change (`refreshStarted`), so a batch can end once they're done.
     @ObservationIgnored private(set) var refreshesRunning = 0
     /// How `settle()` waits; tests may step it by hand.
@@ -156,7 +160,7 @@ public final class LedgerUpdates {
 
     /// Ends the batch, recording its end now. A batch Undo or Redo calls it once its change has been posted, every
     /// window has refreshed and the main actor is free again (`settle()`), so the busy flag and the drop window cover
-    /// everything the user sees as busy (D403.1; Tester2 on 1f2eae8). Bulk Edit's Apply calls it as it returns.
+    /// everything the user sees as busy (D403.1; Tester2 on 1f2eae8). Bulk Edit's Apply ends the same way (D403 on 3dc318b).
     func endBatch() {
         guard isBatchRunning else {
             return
@@ -164,7 +168,6 @@ public final class LedgerUpdates {
         isBatchRunning = false
         let end = uptime()
         lastBatch = min(batchStart ?? end, end)...end
-        heldAtLastEnd = mouseButtonHeld()
         BatchTrace.event("ledger.batch.end", value: end)
         batchStart = nil
         refreshHistories()
@@ -224,21 +227,36 @@ public final class LedgerUpdates {
 
     /// Whether the command being handled was asked for while the last batch ran, so it waited in the event queue
     /// while the save blocked the main thread: an Undo or Redo then does nothing (`QueuedCommandPolicy`). A `true`
-    /// uses up the event, so the next command it's seen with goes through.
+    /// uses up the event, or for the mouse the press, so the next command it's seen with goes through.
+    ///
+    /// Signposted on every check: `ledger.command.press` with the press time (-1 for none, or one that can't be
+    /// right), `ledger.command.pressAge` with the event source's raw seconds since it (-1 for no source), then
+    /// `ledger.command.dropped` or `.passed` with the event's time (-1 for none, or a stale one).
     func dropsQueuedCommand() -> Bool {
-        let event = currentEvent()
+        let seen = currentEvent()
+        let event = QueuedCommandPolicy.fresh(seen, after: lastCommandEventTime)
+        if let seen {
+            lastCommandEventTime = max(lastCommandEventTime ?? seen.time, seen.time)
+        }
+        let age = secondsSincePress()
+        let press = QueuedCommandPolicy.pressTime(now: uptime(), secondsSince: age, launch: launchUptime)
+        BatchTrace.event("ledger.command.press", value: press ?? -1)
+        BatchTrace.event("ledger.command.pressAge", value: age ?? -1)
         let drops = QueuedCommandPolicy.dropsCommand(
             event: event,
+            pressTime: press,
             lastBatch: lastBatch,
-            heldAtEnd: heldAtLastEnd,
             lastDroppedEventTime: lastDroppedEventTime,
+            lastDroppedPressTime: lastDroppedPressTime,
         )
-        if let event {
-            // The event's time and whether it dropped, to line up with `ledger.batch.start` and `.end`.
-            BatchTrace.event(drops ? "ledger.command.dropped" : "ledger.command.passed", value: event.time)
-        }
-        if drops {
-            lastDroppedEventTime = event?.time
+        // The event's time, to line up with `ledger.batch.start` and `.end`.
+        BatchTrace.event(drops ? "ledger.command.dropped" : "ledger.command.passed", value: event?.time ?? -1)
+        if drops, let event {
+            if event.isMouse {
+                lastDroppedPressTime = press
+            } else {
+                lastDroppedEventTime = event.time
+            }
         }
         return drops
     }
