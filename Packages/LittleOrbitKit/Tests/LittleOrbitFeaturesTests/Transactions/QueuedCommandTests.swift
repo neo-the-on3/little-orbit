@@ -258,6 +258,8 @@ final class UptimeClock {
     var eventTime: TimeInterval?
     /// Whether the current event is a mouse-up.
     var isMouseUp = false
+    /// Whether a mouse button is held, as `LedgerUpdates.mouseButtonHeld` gives it.
+    var buttonHeld = false
 
     /// The current event, as `LedgerUpdates.currentEvent` gives it.
     var event: QueuedCommandPolicy.Event? {
