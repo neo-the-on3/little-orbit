@@ -66,7 +66,7 @@ extension ScheduledListViewModel {
             return false
         }
         switch command {
-        case .edit: openEditor(row.itemID)
+        case .edit: openEditor(row)
         case .delete: confirmDelete(row.itemID)
         case .payCustom:
             guard row.canSettle else {
@@ -92,9 +92,10 @@ extension ScheduledListViewModel {
                 sections.append(ScheduledTableSection(kind: kind, title: title, rows: rows))
             }
         }
-        add(.overdue, overdueHeader, board.overdue.map { tableRow($0.item, $0.day, .overdue, presenter) })
-        add(.dueToday, dueTodayHeader, board.dueToday.map { tableRow($0.item, $0.day, .dueToday, presenter) })
-        add(.upcoming, upcomingHeader, board.upcoming.map { tableRow($0.item, $0.day, .upcoming, presenter) })
+        // Each due row is its occurrence as it records it, keyed to its own day (D45).
+        add(.overdue, overdueHeader, board.overdue.map { tableRow($0, .overdue, presenter) })
+        add(.dueToday, dueTodayHeader, board.dueToday.map { tableRow($0, .dueToday, presenter) })
+        add(.upcoming, upcomingHeader, board.upcoming.map { tableRow($0, .upcoming, presenter) })
         add(.completed, completedTitle, board.completed.map { tableRow($0, nil, .completed, presenter) })
         tableSections = sections
         tableRowsByID = Dictionary(
@@ -149,12 +150,21 @@ extension ScheduledListViewModel {
     }
 
     private func tableRow(
-        _ item: ScheduledItem,
-        _ day: CalendarDay?,
+        _ due: ScheduledDue,
         _ kind: ScheduledPresenter.Kind,
         _ presenter: ScheduledPresenter,
     ) -> ScheduledTableRow {
-        let row = presenter.row(item, day: day, kind: kind)
+        tableRow(due.occurrenceItem, due.day, key: due.key, kind, presenter)
+    }
+
+    private func tableRow(
+        _ item: ScheduledItem,
+        _ day: CalendarDay?,
+        key: CalendarDay? = nil,
+        _ kind: ScheduledPresenter.Kind,
+        _ presenter: ScheduledPresenter,
+    ) -> ScheduledTableRow {
+        let row = presenter.row(item, day: day, key: key, kind: kind)
         let shown = day ?? lastDueDay(of: item)
         let (amount, tone) = presenter.amountText(of: item)
         return ScheduledTableRow(
