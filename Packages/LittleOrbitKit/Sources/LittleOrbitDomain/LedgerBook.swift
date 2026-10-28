@@ -64,7 +64,7 @@ public enum LedgerBook {
             }
             // Any stored scheduled item, Completed or hidden ones included, keeps its accounts' currency too, so
             // a form opened before the item was scheduled can't change it (D410.1, D412).
-            let isScheduled = CurrencyLock.scheduledAccountIDs(snapshot.scheduledItems).contains(account.id)
+            let isScheduled = CurrencyLock.scheduledAccountIDs(in: snapshot).contains(account.id)
             if currencyChanged && (hasTransactions || isScheduled) {
                 throw LedgerValidationError.currencyLocked
             }

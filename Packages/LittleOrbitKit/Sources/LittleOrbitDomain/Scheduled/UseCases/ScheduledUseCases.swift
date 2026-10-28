@@ -42,6 +42,9 @@ public struct ScheduledListing: Equatable, Sendable {
 @MainActor
 public protocol LoadScheduledUseCase {
     func listing() throws -> ScheduledListing
+    /// The accounts the store won't change the currency of because a scheduled item uses them, hidden items
+    /// included: `CurrencyLock.scheduledAccountIDs(in:)` on the stored items (#207 B2).
+    func currencyLockedAccountIDs() throws -> Set<UUID>
     /// Today, as the screens and the form use it.
     func today() -> CalendarDay
     /// The device's time zone now: a new item is dated in it, and the form's date pickers work in it.
@@ -200,6 +203,10 @@ public struct DefaultScheduledUseCases: LoadScheduledUseCase, ManageScheduledUse
             categories: ledger.categoriesVisible(),
             payees: ledger.payeesVisible(),
         )
+    }
+
+    public func currencyLockedAccountIDs() throws -> Set<UUID> {
+        CurrencyLock.scheduledAccountIDs(in: try repository.scheduleLedger())
     }
 
     public func save(_ item: ScheduledItem) throws {
