@@ -113,26 +113,29 @@
 
     /// One category row: icon, name and amount, then the transaction count and share, then a bar as long as
     /// the row's share of the largest row. A row at 0 or below (refund-only) has no bar. VoiceOver reads the
-    /// row as one line of the data table: name, amount, currency, share and count.
+    /// row as one line of the data table: name, amount, currency, share and count. At accessibility text sizes
+    /// the name sits above the amount and the count above the share, so the name keeps its width and wraps
+    /// rather than being squeezed out by the amount (Tester's AX5 check on #185).
     struct SpendingRowView: View {
         let row: SpendingRowModel
+        @Environment(\.dynamicTypeSize) private var dynamicTypeSize
 
         var body: some View {
             HStack(alignment: .top) {
                 ReportCategoryIcon(symbolName: row.symbolName, hue: row.hue)
                 VStack(alignment: .leading) {
-                    HStack(alignment: .firstTextBaseline) {
+                    ReportPairLayout(stacked: stacked) {
                         Text(row.name)
-                        Spacer()
+                    } trailing: {
                         // An amount is never truncated (UI Designer, #82).
                         Text(row.amountText)
                             .monospacedDigit()
                             .foregroundStyle(row.amountTone.color)
                             .fixedSize()
                     }
-                    HStack(alignment: .firstTextBaseline) {
+                    ReportPairLayout(stacked: stacked) {
                         Text(row.countText)
-                        Spacer()
+                    } trailing: {
                         if let share = row.shareText {
                             Text(share)
                                 .monospacedDigit()
@@ -150,10 +153,62 @@
             .accessibilityElement(children: .ignore)
             .accessibilityLabel(row.accessibilityLabel)
         }
+
+        private var stacked: Bool { dynamicTypeSize.isAccessibilitySize }
     }
 
-    /// A category's icon chip: its white symbol on its `category/*` hue, as on the category screens.
+    /// Two texts on one line, the second pushed to the trailing edge, as at the default sizes; or, `stacked`, the
+    /// first above the second, both leading-aligned, for accessibility text sizes.
+    struct ReportPairLayout<Leading: View, Trailing: View>: View {
+        private let stacked: Bool
+        private let alignment: VerticalAlignment
+        private let leading: Leading
+        private let trailing: Trailing
+
+        /// `alignment` is the one line's vertical alignment, as the row's own `HStack` had it.
+        init(
+            stacked: Bool,
+            alignment: VerticalAlignment = .firstTextBaseline,
+            @ViewBuilder leading: () -> Leading,
+            @ViewBuilder trailing: () -> Trailing,
+        ) {
+            self.stacked = stacked
+            self.alignment = alignment
+            self.leading = leading()
+            self.trailing = trailing()
+        }
+
+        var body: some View {
+            if stacked {
+                VStack(alignment: .leading) {
+                    leading
+                    trailing
+                }
+            } else {
+                HStack(alignment: alignment) {
+                    leading
+                    Spacer()
+                    trailing
+                }
+            }
+        }
+    }
+
+    /// A category's icon chip: its white symbol on its `category/*` hue, as on the category screens. It grows with
+    /// the text up to the largest standard size and no further, so at accessibility sizes it isn't clipped and
+    /// leaves the row's text its width (Tester's AX5 check on #185).
     struct ReportCategoryIcon: View {
+        let symbolName: String
+        let hue: CategoryHue
+
+        var body: some View {
+            ReportCategoryChip(symbolName: symbolName, hue: hue)
+                .dynamicTypeSize(...DynamicTypeSize.xxxLarge)
+        }
+    }
+
+    /// The chip itself, sized by the Dynamic Type size its parent allows.
+    private struct ReportCategoryChip: View {
         let symbolName: String
         let hue: CategoryHue
         @ScaledMetric private var size: CGFloat = 32
