@@ -6,7 +6,8 @@ import Testing
 /// Debug › Send Queued ⌘Z (n2 on #201): when it sends its ⌘Z, and with what press time. The key-down itself and
 /// `NSApp.sendEvent(_:)` are AppKit's, checked by Tester2 in a Debug Mac build; the drop it then gets is
 /// `QueuedDispatchTests`'. Mutants: sending as soon as it's chosen fails `inBatchWaits`; taking the press time at
-/// the send fails `inBatchKeepsPressTime`; dropping the `#if DEBUG` fails `debugOnly`.
+/// the send fails `inBatchKeepsPressTime`; dropping the `#if DEBUG` fails `debugOnly`. For Send ⌘Z Right After
+/// Batch (`.atSend`): keeping the chosen time fails `atSendStampsAfterEnd`; sending before the end fails it too.
 @MainActor
 @Suite("Debug › Send Queued ⌘Z", .timeLimit(.minutes(1)))
 struct QueuedUndoKeyDebugTests {
@@ -84,6 +85,39 @@ struct QueuedUndoKeyDebugTests {
             lastDroppedEventTime: nil,
         )
         #expect(!drops, "So Undo runs")
+    }
+
+    @Test("Right after the batch (.atSend): sent once after the end, stamped then, outside the batch, so Undo runs")
+    func atSendStampsAfterEnd() async throws {
+        let updates = LedgerUpdates()
+        var now: TimeInterval = 30
+        updates.uptime = { now }
+        #expect(updates.beginBatch())
+        now = 30.2
+        var sent: [TimeInterval] = []
+        var checks = 0
+        let task = QueuedUndoKeyDebug.press(
+            updates: updates,
+            stamp: .atSend,
+            uptime: { now },
+            sleep: { _ in
+                checks += 1
+                if checks == 2 {
+                    now = 31
+                    updates.endBatch()
+                }
+                now += 0.02
+            },
+            send: { sent.append($0) },
+        )
+        await task.value
+        let batch = try #require(updates.lastBatch)
+        #expect(batch == 30...31)
+        #expect(sent.count == 1)
+        let stamped = try #require(sent.first)
+        #expect(stamped > batch.upperBound, "Stamped after the end, not when chosen")
+        let drops = QueuedCommandPolicy.dropsCommand(eventTime: stamped, lastBatch: batch, lastDroppedEventTime: nil)
+        #expect(!drops, "So Undo runs once")
     }
 
     /// The release check a test can see: tests build Debug only, so it reads the source and checks the whole file
