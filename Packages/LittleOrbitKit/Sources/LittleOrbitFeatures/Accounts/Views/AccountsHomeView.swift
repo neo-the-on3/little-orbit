@@ -328,7 +328,8 @@
                     .fontWeight(model.isReordering ? .semibold : .regular)
                 }
             }
-            if transactions.hasSearch, !model.isFirstRun {
+            // Hidden while reordering, like Add, so Search can't be pushed in the middle of Edit (UI Designer).
+            if transactions.hasSearch, !model.isFirstRun, model.allowsRowActions {
                 ToolbarItem(placement: .topBarTrailing) {
                     // #28: opens search with the field ready to type.
                     Button {
