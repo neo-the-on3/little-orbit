@@ -74,9 +74,10 @@ public final class ScheduledPayViewModel: Identifiable {
         fields != openedFields
     }
 
-    /// The fields as they are now; `openedFields` holds them as the sheet opened.
+    /// The fields as they are now; `openedFields` holds them as the sheet opened. Received counts too (#207 on
+    /// #201), so an edited amount received asks “Discard Changes?” (D411) like any other field.
     private var fields: [AnyHashable] {
-        [amountText, postedOn, accountID, categoryID, changesFutureOccurrences]
+        [amountText, receivedText, postedOn, accountID, categoryID, changesFutureOccurrences]
     }
 
     /// Cancel, Esc on the Mac or a swipe down on iOS (D411): with unsaved edits, the same fields as `hasUnsavedEdits`,
