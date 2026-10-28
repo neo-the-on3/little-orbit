@@ -17,6 +17,7 @@ extension ScheduledPayViewModel {
     }
 
     public var receivedLabel: String { ScheduledText.received }
+    public var receivedAccessibilityLabel: String { ScheduledText.amountReceived }
 
     /// To's currency code, the Received field's prompt.
     public var receivedCurrencyCode: String? {

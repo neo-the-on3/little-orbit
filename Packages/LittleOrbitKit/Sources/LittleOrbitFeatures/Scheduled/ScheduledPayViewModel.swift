@@ -14,7 +14,13 @@ public final class ScheduledPayViewModel: Identifiable {
     public let id = UUID()
     public var amountText: String
     public var postedOn: CalendarDay
-    public var accountID: UUID?
+    /// From, or the account. A From in another currency reformats an amount it can hold exactly in that
+    /// currency's decimals, as the Amount field is in From's currency (D415).
+    public var accountID: UUID? {
+        didSet {
+            accountChanged(from: oldValue)
+        }
+    }
     public var categoryID: UUID?
     public var changesFutureOccurrences = false
     /// A transfer between currencies: the amount To receives, in To's currency, prefilled with the item's (#207).
@@ -99,17 +105,47 @@ public final class ScheduledPayViewModel: Identifiable {
     /// A transfer has no category, as on a transaction.
     public var showsCategory: Bool { item.type != .transfer }
 
+    /// The Amount field's currency: the chosen From's, or the account's (D415).
     var currencyCode: String {
         listing.account(accountID)?.currencyCode ?? CurrencyCode.deviceDefault
     }
 
-    private var scheduledAmountText: String {
-        let currency = listing.account(item.accountID)?.currencyCode ?? CurrencyCode.deviceDefault
-        return MoneyFormatter(locale: locale).string(item.amount, currencyCode: currency)
+    /// The Amount field's currency code, shown with it.
+    public var amountCurrencyCode: String { currencyCode }
+    public var amountAccessibilityLabel: String { ScheduledText.amountPaid }
+
+    /// The schedule's own currency: its From's.
+    private var scheduleCurrencyCode: String {
+        listing.account(item.accountID)?.currencyCode ?? CurrencyCode.deviceDefault
     }
 
-    /// "Scheduled amount: ₹1,850.00.", under the amount.
-    public var amountFooter: String { ScheduledText.scheduledAmount(scheduledAmountText) }
+    private var scheduledAmountText: String {
+        MoneyFormatter(locale: locale).string(item.amount, currencyCode: scheduleCurrencyCode)
+    }
+
+    /// "Scheduled amount: ₹1,850.00.", under the amount; once From is in another currency than the schedule's,
+    /// "Scheduled amount: ₹5,000.00, in INR. The amount paid is in USD." (D415).
+    public var amountFooter: String {
+        currencyCode == scheduleCurrencyCode
+            ? ScheduledText.scheduledAmount(scheduledAmountText)
+            : ScheduledText.scheduledAmount(scheduledAmountText, in: scheduleCurrencyCode, paidIn: currencyCode)
+    }
+
+    /// From moved to another currency: the amount typed is reformatted in the new one when it reads there exactly,
+    /// "5,000.00" for USD or "5,000" for JPY; any other text stays as typed, for its error or hint.
+    private func accountChanged(from old: UUID?) {
+        let oldCode = listing.account(old)?.currencyCode ?? CurrencyCode.deviceDefault
+        guard oldCode != currencyCode,
+            let amount = try? AmountInput.parse(amountText, currencyCode: oldCode, locale: locale)
+        else {
+            return
+        }
+        let formatter = MoneyFormatter(locale: locale)
+        let reformatted = formatter.inputString(amount, currencyCode: currencyCode)
+        if (try? AmountInput.parse(reformatted, currencyCode: currencyCode, locale: locale)) == amount {
+            amountText = reformatted
+        }
+    }
 
     /// While the toggle is off: "Only this occurrence changes. The schedule stays ₹1,850.00 on the 15th. Next due:
     /// 15 Nov 2026." While it's on: "Later occurrences use this amount, account and category too. Recorded

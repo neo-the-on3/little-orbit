@@ -10590,6 +10590,45 @@
         }
       }
     },
+    "Scheduled amount: %1$@, in %2$@. The amount paid is in %3$@.": {
+      "comment": "Custom pay sheet footer under the amount once From is in another currency than the schedule’s (D415): %1$@ is the scheduled amount with its currency, %2$@ the schedule’s currency code, %3$@ the Amount field’s, From’s.",
+      "extractionState": "manual",
+      "generatesSymbol": false,
+      "localizations": {
+        "en": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Scheduled amount: %1$@, in %2$@. The amount paid is in %3$@."
+          }
+        }
+      }
+    },
+    "Amount paid": {
+      "comment": "Custom pay sheet: accessibility label of the Amount field, in From’s currency.",
+      "extractionState": "manual",
+      "generatesSymbol": false,
+      "localizations": {
+        "en": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Amount paid"
+          }
+        }
+      }
+    },
+    "Amount received": {
+      "comment": "Custom pay sheet: accessibility label of the Received field, in To’s currency (a transfer between currencies).",
+      "extractionState": "manual",
+      "generatesSymbol": false,
+      "localizations": {
+        "en": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Amount received"
+          }
+        }
+      }
+    },
     "Also change future occurrences": {
       "comment": "Custom pay sheet toggle (a checkbox on the Mac), off by default: the amount, account and category become the schedule’s (D340).",
       "extractionState": "manual",
