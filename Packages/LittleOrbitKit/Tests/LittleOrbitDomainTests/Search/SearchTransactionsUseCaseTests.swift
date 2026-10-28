@@ -42,6 +42,42 @@ struct SearchTransactionsUseCaseTests {
         #expect(byPayee.count == 1)
     }
 
+    @Test("#188 check 5: reading and searching never write; the store is unchanged after every query and scope")
+    func neverWrites() throws {
+        let goa = F.tag("goa")
+        let payee = Payee(name: "Tea Stall")
+        var paid = F.expense(60, on: F.date(2026, 10, 9))
+        paid.payeeID = payee.id
+        paid.tagIDs = [goa.id]
+        let repository = try FakeLedgerRepository(accounts: F.accounts, seedPending: false)
+        try repository.saveTag(goa)
+        try repository.savePayee(payee)
+        try repository.saveTransaction(paid)
+        let before = repository.snapshot
+        let writesBefore = repository.writes
+
+        let search = DefaultSearchTransactionsUseCase(repository: repository)
+        let today = F.day(2026, 10, 21)
+        for query in ["", "tea", "tag:goa", "payee:\"Tea Stall\" year:2026", "zzzz", "after:2026-13-01"] {
+            for type in [nil, TransactionType.expense, .income, .transfer] {
+                for accountID in [nil, F.savingsID] {
+                    let snapshot = try search.read()
+                    _ = snapshot.search(
+                        .parse(query),
+                        filter: TransactionSearchFilter(type: type, accountID: accountID),
+                        today: today,
+                        defaultCurrency: "INR",
+                    )
+                }
+            }
+        }
+
+        #expect(repository.snapshot == before)
+        #expect(repository.writes == writesBefore)
+        #expect(repository.atomicChanges == 0)
+        #expect(!repository.isDefaultSeedPending)
+    }
+
     @Test("A read failure is thrown, not hidden as no results")
     func readFailure() throws {
         let repository = try FakeLedgerRepository(accounts: F.accounts)
