@@ -80,6 +80,29 @@ struct ReportAccountFilterTests {
         #expect(report.accounts.count == 2)
     }
 
+    @Test("A drill-down query with no currency falls back to the given default currency, as the report does (N3)")
+    func entriesDefaultCurrency() {
+        let snapshot = Self.snapshot([
+            R.expense(100, R.rent, on: F.date(2026, 10, 1)),
+            R.expense(5, R.rent, on: F.date(2026, 10, 1), account: F.usdID),
+        ])
+        let query = SpendingReportQuery(range: Self.october)
+        let usd = SpendingReportBuilder.entries(
+            in: snapshot,
+            query: query,
+            categoryID: R.rent.id,
+            defaultCurrency: "USD",
+        )
+        #expect(usd.map(\.amount) == [5])
+        let inr = SpendingReportBuilder.entries(
+            in: snapshot,
+            query: query,
+            categoryID: R.rent.id,
+            defaultCurrency: "INR",
+        )
+        #expect(inr.map(\.amount) == [100])
+    }
+
     @Test("Given I untick one account, then the drill-down lists only the ticked accounts' transactions")
     func drillDownFollowsFilter() {
         let snapshot = Self.snapshot([

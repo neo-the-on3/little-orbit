@@ -216,15 +216,16 @@ public enum SpendingReportBuilder {
         )
     }
 
-    /// The transactions behind one row of `query`'s report, in its currency (the default currency's code
-    /// when it has none) and ticked accounts only, newest first.
+    /// The transactions behind one row of `query`'s report, in its currency (`defaultCurrency` when it has
+    /// none, as the report itself falls back; Tech Architect's N3 on #307) and ticked accounts only, newest first.
     public static func entries(
         in snapshot: LedgerSnapshot,
         query: SpendingReportQuery,
         categoryID: UUID?,
+        defaultCurrency: String = CurrencyCode.deviceDefault,
     ) -> [SpendingReportEntry] {
         let range = query.range
-        let currency = CurrencyCode.normalize(query.currencyCode ?? CurrencyCode.deviceDefault)
+        let currency = CurrencyCode.normalize(query.currencyCode ?? defaultCurrency)
         let payees = Dictionary(snapshot.payeesVisible().map { ($0.id, $0) }, uniquingKeysWith: { first, _ in first })
         var entries: [UUID: SpendingReportEntry] = [:]
         for line in contributions(in: snapshot, range: range)

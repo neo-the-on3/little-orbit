@@ -15,16 +15,27 @@ public final class SpendingDrillDownModel {
     public let row: SpendingRowModel
 
     @ObservationIgnored private let report: SpendingReportViewModel
+    /// Counts reads, so only the latest one started is shown when two overlap (Tech Architect's B1 on #307), as
+    /// the report's own loads do.
+    @ObservationIgnored private var readCount = 0
 
     init(report: SpendingReportViewModel, row: SpendingRowModel) {
         self.report = report
         self.row = row
     }
 
-    /// Reads the row's transactions from the report's current period, currency and accounts.
+    /// Reads the row's transactions from the report's current period, currency and accounts. A read that a newer
+    /// one overtakes, or that's cancelled, changes nothing: each store change starts its own read, and they can
+    /// finish in either order.
     public func load() async {
-        drillDown = await report.drillDown(for: row)
-        loadFailed = drillDown == nil
+        readCount += 1
+        let current = readCount
+        let result = await report.drillDown(for: row)
+        guard current == readCount, !Task.isCancelled else {
+            return
+        }
+        drillDown = result
+        loadFailed = result == nil
     }
 
     /// After a change to the shared store at `storeRevision`: the report reads the store again (once per change,
