@@ -137,7 +137,7 @@ struct SpendingReportViewModelTests {
         #expect(model.period == .thisMonth)
         #expect(model.periodTitle == "October 2026")
         #expect(model.totalText == "₹60,650.50")
-        #expect(model.totalCaption == "Spent in October 2026 · INR")
+        #expect(model.totalCaption == "Spent in October 2026 · INR · all accounts")
         #expect(model.rows.map(\.name) == ["Rent", "Food & Dining › Groceries", "Uncategorised"])
         #expect(model.rows.map(\.amountText) == ["₹45,000.00", "₹12,450.50", "₹3,200.00"])
         #expect(model.rows.map(\.shareText) == ["74.2%", "20.5%", "5.3%"])

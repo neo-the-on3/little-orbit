@@ -243,7 +243,11 @@ public final class SpendingReportViewModel {
         currencyCode = report.currencyCode
         periodTitle = title(of: report.range)
         totalText = formatter.string(report.total, currencyCode: report.currencyCode)
-        totalCaption = ReportText.spentCaption(period: periodTitle, currencyCode: report.currencyCode)
+        totalCaption = ReportText.spentCaption(
+            period: periodTitle,
+            currencyCode: report.currencyCode,
+            accounts: accountsText(report.accounts),
+        )
         accounts = report.accounts
         let largest = report.rows.map(\.amount).max() ?? 0
         rows = report.rows.map { row(for: $0, largest: largest, currencyCode: report.currencyCode) }

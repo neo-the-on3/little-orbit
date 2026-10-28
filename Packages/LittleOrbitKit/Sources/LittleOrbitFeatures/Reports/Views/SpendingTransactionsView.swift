@@ -43,11 +43,7 @@
                         }
                     }
                 } else if drill.loadFailed {
-                    ContentUnavailableView(
-                        model.loadFailedTitle,
-                        systemImage: "exclamationmark.triangle",
-                        description: Text(model.loadFailedMessage),
-                    )
+                    ReportLoadFailedView(model: model) { await drill.retry() }
                 }
             }
             .navigationTitle(drill.drillDown?.title ?? row.name)
