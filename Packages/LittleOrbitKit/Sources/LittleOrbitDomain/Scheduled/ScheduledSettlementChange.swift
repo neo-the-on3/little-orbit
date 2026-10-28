@@ -29,7 +29,8 @@ public struct ScheduledSettlementChange: Equatable, Sendable {
     /// The pending record the settlement replaced, put back by Undo; `nil` when there was none.
     public var replaced: ScheduledOccurrence?
     /// A custom payment that also changed future occurrences: the item before and after it. Undo puts the schedule's
-    /// amount, account and category back as they were, and Redo changes them again (D288.3).
+    /// amount, account and category, and a transfer's amount received and its currency code, back as they were, and
+    /// Redo changes them again (D288.3, #207 B1).
     public var scheduleBefore: ScheduledItem?
     public var scheduleAfter: ScheduledItem?
 
@@ -159,6 +160,9 @@ extension LedgerBook {
         if let reason = goneReference(written: change, settled: settled, in: snapshot) {
             return reason
         }
+        if !receivedCurrencyIsCurrent(written: change, settled: settled, onto: item, in: snapshot) {
+            return .scheduledItemChanged(change.itemID)
+        }
         guard Self.template(of: item) == Self.template(of: change.item) else {
             return .scheduledItemChanged(change.itemID)
         }
@@ -216,11 +220,32 @@ extension LedgerBook {
         return goneCategory || gonePayee ? .scheduledItemChanged(change.itemID) : nil
     }
 
-    /// The fields a custom payment's "Also change future occurrences" sets (`applying(_:to:)`).
+    /// Whether the schedule the revert puts back onto `item`, if any, keeps the store's save invariant, as a form
+    /// save's Undo and Redo check (`staleness(ofSave:undone:in:)`): never a received amount in a currency To isn't
+    /// in now (#207 B1).
+    private static func receivedCurrencyIsCurrent(
+        written change: ScheduledSettlementChange,
+        settled: Bool,
+        onto item: ScheduledItem,
+        in snapshot: LedgerSnapshot,
+    ) -> Bool {
+        guard let schedule = settled ? change.scheduleBefore : change.scheduleAfter else {
+            return true
+        }
+        var restoring = item
+        copySchedule(from: schedule, into: &restoring)
+        return receivedCurrencyIsCurrent(of: restoring, in: snapshot)
+    }
+
+    /// The fields a custom payment's "Also change future occurrences" sets (`applying(_:to:)`): the amount, the
+    /// account and the category, and a transfer's amount received with its currency code (#207 B1), so Undo never
+    /// leaves the schedule at ₹1,000 received as the custom payment's $24.
     private static func copySchedule(from source: ScheduledItem, into item: inout ScheduledItem) {
         item.amount = source.amount
         item.accountID = source.accountID
         item.categoryID = source.categoryID
+        item.destinationAmount = source.destinationAmount
+        item.receivedCurrencyCode = source.receivedCurrencyCode
     }
 
     /// The item without what a settlement or bookkeeping changes: its occurrences and `updatedAt`.

@@ -11,11 +11,22 @@ import Testing
 struct ScheduledCustomPayReceivedTests {
     private typealias Fix = ScheduledFixture
     private static let walletID = UUID(uuidString: "5C000000-0000-4000-8000-000000000020")!
+    private static let cardID = UUID(uuidString: "5C000000-0000-4000-8000-000000000021")!
 
     private static var ledger: LedgerSnapshot {
         var ledger = Fix.ledger
         ledger.accounts.append(
             Account(id: walletID, name: "USD Wallet", type: .cash, currencyCode: "USD", createdAt: Fix.created)
+        )
+        ledger.accounts.append(
+            Account(
+                id: cardID,
+                name: "USD Card",
+                type: .cash,
+                currencyCode: "USD",
+                sortOrder: 9,
+                createdAt: Fix.created,
+            )
         )
         return ledger
     }
@@ -47,10 +58,11 @@ struct ScheduledCustomPayReceivedTests {
         received: Decimal?,
         code: String? = "USD",
         future: Bool = false,
+        from accountID: UUID = Fix.savingsID,
     ) -> ScheduledCustomPayment {
         ScheduledCustomPayment(
             amount: amount,
-            accountID: Fix.savingsID,
+            accountID: accountID,
             categoryID: nil,
             changesFutureOccurrences: future,
             receivedAmount: received,
@@ -113,6 +125,90 @@ struct ScheduledCustomPayReceivedTests {
         let repository = try repository()
         let before = repository.snapshot
         #expect(throws: (any Error).self) { try pay(custom(2_000, received: nil, code: nil), in: repository) }
+        #expect(repository.snapshot == before)
+    }
+
+    // MARK: Undo and Redo with future occurrences (Tech Architect, review 5684398084)
+
+    private func revert(_ result: ScheduledSettlementRevert) throws -> ScheduledSettlementChange {
+        guard case .reverted(let left) = result else {
+            Issue.record("Expected a revert, got \(result)")
+            throw LedgerValidationError.missingScheduledItem
+        }
+        return left
+    }
+
+    private func schedule(_ repository: FakeScheduleRepository) throws -> ScheduledItem {
+        try #require(repository.snapshot.scheduledItems.first)
+    }
+
+    /// To, the USD Wallet, moved to EUR past the store's currency lock, as a restored backup could leave it.
+    private func moveWallet(_ repository: FakeScheduleRepository) throws {
+        let index = try #require(repository.snapshot.accounts.firstIndex { $0.id == Self.walletID })
+        repository.snapshot.accounts[index].currencyCode = "EUR"
+    }
+
+    @Test("The repro: ₹2,000 received as $24 with future on; Undo puts back ₹1,000 and $12, Redo $24 again")
+    func undoRedoRestoresReceived() throws {
+        let repository = try repository()
+        let paid = try #require(try pay(custom(2_000, received: 24, future: true), in: repository))
+        let undone = try revert(try repository.unsettleScheduledOccurrence(paid))
+        var stored = try schedule(repository)
+        #expect(stored.amount == 1_000)
+        #expect(stored.destinationAmount == 12, "Never the custom payment's $24")
+        #expect(stored.receivedCurrencyCode == "USD")
+        #expect(repository.snapshot.transactions.isEmpty)
+        let redone = try revert(try repository.resettleScheduledOccurrence(undone))
+        stored = try schedule(repository)
+        #expect(stored.amount == 2_000)
+        #expect(stored.destinationAmount == 24)
+        #expect(stored.receivedCurrencyCode == "USD")
+        #expect(repository.snapshot.transactions.first?.destinationAmount == 24)
+        _ = try revert(try repository.unsettleScheduledOccurrence(redone))
+        stored = try schedule(repository)
+        #expect(stored.amount == 1_000 && stored.destinationAmount == 12 && stored.receivedCurrencyCode == "USD")
+    }
+
+    @Test(
+        "Paid from a USD account with future on, so nothing is received; Undo puts back $12 and USD, Redo clears both"
+    )
+    func undoRestoresReceivedCurrency() throws {
+        let repository = try repository()
+        let paid = try #require(
+            try pay(custom(50, received: nil, code: nil, future: true, from: Self.cardID), in: repository)
+        )
+        var stored = try schedule(repository)
+        #expect(stored.destinationAmount == nil && stored.receivedCurrencyCode == nil)
+        let undone = try revert(try repository.unsettleScheduledOccurrence(paid))
+        stored = try schedule(repository)
+        #expect(stored.accountID == Fix.savingsID)
+        #expect(stored.destinationAmount == 12)
+        #expect(stored.receivedCurrencyCode == "USD")
+        #expect(LedgerBook.receivedCurrencyIsCurrent(of: stored, in: repository.snapshot))
+        _ = try revert(try repository.resettleScheduledOccurrence(undone))
+        stored = try schedule(repository)
+        #expect(stored.accountID == Self.cardID)
+        #expect(stored.destinationAmount == nil && stored.receivedCurrencyCode == nil)
+    }
+
+    @Test("To moved from USD to EUR since: Undo of the future-on Pay is stale and writes nothing")
+    func undoStaleWhenToMoved() throws {
+        let repository = try repository()
+        let paid = try #require(try pay(custom(2_000, received: 24, future: true), in: repository))
+        try moveWallet(repository)
+        let before = repository.snapshot
+        #expect(try repository.unsettleScheduledOccurrence(paid) == .stale(.scheduledItemChanged(Self.wallet.id)))
+        #expect(repository.snapshot == before)
+    }
+
+    @Test("To moved from USD to EUR after Undo: Redo of the future-on Pay is stale and writes nothing")
+    func redoStaleWhenToMoved() throws {
+        let repository = try repository()
+        let paid = try #require(try pay(custom(2_000, received: 24, future: true), in: repository))
+        let undone = try revert(try repository.unsettleScheduledOccurrence(paid))
+        try moveWallet(repository)
+        let before = repository.snapshot
+        #expect(try repository.resettleScheduledOccurrence(undone) == .stale(.scheduledItemChanged(Self.wallet.id)))
         #expect(repository.snapshot == before)
     }
 }
