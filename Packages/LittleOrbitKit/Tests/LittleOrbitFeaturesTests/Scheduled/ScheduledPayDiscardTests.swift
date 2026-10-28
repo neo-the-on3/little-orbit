@@ -26,7 +26,7 @@ struct ScheduledPayDiscardTests {
     )
     func editedAsks(_ field: ScheduledPayUnsavedTests.PayField) throws {
         let scene = try ScheduledScene()
-        let (list, sheet) = try paySheet(scene)
+        let (list, sheet) = try field.open(scene)
         field.change(sheet, scene)
         #expect(!sheet.requestDismiss(from: .cancel), "\(field.rawValue)")
         #expect(sheet.discard.isPresentedFromCancel)

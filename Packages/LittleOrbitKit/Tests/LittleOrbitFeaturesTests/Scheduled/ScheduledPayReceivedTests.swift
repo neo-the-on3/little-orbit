@@ -11,23 +11,13 @@ import Testing
 @MainActor
 @Suite("Custom Pay sheet with Received (#207 on #201)")
 struct ScheduledPayReceivedTests {
-    private let card = Account(name: "Travel Card", type: .cash, currencyCode: "USD", sortOrder: 2)
-
-    /// Rent Share, ₹1,000 a month from Everyday Savings to Travel Card, received as $12, due 1 Oct; and its Pay sheet.
     private func sheet(_ scene: ScheduledScene) throws -> (ScheduledListViewModel, ScheduledPayViewModel) {
-        try scene.repository.saveAccount(card)
-        var share = scene.item("Rent Share", day: 1, month: 10)
-        share.type = .transfer
-        share.amount = 1_000
-        share.categoryID = nil
-        share.transferAccountID = card.id
-        share.destinationAmount = 12
-        share.receivedCurrencyCode = "USD"
-        try scene.add(share)
-        let list = scene.list(scene.feature(), platform: .iOS)
-        list.load()
-        list.openCustomPay(try #require(list.overdueRows.first))
-        return (list, try #require(list.payment))
+        try ScheduledPayUnsavedTests.PayField.received.open(scene)
+    }
+
+    /// Travel Card, the USD account Rent Share goes to.
+    private func card(_ scene: ScheduledScene) throws -> Account {
+        try #require(try scene.repository.accounts().first { $0.name == "Travel Card" })
     }
 
     @Test("Asks for Received, prefilled with $12, and lists From in any currency but To's own account")
@@ -41,7 +31,8 @@ struct ScheduledPayReceivedTests {
         )
         let choices = sheet.accountChoices.compactMap(\.id)
         #expect(choices.contains(scene.account.id), "Its own From, in INR, is a choice")
-        #expect(!choices.contains(card.id), "To is never From")
+        let cardID = try card(scene).id
+        #expect(!choices.contains(cardID), "To is never From")
         #expect(sheet.receivedHint == nil)
     }
 
@@ -89,12 +80,46 @@ struct ScheduledPayReceivedTests {
         let (_, sheet) = try sheet(scene)
         // Past the store's currency lock, as a restored backup could leave it.
         var ledger = try scene.repository.scheduleLedger()
-        let index = try #require(ledger.accounts.firstIndex { $0.id == card.id })
+        let cardID = try card(scene).id
+        let index = try #require(ledger.accounts.firstIndex { $0.id == cardID })
         ledger.accounts[index].currencyCode = "EUR"
         try scene.repository.replaceLedger(with: ledger)
         sheet.receivedText = "24"
         #expect(!sheet.record())
         #expect(sheet.alert?.message == "Travel Card has changed since then. Nothing was changed.")
         #expect(scene.recorded.isEmpty)
+    }
+    @Test("D411: an edited Received asks “Discard Changes?”, and Discard Changes pays nothing and keeps $12")
+    func discardReceived() throws {
+        let scene = try ScheduledScene()
+        let (list, sheet) = try sheet(scene)
+        sheet.receivedText = "24"
+        #expect(sheet.hasUnsavedEdits)
+        #expect(!sheet.requestDismiss(from: .cancel))
+        #expect(sheet.discard.isPresentedFromCancel)
+        // Discard Changes: the dialog closes and the view closes the sheet.
+        sheet.discard.isPresentedFromCancel = false
+        list.payment = nil
+        list.load()
+        #expect(scene.recorded.isEmpty)
+        #expect(list.overdueRows.count == 1)
+        let share = try #require(try scene.repository.scheduleLedger().scheduledItems.first)
+        #expect(share.destinationAmount == 12 && share.receivedCurrencyCode == "USD")
+    }
+}
+
+extension ScheduledScene {
+    /// Rent Share, ₹1,000 a month from Everyday Savings to Travel Card (USD), received as $12, due 1 Oct.
+    func addRentShare() throws {
+        let card = Account(name: "Travel Card", type: .cash, currencyCode: "USD", sortOrder: 2)
+        try repository.saveAccount(card)
+        var share = item("Rent Share", day: 1, month: 10)
+        share.type = .transfer
+        share.amount = 1_000
+        share.categoryID = nil
+        share.transferAccountID = card.id
+        share.destinationAmount = 12
+        share.receivedCurrencyCode = "USD"
+        try add(share)
     }
 }
