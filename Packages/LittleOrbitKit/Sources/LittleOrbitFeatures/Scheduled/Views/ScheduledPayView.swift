@@ -22,6 +22,9 @@
                         #endif
                     if let error = model.amountError {
                         Text(error).foregroundStyle(Color(ThemeColor.destructiveDefault))
+                    } else if let hint = model.amountHint {
+                        // Between currencies, why Record waits (D415).
+                        Text(verbatim: hint).foregroundStyle(.secondary)
                     }
                     if model.needsReceivedAmount {
                         // A transfer between currencies: the amount To receives, as on the Scheduled form (#207).
@@ -104,6 +107,8 @@
                             dismiss()
                         }
                     }
+                    // Between currencies, Record waits until Amount and Received both read (D415).
+                    .disabled(!model.canRecord)
                     // Tester's Mac accessibility pass at 59017dc: the title was only the description.
                     .accessibilityLabel(Text(model.confirmTitle))
                 }

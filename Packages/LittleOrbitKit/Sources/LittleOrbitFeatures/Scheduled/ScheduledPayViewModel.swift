@@ -224,14 +224,11 @@ public final class ScheduledPayViewModel: Identifiable {
     public func record() -> Bool {
         amountError = nil
         let amount: Decimal
-        do {
-            amount = try AmountInput.parse(amountText, currencyCode: currencyCode, locale: locale)
-        } catch {
-            amountError = message(error)
-            return false
-        }
-        guard amount > 0 else {
-            amountError = ScheduledText.enterAmount
+        switch readAmount() {
+        case .success(let read):
+            amount = read
+        case .failure(let problem):
+            amountError = problem.message
             return false
         }
         var received: Decimal?
@@ -263,6 +260,21 @@ public final class ScheduledPayViewModel: Identifiable {
         }
         paid(change)
         return true
+    }
+
+    /// Amount read in From's currency: above zero and in its decimals, or the message saying why not. It sets
+    /// nothing, so `canRecord` and `amountHint` can read it as the text changes (D415).
+    func readAmount() -> Result<Decimal, ScheduledPayInputProblem> {
+        let amount: Decimal
+        do {
+            amount = try AmountInput.parse(amountText, currencyCode: currencyCode, locale: locale)
+        } catch {
+            return .failure(ScheduledPayInputProblem(message: message(error)))
+        }
+        guard amount > 0 else {
+            return .failure(ScheduledPayInputProblem(message: ScheduledText.enterAmount))
+        }
+        return .success(amount)
     }
 
     /// The Scheduled form's messages (D334.12).
