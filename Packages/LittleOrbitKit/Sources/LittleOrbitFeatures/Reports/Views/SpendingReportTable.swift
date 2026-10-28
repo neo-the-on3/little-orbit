@@ -28,10 +28,12 @@
                         .padding(.horizontal)
                 }
                 SpendingReportTable(model: model, open: open)
+                // No fixedSize: the window takes its minimum size from this layout, and a vertically fixed
+                // footer measured at its narrowest is one character per line, which grew the window past the
+                // screen and stopped it shrinking (Tester2 on #310). It wraps to the width it's given.
                 Text(ReportText.footer)
                     .font(.footnote)
                     .foregroundStyle(.secondary)
-                    .fixedSize(horizontal: false, vertical: true)
                     .padding([.horizontal, .bottom])
             }
         }
