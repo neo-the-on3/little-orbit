@@ -8,7 +8,7 @@ import Testing
 /// #285, D398: Bulk Edit Apply off the main actor gives what Apply on it gives, shows its progress, writes once or
 /// not at all, and checks again when something wrote in between (Tech Architect's ruling 4 on 6435113427).
 @MainActor
-@Suite("Bulk edit as a batch")
+@Suite("Bulk edit as a batch", .timeLimit(.minutes(1)))
 struct BulkEditBatchTests {
     typealias F = TransactionFeatureFixture  // swiftlint:disable:this type_name
 
@@ -175,7 +175,7 @@ struct BulkEditBatchTests {
 
 /// The progress model and its copy (D398.3).
 @MainActor
-@Suite("Bulk edit progress")
+@Suite("Bulk edit progress", .timeLimit(.minutes(1)))
 struct BatchProgressTests {
     @Test("Rows done, then Saving… with the bar full")
     func phases() async {
@@ -186,9 +186,7 @@ struct BatchProgressTests {
         #expect(progress.title == "Undoing Changes…")
         #expect(progress.message == "Updating 3334 transactions." || progress.message == "Updating 3,334 transactions.")
         reporter.rowsDone(128)
-        while progress.done < 128 {
-            await Task.yield()
-        }
+        await ObservedState.until { progress.done == 128 }
         #expect(progress.value == 128)
         #expect(progress.stage == .updating)
         await reporter.willSave(10)

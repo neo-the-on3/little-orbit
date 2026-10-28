@@ -8,7 +8,7 @@ import Testing
 /// D401, Tech Architect's review 5664921216: the progress sheet's decision just before the main-thread save, and
 /// the progress model acting on it for Apply, Undo and Redo.
 @MainActor
-@Suite("Batch sheet before the save")
+@Suite("Batch sheet before the save", .timeLimit(.minutes(1)))
 struct BatchSheetPolicyTests {
     typealias Policy = BatchSheetPolicy
 
