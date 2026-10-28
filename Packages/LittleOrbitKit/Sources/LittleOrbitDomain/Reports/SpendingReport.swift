@@ -49,7 +49,8 @@ public struct SpendingReportRow: Identifiable, Equatable, Sendable {
     }
 }
 
-/// “What do I spend my money on?” for one period and one currency (#27 core, D316). Currencies are never added
+/// “What do I spend my money on?” for one period and one currency (#27 core, D316), or with the income flow
+/// “Where does my money come from?” (#184 slice 5). Currencies are never added
 /// together (D17).
 public struct SpendingReport: Equatable, Sendable {
     /// The whole period, as its title names it. Every day in it counts, future-dated ones included, as budgets
@@ -116,7 +117,8 @@ public struct SpendingReportEntry: Identifiable, Equatable, Sendable {
 /// - An expense adds to its category; a split expense adds each line to the line's own category instead.
 /// - A refund (`isRefund`, linked or not) lowers its category and is never income (D19). A category can go
 ///   below 0 when only its refund is in the period (Electronics −300).
-/// - Other income and transfers never count.
+/// - Other income and transfers never count. With the income flow it's the other way round: income that
+///   isn't a refund counts, a split income line by line, and expenses, refunds and transfers never do (S47).
 /// - A transaction counts on its own calendar day in its own stored time zone, in whichever period that day
 ///   falls, future-dated ones too (D319.2, as budgets count them, S28). Deleted transactions and transactions
 ///   in deleted accounts don't count. A category that's gone counts as Uncategorised.
@@ -145,20 +147,13 @@ public enum SpendingReportBuilder {
     ) -> SpendingReport {
         let range = query.range
         let requested = query.currencyCode
-        let allLines = contributions(in: snapshot, range: range)
+        let allLines = contributions(in: snapshot, range: range, flow: query.flow)
         let lines = allLines.filter { query.accounts.includes($0.account.id) }
-        let defaultCode = CurrencyCode.normalize(defaultCurrency)
-        let currencies = Set(allLines.map(\.currency))
-            .sorted { lhs, rhs in
-                if lhs == defaultCode || rhs == defaultCode {
-                    return lhs == defaultCode && rhs != defaultCode
-                }
-                return lhs < rhs
-            }
-        let requestedCode = requested.map(CurrencyCode.normalize)
-        let currency =
-            requestedCode.flatMap { currencies.contains($0) ? $0 : nil } ?? currencies.first ?? requestedCode
-            ?? defaultCode
+        let (currencies, currency) = pickCurrency(
+            from: allLines.map(\.currency),
+            requested: requested,
+            defaultCurrency: defaultCurrency,
+        )
 
         let key = rowKey(in: snapshot, grouping: query.grouping)
         var amounts: [UUID?: Decimal] = [:]
@@ -189,6 +184,28 @@ public enum SpendingReportBuilder {
             total: total,
             accounts: accountOptions(in: snapshot, currency: currency, filter: query.accounts),
         )
+    }
+
+    /// The currencies of `lines`, the default currency first, then by code, and the one to show: `requested`
+    /// if it has any, else the first (D414). Never added together (D17).
+    static func pickCurrency(
+        from lines: [String],
+        requested: String?,
+        defaultCurrency: String,
+    ) -> (currencies: [String], currency: String) {
+        let defaultCode = CurrencyCode.normalize(defaultCurrency)
+        let currencies = Set(lines)
+            .sorted { lhs, rhs in
+                if lhs == defaultCode || rhs == defaultCode {
+                    return lhs == defaultCode && rhs != defaultCode
+                }
+                return lhs < rhs
+            }
+        let requestedCode = requested.map(CurrencyCode.normalize)
+        let currency =
+            requestedCode.flatMap { currencies.contains($0) ? $0 : nil } ?? currencies.first ?? requestedCode
+            ?? defaultCode
+        return (currencies, currency)
     }
 
     private static func categoryRows(
@@ -266,7 +283,7 @@ public enum SpendingReportBuilder {
         let currency = CurrencyCode.normalize(query.currencyCode ?? defaultCurrency)
         let payees = Dictionary(snapshot.payeesVisible().map { ($0.id, $0) }, uniquingKeysWith: { first, _ in first })
         var entries: [UUID: SpendingReportEntry] = [:]
-        for line in contributions(in: snapshot, range: range)
+        for line in contributions(in: snapshot, range: range, flow: query.flow)
         where line.currency == currency && key(line) == rowID && query.accounts.includes(line.account.id) {
             if entries[line.transaction.id] != nil {
                 entries[line.transaction.id]?.amount += line.amount
@@ -289,68 +306,6 @@ public enum SpendingReportBuilder {
             }
             return lhs.id.uuidString < rhs.id.uuidString
         }
-    }
-
-    // MARK: - Counting
-
-    struct Contribution {
-        var transaction: Transaction
-        var account: Account
-        var currency: String
-        var day: CalendarDay
-        var categoryID: UUID?
-        var amount: Decimal
-    }
-
-    /// Every amount that adds to or lowers spending in the range, one per expense, split line or refund.
-    static func contributions(in snapshot: LedgerSnapshot, range: ReportDayRange) -> [Contribution] {
-        let accounts = Dictionary(
-            snapshot.accountsVisible().map { ($0.id, $0) },
-            uniquingKeysWith: { first, _ in first },
-        )
-        let liveCategories = Set(snapshot.categoriesVisible().map(\.id))
-        let linesByTransaction = Dictionary(grouping: snapshot.splitsVisible(), by: \.transactionID)
-        func category(_ id: UUID?) -> UUID? {
-            id.flatMap { liveCategories.contains($0) ? $0 : nil }
-        }
-        var result: [Contribution] = []
-        for transaction in snapshot.transactions where transaction.deletedAt == nil {
-            guard let account = transaction.accountID.flatMap({ accounts[$0] }) else {
-                continue
-            }
-            let day = TransactionCalendar.ownDay(of: transaction.date, timeZoneID: transaction.timeZoneID)
-            guard range.contains(day) else {
-                continue
-            }
-            func add(_ amount: Decimal, _ categoryID: UUID?) {
-                result.append(
-                    Contribution(
-                        transaction: transaction,
-                        account: account,
-                        currency: CurrencyCode.normalize(account.currencyCode),
-                        day: day,
-                        categoryID: category(categoryID),
-                        amount: amount,
-                    )
-                )
-            }
-            switch transaction.type {
-            case .expense:
-                let lines = linesByTransaction[transaction.id] ?? []
-                if lines.isEmpty {
-                    add(transaction.amount, transaction.categoryID)
-                } else {
-                    for line in lines {
-                        add(line.amount, line.categoryID)
-                    }
-                }
-            case .income where transaction.isRefund:
-                add(-transaction.amount, transaction.categoryID)
-            case .income, .transfer:
-                continue
-            }
-        }
-        return result
     }
 
     /// Largest signed amount first; ties by name, Uncategorised last among equals, then by ID, so the order

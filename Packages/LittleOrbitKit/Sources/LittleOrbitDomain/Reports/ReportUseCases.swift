@@ -1,7 +1,7 @@
 import Foundation
 
-/// Loads “What do I spend my money on?” or, grouped by payee, “Where do I spend the most?”, and their
-/// drill-downs (#27, #184). The spending report's view model depends
+/// Loads “What do I spend my money on?”, by payee “Where do I spend the most?”, by income “Where does my money
+/// come from?”, and their drill-downs, and income vs expenses by month (#27, #184). The spending report's view model depends
 /// only on this protocol; the App target wires in `DefaultLoadSpendingReportUseCase`. Both calls are async, so
 /// the report is built off the main actor (Tech Architect's NB1 on #185).
 public protocol LoadSpendingReportUseCase: Sendable {
@@ -11,6 +11,9 @@ public protocol LoadSpendingReportUseCase: Sendable {
     /// The transactions behind one row of `query`'s report, newest first. `categoryID` is the row's ID: a
     /// category's, or a payee's when the query groups by payee; `nil` is Uncategorised or No Payee.
     func spendingEntries(_ query: SpendingReportQuery, categoryID: UUID?) async throws -> [SpendingReportEntry]
+    /// Income vs expenses by month for `query`'s range, currency and accounts (#184 slice 5), also the Reports
+    /// list's This Month summary.
+    func incomeExpenseReport(_ query: SpendingReportQuery) async throws -> IncomeExpenseReport
 }
 
 @MainActor
@@ -44,6 +47,16 @@ public struct DefaultLoadSpendingReportUseCase: LoadSpendingReportUseCase {
                 categoryID: categoryID,
                 defaultCurrency: defaultCurrency,
             )
+        }
+    }
+}
+
+extension DefaultLoadSpendingReportUseCase {
+    public func incomeExpenseReport(_ query: SpendingReportQuery) async throws -> IncomeExpenseReport {
+        let snapshot = try source.backupSnapshot()
+        let defaultCurrency = defaultCurrency
+        return try await ReportWork.offMain {
+            IncomeExpenseReportBuilder.report(in: snapshot, query: query, defaultCurrency: defaultCurrency)
         }
     }
 }

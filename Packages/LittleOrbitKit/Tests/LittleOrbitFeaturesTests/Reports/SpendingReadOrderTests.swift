@@ -31,6 +31,12 @@ final class GatedSpendingReportUseCase: LoadSpendingReportUseCase {
         return SpendingReportBuilder.entries(in: snapshot, query: query, categoryID: categoryID)
     }
 
+    func incomeExpenseReport(_ query: SpendingReportQuery) async throws -> IncomeExpenseReport {
+        let snapshot = snapshot
+        await gate()
+        return IncomeExpenseReportBuilder.report(in: snapshot, query: query, defaultCurrency: "INR")
+    }
+
     /// Lets the held read numbered `call` (1 for the first held read) finish.
     func release(_ call: Int) {
         gates.removeValue(forKey: call)?.resume()

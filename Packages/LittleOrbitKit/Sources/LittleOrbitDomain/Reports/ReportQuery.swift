@@ -7,7 +7,15 @@ public enum ReportGrouping: Hashable, Sendable {
     case payee
 }
 
-/// What one spending report reads (#184): its days, its currency, its accounts and its grouping.
+/// What a report counts (#184 slice 5): spending (expenses minus refunds) or income (income transactions that
+/// aren't refunds). Transfers are never either.
+public enum ReportFlow: Hashable, Sendable {
+    case spending
+    case income
+}
+
+/// What one report reads (#184): its days, its currency, its accounts, its grouping and whether it counts
+/// spending or income. Income vs expenses reads the days, currency and accounts only.
 public struct SpendingReportQuery: Hashable, Sendable {
     /// Both end days included.
     public var range: ReportDayRange
@@ -16,17 +24,20 @@ public struct SpendingReportQuery: Hashable, Sendable {
     public var currencyCode: String?
     public var accounts: ReportAccountFilter
     public var grouping: ReportGrouping
+    public var flow: ReportFlow
 
     public init(
         range: ReportDayRange,
         currencyCode: String? = nil,
         accounts: ReportAccountFilter = .all,
         grouping: ReportGrouping = .category,
+        flow: ReportFlow = .spending,
     ) {
         self.range = range
         self.currencyCode = currencyCode
         self.accounts = accounts
         self.grouping = grouping
+        self.flow = flow
     }
 }
 
