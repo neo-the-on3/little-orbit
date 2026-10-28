@@ -41,16 +41,21 @@ public struct ScheduledReminder: Hashable, Sendable, Identifiable {
     public static let identifierPrefix = "scheduled.reminder."
 
     public let id: String
+    /// The item as this occurrence records it, with its own values (D45).
     public let item: ScheduledItem
+    /// The day it's due, which "This occurrence only" may have moved from its key.
     public let day: CalendarDay
+    /// The occurrence's own day, which its identifier comes from, so a moved occurrence keeps one reminder (D45).
+    public let key: CalendarDay
     public let time: ReminderTime
     /// When it arrives, worked out in the planning zone. Used for ordering and to drop times already past.
     public let fireDate: Date
 
-    public init(item: ScheduledItem, day: CalendarDay, time: ReminderTime, fireDate: Date) {
-        id = Self.identifier(item: item.id, day: day)
+    public init(item: ScheduledItem, day: CalendarDay, key: CalendarDay? = nil, time: ReminderTime, fireDate: Date) {
+        id = Self.identifier(item: item.id, day: key ?? day)
         self.item = item
         self.day = day
+        self.key = key ?? day
         self.time = time
         self.fireDate = fireDate
     }
@@ -103,7 +108,9 @@ public enum ScheduledReminderPlanner {
         let today = TransactionTiming.today(now, timeZone: timeZone)
         var reminders: [ScheduledReminder] = []
         for item in items where item.notifiesWhenDue && item.deletedAt == nil {
-            for day in candidateDays(of: item, from: today, limit: limit) {
+            for key in candidateDays(of: item, from: today, limit: limit) {
+                // On the day it's due, with its own values, under its key's identifier (D45).
+                let day = item.dueDay(of: key)
                 guard
                     let fire = calendar.date(
                         from: DateComponents(
@@ -118,7 +125,9 @@ public enum ScheduledReminderPlanner {
                 else {
                     continue
                 }
-                reminders.append(ScheduledReminder(item: item, day: day, time: time, fireDate: fire))
+                reminders.append(
+                    ScheduledReminder(item: item.resolved(for: key), day: day, key: key, time: time, fireDate: fire)
+                )
             }
         }
         reminders.sort { lhs, rhs in
@@ -133,8 +142,14 @@ public enum ScheduledReminderPlanner {
         // Settled records can only shorten the list, so asking for that many more always leaves `limit` open days.
         let ruled = ScheduleCalendar.occurrences(of: item, from: today, count: limit + item.occurrences.count)
         let pending = item.pendingDays.filter { $0 >= today }
-        let days = pending.isEmpty ? ruled : Array(Set(ruled + pending)).sorted()
-        return Array(days.filter { isRemindable($0, of: item) }.prefix(limit))
+        // An earlier occurrence "This occurrence only" moved to today or later is still ahead (D45).
+        let movedAhead = item.occurrences
+            .filter { $0.deletedAt == nil && $0.day < today && item.dueDay(of: $0.day) >= today }
+            .map(\.day)
+        let extra = pending + movedAhead
+        let days = extra.isEmpty ? ruled : Array(Set(ruled + extra)).sorted()
+        // One moved before today is overdue or past, so it never notifies (S10).
+        return Array(days.filter { isRemindable($0, of: item) && item.dueDay(of: $0) >= today }.prefix(limit))
     }
 
     /// Whether the occurrence on `day` still gets its reminder.
