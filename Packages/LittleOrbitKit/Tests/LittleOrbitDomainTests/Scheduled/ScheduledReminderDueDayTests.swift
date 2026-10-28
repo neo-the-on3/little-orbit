@@ -187,4 +187,41 @@ struct ScheduledReminderDueDayTests {
         let paid = plan([moved(item, far, to: today, outcome: .posted)])
         #expect(!paid.contains { $0.key == far })
     }
+
+    @Test("D435: a move whose own day a Starts edit took off the rule is kept, so it's reminded on its moved day")
+    func keptMoveIsReminded() throws {
+        // Tue 20 Oct: Mon 26 Oct is moved to Fri 30 Oct. Wed 21 Oct: Starts becomes Tue 27 Oct, so 26 Oct is no
+        // longer on the rule. The board shows it and Pay accepts it (D435.1), so its reminder follows them.
+        var snapshot = try LedgerBook.savingScheduledItem(
+            phonePlan(),
+            in: Fix.ledger,
+            today: Fix.day(2026, 7, 1),
+            now: Fix.created,
+        )
+        let key = Fix.day(2026, 10, 26)
+        let save = ScheduledOccurrenceSave(occurrence: key, dueDay: Fix.day(2026, 10, 30), scope: .thisOccurrence)
+        snapshot = try LedgerBook.savingScheduledOccurrence(
+            snapshot.scheduledItems[0],
+            editing: save,
+            in: snapshot,
+            today: Fix.day(2026, 10, 20),
+            now: Fix.date(2026, 10, 20),
+        )
+        var tuesdays = snapshot.scheduledItems[0]
+        tuesdays.startDay = Fix.day(2026, 10, 27)
+        snapshot = try LedgerBook.savingScheduledItem(
+            tuesdays,
+            in: snapshot,
+            today: Fix.day(2026, 10, 21),
+            now: Fix.date(2026, 10, 21),
+        )
+        let item = snapshot.scheduledItems[0]
+        #expect(item.occurrence(on: key)?.outcome == .pending)
+        let board = ScheduledBoard.make(snapshot, today: Fix.day(2026, 10, 30))
+        #expect(board.dueToday.contains { $0.key == key && $0.day == Fix.day(2026, 10, 30) })
+        let reminders = plan([item])
+        #expect(reminders.first?.id == id(item, key))
+        #expect(reminders.first?.fireDate == Fix.date(2026, 10, 30, 9))
+        #expect(reminders.dropFirst().first?.day == Fix.day(2026, 11, 3))
+    }
 }

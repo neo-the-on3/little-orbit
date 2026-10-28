@@ -66,6 +66,7 @@ extension LedgerBook {
                 keepUnpaidDays(of: existing, before: today, in: &item, now: now)
                 let afterLast = existing.settledDays.max().flatMap { ScheduleCalendar.adding(days: 1, to: $0) }
                 item.resumesOn = [afterLast, today, existing.resumesOn].compactMap { $0 }.max()
+                keepOrphanedMoves(in: &item, now: now)
             }
             foldingOneOffEdit(of: &item, now: now)
             droppingStaleOwnReceived(from: &item, in: snapshot, except: nil, now: now)
@@ -354,6 +355,20 @@ extension LedgerBook {
             )
         }
         item.occurrences.sort { $0.day < $1.day }
+    }
+
+    /// A "This occurrence only" move whose own day the new rule no longer has stays due on the day it moved to,
+    /// as a `pending` record with its own values, whether that day is before or after the edit (D435.1, D436).
+    /// Without this it would be on no board and Pay would refuse it, so a payment moved on purpose would vanish.
+    private static func keepOrphanedMoves(in item: inout ScheduledItem, now: Date) {
+        let orphaned = item.occurrences.filter { record in
+            record.deletedAt == nil && record.outcome == .edited && record.edit?.has(.day) == true
+                && !ScheduleCalendar.isOccurrence(record.day, of: item)
+        }
+        for index in item.occurrences.indices where orphaned.contains(where: { $0.id == item.occurrences[index].id }) {
+            item.occurrences[index].outcome = .pending
+            item.occurrences[index].updatedAt = now
+        }
     }
 
     static func normalize(_ item: ScheduledItem) -> ScheduledItem {
