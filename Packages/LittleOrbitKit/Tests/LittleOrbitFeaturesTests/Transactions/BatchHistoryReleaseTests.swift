@@ -56,7 +56,11 @@ struct BatchHistoryReleaseTests {
             window = setup.window
             history = setup.window.history
             setup.window.history.undo()
-            await RealTime.eventually { sleeper.waiting == [LedgerUpdates.settleLimit] }
+            // The refresh is counted as the change is posted, so settle() waits on its cap at once, but its build
+            // runs in its own task and can start later under load (macOS CI, run 40611022307 attempt 2: 0): wait
+            // for both.
+            await RealTime.eventually { sleeper.waiting == [LedgerUpdates.settleLimit] && builds.started == 1 }
+            try #require(sleeper.waiting == [LedgerUpdates.settleLimit], "settle() waits on its cap")
             try #require(builds.started == 1, "The batch's change started the register's refresh")
         }
         #expect(window == nil, "The window went")
