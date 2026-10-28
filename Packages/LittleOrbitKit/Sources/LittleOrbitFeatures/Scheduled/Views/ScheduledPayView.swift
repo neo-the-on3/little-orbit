@@ -4,7 +4,8 @@
     import SwiftUI
 
     /// Pay with Custom Date or Amount (D24, #197 design answers): a standard sheet titled "Pay ‹item›", Cancel and
-    /// Record, with a Form of the amount and its "Scheduled amount" footer, the "Paid on" date picker, up to today, the
+    /// Record, with a Form of the amount (and Received, for a transfer between currencies, #207) and its "Scheduled
+    /// amount" footer, the "Paid on" date picker, up to today, the
     /// account (From for a transfer), the category, and "Also change future occurrences" (a checkbox on the Mac) with its footer. Standard Form controls only.
     /// With unsaved edits, Cancel (Esc on the Mac) or a swipe down on iOS asks the Scheduled form's “Discard
     /// Changes?” first, with no message (D411, D300.1, D388.5); with none it closes, and nothing is paid either way.
@@ -21,6 +22,26 @@
                         #endif
                     if let error = model.amountError {
                         Text(error).foregroundStyle(Color(ThemeColor.destructiveDefault))
+                    }
+                    if model.needsReceivedAmount {
+                        // A transfer between currencies: the amount To receives, as on the Scheduled form (#207).
+                        TextField(
+                            model.receivedLabel,
+                            text: $model.receivedText,
+                            prompt: Text(verbatim: model.receivedCurrencyCode ?? ""),
+                        )
+                        .accessibilityHint(Text(verbatim: model.receivedHint ?? ""))
+                        #if os(iOS)
+                            .keyboardType(.decimalPad)
+                        #endif
+                        if let error = model.receivedError {
+                            Text(error).foregroundStyle(Color(ThemeColor.destructiveDefault))
+                        } else if let hint = model.receivedHint {
+                            // Hidden from VoiceOver: the field reads it as its hint already.
+                            Text(verbatim: hint)
+                                .foregroundStyle(.secondary)
+                                .accessibilityHidden(true)
+                        }
                     }
                 } footer: {
                     Text(model.amountFooter)

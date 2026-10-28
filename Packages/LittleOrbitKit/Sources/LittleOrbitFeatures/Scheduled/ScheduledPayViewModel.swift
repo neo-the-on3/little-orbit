@@ -17,8 +17,18 @@ public final class ScheduledPayViewModel: Identifiable {
     public var accountID: UUID?
     public var categoryID: UUID?
     public var changesFutureOccurrences = false
+    /// A transfer between currencies: the amount To receives, in To's currency, prefilled with the item's (#207).
+    public var receivedText: String {
+        didSet {
+            if oldValue != receivedText {
+                receivedError = nil
+            }
+        }
+    }
     /// The amount field's error, after a Record attempt.
     public private(set) var amountError: String?
+    /// The Received field's error, after a Record attempt; cleared by any edit.
+    public internal(set) var receivedError: String?
     public var alert: CategoryAlert?
     /// “Discard Changes?” for Cancel, Esc on the Mac or a swipe down with unsaved edits (D411, D300.1).
     public var discard = DiscardConfirmation()
@@ -26,10 +36,10 @@ public final class ScheduledPayViewModel: Identifiable {
     @ObservationIgnored private var openedFields: [AnyHashable] = []
 
     @ObservationIgnored private let useCases: ScheduledScreenUseCases
-    @ObservationIgnored private let listing: ScheduledListing
-    @ObservationIgnored private let item: ScheduledItem
+    @ObservationIgnored let listing: ScheduledListing
+    @ObservationIgnored let item: ScheduledItem
     @ObservationIgnored private let occurrence: CalendarDay
-    @ObservationIgnored private let locale: Locale
+    @ObservationIgnored let locale: Locale
     @ObservationIgnored private let paid: (ScheduledSettlementChange?) -> Void
     public let title: String
 
@@ -54,6 +64,7 @@ public final class ScheduledPayViewModel: Identifiable {
         postedOn = useCases.load.today()
         accountID = item.accountID
         categoryID = item.categoryID
+        receivedText = ScheduledFormViewModel.receivedText(of: item, listing: listing, locale: locale)
         openedFields = fields
     }
 
@@ -87,7 +98,7 @@ public final class ScheduledPayViewModel: Identifiable {
     /// A transfer has no category, as on a transaction.
     public var showsCategory: Bool { item.type != .transfer }
 
-    private var currencyCode: String {
+    var currencyCode: String {
         listing.account(accountID)?.currencyCode ?? CurrencyCode.deviceDefault
     }
 
@@ -138,14 +149,21 @@ public final class ScheduledPayViewModel: Identifiable {
 
     // MARK: Choices
 
-    /// Every account; for a transfer, those in its To account's currency other than it, as the form allows.
+    /// Every account; for a transfer, every one but To, in any currency, each named with its currency as on the
+    /// Scheduled form (#207): one in another currency than To's asks for the amount received too.
     public var accountChoices: [ScheduledChoice] {
         var accounts = listing.accounts
         if item.type == .transfer {
-            let currency = listing.account(item.transferAccountID)?.currencyCode
-            accounts = accounts.filter { $0.id != item.transferAccountID && $0.currencyCode == currency }
+            accounts = accounts.filter { $0.id != item.transferAccountID }
         }
-        return accounts.sorted { $0.sortOrder < $1.sortOrder }.map { ScheduledChoice(id: $0.id, name: $0.name) }
+        return accounts.sorted { $0.sortOrder < $1.sortOrder }
+            .map { account in
+                ScheduledChoice(
+                    id: account.id,
+                    name: item.type == .transfer
+                        ? ScheduledText.pair(account.name, account.currencyCode) : account.name,
+                )
+            }
     }
 
     /// The categories of the item's kind, as the Scheduled form lists them, with None first.
@@ -215,15 +233,29 @@ public final class ScheduledPayViewModel: Identifiable {
             amountError = ScheduledText.enterAmount
             return false
         }
+        var received: Decimal?
+        if needsReceivedAmount {
+            guard let parsed = parseReceived() else {
+                return false
+            }
+            received = parsed
+        }
         let custom = ScheduledCustomPayment(
             amount: amount,
             accountID: accountID,
             categoryID: showsCategory ? categoryID : nil,
             changesFutureOccurrences: changesFutureOccurrences,
+            // In To's currency as this sheet read it; the store refuses it if To has moved on (#207 B1).
+            receivedAmount: received,
+            receivedCurrencyCode: received == nil ? nil : receivedCurrencyCode,
         )
         let change: ScheduledSettlementChange?
         do {
             change = try useCases.manage.pay(itemID: item.id, occurrence: occurrence, on: postedOn, custom: custom)
+        } catch LedgerValidationError.receivedCurrencyMismatch {
+            // To's currency changed since the sheet read it: nothing was paid, and the sheet stays open (#207 B1).
+            alert = ScheduledText.toChangedNothingSaved(listing.account(item.transferAccountID)?.name)
+            return false
         } catch {
             alert = ScheduledText.saveFailed
             return false

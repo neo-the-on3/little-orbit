@@ -204,7 +204,8 @@ public struct ScheduledCatchUpNotice: Equatable, Sendable, Codable {
 
 /// Pay with a custom date or amount (#26, D24): this payment's amount, account and category, and whether they also
 /// become the schedule's from now on ("Also change future occurrences", off by default). The anchor day and the due
-/// dates never change.
+/// dates never change. A transfer between currencies also takes its amount received, in the currency it was entered
+/// in (#207 B1): the payment's, and the schedule's with the toggle on.
 public struct ScheduledCustomPayment: Hashable, Sendable {
     public var amount: Decimal
     /// The account the payment leaves (a transfer's From account).
@@ -212,12 +213,25 @@ public struct ScheduledCustomPayment: Hashable, Sendable {
     /// Ignored for a transfer, which has no category.
     public var categoryID: UUID?
     public var changesFutureOccurrences: Bool
+    /// A transfer between currencies: the amount To receives, and To's currency as it was entered in. `nil` for one
+    /// in a single currency, and for every other type.
+    public var receivedAmount: Decimal?
+    public var receivedCurrencyCode: String?
 
-    public init(amount: Decimal, accountID: UUID?, categoryID: UUID?, changesFutureOccurrences: Bool = false) {
+    public init(
+        amount: Decimal,
+        accountID: UUID?,
+        categoryID: UUID?,
+        changesFutureOccurrences: Bool = false,
+        receivedAmount: Decimal? = nil,
+        receivedCurrencyCode: String? = nil,
+    ) {
         self.amount = amount
         self.accountID = accountID
         self.categoryID = categoryID
         self.changesFutureOccurrences = changesFutureOccurrences
+        self.receivedAmount = receivedAmount
+        self.receivedCurrencyCode = receivedCurrencyCode
     }
 }
 
