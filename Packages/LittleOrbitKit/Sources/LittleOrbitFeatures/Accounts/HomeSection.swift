@@ -99,9 +99,20 @@ public struct HomeRowModel: Identifiable, Equatable, Sendable {
     public var title: String { destination.title }
     public var symbolName: String { destination.symbolName }
 
-    static func rows(counts: PlannedItemCounts, hasAnyTransaction: Bool) -> [HomeRowModel] {
-        [
-            make(.budgets, isEmpty: counts.budgetCount == 0, count: counts.overspentBudgetCount, noun: "overspent"),
+    /// Budgets, Scheduled and Reports, in that order (D58). Without `budgetsEnabled` there's no Budgets row, and
+    /// Scheduled and Reports keep their order and badges (D423.2).
+    static func rows(
+        counts: PlannedItemCounts,
+        hasAnyTransaction: Bool,
+        budgetsEnabled: Bool = FeatureFlags.budgetsEnabled,
+    ) -> [HomeRowModel] {
+        let budgets = make(
+            .budgets,
+            isEmpty: counts.budgetCount == 0,
+            count: counts.overspentBudgetCount,
+            noun: "overspent",
+        )
+        return (budgetsEnabled ? [budgets] : []) + [
             make(
                 .scheduled,
                 isEmpty: counts.scheduledItemCount == 0,

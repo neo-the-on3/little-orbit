@@ -13,10 +13,7 @@ public final class AccountsViewModel {
     public private(set) var assets: [AccountRowModel] = []
     public private(set) var credit: [AccountRowModel] = []
     public private(set) var netWealth: [NetWealthLine] = []
-    public private(set) var homeRows: [HomeRowModel] = HomeRowModel.rows(
-        counts: PlannedItemCounts(),
-        hasAnyTransaction: false,
-    )
+    public private(set) var homeRows: [HomeRowModel] = []
     public private(set) var hiddenCount = 0
     /// No accounts at all, hidden ones included.
     public private(set) var isFirstRun = true
@@ -38,6 +35,8 @@ public final class AccountsViewModel {
     @ObservationIgnored private let deleteAccount: any DeleteAccountUseCase
     @ObservationIgnored private let reorderAccounts: any ReorderAccountsUseCase
     @ObservationIgnored private let plannedItems: any PlannedItemsSource
+    /// Whether the home section has a Budgets row (D423). Tests turn it on; the App uses the build's flag.
+    @ObservationIgnored private let budgetsEnabled: Bool
     @ObservationIgnored private let formatter: MoneyFormatter
     @ObservationIgnored private var accounts: [Account] = []
     /// The shared revision last loaded through `load(at:)`.
@@ -52,10 +51,12 @@ public final class AccountsViewModel {
         deleteAccount: any DeleteAccountUseCase,
         reorderAccounts: any ReorderAccountsUseCase,
         plannedItems: any PlannedItemsSource = NoPlannedItems(),
+        budgetsEnabled: Bool = FeatureFlags.budgetsEnabled,
         locale: Locale = .current,
         changed: @escaping () -> Void = {},
     ) {
         self.changed = changed
+        self.budgetsEnabled = budgetsEnabled
         self.listAccounts = listAccounts
         self.computeNetWealth = computeNetWealth
         self.saveAccount = saveAccount
@@ -63,12 +64,18 @@ public final class AccountsViewModel {
         self.reorderAccounts = reorderAccounts
         self.plannedItems = plannedItems
         self.formatter = MoneyFormatter(locale: locale)
+        homeRows = HomeRowModel.rows(
+            counts: PlannedItemCounts(),
+            hasAnyTransaction: false,
+            budgetsEnabled: budgetsEnabled,
+        )
     }
 
     /// The same, taking the use cases from one `AccountUseCases` value.
     public convenience init(
         useCases: AccountUseCases,
         plannedItems: any PlannedItemsSource = NoPlannedItems(),
+        budgetsEnabled: Bool = FeatureFlags.budgetsEnabled,
         locale: Locale = .current,
         changed: @escaping () -> Void = {},
     ) {
@@ -79,6 +86,7 @@ public final class AccountsViewModel {
             deleteAccount: useCases.deleteAccount,
             reorderAccounts: useCases.reorderAccounts,
             plannedItems: plannedItems,
+            budgetsEnabled: budgetsEnabled,
             locale: locale,
             changed: changed,
         )
@@ -143,6 +151,7 @@ public final class AccountsViewModel {
             homeRows = HomeRowModel.rows(
                 counts: plannedItems.plannedItemCounts(),
                 hasAnyTransaction: listing.hasAnyTransaction,
+                budgetsEnabled: budgetsEnabled,
             )
         } catch {
             errorMessage = Self.message(for: error)
