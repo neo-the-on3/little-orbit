@@ -58,6 +58,9 @@ public final class BatchProgress {
 
     /// `showDelay` in the app; `nil` runs no timer, for tests that must never see a timer-shown sheet.
     @ObservationIgnored private let delay: Duration?
+    /// How the half-second timer sleeps: `Task.sleep` in the app. Tests hold it until they resume it, so whether the
+    /// sheet shows never depends on how soon a loaded main actor runs the timer (#303).
+    @ObservationIgnored private let timerSleep: @MainActor (Duration) async -> Void
     @ObservationIgnored private let now: () -> ContinuousClock.Instant
     @ObservationIgnored private var startedAt: ContinuousClock.Instant?
     @ObservationIgnored private var continuation: AsyncStream<Int>.Continuation?
@@ -101,11 +104,13 @@ public final class BatchProgress {
         total: Int,
         showAfter delay: Duration? = BatchProgress.showDelay,
         now: @escaping () -> ContinuousClock.Instant = { .now },
+        timerSleep: @escaping @MainActor (Duration) async -> Void = { try? await Task.sleep(for: $0) },
     ) {
         self.kind = kind
         self.total = max(total, 0)
         self.delay = delay
         self.now = now
+        self.timerSleep = timerSleep
     }
 
     /// Whether the bar is the indeterminate "Saving…" one (#285, B; UI Designer's approval; D405.5): only once the
@@ -135,8 +140,9 @@ public final class BatchProgress {
         )
         startedAt = now()
         if let delay {
+            let sleep = timerSleep
             timer = Task { [weak self] in
-                try? await Task.sleep(for: delay)
+                await sleep(delay)
                 guard !Task.isCancelled, let self, !self.isShown else {
                     return
                 }
