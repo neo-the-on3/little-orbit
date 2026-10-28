@@ -66,6 +66,10 @@ extension LedgerBook {
                 keepUnpaidDays(of: existing, before: today, in: &item, now: now)
                 let afterLast = existing.settledDays.max().flatMap { ScheduleCalendar.adding(days: 1, to: $0) }
                 item.resumesOn = [afterLast, today, existing.resumesOn].compactMap { $0 }.max()
+            }
+            // After `resumesOn`, which decides what's on the new rule. An End date edit can take a move's own day
+            // off the rule as a Starts or repeat edit can (Tech Architect B1 on #326).
+            if ruleChanged || existing.endDay != item.endDay {
                 keepOrphanedMoves(in: &item, now: now)
             }
             foldingOneOffEdit(of: &item, now: now)
@@ -357,8 +361,9 @@ extension LedgerBook {
         item.occurrences.sort { $0.day < $1.day }
     }
 
-    /// A "This occurrence only" move whose own day the new rule no longer has stays due on the day it moved to,
-    /// as a `pending` record with its own values, whether that day is before or after the edit (D435.1, D436).
+    /// A "This occurrence only" move whose own day the new rule or End date no longer has stays due on the day it
+    /// moved to, as a `pending` record with its own values, whether that day is before or after the edit (D435.1,
+    /// D436).
     /// Without this it would be on no board and Pay would refuse it, so a payment moved on purpose would vanish.
     private static func keepOrphanedMoves(in item: inout ScheduledItem, now: Date) {
         let orphaned = item.occurrences.filter { record in
