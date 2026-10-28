@@ -43,7 +43,7 @@
                     Text(ReportText.spendingQuestion)
                         .font(.title3)
                         .accessibilityAddTraits(.isHeader)
-                    Picker(ReportText.period, selection: $model.period) {
+                    Picker(ReportText.period, selection: period) {
                         ForEach(model.periods) { period in
                             Text(model.periodName(period)).tag(period)
                         }
@@ -61,13 +61,23 @@
                 content
             }
             .navigationTitle(ReportText.spendingTitle)
-            .task { model.load() }
+            .task { await model.load() }
             // Any edit to the shared store, from any window, regenerates the report.
-            .onChange(of: updates.revision) { model.load(at: updates.revision) }
+            .onChange(of: updates.revision) {
+                let revision = updates.revision
+                Task { await model.load(at: revision) }
+            }
+        }
+
+        private var period: Binding<ReportPeriod> {
+            Binding(
+                get: { model.period ?? .thisMonth },
+                set: { period in Task { await model.select(period) } },
+            )
         }
 
         private var currency: Binding<String> {
-            Binding(get: { model.currencyCode }, set: { model.selectCurrency($0) })
+            Binding(get: { model.currencyCode }, set: { code in Task { await model.selectCurrency(code) } })
         }
 
         @ViewBuilder private var content: some View {
