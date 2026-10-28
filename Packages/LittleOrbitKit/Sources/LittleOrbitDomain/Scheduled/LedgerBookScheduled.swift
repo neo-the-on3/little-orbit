@@ -145,6 +145,8 @@ extension LedgerBook {
                 )
                 return (snapshot, nil)
             }
+            // A received amount is only posted in the currency it was entered in (#207 B1).
+            try validateReceivedCurrency(of: item, in: snapshot)
             let transaction = try scheduledTransaction(for: item, occurrence: day, postedOn: postedOn, now: now)
             snapshot = try savingTransaction(transaction, in: snapshot, now: now)
             record(
@@ -310,6 +312,9 @@ extension LedgerBook {
             item.transferAccountID = nil
             item.destinationAmount = nil
         }
+        if item.destinationAmount == nil {
+            item.receivedCurrencyCode = nil
+        }
         if !item.repeatRule.repeats {
             item.endDay = nil
         }
@@ -318,6 +323,8 @@ extension LedgerBook {
 
     private static func validate(_ item: ScheduledItem, in snapshot: LedgerSnapshot) throws {
         try validateRule(of: item)
+        // Before the transaction rules, so a received amount read in the wrong currency says so (#207 B1).
+        try validateReceivedCurrency(of: item, in: snapshot)
         guard TimeZone(identifier: item.timeZoneID) != nil else {
             throw LedgerValidationError.invalidTimeZone
         }

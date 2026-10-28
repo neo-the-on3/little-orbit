@@ -258,6 +258,9 @@
             public var amountScale: Int16 = 0
             public var destinationAmountMinor: Int64?
             public var destinationAmountScale: Int16?
+            /// The currency the received amount was entered in (#207 B1). Optional, added in place: a development
+            /// store made before it needs a reset.
+            public var receivedCurrencyCode: String?
             public var accountID: UUID?
             public var transferAccountID: UUID?
             public var categoryID: UUID?

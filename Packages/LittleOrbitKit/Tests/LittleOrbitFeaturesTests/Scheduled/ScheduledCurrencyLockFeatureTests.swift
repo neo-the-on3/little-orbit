@@ -17,6 +17,7 @@ struct ScheduledCurrencyLockFeatureTests {
             type: .transfer,
             amount: 1_000,
             destinationAmount: 12,
+            receivedCurrencyCode: travel.currencyCode,
             accountID: scene.account.id,
             transferAccountID: travel.id,
             details: "Top-up",

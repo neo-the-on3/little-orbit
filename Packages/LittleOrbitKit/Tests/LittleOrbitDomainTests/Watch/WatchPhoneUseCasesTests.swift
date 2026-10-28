@@ -187,6 +187,7 @@ struct WatchPhoneUseCasesTests {
             type: .transfer,
             amount: 8_400,
             destinationAmount: 100,
+            receivedCurrencyCode: "USD",
             accountID: Fixture.savingsID,
             transferAccountID: wallet.id,
             startDay: Fixture.day(2026, 10, 20),

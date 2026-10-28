@@ -376,6 +376,7 @@
                 destinationAmountMinor = nil
                 destinationAmountScale = nil
             }
+            receivedCurrencyCode = item.receivedCurrencyCode
             accountID = item.accountID
             transferAccountID = item.transferAccountID
             categoryID = item.categoryID
@@ -421,6 +422,7 @@
                 type: TransactionType(storedRawValue: transactionType),
                 amount: decimal(minor: amountMinor, scale: amountScale),
                 destinationAmount: optionalDecimal(minor: destinationAmountMinor, scale: destinationAmountScale),
+                receivedCurrencyCode: receivedCurrencyCode,
                 accountID: accountID,
                 transferAccountID: transferAccountID,
                 categoryID: categoryID,
