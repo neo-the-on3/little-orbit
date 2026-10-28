@@ -124,4 +124,43 @@ struct ReportDrillDownPresentationTests {
         let stepped = try await open(try row(S.food, in: report), &presentation, in: report)
         #expect(stepped == october)
     }
+
+    @Test("Given Food is open, when Rent is opened before Back, then Rent's drill-down replaces Food's")
+    func opensAnotherRowWhileOneIsOpen() async throws {
+        let report = await report()
+        let food = try row(S.food, in: report)
+        let rent = try row(S.rent, in: report)
+        var presentation = ReportDrillDownPresentation<SpendingRowModel>()
+        _ = try await open(food, &presentation, in: report)
+
+        let drill = try await open(rent, &presentation, in: report)
+
+        #expect(presentation.row == rent)
+        #expect(drill.title == "Rent")
+        #expect(drill.entries.count == 1)
+        #expect(drill.amountText == "₹25,000.00")
+    }
+
+    @Test("Given Food is open, when isPresented is set to true, then Food stays open")
+    func settingPresentedTrueKeepsTheRow() async throws {
+        let report = await report()
+        let food = try row(S.food, in: report)
+        var presentation = ReportDrillDownPresentation<SpendingRowModel>()
+        _ = try await open(food, &presentation, in: report)
+
+        presentation.isPresented = true
+
+        #expect(presentation.isPresented)
+        #expect(presentation.row == food)
+    }
+
+    @Test("Given nothing is open, when isPresented is set to true, then nothing opens")
+    func settingPresentedTrueWithNoRowOpensNothing() {
+        var presentation = ReportDrillDownPresentation<SpendingRowModel>()
+
+        presentation.isPresented = true
+
+        #expect(presentation.isPresented == false)
+        #expect(presentation.row == nil)
+    }
 }
