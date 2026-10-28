@@ -84,6 +84,23 @@ struct ReportCatalogTests {
         #expect(entries["report.column.payee"] == ["Payee"])
     }
 
+    @Test(
+        "The income report's wording is in the catalog, its Other bar plurals and its title is its own key (#184 slice 5)"
+    )
+    func incomeEntries() throws {
+        let entries = try StringCatalogTests.entries()
+        for key in [
+            "Where does my money come from?", "Earned in %1$@ · %2$@ · %3$@", "Sources of Income", "%1$@ of income",
+            "Sorted by amount. Refunds and transfers between your accounts aren’t income.", "No Income",
+            "There’s no income in this period. Try another period.",
+        ] {
+            #expect(entries[key] == [key], "\(key) is one entry with its English value")
+        }
+        #expect(Set(try #require(entries["Other · %lld sources"])) == ["Other · %lld source", "Other · %lld sources"])
+        #expect(Set(try #require(entries["Other, %lld sources"])) == ["Other, %lld source", "Other, %lld sources"])
+        #expect(entries["report.title.income"] == ["Income"])
+    }
+
     @Test("The transaction count has one and other variants, each with %lld")
     func countPlural() throws {
         let values = try #require(try StringCatalogTests.entries()["%lld transactions"])

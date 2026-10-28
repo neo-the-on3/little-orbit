@@ -1,56 +1,75 @@
 import Foundation
 import LittleOrbitDomain
 
-/// The wording that differs between the category report and the payee report (#184 slice 4). Everything else,
-/// from the filters to the drill-down, is shared.
+/// The wording that differs between the category, payee (#184 slice 4) and income (slice 5) reports. Everything
+/// else, from the filters to the drill-down, is shared.
 extension SpendingReportViewModel {
-    /// The report's heading and the audio graph's title: “What do I spend my money on?” or “Where do I spend
-    /// the most?”.
+    /// Which of the three reports this screen is.
+    private enum Kind {
+        case categories
+        case payees
+        case income
+    }
+
+    private var kind: Kind {
+        if flow == .income {
+            return .income
+        }
+        return grouping == .payee ? .payees : .categories
+    }
+
+    /// The report's heading and the audio graph's title: “What do I spend my money on?”, “Where do I spend
+    /// the most?” or “Where does my money come from?”.
     public var question: String {
-        switch grouping {
-        case .category: ReportText.spendingQuestion
-        case .payee: ReportText.payeeQuestion
+        switch kind {
+        case .categories: ReportText.spendingQuestion
+        case .payees: ReportText.payeeQuestion
+        case .income: ReportText.incomeQuestion
         }
     }
 
-    /// The navigation title, also the Back button's and the Mac window's: “Spending”, or “Spending by Payee”
-    /// (UI Designer's answer on #314).
+    /// The navigation title, also the Back button's and the Mac window's: “Spending”, “Spending by Payee”
+    /// (UI Designer's answer on #314) or “Income”.
     public var navigationTitle: String {
-        switch grouping {
-        case .category: ReportText.spendingTitle
-        case .payee: ReportText.payeeTitle
+        switch kind {
+        case .categories: ReportText.spendingTitle
+        case .payees: ReportText.payeeTitle
+        case .income: ReportText.incomeTitle
         }
     }
 
-    /// “All Categories” or “All Payees”: the header over the rows.
+    /// “All Categories”, “All Payees” or “Sources of Income”: the header over the rows.
     public var rowsHeader: String {
-        switch grouping {
-        case .category: ReportText.allCategories
-        case .payee: ReportText.allPayees
+        switch kind {
+        case .categories: ReportText.allCategories
+        case .payees: ReportText.allPayees
+        case .income: ReportText.sourcesOfIncome
         }
     }
 
     /// What the rows count and leave out.
     public var footer: String {
-        switch grouping {
-        case .category: ReportText.footer
-        case .payee: ReportText.payeeFooter
+        switch kind {
+        case .categories: ReportText.footer
+        case .payees: ReportText.payeeFooter
+        case .income: ReportText.incomeFooter
         }
     }
 
     /// The Mac table's first column and the audio graph's category axis: “Category” or “Payee”.
     public var chartCategoryAxis: String {
-        switch grouping {
-        case .category: ReportText.categoryColumn
-        case .payee: ReportText.payeeColumn
-        }
+        kind == .payees ? ReportText.payeeColumn : ReportText.categoryColumn
     }
+
+    /// The empty state's symbol: a cart for spending, a banknote for income.
+    public var emptySymbolName: String { kind == .income ? "banknote" : "cart" }
 
     /// The Other bar's name on the chart and for VoiceOver.
     func otherBarNames(_ count: Int) -> (shown: String, spoken: String) {
-        switch grouping {
-        case .category: (ReportText.otherCategories(count), ReportText.otherCategoriesSpoken(count))
-        case .payee: (ReportText.otherPayees(count), ReportText.otherPayeesSpoken(count))
+        switch kind {
+        case .categories: (ReportText.otherCategories(count), ReportText.otherCategoriesSpoken(count))
+        case .payees: (ReportText.otherPayees(count), ReportText.otherPayeesSpoken(count))
+        case .income: (ReportText.otherSources(count), ReportText.otherSourcesSpoken(count))
         }
     }
 

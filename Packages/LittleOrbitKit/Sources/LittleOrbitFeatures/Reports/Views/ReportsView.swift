@@ -25,6 +25,11 @@
                 } label: {
                     Label(feature.payeeQuestion, systemImage: "storefront.fill")
                 }
+                NavigationLink {
+                    SpendingReportView(feature: feature, flow: .income)
+                } label: {
+                    Label(feature.incomeQuestion, systemImage: "banknote.fill")
+                }
             }
             .navigationTitle(feature.title)
         }
@@ -32,7 +37,8 @@
 
     /// “What do I spend my money on?”: the period and currency pickers, the total, the ranked bar chart (#184
     /// slice 3), then one row per category with its amount, share and a bar, each opening its transactions.
-    /// Grouped by payee it's “Where do I spend the most?” (#184 slice 4), with one row per payee and no icons.
+    /// Grouped by payee it's “Where do I spend the most?” (#184 slice 4), with one row per payee and no icons;
+    /// counting income it's “Where does my money come from?” (slice 5).
     /// Standard list rows, so they get the system chevrons, Dynamic Type and keyboard focus. On the Mac a table
     /// replaces the list.
     struct SpendingReportView: View {
@@ -42,10 +48,16 @@
         @State private var opened = ReportDrillDownPresentation<SpendingRowModel>()
         private let updates: LedgerUpdates
 
-        init(feature: ReportsFeature, grouping: ReportGrouping = .category) {
-            _model = State(
-                initialValue: grouping == .payee ? feature.makePayeeReport() : feature.makeSpendingReport()
-            )
+        init(feature: ReportsFeature, grouping: ReportGrouping = .category, flow: ReportFlow = .spending) {
+            let model =
+                if flow == .income {
+                    feature.makeIncomeReport()
+                } else if grouping == .payee {
+                    feature.makePayeeReport()
+                } else {
+                    feature.makeSpendingReport()
+                }
+            _model = State(initialValue: model)
             updates = feature.updates
         }
 
@@ -124,7 +136,11 @@
         }
 
         private var emptyView: some View {
-            ContentUnavailableView(model.emptyTitle, systemImage: "cart", description: Text(model.emptyMessage))
+            ContentUnavailableView(
+                model.emptyTitle,
+                systemImage: model.emptySymbolName,
+                description: Text(model.emptyMessage),
+            )
         }
 
         private var currency: Binding<String> {

@@ -133,6 +133,19 @@
         }
       }
     },
+    "%1$@ of income": {
+      "comment": "Income drill-down header: %1$@ is the row’s share of income, “92.6% of income”.",
+      "extractionState": "manual",
+      "generatesSymbol": false,
+      "localizations": {
+        "en": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "%1$@ of income"
+          }
+        }
+      }
+    },
     "%1$@ of spending": {
       "comment": "Spending report: the start of a category drill-down’s header, before the period and currency. %1$@ is the category’s share of the period’s spending, such as “16.9%”.",
       "extractionState": "manual",
@@ -2959,6 +2972,19 @@
         }
       }
     },
+    "Earned in %1$@ · %2$@ · %3$@": {
+      "comment": "Income report total’s caption: %1$@ is the period, %2$@ the account part (“all accounts” or “2 of 3 accounts”), %3$@ the currency code, “Earned in October 2026 · all accounts · INR”.",
+      "extractionState": "manual",
+      "generatesSymbol": false,
+      "localizations": {
+        "en": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Earned in %1$@ · %2$@ · %3$@"
+          }
+        }
+      }
+    },
     "Hidden": {
       "comment": "Spending report account filter: the note on a hidden account’s row. Its spending counts while it’s ticked (D417).",
       "extractionState": "manual",
@@ -3007,6 +3033,19 @@
           "stringUnit": {
             "state": "translated",
             "value": "Next Period"
+          }
+        }
+      }
+    },
+    "No Income": {
+      "comment": "Income report empty state title, above “There’s no income in this period. Try another period.”",
+      "extractionState": "manual",
+      "generatesSymbol": false,
+      "localizations": {
+        "en": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "No Income"
           }
         }
       }
@@ -3085,6 +3124,30 @@
         }
       }
     },
+    "Other · %lld sources": {
+      "comment": "Income chart: the last bar, combining the smaller sources (always 2 or more), “Other · 2 sources”.",
+      "extractionState": "manual",
+      "localizations": {
+        "en": {
+          "variations": {
+            "plural": {
+              "one": {
+                "stringUnit": {
+                  "state": "translated",
+                  "value": "Other · %lld source"
+                }
+              },
+              "other": {
+                "stringUnit": {
+                  "state": "translated",
+                  "value": "Other · %lld sources"
+                }
+              }
+            }
+          }
+        }
+      }
+    },
     "Other, %lld categories": {
       "comment": "Spending chart: how VoiceOver names the Other bar, “Other, 2 categories”.",
       "extractionState": "manual",
@@ -3126,6 +3189,30 @@
                 "stringUnit": {
                   "state": "translated",
                   "value": "Other, %lld payees"
+                }
+              }
+            }
+          }
+        }
+      }
+    },
+    "Other, %lld sources": {
+      "comment": "Income chart: how VoiceOver and the audio graph name the Other bar, “Other, 2 sources”.",
+      "extractionState": "manual",
+      "localizations": {
+        "en": {
+          "variations": {
+            "plural": {
+              "one": {
+                "stringUnit": {
+                  "state": "translated",
+                  "value": "Other, %lld source"
+                }
+              },
+              "other": {
+                "stringUnit": {
+                  "state": "translated",
+                  "value": "Other, %lld sources"
                 }
               }
             }
@@ -3220,6 +3307,19 @@
           "stringUnit": {
             "state": "translated",
             "value": "Transactions"
+          }
+        }
+      }
+    },
+    "report.title.income": {
+      "comment": "Navigation title of the income-by-category report, also its Back button and Mac window title.",
+      "extractionState": "manual",
+      "generatesSymbol": false,
+      "localizations": {
+        "en": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Income"
           }
         }
       }
@@ -7107,6 +7207,19 @@
         }
       }
     },
+    "Sorted by amount. Refunds and transfers between your accounts aren’t income.": {
+      "comment": "Income report: the footer under the category rows.",
+      "extractionState": "manual",
+      "generatesSymbol": false,
+      "localizations": {
+        "en": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Sorted by amount. Refunds and transfers between your accounts aren’t income."
+          }
+        }
+      }
+    },
     "Sorted by amount. Refunds reduce spending at their payee. Transfers between your accounts aren’t spending.": {
       "comment": "Spending by payee: the footer under the payee rows.",
       "extractionState": "manual",
@@ -7129,6 +7242,19 @@
           "stringUnit": {
             "state": "translated",
             "value": "Sorted by amount. Refunds reduce spending in their category. Transfers between your accounts aren’t spending."
+          }
+        }
+      }
+    },
+    "Sources of Income": {
+      "comment": "Income report: the header of the list of category rows.",
+      "extractionState": "manual",
+      "generatesSymbol": false,
+      "localizations": {
+        "en": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Sources of Income"
           }
         }
       }
@@ -7419,6 +7545,19 @@
           "stringUnit": {
             "state": "translated",
             "value": "There’s an archived category named “%@”. Unarchive it in Categories to use it."
+          }
+        }
+      }
+    },
+    "There’s no income in this period. Try another period.": {
+      "comment": "Income report empty state message, under “No Income”.",
+      "extractionState": "manual",
+      "generatesSymbol": false,
+      "localizations": {
+        "en": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "There’s no income in this period. Try another period."
           }
         }
       }
@@ -8126,6 +8265,19 @@
           "stringUnit": {
             "state": "translated",
             "value": "Where do I spend the most?"
+          }
+        }
+      }
+    },
+    "Where does my money come from?": {
+      "comment": "The income-by-category report’s title, a plain question: its row on Reports and its heading.",
+      "extractionState": "manual",
+      "generatesSymbol": false,
+      "localizations": {
+        "en": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Where does my money come from?"
           }
         }
       }

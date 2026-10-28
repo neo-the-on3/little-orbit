@@ -54,14 +54,16 @@ public struct SpendingDrillDown: Equatable, Sendable {
     public var entries: [SpendingEntryRowModel]
 }
 
-/// “What do I spend my money on?” (#27, #184), or grouped by payee “Where do I spend the most?” (#184 slice 4),
-/// for iOS and macOS. It depends only on `LoadSpendingReportUseCase`,
+/// “What do I spend my money on?” (#27, #184), grouped by payee “Where do I spend the most?” (#184 slice 4), or
+/// counting income “Where does my money come from?” (#184 slice 5), for iOS and macOS. It depends only on `LoadSpendingReportUseCase`,
 /// and every read is async, so the report is built off the main actor (Tech Architect's NB1 on #185).
 @MainActor
 @Observable
 public final class SpendingReportViewModel {
     /// Whether the rows are categories or payees. Fixed for the screen.
     public let grouping: ReportGrouping
+    /// Whether the rows count spending or income. Fixed for the screen.
+    public let flow: ReportFlow
     /// The period shown: a preset, moved by ‹ ›, or a custom range. Change it with `select(_:)`.
     public internal(set) var selection: ReportSelection = .default
     /// The accounts counted: all of them, hidden ones too, until some are unticked (D417).
@@ -102,12 +104,14 @@ public final class SpendingReportViewModel {
     public init(
         useCase: any LoadSpendingReportUseCase,
         grouping: ReportGrouping = .category,
+        flow: ReportFlow = .spending,
         locale: Locale = .current,
         timeZone: TimeZone = .current,
         now: @escaping () -> Date = Date.init,
     ) {
         self.useCase = useCase
         self.grouping = grouping
+        self.flow = flow
         self.locale = locale
         self.formatter = MoneyFormatter(locale: locale)
         self.text = TransactionText(locale: locale)
@@ -155,8 +159,8 @@ public final class SpendingReportViewModel {
     /// No expenses or refunds in this period (and currency): the empty state.
     public var isEmpty: Bool { !isLoading && !loadFailed && rows.isEmpty }
 
-    public var emptyTitle: String { ReportText.emptyTitle }
-    public var emptyMessage: String { ReportText.emptyMessage }
+    public var emptyTitle: String { flow == .income ? ReportText.noIncomeTitle : ReportText.emptyTitle }
+    public var emptyMessage: String { flow == .income ? ReportText.noIncomeMessage : ReportText.emptyMessage }
     public var loadFailedTitle: String { ReportText.loadFailedTitle }
     public var loadFailedMessage: String { ReportText.tryAgain }
 
@@ -169,6 +173,7 @@ public final class SpendingReportViewModel {
             currencyCode: requestedCurrency,
             accounts: accountFilter,
             grouping: grouping,
+            flow: flow,
         )
     }
 
@@ -232,6 +237,7 @@ public final class SpendingReportViewModel {
             currencyCode: report.currencyCode,
             accounts: accountFilter,
             grouping: grouping,
+            flow: flow,
         )
         guard let entries = try? await useCase.spendingEntries(query, categoryID: row.rowID) else {
             return nil
@@ -246,6 +252,7 @@ public final class SpendingReportViewModel {
             amountText: formatter.string(total, currencyCode: report.currencyCode),
             caption: ReportText.drillDownCaption(
                 share: current?.shareText,
+                flow: flow,
                 period: title(of: report.range),
                 accounts: accountsText(report.accounts),
                 currencyCode: report.currencyCode,
@@ -262,7 +269,8 @@ public final class SpendingReportViewModel {
         currencyCode = report.currencyCode
         periodTitle = title(of: report.range)
         totalText = formatter.string(report.total, currencyCode: report.currencyCode)
-        totalCaption = ReportText.spentCaption(
+        totalCaption = ReportText.totalCaption(
+            flow: flow,
             period: periodTitle,
             accounts: accountsText(report.accounts),
             currencyCode: report.currencyCode,
@@ -348,7 +356,7 @@ public final class SpendingReportViewModel {
         let title: String
         switch RefundStatus(of: transaction) {
         case .notRefund:
-            title = name ?? ReportText.expense
+            title = name ?? (flow == .income ? ReportText.income : ReportText.expense)
         case .linked:
             title = RefundText.rowTitle(name: name, isLinked: true)
         case .originalDeleted:
@@ -357,13 +365,15 @@ public final class SpendingReportViewModel {
         }
         let date = text.format(entry.day, template: entry.day.year == today.year ? "EEEdMMM" : "EEEdMMMyyyy")
         let subtitle = [entry.account.name, date].joined(separator: " · ")
-        let amountText = formatter.string(-entry.amount, currencyCode: currencyCode, showsPlus: true)
+        // What it did to spending (−₹1,240.00 for an expense), or to income (+₹500.00).
+        let signed = flow == .income ? entry.amount : -entry.amount
+        let amountText = formatter.string(signed, currencyCode: currencyCode, showsPlus: true)
         return SpendingEntryRowModel(
             id: entry.id,
             title: title,
             subtitle: subtitle,
             amountText: amountText,
-            amountTone: entry.amount > 0 ? .negative : entry.amount < 0 ? .positive : .neutral,
+            amountTone: signed < 0 ? .negative : signed > 0 ? .positive : .neutral,
             accessibilityLabel: [title, subtitle, amountText].joined(separator: ", "),
         )
     }
