@@ -74,6 +74,20 @@ struct UndoCommandPerformTests {
         }
     }
 
+    @Test(
+        "Each command maps exactly to its own standard action: undo to undo:, redo to redo:, never swapped",
+        arguments: [(UndoCommandGate.Command.undo, "undo:"), (.redo, "redo:")],
+    )
+    func commandMapsToItsAction(_ command: UndoCommandGate.Command, _ name: String) {
+        #expect(command.actionName == name)
+        #expect(UndoCommandGate.command(forAction: name) == command)
+        #if canImport(AppKit) && os(macOS)
+            // What the Buttons send with `NSApp.sendAction` (D407.6), and what the app's guards read back.
+            #expect(command.action == NSSelectorFromString(name))
+            #expect(NSStringFromSelector(command.action) == name)
+        #endif
+    }
+
     // MARK: D407.2, the items read again in the same turn
 
     @Test("D407.2: closed, both items are dimmed and still named for the step; open again, on at once")
