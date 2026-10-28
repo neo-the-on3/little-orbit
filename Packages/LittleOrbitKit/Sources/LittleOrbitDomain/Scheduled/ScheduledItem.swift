@@ -146,6 +146,11 @@ public struct ScheduledItem: Identifiable, Hashable, Sendable, Codable {
     public var amount: Decimal
     /// A transfer into an account in another currency: the amount that arrives.
     public var destinationAmount: Decimal?
+    /// The currency `destinationAmount` was entered in: To's currency when it was set. It's set whenever the
+    /// received amount is, and a store refuses an item whose code isn't To's current currency, or is From's, so a
+    /// received amount is never read in a currency it wasn't entered in (#207 B1). Unset in backups and stores made
+    /// before it existed; such an item with a received amount is refused until the dev store is reset.
+    public var receivedCurrencyCode: String?
     public var accountID: UUID?
     public var transferAccountID: UUID?
     public var categoryID: UUID?
@@ -178,6 +183,7 @@ public struct ScheduledItem: Identifiable, Hashable, Sendable, Codable {
         type: TransactionType = .expense,
         amount: Decimal = 0,
         destinationAmount: Decimal? = nil,
+        receivedCurrencyCode: String? = nil,
         accountID: UUID? = nil,
         transferAccountID: UUID? = nil,
         categoryID: UUID? = nil,
@@ -200,6 +206,7 @@ public struct ScheduledItem: Identifiable, Hashable, Sendable, Codable {
         self.type = type
         self.amount = amount
         self.destinationAmount = destinationAmount
+        self.receivedCurrencyCode = receivedCurrencyCode
         self.accountID = accountID
         self.transferAccountID = transferAccountID
         self.categoryID = categoryID

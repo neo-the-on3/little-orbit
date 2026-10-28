@@ -152,6 +152,11 @@ extension LedgerBook {
             if !references(of: restoring, liveIn: snapshot, except: recreated) {
                 return .scheduledItemChanged(id)
             }
+            // The store's save invariant holds for Undo and Redo too: nothing is put back with a received amount
+            // in a currency To isn't in now (#207 B1).
+            if !receivedCurrencyIsCurrent(of: restoring, in: snapshot) {
+                return .scheduledItemChanged(id)
+            }
         }
         if undone, let created = change.createdPayee, !snapshot.payees.contains(where: { $0.id == created.id }),
             snapshot.payees.contains(where: { $0.isLive(named: created.name) && $0.isArchived })

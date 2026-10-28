@@ -31,6 +31,7 @@ struct ScheduledTableReceivedTests {
         item.categoryID = nil
         item.transferAccountID = account.id
         item.destinationAmount = received
+        item.receivedCurrencyCode = received == nil ? nil : account.currencyCode
         return item
     }
 

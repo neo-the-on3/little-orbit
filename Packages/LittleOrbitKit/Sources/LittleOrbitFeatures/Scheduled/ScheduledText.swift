@@ -327,6 +327,12 @@ enum ScheduledText {
         CategoryAlert(title: CategoryText.couldntSaveTitle, message: StaleText.deleted(name))
     }
 
+    /// "Travel Card has changed since then. Nothing was changed.", the stale-step message: a Save whose received
+    /// amount was entered in a currency To has changed from since the form opened (#207 B1).
+    static func toChangedNothingSaved(_ name: String?) -> CategoryAlert {
+        CategoryAlert(title: CategoryText.couldntSaveTitle, message: StaleText.changed(name ?? StaleText.theAccount))
+    }
+
     static var loadFailed: CategoryAlert {
         CategoryAlert(
             title: FeatureText.string(

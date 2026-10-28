@@ -44,6 +44,7 @@ struct ScheduledCurrencyStoreLockTests {
             type: .transfer,
             amount: 1_000,
             destinationAmount: received,
+            receivedCurrencyCode: account.currencyCode,
             accountID: scene.account.id,
             transferAccountID: account.id,
             details: "Rent Share",

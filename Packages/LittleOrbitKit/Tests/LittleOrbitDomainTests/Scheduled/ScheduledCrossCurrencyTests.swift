@@ -25,6 +25,7 @@ struct ScheduledCrossCurrencyTests {
             type: .transfer,
             amount: 1_000,
             destinationAmount: received,
+            receivedCurrencyCode: received == nil ? nil : (accountID == Self.yenID ? "JPY" : "USD"),
             accountID: Fix.savingsID,
             transferAccountID: accountID,
             details: "Fund USD Wallet",
@@ -70,13 +71,17 @@ struct ScheduledCrossCurrencyTests {
         #expect(repository.snapshot.scheduledItems.first?.destinationAmount == 150)
     }
 
-    @Test("A transfer in one currency keeps one amount: a received amount is refused")
+    @Test("A transfer in one currency keeps one amount: a received amount is refused, even in To's currency")
     func sameCurrency() throws {
         let repository = FakeScheduleRepository(Self.ledger)
         repository.now = Fix.created
-        #expect(throws: LedgerValidationError.unexpectedDestinationAmount) {
-            try repository.useCases().save(wallet(received: 12, to: Fix.fundID))
+        var item = wallet(received: 12, to: Fix.fundID)
+        item.receivedCurrencyCode = "INR"
+        // #207 B1's From-differs check says it before the transaction rules would.
+        #expect(throws: LedgerValidationError.receivedCurrencyMismatch) {
+            try repository.useCases().save(item)
         }
+        #expect(repository.snapshot.scheduledItems.isEmpty)
     }
 
     @Test("Catch-up records each occurrence with both amounts, as one transfer each")

@@ -18,6 +18,10 @@ public enum LedgerValidationError: Error, Equatable, Sendable {
     case detailsTooLong
     case invalidCurrencyCode
     case currencyLocked
+    /// A scheduled transfer's received amount isn't in To's current currency as entered, or To is now in From's
+    /// currency, or the item predates the received amount's currency (#207 B1). Refused at save, Undo, Redo and
+    /// posting, with nothing written.
+    case receivedCurrencyMismatch
     case tooManyDecimalPlaces
     case amountOutOfRange
     case categoryNestingTooDeep

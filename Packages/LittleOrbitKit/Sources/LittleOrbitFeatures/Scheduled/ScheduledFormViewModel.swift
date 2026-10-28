@@ -342,6 +342,8 @@ public final class ScheduledFormViewModel: Identifiable {
         item.transferAccountID = type == .transfer ? transferAccountID : nil
         // Dropped when To is back in From's currency (#197 item 9).
         item.destinationAmount = type == .transfer && needsReceivedAmount ? received : nil
+        // The currency the form entered it in, To's as this form read it; the store refuses it if To has moved on.
+        item.receivedCurrencyCode = item.destinationAmount == nil ? nil : receivedCurrencyCode
         item.categoryID = type == .transfer ? nil : categoryID
         item.payeeID = type == .transfer ? nil : payeeID
         let trimmed = details.trimmingCharacters(in: .whitespacesAndNewlines)
@@ -412,6 +414,11 @@ public final class ScheduledFormViewModel: Identifiable {
             change = try isNew ? useCases.manage.save(item, payee: payee) : useCases.manage.update(item, payee: payee)
         } catch LedgerValidationError.scheduleEndsBeforeStart {
             formError = ScheduledText.endBeforeStart
+            return false
+        } catch LedgerValidationError.receivedCurrencyMismatch {
+            // To's currency changed since the form read it: nothing was saved, and the form stays open with its
+            // edits, under the stale-step message "‹To› has changed since then. Nothing was changed." (#207 B1).
+            alert = ScheduledText.toChangedNothingSaved(listing.account(transferAccountID)?.name)
             return false
         } catch LedgerValidationError.missingScheduledItem where !isNew {
             // Deleted elsewhere while the form was open: nothing was saved, and OK closes the form (#258).
