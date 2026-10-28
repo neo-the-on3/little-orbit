@@ -93,9 +93,9 @@ struct ReportPeriodTests {
         #expect(ReportPeriod.lastMonth.range(today: F.day(2000, 3, 1)).end == F.day(2000, 2, 29))
     }
 
-    @Test("Only the four presets are offered for Monday")
-    func onlyPresets() {
-        #expect(ReportPeriod.allCases == [.thisMonth, .lastMonth, .thisYear, .lastYear])
+    @Test("The presets are months, quarters and years, in that order (#184)")
+    func offeredPresets() {
+        #expect(ReportPeriod.allCases == [.thisMonth, .lastMonth, .thisQuarter, .lastQuarter, .thisYear, .lastYear])
     }
 }
 
