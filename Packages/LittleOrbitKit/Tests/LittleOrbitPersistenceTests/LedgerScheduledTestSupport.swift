@@ -94,8 +94,9 @@ func assertScheduledStorage(make: MakeScheduleRepository) throws {
 }
 
 /// A catch-up posting that fails writes neither its transaction nor its record, and the other items still post in
-/// the same save (#26 exactly once). Here the transfer's To account changed currency after the item was saved, so
-/// its postings fail validation.
+/// the same save (#26 exactly once). Here the transfer's To account is in another currency than when the item was
+/// saved, so its postings fail validation. The store refuses that change now (D410.1), so the test checks the
+/// refusal, then writes the mismatch straight into the ledger, as data saved before D410 can still hold it.
 @MainActor
 func assertFailedCatchUpPostingWritesNothing(make: MakeScheduleRepository) throws {
     typealias Fix = ScheduledStorageFixture
@@ -127,7 +128,12 @@ func assertFailedCatchUpPostingWritesNothing(make: MakeScheduleRepository) throw
     try repository.saveScheduledItem(transfer, today: Fix.day(2026, 8, 1), now: created)
     try repository.saveScheduledItem(gym, today: Fix.day(2026, 8, 1), now: created)
     fund.currencyCode = "EUR"
-    try repository.saveAccount(fund)
+    XCTAssertThrowsError(try repository.saveAccount(fund)) { error in
+        XCTAssertEqual(error as? LedgerValidationError, .currencyLocked)
+    }
+    var ledger = try repository.ledgerSnapshot()
+    ledger.accounts = ledger.accounts.map { $0.id == fund.id ? fund : $0 }
+    try repository.replaceLedger(with: ledger)
 
     let result = try repository.catchUpScheduledItems(today: Fix.day(2026, 10, 20), pruningOrphans: true)
     XCTAssertEqual(result.failedItemIDs, [transfer.id])

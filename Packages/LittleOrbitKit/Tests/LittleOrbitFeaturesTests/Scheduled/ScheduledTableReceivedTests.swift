@@ -61,10 +61,12 @@ struct ScheduledTableReceivedTests {
         let scene = try ScheduledScene()
         try scene.repository.saveAccount(Self.wallet)
         try scene.add(transfer(scene, "Fund USD Wallet", to: Self.wallet, received: 12))
-        // As an Edit Account form left open from before the item used it could still do (#301).
+        // The store refuses this change now (D410.1); data saved before D410 can still hold it.
         var wallet = Self.wallet
         wallet.currencyCode = "INR"
-        try scene.repository.saveAccount(wallet)
+        var ledger = try scene.repository.ledgerSnapshot()
+        ledger.accounts = ledger.accounts.map { $0.id == wallet.id ? wallet : $0 }
+        try scene.repository.replaceLedger(with: ledger)
         let row = try #require(rows(scene)["Fund USD Wallet"])
         #expect(row.received == nil)
         #expect(row.amountHelp == row.amount)

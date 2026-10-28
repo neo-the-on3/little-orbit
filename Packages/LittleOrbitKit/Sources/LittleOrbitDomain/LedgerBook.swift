@@ -62,7 +62,10 @@ public enum LedgerBook {
                 transaction.deletedAt == nil
                     && (transaction.accountID == account.id || transaction.transferAccountID == account.id)
             }
-            if currencyChanged && hasTransactions {
+            // Any stored scheduled item, Completed or hidden ones included, keeps its accounts' currency too, so
+            // a form opened before the item was scheduled can't change it (D410.1, D412).
+            let isScheduled = CurrencyLock.scheduledAccountIDs(snapshot.scheduledItems).contains(account.id)
+            if currencyChanged && (hasTransactions || isScheduled) {
                 throw LedgerValidationError.currencyLocked
             }
             account.createdAt = existing.createdAt
