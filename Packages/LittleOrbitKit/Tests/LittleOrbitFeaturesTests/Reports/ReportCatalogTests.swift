@@ -11,7 +11,8 @@ struct ReportCatalogTests {
         let keys = [
             "Reports", "Spending", "What do I spend my money on?", "Period", "Currency", "This Month", "Last Month",
             "This Quarter", "Last Quarter", "Q%1$lld %2$@", "%1$@ – %2$@",
-            "This Year", "Last Year", "%1$@ › %2$@", "Spent in %1$@ · %2$@", "%1$@ · %2$@", "%1$@ of spending",
+            "This Year", "Last Year", "%1$@ › %2$@", "Spent in %1$@ · %2$@ · %3$@", "all accounts", "Hidden",
+            "Custom Range", "Previous Period", "Next Period", "%1$@ · %2$@", "%1$@ of spending",
             "All Categories", "No Expenses", "There are no expenses in this period. Try another period.",
             "Couldn’t Load Report", "Refund", "Refund · %@", "Refund (original deleted)",
             "Refund (original deleted) · %@", "Uncategorised", "Try again.", "Expense",
@@ -21,10 +22,10 @@ struct ReportCatalogTests {
             #expect(entries[key] == [key], "\(key) is one entry with its English value")
         }
         for gone in [
-            "No spending in %@", "%1$@ of spending · %2$@",
+            "No spending in %@", "%1$@ of spending · %2$@", "Spent in %1$@ · %2$@",
             "Sorted by amount. Refunds reduce spending in their category. Transfers between your accounts aren’t spending. Future-dated items aren’t included.",
         ] {
-            #expect(entries[gone] == nil, "\(gone) is no longer used (D318.4, D319.5, D319.6)")
+            #expect(entries[gone] == nil, "\(gone) is no longer used (D318.4, D319.5, D319.6, #184)")
         }
     }
 

@@ -1010,6 +1010,19 @@
         }
       }
     },
+    "all accounts": {
+      "comment": "Spending report caption’s end, “Spent in October 2026 · INR · all accounts”: every account in the currency counts. Lowercase, mid-sentence.",
+      "extractionState": "manual",
+      "generatesSymbol": false,
+      "localizations": {
+        "en": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "all accounts"
+          }
+        }
+      }
+    },
     "All Categories": {
       "comment": "Spending report: the header of the list of category rows.",
       "extractionState": "manual",
@@ -2846,6 +2859,32 @@
         }
       }
     },
+    "Custom Range": {
+      "comment": "Report period picker: the option to choose your own first and last day, both included.",
+      "extractionState": "manual",
+      "generatesSymbol": false,
+      "localizations": {
+        "en": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Custom Range"
+          }
+        }
+      }
+    },
+    "Hidden": {
+      "comment": "Spending report account filter: the note on a hidden account’s row. Its spending counts while it’s ticked (D417).",
+      "extractionState": "manual",
+      "generatesSymbol": false,
+      "localizations": {
+        "en": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Hidden"
+          }
+        }
+      }
+    },
     "Last Quarter": {
       "comment": "Report period preset: the previous calendar quarter.",
       "extractionState": "manual",
@@ -2855,6 +2894,32 @@
           "stringUnit": {
             "state": "translated",
             "value": "Last Quarter"
+          }
+        }
+      }
+    },
+    "Next Period": {
+      "comment": "Report › button (⌘→ on macOS): the month, quarter or year after the one shown.",
+      "extractionState": "manual",
+      "generatesSymbol": false,
+      "localizations": {
+        "en": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Next Period"
+          }
+        }
+      }
+    },
+    "Previous Period": {
+      "comment": "Report ‹ button (⌘← on macOS): the month, quarter or year before the one shown.",
+      "extractionState": "manual",
+      "generatesSymbol": false,
+      "localizations": {
+        "en": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Previous Period"
           }
         }
       }
@@ -6781,15 +6846,15 @@
         }
       }
     },
-    "Spent in %1$@ · %2$@": {
-      "comment": "Spending report: the caption under the total. %1$@ is the period, such as “October 2026” or “2026”; %2$@ the currency code, such as INR.",
+    "Spent in %1$@ · %2$@ · %3$@": {
+      "comment": "Caption under the spending report’s total, e.g. “Spent in October 2026 · INR · all accounts”: the period, the currency, then which accounts count (D318.1, #184).",
       "extractionState": "manual",
       "generatesSymbol": false,
       "localizations": {
         "en": {
           "stringUnit": {
             "state": "translated",
-            "value": "Spent in %1$@ · %2$@"
+            "value": "Spent in %1$@ · %2$@ · %3$@"
           }
         }
       }

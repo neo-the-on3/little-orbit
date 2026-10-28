@@ -30,6 +30,7 @@
     /// system chevrons, Dynamic Type and keyboard focus.
     struct SpendingReportView: View {
         @State private var model: SpendingReportViewModel
+        @State private var showsAccounts = false
         private let updates: LedgerUpdates
 
         init(feature: ReportsFeature) {
@@ -43,12 +44,7 @@
                     Text(ReportText.spendingQuestion)
                         .font(.title3)
                         .accessibilityAddTraits(.isHeader)
-                    Picker(ReportText.period, selection: period) {
-                        ForEach(model.periods) { period in
-                            Text(model.periodName(period)).tag(period)
-                        }
-                    }
-                    .pickerStyle(.menu)
+                    ReportPeriodControls(model: model)
                     if model.showsCurrencyPicker {
                         Picker(ReportText.currency, selection: currency) {
                             ForEach(model.currencies, id: \.self) { code in
@@ -61,6 +57,19 @@
                 content
             }
             .navigationTitle(ReportText.spendingTitle)
+            .toolbar {
+                ToolbarItem {
+                    Button {
+                        showsAccounts = true
+                    } label: {
+                        Label(model.accountsTitle, systemImage: "line.3.horizontal.decrease.circle")
+                    }
+                    .disabled(model.accounts.isEmpty)
+                }
+            }
+            .sheet(isPresented: $showsAccounts) {
+                ReportAccountsSheet(model: model)
+            }
             .task { await model.load() }
             // Any edit to the shared store, from any window, regenerates the report.
             .onChange(of: updates.revision) {
@@ -69,24 +78,13 @@
             }
         }
 
-        private var period: Binding<ReportPeriod> {
-            Binding(
-                get: { model.period ?? .thisMonth },
-                set: { period in Task { await model.select(period) } },
-            )
-        }
-
         private var currency: Binding<String> {
             Binding(get: { model.currencyCode }, set: { code in Task { await model.selectCurrency(code) } })
         }
 
         @ViewBuilder private var content: some View {
             if model.loadFailed {
-                ContentUnavailableView(
-                    model.loadFailedTitle,
-                    systemImage: "exclamationmark.triangle",
-                    description: Text(model.loadFailedMessage),
-                )
+                ReportLoadFailedView(model: model) { await model.retry() }
             } else if model.isEmpty {
                 ContentUnavailableView(model.emptyTitle, systemImage: "cart", description: Text(model.emptyMessage))
             } else if !model.rows.isEmpty {

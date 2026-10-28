@@ -78,9 +78,72 @@ enum ReportText {
         FeatureText.plural("%lld transactions", one: "%lld transaction", count)
     }
 
-    /// “Spent in October 2026 · INR”, under the total.
-    static func spentCaption(period: String, currencyCode: String) -> String {
-        FeatureText.format("Spent in %1$@ · %2$@", period, currencyCode)
+    /// “Spent in October 2026 · INR · all accounts”, under the total (D318.1; “· all accounts” from #184).
+    static func spentCaption(period: String, currencyCode: String, accounts: String) -> String {
+        FeatureText.format("Spent in %1$@ · %2$@ · %3$@", period, currencyCode, accounts)
+    }
+
+    static var allAccounts: String {
+        FeatureText.string(
+            "all accounts",
+            comment:
+                "Spending report caption’s end, “Spent in October 2026 · INR · all accounts”: every account counts.",
+        )
+    }
+
+    /// “2 accounts”: how many of the shown currency's accounts are ticked, when not all of them are.
+    static func accountCount(_ count: Int) -> String {
+        FeatureText.plural("%lld accounts", one: "%lld account", count)
+    }
+
+    static var accountsTitle: String {
+        FeatureText.string(
+            "Accounts",
+            comment:
+                "Spending report: the account filter’s button and sheet title, listing the shown currency’s accounts.",
+        )
+    }
+
+    static var hiddenAccount: String {
+        FeatureText.string(
+            "Hidden",
+            comment:
+                "Spending report account filter: the note on a hidden account’s row. Its spending counts while ticked.",
+        )
+    }
+
+    static var customRange: String {
+        FeatureText.string("Custom Range", comment: "Report period picker: choose your own first and last day.")
+    }
+
+    static var customStart: String {
+        FeatureText.string("From", comment: "Report custom range: the first day, included.")
+    }
+
+    static var customEnd: String {
+        FeatureText.string("To", comment: "Report custom range: the last day, included.")
+    }
+
+    static var previousPeriod: String {
+        FeatureText.string(
+            "Previous Period",
+            comment: "Report ‹ button (⌘← on macOS): the month, quarter or year before the one shown.",
+        )
+    }
+
+    static var nextPeriod: String {
+        FeatureText.string(
+            "Next Period",
+            comment: "Report › button (⌘→ on macOS): the month, quarter or year after the one shown.",
+        )
+    }
+
+    static var tryAgainButton: String {
+        FeatureText.string(
+            "Try Again",
+            comment:
+                "Button under “Couldn’t Load Report” that reads the report (and an open drill-down) again (D318.5).",
+        )
     }
 
     /// “16.9% of spending · October 2026 · INR”, under a category's total in its drill-down: the category's share
