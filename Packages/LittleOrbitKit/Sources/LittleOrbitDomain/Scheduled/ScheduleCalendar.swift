@@ -196,16 +196,18 @@ public enum ScheduleCalendar {
     }
 
     /// Calls `body` with each occurrence in order until it returns `false`, the end date passes or the rule ends.
-    /// Days before the item's creation day or `resumesOn` are passed over (D114, D336.2, D337.1).
+    /// Days before the item's creation day or `resumesOn` are passed over (D114, D336.2, D337.1), and so is a day
+    /// whose period already has another occurrence of the item (D426.1, D427.1).
     private static func walk(_ item: ScheduledItem, _ body: (CalendarDay) -> Bool) {
         let floor = max(item.creationDay, item.resumesOn ?? item.creationDay)
+        let taken = TakenPeriods(item)
         var index = 0
         while index < walkLimit, let day = occurrence(index, from: item.startDay, repeating: item.repeatRule) {
             index += 1
             if let end = item.endDay, day > end {
                 return
             }
-            if day < floor {
+            if day < floor || taken.contains(day) {
                 continue
             }
             if !body(day) {
