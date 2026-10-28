@@ -56,5 +56,61 @@
                 XCTAssertEqual(stored.amount, decimal("120"))
             }
         }
+
+        /// #207 B1: an occurrence's own To account in another currency keeps its own amount received and its code.
+        func testOccurrenceReceivedAmountSurvivesReopeningTheStore() throws {
+            try onMain {
+                let directory = FileManager.default.temporaryDirectory
+                    .appendingPathComponent("little-orbit-\(UUID().uuidString)", isDirectory: true)
+                try FileManager.default.createDirectory(at: directory, withIntermediateDirectories: true)
+                let configuration = StoreConfiguration(fileURL: directory.appendingPathComponent("ledger.store"))
+                let savings = Account(name: "Everyday Savings", currencyCode: "INR", openingBalance: decimal("500"))
+                let wallet = Account(name: "USD Wallet", currencyCode: "USD")
+                let yen = Account(name: "Tokyo Wallet", currencyCode: "JPY")
+                var item = ScheduledItem(
+                    type: .transfer,
+                    amount: decimal("1000"),
+                    destinationAmount: decimal("12.5"),
+                    receivedCurrencyCode: "USD",
+                    accountID: savings.id,
+                    transferAccountID: wallet.id,
+                    details: "Fund USD Wallet",
+                    startDay: CalendarDay(year: 2027, month: 1, day: 31),
+                    timeZoneID: "Asia/Kolkata",
+                    createdAt: Date(timeIntervalSince1970: 1_780_000_000),
+                )
+                let key = CalendarDay(year: 2027, month: 2, day: 28)
+                do {
+                    let repository = try LittleOrbitStore.makeRepository(configuration: configuration)
+                    for account in [savings, wallet, yen] {
+                        try repository.saveAccount(account)
+                    }
+                    let today = CalendarDay(year: 2027, month: 1, day: 1)
+                    try repository.saveScheduledItem(
+                        item,
+                        today: today,
+                        now: Date(timeIntervalSince1970: 1_798_741_800),
+                    )
+                    item.transferAccountID = yen.id
+                    item.destinationAmount = decimal("1800")
+                    item.receivedCurrencyCode = "JPY"
+                    _ = try repository.updateScheduledOccurrence(
+                        item,
+                        editing: ScheduledOccurrenceSave(occurrence: key, dueDay: key, scope: .thisOccurrence),
+                        payee: nil,
+                        today: today,
+                        now: Date(timeIntervalSince1970: 1_798_741_800),
+                    )
+                }
+                let reopened = try LittleOrbitStore.makeRepository(configuration: configuration)
+                let stored = try XCTUnwrap(try reopened.scheduleLedger().scheduledItems.first)
+                XCTAssertEqual(stored.edit(for: key)?.fields, [.transferAccount, .received])
+                XCTAssertEqual(stored.resolved(for: key).transferAccountID, yen.id)
+                XCTAssertEqual(stored.resolved(for: key).destinationAmount, decimal("1800"))
+                XCTAssertEqual(stored.resolved(for: key).receivedCurrencyCode, "JPY")
+                XCTAssertEqual(stored.destinationAmount, decimal("12.5"))
+                XCTAssertEqual(stored.receivedCurrencyCode, "USD")
+            }
+        }
     }
 #endif

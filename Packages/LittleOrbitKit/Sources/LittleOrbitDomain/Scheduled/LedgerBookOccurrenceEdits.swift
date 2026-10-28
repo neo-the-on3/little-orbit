@@ -350,6 +350,9 @@ extension LedgerBook {
         case .amount: item.amount = source.amount
         case .account: item.accountID = source.accountID
         case .transferAccount: item.transferAccountID = source.transferAccountID
+        case .received:
+            item.destinationAmount = source.destinationAmount
+            item.receivedCurrencyCode = source.receivedCurrencyCode
         case .category: item.categoryID = source.categoryID
         case .payee: item.payeeID = source.payeeID
         case .details: item.details = source.details

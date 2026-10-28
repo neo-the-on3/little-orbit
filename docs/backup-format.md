@@ -158,9 +158,12 @@ schema is still V1 and changes in place (D294). Each item carries its settled oc
 it stays due for the user and catch-up never records it (D344). Records without it write no transaction ID, as before,
 so their backups and fingerprints don't change. An occurrence edited with "This occurrence only" (#197, D45) carries
 an `edit` object: `fields` (the names of the fields it sets, in a fixed order), and its values (`day`, `amount`,
-`accountID`, `transferAccountID`, `categoryID`, `payeeID`, `details`, `note`); an open one has the outcome `edited`.
+`accountID`, `transferAccountID`, `destinationAmount`, `receivedCurrencyCode`, `categoryID`, `payeeID`, `details`,
+`note`); an open one has the outcome `edited`. A transfer's own amount received (`received` in `fields`) is written
+with the currency it was entered in, as the item's is (#207 B1).
 An `accountID` or `transferAccountID` the backup has no account for (its account was deleted after the edit) is
-dropped on restore, and that occurrence follows the item's account; it never makes the backup damaged (#202 B1).
+dropped on restore, and that occurrence follows the item's account, and with its To account its own amount received;
+it never makes the backup damaged (#202 B1).
 Items without such edits write exactly what they wrote before. A backup without scheduled items writes the section as
 before, its manifest doesn't list it, and its fingerprint doesn't change; older backups read with no scheduled items.
 The repeat is written as `{"kind": "never"}` or `{"kind": "every", "unit": "month", "count": 1}`, and days as

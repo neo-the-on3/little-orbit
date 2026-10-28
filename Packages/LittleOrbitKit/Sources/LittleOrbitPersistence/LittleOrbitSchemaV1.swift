@@ -320,6 +320,11 @@
             public var editAmountScale: Int16?
             public var editAccountID: UUID?
             public var editTransferAccountID: UUID?
+            /// Its own amount received, in minor units at `editDestinationAmountScale` decimal places, and the
+            /// currency it was entered in (#207 B1).
+            public var editDestinationAmountMinor: Int64?
+            public var editDestinationAmountScale: Int16?
+            public var editReceivedCurrencyCode: String?
             public var editCategoryID: UUID?
             public var editPayeeID: UUID?
             public var editDetails: String?

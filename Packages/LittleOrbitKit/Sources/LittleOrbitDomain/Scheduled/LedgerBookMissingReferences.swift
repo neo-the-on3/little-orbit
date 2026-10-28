@@ -77,6 +77,8 @@ extension LedgerBook {
             switch field {
             case .account: missingAccount(edit.accountID)
             case .transferAccount: missingAccount(edit.transferAccountID)
+            // Its own amount received goes with its own To account, so it follows the item's too (#207 B1).
+            case .received: edit.has(.transferAccount) && missingAccount(edit.transferAccountID)
             case .category: edit.categoryID.map { activeCategory($0, in: snapshot) == nil } ?? false
             case .payee:
                 edit.payeeID.map { id in !snapshot.payees.contains { $0.id == id && $0.deletedAt == nil } } ?? false

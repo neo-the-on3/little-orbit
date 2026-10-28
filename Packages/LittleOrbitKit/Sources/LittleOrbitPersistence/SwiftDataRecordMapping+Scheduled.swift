@@ -48,6 +48,11 @@
             editAmountScale = amount?.scale
             editAccountID = edit?.accountID
             editTransferAccountID = edit?.transferAccountID
+            let received = try edit?.destinationAmount
+                .map { try MinorUnitDecimal.store($0, scale: MinorUnitDecimal.fractionalDigits(in: $0)) }
+            editDestinationAmountMinor = received?.minorUnits
+            editDestinationAmountScale = received?.scale
+            editReceivedCurrencyCode = edit?.receivedCurrencyCode
             editCategoryID = edit?.categoryID
             editPayeeID = edit?.payeeID
             editDetails = edit?.details
@@ -70,12 +75,23 @@
                     from: MinorUnitDecimal.Stored(minorUnits: editAmountMinor, scale: editAmountScale)
                 )
             }
+            var received: Decimal?
+            if let editDestinationAmountMinor, let editDestinationAmountScale {
+                received = MinorUnitDecimal.decimal(
+                    from: MinorUnitDecimal.Stored(
+                        minorUnits: editDestinationAmountMinor,
+                        scale: editDestinationAmountScale,
+                    )
+                )
+            }
             return ScheduledOccurrenceEdit(
                 fields: fields,
                 day: day,
                 amount: amount,
                 accountID: editAccountID,
                 transferAccountID: editTransferAccountID,
+                destinationAmount: received,
+                receivedCurrencyCode: editReceivedCurrencyCode,
                 categoryID: editCategoryID,
                 payeeID: editPayeeID,
                 details: editDetails,
