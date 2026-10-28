@@ -51,19 +51,15 @@ public struct SpendingDrillDown: Equatable, Sendable {
     public var entries: [SpendingEntryRowModel]
 }
 
-/// “What do I spend my money on?” (#27 core, D316) for iOS and macOS. It depends only on
-/// `LoadSpendingReportUseCase`.
+/// “What do I spend my money on?” (#27, #184) for iOS and macOS. It depends only on `LoadSpendingReportUseCase`,
+/// and every read is async, so the report is built off the main actor (Tech Architect's NB1 on #185).
 @MainActor
 @Observable
 public final class SpendingReportViewModel {
-    /// The preset period. Changing it reloads the report.
-    public var period: ReportPeriod = .thisMonth {
-        didSet {
-            if period != oldValue {
-                load()
-            }
-        }
-    }
+    /// The period shown: a preset, moved by ‹ ›, or a custom range. Change it with `select(_:)`.
+    public internal(set) var selection: ReportSelection = .default
+    /// The accounts counted: all of them, hidden ones too, until some are unticked (D417).
+    public internal(set) var accountFilter: ReportAccountFilter = .all
 
     public private(set) var rows: [SpendingRowModel] = []
     public private(set) var totalText = ""
@@ -72,6 +68,8 @@ public final class SpendingReportViewModel {
     public private(set) var currencies: [String] = []
     /// The currency shown: one at a time, never added together (D17).
     public private(set) var currencyCode = ""
+    /// The account filter's list: every account in the shown currency, hidden ones included (D417).
+    public private(set) var accounts: [ReportAccountOption] = []
     public private(set) var loadFailed = false
     /// True until the first load.
     public private(set) var isLoading = true
@@ -83,13 +81,15 @@ public final class SpendingReportViewModel {
     /// its open drill-down hears it first.
     @ObservationIgnored private var storeRevision: Int?
     @ObservationIgnored private var report: SpendingReport?
-    @ObservationIgnored private var requestedCurrency: String?
+    @ObservationIgnored var requestedCurrency: String?
+    /// Counts loads, so only the latest one started is shown when two overlap.
+    @ObservationIgnored private var loadCount = 0
     @ObservationIgnored private let useCase: any LoadSpendingReportUseCase
-    @ObservationIgnored private let locale: Locale
+    @ObservationIgnored let locale: Locale
     @ObservationIgnored private let formatter: MoneyFormatter
-    @ObservationIgnored private let text: TransactionText
-    @ObservationIgnored private let timeZone: TimeZone
-    @ObservationIgnored private let now: () -> Date
+    @ObservationIgnored let text: TransactionText
+    @ObservationIgnored let timeZone: TimeZone
+    @ObservationIgnored let now: () -> Date
 
     public init(
         useCase: any LoadSpendingReportUseCase,
@@ -106,10 +106,27 @@ public final class SpendingReportViewModel {
     }
 
     /// Shows `code` and keeps it while the period changes, as long as the period has spending in it.
-    public func selectCurrency(_ code: String) {
+    public func selectCurrency(_ code: String) async {
         requestedCurrency = code
-        load()
+        await load()
     }
+
+    /// Shows `period` from today, then reloads.
+    public func select(_ period: ReportPeriod) async {
+        await select(.preset(period))
+    }
+
+    /// Shows `selection`, then reloads.
+    public func select(_ selection: ReportSelection) async {
+        guard selection != self.selection else {
+            return
+        }
+        self.selection = selection
+        await load()
+    }
+
+    /// The preset the period picker shows; `nil` for a custom range.
+    public var period: ReportPeriod? { selection.preset }
 
     public var periods: [ReportPeriod] { ReportPeriod.allCases }
 
@@ -128,35 +145,57 @@ public final class SpendingReportViewModel {
     public var loadFailedTitle: String { ReportText.loadFailedTitle }
     public var loadFailedMessage: String { ReportText.tryAgain }
 
-    public func load() {
-        defer {
-            isLoading = false
-            revision += 1
-        }
+    var today: CalendarDay { TransactionTiming.today(now(), timeZone: timeZone) }
+
+    /// What the next load reads.
+    var query: SpendingReportQuery {
+        SpendingReportQuery(
+            range: selection.range(today: today),
+            currencyCode: requestedCurrency,
+            accounts: accountFilter,
+        )
+    }
+
+    /// Reads the report again. A load that's overtaken by a newer one, or cancelled, changes nothing.
+    public func load() async {
+        loadCount += 1
+        let current = loadCount
+        let query = query
         do {
-            let report = try useCase.spendingReport(for: period, currencyCode: requestedCurrency)
+            let report = try await useCase.spendingReport(query)
+            guard current == loadCount else {
+                return
+            }
             self.report = report
             loadFailed = false
             apply(report)
+        } catch is CancellationError {
+            return
         } catch {
+            guard current == loadCount else {
+                return
+            }
             report = nil
             loadFailed = true
             rows = []
             totalText = ""
             totalCaption = ""
             currencies = []
-            periodTitle = title(of: period.range(today: TransactionTiming.today(now(), timeZone: timeZone)))
+            accounts = []
+            periodTitle = title(of: query.range)
         }
+        isLoading = false
+        revision += 1
     }
 
     /// Loads again after a change to the shared store at `storeRevision`, from any window, unless that change has
     /// already been read.
-    public func load(at storeRevision: Int) {
+    public func load(at storeRevision: Int) async {
         guard storeRevision != self.storeRevision else {
             return
         }
         self.storeRevision = storeRevision
-        load()
+        await load()
     }
 
     /// A drill-down for `row`, kept current while it's open.
@@ -167,20 +206,19 @@ public final class SpendingReportViewModel {
     /// The transactions behind `row`, read when its drill-down opens and again after each load. Its title is the
     /// row's current name, in case the category was renamed, and its share is the current one. `nil` if they can't
     /// be read.
-    public func drillDown(for row: SpendingRowModel) -> SpendingDrillDown? {
+    public func drillDown(for row: SpendingRowModel) async -> SpendingDrillDown? {
         guard let report else {
             return nil
         }
-        guard
-            let entries = try? useCase.spendingEntries(
-                for: report.period,
-                currencyCode: report.currencyCode,
-                categoryID: row.categoryID,
-            )
-        else {
+        let query = SpendingReportQuery(
+            range: report.range,
+            currencyCode: report.currencyCode,
+            accounts: accountFilter,
+        )
+        guard let entries = try? await useCase.spendingEntries(query, categoryID: row.categoryID) else {
             return nil
         }
-        let today = TransactionTiming.today(now(), timeZone: timeZone)
+        let today = today
         let total = entries.reduce(Decimal(0)) { $0 + $1.amount }
         // The report's current row, for its name and share. Gone once its last transaction is: no share then, so
         // the header is the period and currency only, as for any row without a share.
@@ -206,6 +244,7 @@ public final class SpendingReportViewModel {
         periodTitle = title(of: report.range)
         totalText = formatter.string(report.total, currencyCode: report.currencyCode)
         totalCaption = ReportText.spentCaption(period: periodTitle, currencyCode: report.currencyCode)
+        accounts = report.accounts
         let largest = report.rows.map(\.amount).max() ?? 0
         rows = report.rows.map { row(for: $0, largest: largest, currencyCode: report.currencyCode) }
     }
@@ -253,10 +292,22 @@ public final class SpendingReportViewModel {
             .formatted(.percent.precision(.fractionLength(1)).sign(strategy: .automatic).locale(locale))
     }
 
-    /// “October 2026” for a month, “2026” for a year, in the view model's locale.
-    private func title(of range: ReportDayRange) -> String {
-        let isYear = range.start.month == 1 && range.end.month == 12 && range.start.year == range.end.year
-        return text.format(range.start, template: isYear ? "yyyy" : "MMMMyyyy")
+    /// “October 2026” for a month, “Q4 2026” for a quarter, “2026” for a year, and “15 Sep 2026 – 14 Oct 2026”
+    /// for any other range, in the view model's locale.
+    func title(of range: ReportDayRange) -> String {
+        switch range.shape {
+        case .month:
+            text.format(range.start, template: "MMMMyyyy")
+        case .quarter(let quarter):
+            ReportText.quarterTitle(quarter, year: text.format(range.start, template: "yyyy"))
+        case .year:
+            text.format(range.start, template: "yyyy")
+        case .days:
+            ReportText.rangeTitle(
+                from: text.format(range.start, template: "dMMMyyyy"),
+                to: text.format(range.end, template: "dMMMyyyy"),
+            )
+        }
     }
 
     private func entryRow(_ entry: SpendingReportEntry, currencyCode: String, today: CalendarDay)

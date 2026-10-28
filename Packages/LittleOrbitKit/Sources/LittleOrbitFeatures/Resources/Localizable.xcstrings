@@ -308,6 +308,19 @@
         }
       }
     },
+    "%1$@ – %2$@": {
+      "comment": "A custom report period’s title, e.g. “15 Sep 2026 – 14 Oct 2026”: its first and last days, both included.",
+      "extractionState": "manual",
+      "generatesSymbol": false,
+      "localizations": {
+        "en": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "%1$@ – %2$@"
+          }
+        }
+      }
+    },
     "%1$@ › %2$@": {
       "comment": "A subcategory with its parent: %1$@ is the parent category, %2$@ the subcategory, as in “Food & Dining › Groceries”. Spending report rows (D289.2) and the CSV import Match step.",
       "extractionState": "manual",
@@ -2842,6 +2855,19 @@
           "stringUnit": {
             "state": "translated",
             "value": "Last Quarter"
+          }
+        }
+      }
+    },
+    "Q%1$lld %2$@": {
+      "comment": "A calendar quarter as a report period’s title, e.g. “Q4 2026”: the quarter number, then the year.",
+      "extractionState": "manual",
+      "generatesSymbol": false,
+      "localizations": {
+        "en": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Q%1$lld %2$@"
           }
         }
       }

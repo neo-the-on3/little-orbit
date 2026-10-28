@@ -1,63 +1,62 @@
 import Foundation
 
-/// Loads “What do I spend my money on?” and its drill-down (#27 core). The spending report's view model depends
-/// only on this protocol; the App target wires in `DefaultLoadSpendingReportUseCase`.
-@MainActor
-public protocol LoadSpendingReportUseCase {
-    /// The report for `period` in `currencyCode`, or, when that currency has no spending in the period, in the
-    /// first of the period's currencies (the default currency first).
-    func spendingReport(for period: ReportPeriod, currencyCode: String?) throws -> SpendingReport
-    /// The transactions behind one row (`categoryID` `nil` is Uncategorised), newest first.
-    func spendingEntries(
-        for period: ReportPeriod,
-        currencyCode: String,
-        categoryID: UUID?,
-    ) throws -> [SpendingReportEntry]
+/// Loads “What do I spend my money on?” and its drill-down (#27, #184). The spending report's view model depends
+/// only on this protocol; the App target wires in `DefaultLoadSpendingReportUseCase`. Both calls are async, so
+/// the report is built off the main actor (Tech Architect's NB1 on #185).
+public protocol LoadSpendingReportUseCase: Sendable {
+    /// The report for `query`, in its currency or, when that currency has no spending in the range, in the
+    /// first of the range's currencies (the default currency first).
+    func spendingReport(_ query: SpendingReportQuery) async throws -> SpendingReport
+    /// The transactions behind one row of `query`'s report (`categoryID` `nil` is Uncategorised), newest first.
+    func spendingEntries(_ query: SpendingReportQuery, categoryID: UUID?) async throws -> [SpendingReportEntry]
 }
 
 @MainActor
 public struct DefaultLoadSpendingReportUseCase: LoadSpendingReportUseCase {
     private let source: any LedgerBackupSource
     private let defaultCurrency: String
-    private let timeZone: TimeZone
-    private let now: @MainActor () -> Date
 
     /// `source` is read once per call, as one whole-ledger snapshot without attachment bytes (Tech Architect's
-    /// NB2 on #185), rather than once per record type. `timeZone` and `now` only decide which day is today, and
-    /// so which month or year is “this” one. Each transaction still counts on its own day in its own zone.
-    public init(
-        source: any LedgerBackupSource,
-        defaultCurrency: String = CurrencyCode.deviceDefault,
-        timeZone: TimeZone = .current,
-        now: @escaping @MainActor () -> Date = { Date() },
-    ) {
+    /// NB2 on #185). The store lives on the main actor, so that read stays there: it's the store's own copy of
+    /// the ledger in memory. Counting, sorting and the shares run off the main actor.
+    public init(source: any LedgerBackupSource, defaultCurrency: String = CurrencyCode.deviceDefault) {
         self.source = source
         self.defaultCurrency = defaultCurrency
-        self.timeZone = timeZone
-        self.now = now
     }
 
-    public func spendingReport(for period: ReportPeriod, currencyCode: String?) throws -> SpendingReport {
-        SpendingReportBuilder.report(
-            in: try source.backupSnapshot(),
-            period: period,
-            today: TransactionTiming.today(now(), timeZone: timeZone),
-            currencyCode: currencyCode,
-            defaultCurrency: defaultCurrency,
-        )
+    public func spendingReport(_ query: SpendingReportQuery) async throws -> SpendingReport {
+        let snapshot = try source.backupSnapshot()
+        let defaultCurrency = defaultCurrency
+        return try await ReportWork.offMain {
+            SpendingReportBuilder.report(in: snapshot, query: query, defaultCurrency: defaultCurrency)
+        }
     }
 
-    public func spendingEntries(
-        for period: ReportPeriod,
-        currencyCode: String,
-        categoryID: UUID?,
-    ) throws -> [SpendingReportEntry] {
-        SpendingReportBuilder.entries(
-            in: try source.backupSnapshot(),
-            period: period,
-            today: TransactionTiming.today(now(), timeZone: timeZone),
-            currencyCode: currencyCode,
-            categoryID: categoryID,
-        )
+    public func spendingEntries(_ query: SpendingReportQuery, categoryID: UUID?) async throws -> [SpendingReportEntry] {
+        let snapshot = try source.backupSnapshot()
+        return try await ReportWork.offMain {
+            SpendingReportBuilder.entries(in: snapshot, query: query, categoryID: categoryID)
+        }
+    }
+}
+
+/// Report work off the main actor.
+public enum ReportWork {
+    /// Runs `work` on a detached task and returns its result. Cancelling the caller cancels it, and a cancelled
+    /// call throws `CancellationError` rather than returning a stale report.
+    public static func offMain<Result: Sendable>(
+        _ work: @escaping @Sendable () -> Result
+    ) async throws -> Result {
+        let task = Task.detached(priority: .userInitiated) { () throws -> Result in
+            try Task.checkCancellation()
+            return work()
+        }
+        let result = try await withTaskCancellationHandler {
+            try await task.value
+        } onCancel: {
+            task.cancel()
+        }
+        try Task.checkCancellation()
+        return result
     }
 }

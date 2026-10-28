@@ -51,6 +51,16 @@ enum ReportText {
         }
     }
 
+    /// “Q4 2026”: a calendar quarter's title. `year` is already formatted for the locale.
+    static func quarterTitle(_ quarter: Int, year: String) -> String {
+        FeatureText.format("Q%1$lld %2$@", quarter, year)
+    }
+
+    /// “15 Sep 2026 – 14 Oct 2026”: a custom range's title, both end days included.
+    static func rangeTitle(from start: String, to end: String) -> String {
+        FeatureText.format("%1$@ – %2$@", start, end)
+    }
+
     static var uncategorised: String {
         FeatureText.string(
             "Uncategorised",

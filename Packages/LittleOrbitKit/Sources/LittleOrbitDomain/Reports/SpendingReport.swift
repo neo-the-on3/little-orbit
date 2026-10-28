@@ -42,7 +42,6 @@ public struct SpendingReportRow: Identifiable, Equatable, Sendable {
 /// “What do I spend my money on?” for one period and one currency (#27 core, D316). Currencies are never added
 /// together (D17).
 public struct SpendingReport: Equatable, Sendable {
-    public var period: ReportPeriod
     /// The whole period, as its title names it. Every day in it counts, future-dated ones included, as budgets
     /// count them (D319.2, S28).
     public var range: ReportDayRange
@@ -54,22 +53,28 @@ public struct SpendingReport: Equatable, Sendable {
     public var rows: [SpendingReportRow]
     /// The sum of every row, exactly.
     public var total: Decimal
+    /// The account filter's list (#184): every account in `currencyCode`, hidden ones too, by name, each ticked
+    /// unless the query unticked it.
+    public var accounts: [ReportAccountOption]
 
     public init(
-        period: ReportPeriod,
         range: ReportDayRange,
         currencyCode: String,
         currencies: [String],
         rows: [SpendingReportRow],
         total: Decimal,
+        accounts: [ReportAccountOption] = [],
     ) {
-        self.period = period
         self.range = range
         self.currencyCode = currencyCode
         self.currencies = currencies
         self.rows = rows
         self.total = total
+        self.accounts = accounts
     }
+
+    /// Every account in the currency is ticked.
+    public var countsAllAccounts: Bool { accounts.allSatisfy(\.isIncluded) }
 
     /// No expenses or refunds in the period in this currency: the screen shows its empty state.
     public var isEmpty: Bool { rows.isEmpty }
@@ -106,6 +111,7 @@ public struct SpendingReportEntry: Identifiable, Equatable, Sendable {
 ///   falls, future-dated ones too (D319.2, as budgets count them, S28). Deleted transactions and transactions
 ///   in deleted accounts don't count. A category that's gone counts as Uncategorised.
 public enum SpendingReportBuilder {
+    /// A preset period's report for `today`, every account counted.
     public static func report(
         in snapshot: LedgerSnapshot,
         period: ReportPeriod,
@@ -113,10 +119,26 @@ public enum SpendingReportBuilder {
         currencyCode requested: String?,
         defaultCurrency: String,
     ) -> SpendingReport {
-        let range = period.range(today: today)
-        let lines = contributions(in: snapshot, range: range)
+        report(
+            in: snapshot,
+            query: SpendingReportQuery(range: period.range(today: today), currencyCode: requested),
+            defaultCurrency: defaultCurrency,
+        )
+    }
+
+    /// The report for `query`. The currencies come from every account, so unticking a currency's accounts never
+    /// takes it off the picker; the rows count only the ticked ones.
+    public static func report(
+        in snapshot: LedgerSnapshot,
+        query: SpendingReportQuery,
+        defaultCurrency: String,
+    ) -> SpendingReport {
+        let range = query.range
+        let requested = query.currencyCode
+        let allLines = contributions(in: snapshot, range: range)
+        let lines = allLines.filter { query.accounts.includes($0.account.id) }
         let defaultCode = CurrencyCode.normalize(defaultCurrency)
-        let currencies = Set(lines.map(\.currency))
+        let currencies = Set(allLines.map(\.currency))
             .sorted { lhs, rhs in
                 if lhs == defaultCode || rhs == defaultCode {
                     return lhs == defaultCode && rhs != defaultCode
@@ -155,13 +177,28 @@ public enum SpendingReportBuilder {
             rows[index].shareTenths = shares?[index]
         }
         return SpendingReport(
-            period: period,
             range: range,
             currencyCode: currency,
             currencies: currencies,
             rows: rows,
             total: total,
+            accounts: accountOptions(in: snapshot, currency: currency, filter: query.accounts),
         )
+    }
+
+    /// Every account in `currency` that isn't deleted, hidden ones too (D417), by name.
+    static func accountOptions(
+        in snapshot: LedgerSnapshot,
+        currency: String,
+        filter: ReportAccountFilter,
+    ) -> [ReportAccountOption] {
+        snapshot.accountsVisible()
+            .filter { CurrencyCode.normalize($0.currencyCode) == currency }
+            .sorted { lhs, rhs in
+                let order = lhs.name.localizedStandardCompare(rhs.name)
+                return order == .orderedSame ? lhs.id.uuidString < rhs.id.uuidString : order == .orderedAscending
+            }
+            .map { ReportAccountOption(account: $0, isIncluded: filter.includes($0.id)) }
     }
 
     /// The transactions behind one row, newest first. Their amounts add up to the row's amount.
@@ -172,12 +209,26 @@ public enum SpendingReportBuilder {
         currencyCode: String,
         categoryID: UUID?,
     ) -> [SpendingReportEntry] {
-        let range = period.range(today: today)
-        let currency = CurrencyCode.normalize(currencyCode)
+        entries(
+            in: snapshot,
+            query: SpendingReportQuery(range: period.range(today: today), currencyCode: currencyCode),
+            categoryID: categoryID,
+        )
+    }
+
+    /// The transactions behind one row of `query`'s report, in its currency (the default currency's code
+    /// when it has none) and ticked accounts only, newest first.
+    public static func entries(
+        in snapshot: LedgerSnapshot,
+        query: SpendingReportQuery,
+        categoryID: UUID?,
+    ) -> [SpendingReportEntry] {
+        let range = query.range
+        let currency = CurrencyCode.normalize(query.currencyCode ?? CurrencyCode.deviceDefault)
         let payees = Dictionary(snapshot.payeesVisible().map { ($0.id, $0) }, uniquingKeysWith: { first, _ in first })
         var entries: [UUID: SpendingReportEntry] = [:]
         for line in contributions(in: snapshot, range: range)
-        where line.currency == currency && line.categoryID == categoryID {
+        where line.currency == currency && line.categoryID == categoryID && query.accounts.includes(line.account.id) {
             if entries[line.transaction.id] != nil {
                 entries[line.transaction.id]?.amount += line.amount
             } else {

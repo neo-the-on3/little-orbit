@@ -8,46 +8,30 @@ import Testing
 @MainActor
 final class FakeSpendingReportUseCase: LoadSpendingReportUseCase {
     var snapshot: LedgerSnapshot
-    var today: CalendarDay
     var fails = false
-    private(set) var requests: [(ReportPeriod, String?)] = []
+    private(set) var requests: [SpendingReportQuery] = []
+    private(set) var entryRequests: [SpendingReportQuery] = []
 
-    init(snapshot: LedgerSnapshot, today: CalendarDay = CalendarDay(year: 2026, month: 10, day: 25)) {
+    init(snapshot: LedgerSnapshot) {
         self.snapshot = snapshot
-        self.today = today
     }
 
     struct Failure: Error {}
 
-    func spendingReport(for period: ReportPeriod, currencyCode: String?) throws -> SpendingReport {
-        requests.append((period, currencyCode))
+    func spendingReport(_ query: SpendingReportQuery) async throws -> SpendingReport {
+        requests.append(query)
         if fails {
             throw Failure()
         }
-        return SpendingReportBuilder.report(
-            in: snapshot,
-            period: period,
-            today: today,
-            currencyCode: currencyCode,
-            defaultCurrency: "INR",
-        )
+        return SpendingReportBuilder.report(in: snapshot, query: query, defaultCurrency: "INR")
     }
 
-    func spendingEntries(
-        for period: ReportPeriod,
-        currencyCode: String,
-        categoryID: UUID?,
-    ) throws -> [SpendingReportEntry] {
+    func spendingEntries(_ query: SpendingReportQuery, categoryID: UUID?) async throws -> [SpendingReportEntry] {
+        entryRequests.append(query)
         if fails {
             throw Failure()
         }
-        return SpendingReportBuilder.entries(
-            in: snapshot,
-            period: period,
-            today: today,
-            currencyCode: currencyCode,
-            categoryID: categoryID,
-        )
+        return SpendingReportBuilder.entries(in: snapshot, query: query, categoryID: categoryID)
     }
 }
 
@@ -138,7 +122,7 @@ struct SpendingReportViewModelTests {
     typealias S = SpendingFixture  // swiftlint:disable:this type_name
 
     @Test("This Month is the default; rows show name, amount, share, count and a bar against the largest")
-    func rows() {
+    func rows() async {
         let fake = FakeSpendingReportUseCase(
             snapshot: S.snapshot([
                 S.expense("45000", S.rent, 10, 1),
@@ -148,7 +132,7 @@ struct SpendingReportViewModelTests {
         )
         let model = S.model(fake)
         #expect(model.isLoading)
-        model.load()
+        await model.load()
         #expect(!model.isLoading)
         #expect(model.period == .thisMonth)
         #expect(model.periodTitle == "October 2026")
@@ -166,10 +150,10 @@ struct SpendingReportViewModelTests {
     }
 
     @Test("VoiceOver reads each row as a table line: name, amount, currency, share and count")
-    func accessibility() {
+    func accessibility() async {
         let fake = FakeSpendingReportUseCase(snapshot: S.snapshot([S.expense("12450.50", S.groceries, 10, 3)]))
         let model = S.model(fake)
-        model.load()
+        await model.load()
         let label = model.rows.first?.accessibilityLabel ?? ""
         #expect(label.hasPrefix("Food & Dining › Groceries, ₹12,450.50, "))
         #expect(label.hasSuffix(", 100.0%, 1 transaction"))
@@ -177,7 +161,7 @@ struct SpendingReportViewModelTests {
     }
 
     @Test("A refund-only row is negative, last, has no bar and still lowers the total")
-    func negativeRow() throws {
+    func negativeRow() async throws {
         let fake = FakeSpendingReportUseCase(
             snapshot: S.snapshot([
                 S.expense("1000", S.rent, 10, 1),
@@ -185,7 +169,7 @@ struct SpendingReportViewModelTests {
             ])
         )
         let model = S.model(fake)
-        model.load()
+        await model.load()
         #expect(model.rows.map(\.name) == ["Rent", "Electronics"])
         #expect(model.rows.last?.amountText == "−₹300.00")
         #expect(model.rows.last?.barFraction == nil)
@@ -197,22 +181,24 @@ struct SpendingReportViewModelTests {
         #expect(negative != "42.9%" && negative.contains("42.9%"))
         // The drill-down header carries the same signed share (D319.7).
         let refunds = try #require(model.rows.last)
-        #expect(try #require(model.drillDown(for: refunds)).caption == "\(negative) of spending · October 2026 · INR")
+        #expect(
+            try #require(await model.drillDown(for: refunds)).caption == "\(negative) of spending · October 2026 · INR"
+        )
     }
 
     @Test("Bars are a fraction of the largest row")
-    func barFractions() throws {
+    func barFractions() async throws {
         let fake = FakeSpendingReportUseCase(
             snapshot: S.snapshot([S.expense("400", S.rent, 10, 1), S.expense("100", S.groceries, 10, 2)])
         )
         let model = S.model(fake)
-        model.load()
+        await model.load()
         let fractions = model.rows.map(\.barFraction)
         #expect(fractions == [1, 0.25])
     }
 
     @Test("Changing the period reloads: Last Month, This Year and Last Year")
-    func periods() {
+    func periods() async {
         let fake = FakeSpendingReportUseCase(
             snapshot: S.snapshot([
                 S.expense("100", S.rent, 10, 1),
@@ -228,15 +214,15 @@ struct SpendingReportViewModelTests {
             ])
         )
         let model = S.model(fake)
-        model.load()
+        await model.load()
         #expect(model.totalText == "₹100.00")
-        model.period = .lastMonth
+        await model.select(.lastMonth)
         #expect(model.periodTitle == "September 2026")
         #expect(model.totalText == "₹200.00")
-        model.period = .thisYear
+        await model.select(.thisYear)
         #expect(model.periodTitle == "2026")
         #expect(model.totalText == "₹300.00")
-        model.period = .lastYear
+        await model.select(.lastYear)
         #expect(model.periodTitle == "2025")
         #expect(model.totalText == "₹50.00")
         #expect(
@@ -247,7 +233,7 @@ struct SpendingReportViewModelTests {
     }
 
     @Test("Several currencies show the picker, default first; picking one shows only that currency")
-    func currencies() {
+    func currencies() async {
         let fake = FakeSpendingReportUseCase(
             snapshot: S.snapshot([
                 S.expense("1000", S.rent, 10, 1),
@@ -255,24 +241,24 @@ struct SpendingReportViewModelTests {
             ])
         )
         let model = S.model(fake)
-        model.load()
+        await model.load()
         #expect(model.showsCurrencyPicker)
         #expect(model.currencies == ["INR", "USD"])
         #expect(model.currencyCode == "INR")
-        model.selectCurrency("USD")
+        await model.selectCurrency("USD")
         #expect(model.currencyCode == "USD")
         #expect(model.totalText == "$80.00")
         #expect(model.rows.map(\.name) == ["Food & Dining › Groceries"])
-        model.period = .thisYear
+        await model.select(.thisYear)
         #expect(model.currencyCode == "USD")
-        #expect(fake.requests.last?.1 == "USD")
+        #expect(fake.requests.last?.currencyCode == "USD")
     }
 
     @Test("A period with no expenses shows the empty state: No Expenses, then the message (D318.4)")
-    func empty() {
+    func empty() async {
         let fake = FakeSpendingReportUseCase(snapshot: S.snapshot([S.expense("100", S.rent, 9, 1)]))
         let model = S.model(fake)
-        model.load()
+        await model.load()
         #expect(model.isEmpty)
         #expect(model.rows.isEmpty)
         #expect(model.emptyTitle == "No Expenses")
@@ -280,11 +266,11 @@ struct SpendingReportViewModelTests {
     }
 
     @Test("A read failure shows Couldn’t Load Report, not the empty state")
-    func failure() {
+    func failure() async {
         let fake = FakeSpendingReportUseCase(snapshot: S.snapshot([]))
         fake.fails = true
         let model = S.model(fake)
-        model.load()
+        await model.load()
         #expect(model.loadFailed)
         #expect(!model.isEmpty)
         #expect(model.loadFailedTitle == "Couldn’t Load Report")
@@ -293,7 +279,7 @@ struct SpendingReportViewModelTests {
     }
 
     @Test("The drill-down lists the row's transactions, newest first, adding up to the row")
-    func drillDown() throws {
+    func drillDown() async throws {
         let fake = FakeSpendingReportUseCase(
             snapshot: S.snapshot([
                 S.expense("2000", S.groceries, 10, 3, payee: S.payee),
@@ -303,10 +289,10 @@ struct SpendingReportViewModelTests {
             ])
         )
         let model = S.model(fake)
-        model.load()
+        await model.load()
         let row = try #require(model.rows.first { $0.name == "Food & Dining › Groceries" })
         #expect(row.amountText == "₹3,140.00")
-        let drill = try #require(model.drillDown(for: row))
+        let drill = try #require(await model.drillDown(for: row))
         #expect(drill.title == "Food & Dining › Groceries")
         #expect(drill.amountText == row.amountText)
         #expect(drill.caption == "86.3% of spending · October 2026 · INR")
@@ -324,7 +310,7 @@ struct SpendingReportViewModelTests {
     @Test(
         "Refund rows take D233's titles: with or without a payee, linked or with the original deleted, and the description fallback (D318.6)"
     )
-    func refundTitles() throws {
+    func refundTitles() async throws {
         let original = S.expense("2000", S.electronics, 10, 2, payee: S.trailhead)
         let fake = FakeSpendingReportUseCase(
             snapshot: S.snapshot([
@@ -339,9 +325,9 @@ struct SpendingReportViewModelTests {
             ])
         )
         let model = S.model(fake)
-        model.load()
+        await model.load()
         let row = try #require(model.rows.first { $0.name == "Electronics" })
-        let drill = try #require(model.drillDown(for: row))
+        let drill = try #require(await model.drillDown(for: row))
         #expect(
             drill.entries.map(\.title) == [
                 "Refund (original deleted)",
@@ -359,14 +345,14 @@ struct SpendingReportViewModelTests {
     }
 
     @Test("NB9: an open drill-down reads again after every load, even when no row changed (a payee rename)")
-    func drillDownAfterRename() throws {
+    func drillDownAfterRename() async throws {
         let fake = FakeSpendingReportUseCase(
             snapshot: S.snapshot([S.expense("2000", S.groceries, 10, 3, payee: S.payee)])
         )
         let model = S.model(fake)
-        model.load()
+        await model.load()
         let row = try #require(model.rows.first)
-        let before = try #require(model.drillDown(for: row))
+        let before = try #require(await model.drillDown(for: row))
         #expect(before.entries.map(\.title) == ["Green Basket"])
         let revision = model.revision
         let rows = model.rows
@@ -375,47 +361,42 @@ struct SpendingReportViewModelTests {
             renamed.name = "Green Basket Market"
             return renamed
         }
-        model.load()
+        await model.load()
         #expect(model.rows == rows)
         #expect(model.revision == revision + 1)
-        let after = try #require(model.drillDown(for: row))
+        let after = try #require(await model.drillDown(for: row))
         #expect(after.entries.map(\.title) == ["Green Basket Market"])
     }
 
     @Test("Food & Dining's drill-down holds only its own transaction, not its subcategory's (D289)")
-    func parentDrillDown() throws {
+    func parentDrillDown() async throws {
         let fake = FakeSpendingReportUseCase(
             snapshot: S.snapshot([S.expense("2000", S.groceries, 10, 3), S.expense("500", S.food, 10, 5)])
         )
         let model = S.model(fake)
-        model.load()
+        await model.load()
         let row = try #require(model.rows.first { $0.name == "Food & Dining" })
-        let drill = try #require(model.drillDown(for: row))
+        let drill = try #require(await model.drillDown(for: row))
         #expect(drill.entries.count == 1)
         #expect(drill.amountText == "₹500.00")
     }
 
     @Test("Wired to the real use case over the in-memory store, it reads saved transactions")
-    func realUseCase() throws {
+    func realUseCase() async throws {
         let repository = InMemoryLedgerRepository()
         try repository.saveAccount(S.savings)
         try repository.saveCategory(S.rent)
         try repository.saveTransaction(S.expense("45000", S.rent, 10, 1))
         try repository.saveTransaction(S.expense("0.01", S.rent, 10, 2))
-        let useCase = DefaultLoadSpendingReportUseCase(
-            source: repository,
-            defaultCurrency: "INR",
-            timeZone: TimeZone(identifier: S.zone)!,
-            now: { S.date(10, 25) },
-        )
+        let useCase = DefaultLoadSpendingReportUseCase(source: repository, defaultCurrency: "INR")
         let model = S.model(useCase)
-        model.load()
+        await model.load()
         #expect(model.totalText == "₹45,000.01")
         #expect(model.rows.map(\.countText) == ["2 transactions"])
     }
 
     @Test("The Reports feature makes a report model with This Month selected")
-    func feature() {
+    func feature() async {
         let feature = ReportsFeature(
             spendingReport: FakeSpendingReportUseCase(snapshot: S.snapshot([])),
             updates: LedgerUpdates(),

@@ -21,16 +21,22 @@ public final class SpendingDrillDownModel {
         self.row = row
     }
 
-    /// Reads the row's transactions from the report's current period and currency.
-    public func load() {
-        drillDown = report.drillDown(for: row)
+    /// Reads the row's transactions from the report's current period, currency and accounts.
+    public func load() async {
+        drillDown = await report.drillDown(for: row)
         loadFailed = drillDown == nil
     }
 
     /// After a change to the shared store at `storeRevision`: the report reads the store again (once per change,
     /// whichever screen asks first), so the row's share and the period are current, then the transactions.
-    public func refresh(at storeRevision: Int) {
-        report.load(at: storeRevision)
-        load()
+    public func refresh(at storeRevision: Int) async {
+        await report.load(at: storeRevision)
+        await load()
+    }
+
+    /// Try Again after a failed read (D318.5): the report reads the store again, then the transactions.
+    public func retry() async {
+        await report.load()
+        await load()
     }
 }

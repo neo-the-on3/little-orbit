@@ -51,10 +51,13 @@
                 }
             }
             .navigationTitle(drill.drillDown?.title ?? row.name)
-            .task { drill.load() }
+            .task { await drill.load() }
             // Any change to the shared store, from any window, reads the report and the transactions again, even
             // when no row changed (a payee rename) and while the report's list underneath isn't on screen.
-            .onChange(of: updates.revision) { drill.refresh(at: updates.revision) }
+            .onChange(of: updates.revision) {
+                let revision = updates.revision
+                Task { await drill.refresh(at: revision) }
+            }
         }
 
         /// At accessibility text sizes each part gets its own full-width line, as in the report's rows: the icon,
