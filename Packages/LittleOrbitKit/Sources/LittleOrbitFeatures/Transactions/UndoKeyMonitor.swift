@@ -44,16 +44,19 @@
             let gate = UndoCommandGate.shared
             let modifiers = event.modifierFlags.intersection(.deviceIndependentFlagsMask).subtracting(.capsLock)
             let characters = event.charactersIgnoringModifiers
+            let keyModifiers = Self.policyModifiers(modifiers)
             // Cheap first: most key-downs aren't ⌘Z or ⇧⌘Z.
-            guard UndoKeyPolicy.command(characters: characters, modifiers: Self.policyModifiers(modifiers)) != nil
-            else {
+            if let reason = UndoKeyPolicy.keyReason(characters: characters, modifiers: keyModifiers) {
+                #if DEBUG
+                    Self.tracePass(reason, event)
+                #endif
                 return false
             }
             let window = event.window
             let items = read(gate.isClosed)
             let input = UndoKeyPolicy.Input(
                 characters: characters,
-                modifiers: Self.policyModifiers(modifiers),
+                modifiers: keyModifiers,
                 isAppKeyWindow: window.map { window in
                     window.isKeyWindow && NSApp.windows.contains { $0 === window }
                 } ?? false,
@@ -64,6 +67,9 @@
                 undoItemEnabled: Self.editItem(.undo)?.isEnabled,
                 redoItemEnabled: Self.editItem(.redo)?.isEnabled,
             )
+            #if DEBUG
+                Self.tracePass(UndoKeyPolicy.reason(input), event)
+            #endif
             guard case .act(let command) = UndoKeyPolicy.decide(input) else {
                 return false
             }
@@ -86,6 +92,19 @@
             }
             return true
         }
+
+        #if DEBUG
+            /// `ledger.keyMonitor.pass` on every key-down the monitor sees, tagged with `UndoKeyPolicy.Reason`, with
+            /// the event's time, its key code and its modifier flags: why ⌘Z or ⇧⌘Z did or didn't act (Tester2 at
+            /// 7c8a893). Debug builds only; a release build has no call.
+            private static func tracePass(_ reason: UndoKeyPolicy.Reason, _ event: NSEvent) {
+                BatchTrace.event(
+                    "ledger.keyMonitor.pass",
+                    reason.tag,
+                    values: [event.timestamp, Double(event.keyCode), Double(event.modifierFlags.rawValue)],
+                )
+            }
+        #endif
 
         private static func policyModifiers(_ flags: NSEvent.ModifierFlags) -> UndoKeyPolicy.Modifiers {
             var modifiers: UndoKeyPolicy.Modifiers = []
