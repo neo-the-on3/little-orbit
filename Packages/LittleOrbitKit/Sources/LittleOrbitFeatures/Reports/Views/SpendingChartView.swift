@@ -30,7 +30,9 @@
                     // Keyed by the row's ID, so two rows with the same name get two bars; the axis shows the name.
                     y: .value(model.chartCategoryAxis, bar.id),
                 )
-                .foregroundStyle(bar.hue.map { Color($0.token) } ?? Color.secondary)
+                .foregroundStyle(
+                    bar.hue.map { Color($0.token) } ?? (bar.row == nil ? Color.secondary : Color.accentColor)
+                )
                 .annotation(position: .trailing, alignment: .leading) {
                     // At accessibility sizes the annotations are hidden; the rows below have the amounts.
                     if !dynamicTypeSize.isAccessibilitySize {

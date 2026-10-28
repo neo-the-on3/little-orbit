@@ -1109,6 +1109,19 @@
         }
       }
     },
+    "All Payees": {
+      "comment": "Spending by payee: the header of the list of payee rows.",
+      "extractionState": "manual",
+      "generatesSymbol": false,
+      "localizations": {
+        "en": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "All Payees"
+          }
+        }
+      }
+    },
     "Already paid on iPhone": {
       "comment": "Apple Watch message title: a Pay or Skip from the watch did nothing, because this occurrence was already paid on the iPhone.",
       "extractionState": "manual",
@@ -2985,6 +2998,19 @@
         }
       }
     },
+    "No Payee": {
+      "comment": "Spending by payee: the row, and its drill-down’s title, for spending with no payee.",
+      "extractionState": "manual",
+      "generatesSymbol": false,
+      "localizations": {
+        "en": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "No Payee"
+          }
+        }
+      }
+    },
     "Only %1$@ accounts are listed because the report shows %1$@.": {
       "comment": "Report account list footer: %1$@ is the report's currency code, “Only INR accounts are listed because the report shows INR.”",
       "extractionState": "manual",
@@ -3022,6 +3048,30 @@
         }
       }
     },
+    "Other · %lld payees": {
+      "comment": "Spending by payee chart: the last bar, combining the smaller payees (always 2 or more), “Other · 2 payees”.",
+      "extractionState": "manual",
+      "localizations": {
+        "en": {
+          "variations": {
+            "plural": {
+              "one": {
+                "stringUnit": {
+                  "state": "translated",
+                  "value": "Other · %lld payee"
+                }
+              },
+              "other": {
+                "stringUnit": {
+                  "state": "translated",
+                  "value": "Other · %lld payees"
+                }
+              }
+            }
+          }
+        }
+      }
+    },
     "Other, %lld categories": {
       "comment": "Spending chart: how VoiceOver names the Other bar, “Other, 2 categories”.",
       "extractionState": "manual",
@@ -3039,6 +3089,30 @@
                 "stringUnit": {
                   "state": "translated",
                   "value": "Other, %lld categories"
+                }
+              }
+            }
+          }
+        }
+      }
+    },
+    "Other, %lld payees": {
+      "comment": "Spending by payee chart: how VoiceOver and the audio graph name the Other bar, “Other, 2 payees”.",
+      "extractionState": "manual",
+      "localizations": {
+        "en": {
+          "variations": {
+            "plural": {
+              "one": {
+                "stringUnit": {
+                  "state": "translated",
+                  "value": "Other, %lld payee"
+                }
+              },
+              "other": {
+                "stringUnit": {
+                  "state": "translated",
+                  "value": "Other, %lld payees"
                 }
               }
             }
@@ -3094,6 +3168,19 @@
           "stringUnit": {
             "state": "translated",
             "value": "Category"
+          }
+        }
+      }
+    },
+    "report.column.payee": {
+      "comment": "Spending by payee: the Mac table’s payee column title, and the audio graph’s payee axis.",
+      "extractionState": "manual",
+      "generatesSymbol": false,
+      "localizations": {
+        "en": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Payee"
           }
         }
       }
@@ -7007,6 +7094,19 @@
         }
       }
     },
+    "Sorted by amount. Refunds reduce spending at their payee. Transfers between your accounts aren’t spending.": {
+      "comment": "Spending by payee: the footer under the payee rows.",
+      "extractionState": "manual",
+      "generatesSymbol": false,
+      "localizations": {
+        "en": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Sorted by amount. Refunds reduce spending at their payee. Transfers between your accounts aren’t spending."
+          }
+        }
+      }
+    },
     "Sorted by amount. Refunds reduce spending in their category. Transfers between your accounts aren’t spending.": {
       "comment": "Spending report footer under the category rows.",
       "extractionState": "manual",
@@ -7029,6 +7129,19 @@
           "stringUnit": {
             "state": "translated",
             "value": "Spending"
+          }
+        }
+      }
+    },
+    "Spending by Payee": {
+      "comment": "Navigation title of the spending-by-payee report, also its Back button and Mac window title.",
+      "extractionState": "manual",
+      "generatesSymbol": false,
+      "localizations": {
+        "en": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Spending by Payee"
           }
         }
       }
@@ -7987,6 +8100,19 @@
           "stringUnit": {
             "state": "translated",
             "value": "What do I spend my money on?"
+          }
+        }
+      }
+    },
+    "Where do I spend the most?": {
+      "comment": "The spending-by-payee report’s title, a plain question: its row on Reports and its heading.",
+      "extractionState": "manual",
+      "generatesSymbol": false,
+      "localizations": {
+        "en": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Where do I spend the most?"
           }
         }
       }

@@ -2,14 +2,15 @@ import Foundation
 import LittleOrbitDomain
 import Observation
 
-/// One category row of the spending report, ready for the list and VoiceOver.
+/// One row of the spending report, a category or a payee, ready for the list and VoiceOver.
 public struct SpendingRowModel: Identifiable, Equatable, Sendable {
-    /// `nil` for Uncategorised.
-    public var categoryID: UUID?
-    /// “Rent”, “Food & Dining › Groceries” or “Uncategorised”.
+    /// The category's or payee's ID; `nil` for Uncategorised or No Payee.
+    public var rowID: UUID?
+    /// “Rent”, “Food & Dining › Groceries” or “Uncategorised”; or “Sunrise Apartments” or “No Payee”.
     public var name: String
-    public var symbolName: String
-    public var hue: CategoryHue
+    /// The category's icon and colour. `nil` for a payee row, which has no icon (#184 slice 4).
+    public var symbolName: String?
+    public var hue: CategoryHue?
     public var amountText: String
     /// “16.9%”, or `nil` when the total isn't above 0.
     public var shareText: String?
@@ -24,7 +25,7 @@ public struct SpendingRowModel: Identifiable, Equatable, Sendable {
     /// “Groceries, ₹12,450.50, Indian rupees, 16.9%, 6 transactions”: the row read as one line of a data table.
     public var accessibilityLabel: String
 
-    public var id: UUID? { categoryID }
+    public var id: UUID? { rowID }
 }
 
 /// One transaction in a row's drill-down.
@@ -53,11 +54,14 @@ public struct SpendingDrillDown: Equatable, Sendable {
     public var entries: [SpendingEntryRowModel]
 }
 
-/// “What do I spend my money on?” (#27, #184) for iOS and macOS. It depends only on `LoadSpendingReportUseCase`,
+/// “What do I spend my money on?” (#27, #184), or grouped by payee “Where do I spend the most?” (#184 slice 4),
+/// for iOS and macOS. It depends only on `LoadSpendingReportUseCase`,
 /// and every read is async, so the report is built off the main actor (Tech Architect's NB1 on #185).
 @MainActor
 @Observable
 public final class SpendingReportViewModel {
+    /// Whether the rows are categories or payees. Fixed for the screen.
+    public let grouping: ReportGrouping
     /// The period shown: a preset, moved by ‹ ›, or a custom range. Change it with `select(_:)`.
     public internal(set) var selection: ReportSelection = .default
     /// The accounts counted: all of them, hidden ones too, until some are unticked (D417).
@@ -97,11 +101,13 @@ public final class SpendingReportViewModel {
 
     public init(
         useCase: any LoadSpendingReportUseCase,
+        grouping: ReportGrouping = .category,
         locale: Locale = .current,
         timeZone: TimeZone = .current,
         now: @escaping () -> Date = Date.init,
     ) {
         self.useCase = useCase
+        self.grouping = grouping
         self.locale = locale
         self.formatter = MoneyFormatter(locale: locale)
         self.text = TransactionText(locale: locale)
@@ -162,6 +168,7 @@ public final class SpendingReportViewModel {
             range: selection.range(today: today),
             currencyCode: requestedCurrency,
             accounts: accountFilter,
+            grouping: grouping,
         )
     }
 
@@ -224,15 +231,16 @@ public final class SpendingReportViewModel {
             range: report.range,
             currencyCode: report.currencyCode,
             accounts: accountFilter,
+            grouping: grouping,
         )
-        guard let entries = try? await useCase.spendingEntries(query, categoryID: row.categoryID) else {
+        guard let entries = try? await useCase.spendingEntries(query, categoryID: row.rowID) else {
             return nil
         }
         let today = today
         let total = entries.reduce(Decimal(0)) { $0 + $1.amount }
         // The report's current row, for its name and share. Gone once its last transaction is: no share then, so
         // the header is the period and currency only, as for any row without a share.
-        let current = rows.first { $0.categoryID == row.categoryID }
+        let current = rows.first { $0.rowID == row.rowID }
         return SpendingDrillDown(
             title: (current ?? row).name,
             amountText: formatter.string(total, currencyCode: report.currencyCode),
@@ -277,11 +285,12 @@ public final class SpendingReportViewModel {
         }
         let currencyName = locale.localizedString(forCurrencyCode: currencyCode)
         let spoken = [name, amountText, currencyName, shareText, countText].compactMap(\.self)
+        let isCategory = grouping == .category
         return SpendingRowModel(
-            categoryID: row.categoryID,
+            rowID: row.id,
             name: name,
-            symbolName: row.category.map(CategoryAppearance.symbol(of:)) ?? "questionmark",
-            hue: row.category.map(CategoryAppearance.hue(of:)) ?? .gray,
+            symbolName: isCategory ? row.category.map(CategoryAppearance.symbol(of:)) ?? "questionmark" : nil,
+            hue: isCategory ? row.category.map(CategoryAppearance.hue(of:)) ?? .gray : nil,
             amountText: amountText,
             shareText: shareText,
             countText: countText,
@@ -290,16 +299,6 @@ public final class SpendingReportViewModel {
             amountTone: row.amount < 0 ? .negative : .neutral,
             accessibilityLabel: spoken.joined(separator: ", "),
         )
-    }
-
-    private func name(of row: SpendingReportRow) -> String {
-        guard let category = row.category else {
-            return ReportText.uncategorised
-        }
-        guard let parent = row.parent else {
-            return category.name
-        }
-        return ReportText.subcategoryName(category.name, parent: parent.name)
     }
 
     /// 169 tenths is “16.9%” in the view model's locale. A negative share takes the locale's own minus sign

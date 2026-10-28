@@ -3,9 +3,9 @@ import LittleOrbitDomain
 
 /// One bar of the spending chart (#184 slice 3), ready for Swift Charts, VoiceOver and the audio graph.
 public struct SpendingChartBar: Identifiable, Equatable, Sendable {
-    /// The row's category ID, “uncategorised”, or “other”.
+    /// The row's category or payee ID, “none” for Uncategorised or No Payee, or “other”.
     public var id: String
-    /// The bar's axis label: “Rent”, or “Other · 2 categories”.
+    /// The bar's axis label: “Rent”, or “Other · 2 categories” (“Other · 2 payees” by payee).
     public var name: String
     /// The bar's length, in the report's currency.
     public var amount: Double
@@ -17,7 +17,7 @@ public struct SpendingChartBar: Identifiable, Equatable, Sendable {
     public var shareText: String?
     /// 0.169 for 16.9%, from the same tenths as `shareText`, for the audio graph's Share axis.
     public var share: Double?
-    /// The category's colour, or `nil` for Other, which is secondary.
+    /// The category's colour, or `nil` for a payee, in the accent colour, or for Other, which is secondary.
     public var hue: CategoryHue?
     /// The row whose drill-down a tap opens, or `nil` for Other, which isn't tappable.
     public var row: SpendingRowModel?
@@ -42,10 +42,9 @@ public struct SpendingChartAudioPoint: Identifiable, Equatable, Sendable {
 
 extension SpendingReportViewModel {
     /// The audio graph's title: the report's question.
-    public var chartTitle: String { ReportText.spendingQuestion }
+    public var chartTitle: String { question }
     /// The audio graph's summary: the caption under the total.
     public var chartSummary: String { totalCaption }
-    public var chartCategoryAxis: String { ReportText.categoryColumn }
     public var chartAmountAxis: String { ReportText.amountColumn }
     public var transactionsColumn: String { ReportText.transactionsColumn }
     public var shareColumn: String { ReportText.shareColumn }
@@ -105,7 +104,7 @@ extension SpendingReportViewModel {
             case .row(let index):
                 let row = rows[index]
                 return SpendingChartBar(
-                    id: row.categoryID?.uuidString ?? "uncategorised",
+                    id: row.rowID?.uuidString ?? "none",
                     name: row.name,
                     amount: amount,
                     amountText: amountText,
@@ -118,9 +117,10 @@ extension SpendingReportViewModel {
                     accessibilityValue: value,
                 )
             case .other(let count):
+                let names = otherBarNames(count)
                 return SpendingChartBar(
                     id: "other",
-                    name: ReportText.otherCategories(count),
+                    name: names.shown,
                     amount: amount,
                     amountText: amountText,
                     compactAmountText: compact,
@@ -128,7 +128,7 @@ extension SpendingReportViewModel {
                     share: share,
                     hue: nil,
                     row: nil,
-                    accessibilityLabel: ReportText.otherCategoriesSpoken(count),
+                    accessibilityLabel: names.spoken,
                     accessibilityValue: value,
                 )
             }

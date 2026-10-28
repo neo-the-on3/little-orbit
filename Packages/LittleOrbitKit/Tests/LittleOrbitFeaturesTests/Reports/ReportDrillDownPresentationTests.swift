@@ -27,7 +27,7 @@ struct ReportDrillDownPresentationTests {
     }
 
     private func row(_ category: TransactionCategory, in report: SpendingReportViewModel) throws -> SpendingRowModel {
-        try #require(report.rows.first { $0.categoryID == category.id })
+        try #require(report.rows.first { $0.rowID == category.id })
     }
 
     /// Opens `row` the way a click does, then reads what the pushed drill-down shows.
