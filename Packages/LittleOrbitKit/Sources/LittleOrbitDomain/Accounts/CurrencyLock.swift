@@ -15,9 +15,25 @@ public enum CurrencyLock {
     }
 
     /// The accounts `items` use, as the account or as To: what `isLocked` takes as `scheduledAccountIDs`. Every
-    /// item counts, Completed ones included, so an account with any scheduled item keeps its currency (D381.3).
+    /// item counts, Completed ones included, so an account with any scheduled item keeps its currency (D381.3). So
+    /// does an account only an occurrence's own values use, as its own account or To, settled occurrences included,
+    /// since Undo Pay or Undo Skip brings their values back (#202 B3).
     public static func scheduledAccountIDs(_ items: [ScheduledItem]) -> Set<UUID> {
-        Set(items.flatMap(\.accountIDs))
+        Set(items.flatMap { item in item.accountIDs + occurrenceAccountIDs(of: item) })
+    }
+
+    /// The accounts the item's occurrences set as their own: only the fields they set, on records not deleted.
+    private static func occurrenceAccountIDs(of item: ScheduledItem) -> [UUID] {
+        item.occurrences.flatMap { record -> [UUID] in
+            guard record.deletedAt == nil, let edit = record.edit else {
+                return []
+            }
+            return [
+                edit.has(.account) ? edit.accountID : nil,
+                edit.has(.transferAccount) ? edit.transferAccountID : nil,
+            ]
+            .compactMap { $0 }
+        }
     }
 
     /// The accounts whose currency the store keeps because a stored scheduled item uses them: every item not
