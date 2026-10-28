@@ -209,4 +209,72 @@ struct ScheduledEndDateMoveTests {
             ]
         )
     }
+
+    // MARK: D443: a move made past an End that's already set
+
+    @Test("D443: 26 Oct moved past an End already set (to Tue 3 Nov) stays due; the next item save removes it")
+    func movePastAnExistingEndStaysDueUntilTheNextSave() throws {
+        let repository = FakeScheduleRepository()
+        repository.now = Fix.created
+        let useCases = repository.useCases()
+        var phone = Fix.rent(
+            amount: 199,
+            start: Fix.day(2026, 10, 12),
+            rule: .weekly,
+            end: Self.newEnd,
+            automatic: false,
+        )
+        phone.details = "Phone Plan"
+        phone.notifiesWhenDue = true
+        let id = try useCases.save(phone, payee: nil).after.id
+        for day in [Fix.day(2026, 10, 12), Fix.day(2026, 10, 19)] {
+            _ = try repository.settleScheduledOccurrence(.pay(itemID: id, occurrence: day, postedOn: day))
+        }
+        // Tue 20 Oct: the move is saved and isn't refused or removed (D443.1).
+        repository.now = Fix.date(2026, 10, 20)
+        let move = ScheduledOccurrenceSave(occurrence: Self.keyB, dueDay: Self.movedB, scope: .thisOccurrence)
+        let moved = try useCases.update(repository.snapshot.scheduledItems[0], editing: move, payee: nil)
+        #expect(moved.removed.isEmpty)
+        var item = repository.snapshot.scheduledItems[0]
+        #expect(item.occurrence(on: Self.keyB)?.outcome == .edited)
+        #expect(ScheduleCalendar.dueOccurrences(of: item, through: Fix.day(2026, 11, 30)).map(\.day) == [Self.movedB])
+        let reminders = ScheduledReminderPlanner.plan(
+            [item],
+            now: Fix.date(2026, 10, 20),
+            timeZone: Self.kolkata,
+            time: .standard,
+            limit: 3,
+        )
+        #expect(reminders.first?.fireDate == Fix.date(2026, 11, 3, 9))
+        // Wed 21 Oct: an unrelated save, the amount to ₹209.00, removes it and reports it (D443.2).
+        repository.now = Fix.date(2026, 10, 21)
+        var dearer = item
+        dearer.amount = 209
+        let change = try useCases.update(dearer, payee: nil)
+        #expect(change.removed == [.init(reason: .movedAfterEnd, key: Self.keyB, dueDay: Self.movedB)])
+        item = repository.snapshot.scheduledItems[0]
+        #expect(item.occurrence(on: Self.keyB) == nil)
+        #expect(ScheduleCalendar.dueOccurrences(of: item, through: Fix.day(2026, 11, 30)).map(\.day) == [Self.keyB])
+        // Undo puts the move back, due on 3 Nov.
+        guard case .reverted = try repository.revertScheduledItemSave(change, undone: false) else {
+            Issue.record("Undo was stale")
+            return
+        }
+        #expect(repository.snapshot.scheduledItems[0].dueDay(of: Self.keyB) == Self.movedB)
+    }
+
+    @Test(
+        "D443: a save that can't report removals (the store's plain save) removes nothing for an End it didn't change"
+    )
+    func unreportedSaveRemovesNothing() throws {
+        let (repository, _) = try Self.example(key: Self.keyA, movedTo: Self.movedA)
+        var item = repository.snapshot.scheduledItems[0]
+        // 26 Oct moved to Tue 3 Nov after the End is set, then a plain save of the amount.
+        let move = ScheduledOccurrenceSave(occurrence: Self.keyB, dueDay: Self.movedB, scope: .thisOccurrence)
+        _ = try repository.useCases().update(item, editing: move, payee: nil)
+        item = repository.snapshot.scheduledItems[0]
+        item.amount = 209
+        try repository.useCases().save(item)
+        #expect(repository.snapshot.scheduledItems[0].dueDay(of: Self.keyB) == Self.movedB)
+    }
 }

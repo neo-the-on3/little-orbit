@@ -20,14 +20,14 @@ extension LedgerBook {
         today: CalendarDay,
         now: Date,
     ) throws -> LedgerSnapshot {
-        var removed: [ScheduledRemovedOccurrence] = []
+        var unreported: [ScheduledRemovedOccurrence]?
         return try savingScheduledOccurrence(
             item,
             editing: save,
             in: snapshot,
             today: today,
             now: now,
-            removed: &removed,
+            removed: &unreported,
         )
     }
 
@@ -38,7 +38,7 @@ extension LedgerBook {
         in snapshot: LedgerSnapshot,
         today: CalendarDay,
         now: Date,
-        removed: inout [ScheduledRemovedOccurrence],
+        removed: inout [ScheduledRemovedOccurrence]?,
     ) throws -> LedgerSnapshot {
         guard let existing = snapshot.scheduledItems.first(where: { $0.id == item.id }) else {
             throw LedgerValidationError.missingScheduledItem

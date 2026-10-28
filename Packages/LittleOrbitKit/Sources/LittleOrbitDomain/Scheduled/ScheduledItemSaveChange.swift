@@ -98,7 +98,7 @@ extension LedgerBook {
         payee pending: ScheduledPendingPayee?,
         in snapshot: LedgerSnapshot,
         now: Date,
-        _ body: (ScheduledItem, LedgerSnapshot, inout [ScheduledRemovedOccurrence]) throws -> LedgerSnapshot,
+        _ body: (ScheduledItem, LedgerSnapshot, inout [ScheduledRemovedOccurrence]?) throws -> LedgerSnapshot,
     ) throws -> (snapshot: LedgerSnapshot, change: ScheduledItemSaveChange) {
         var snapshot = snapshot
         var item = item
@@ -133,7 +133,7 @@ extension LedgerBook {
             break
         }
         let before = snapshot.scheduledItems.first { $0.id == item.id }
-        var removed: [ScheduledRemovedOccurrence] = []
+        var removed: [ScheduledRemovedOccurrence]? = []
         snapshot = try body(item, snapshot, &removed)
         guard let after = snapshot.scheduledItems.first(where: { $0.id == item.id }) else {
             throw LedgerValidationError.missingScheduledItem
@@ -148,7 +148,7 @@ extension LedgerBook {
                 createdPayee: stored(created),
                 unarchivedPayee: unarchived,
                 unarchivedPayeeAsSaved: stored(unarchived),
-                removed: removed,
+                removed: removed ?? [],
             ),
         )
     }

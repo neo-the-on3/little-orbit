@@ -54,17 +54,20 @@ extension LedgerBook {
         today: CalendarDay,
         now: Date,
     ) throws -> LedgerSnapshot {
-        var removed: [ScheduledRemovedOccurrence] = []
-        return try savingScheduledItem(item, in: snapshot, today: today, now: now, removed: &removed)
+        var unreported: [ScheduledRemovedOccurrence]?
+        return try savingScheduledItem(item, in: snapshot, today: today, now: now, removed: &unreported)
     }
 
-    /// As above, adding to `removed` the occurrences the save removed (D442), for the form's notice.
+    /// As above, adding to `removed` the occurrences the save removed (D442), for the form's notice. A save that
+    /// reports them (`removed` isn't `nil`) checks the End date on every save, not only when it changes (D443), so a
+    /// move made past an End that's already set stays due until the item is next saved. One that can't report them,
+    /// such as Pay's "change future occurrences", never removes anything silently for an End it didn't change.
     static func savingScheduledItem(
         _ item: ScheduledItem,
         in snapshot: LedgerSnapshot,
         today: CalendarDay,
         now: Date,
-        removed: inout [ScheduledRemovedOccurrence],
+        removed: inout [ScheduledRemovedOccurrence]?,
     ) throws -> LedgerSnapshot {
         var item = normalize(item)
         var snapshot = snapshot
@@ -81,8 +84,10 @@ extension LedgerBook {
             }
             // After `resumesOn`, which decides what's on the new rule. An End date edit can take an occurrence's
             // own day off the rule as a Starts or repeat edit can (Tech Architect B1 on #326, D442).
-            if ruleChanged || existing.endDay != item.endDay {
-                removed += resolvingOwnValues(after: existing, in: &item, ruleChanged: ruleChanged, now: now)
+            let checksEnd = existing.endDay != item.endDay || removed != nil
+            if ruleChanged || checksEnd {
+                let found = resolvingOwnValues(in: &item, ruleChanged: ruleChanged, checksEnd: checksEnd, now: now)
+                removed?.append(contentsOf: found)
             }
             foldingOneOffEdit(of: &item, now: now)
             droppingStaleOwnReceived(from: &item, in: snapshot, except: nil, now: now)

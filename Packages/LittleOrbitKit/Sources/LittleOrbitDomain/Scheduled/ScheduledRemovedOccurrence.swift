@@ -26,23 +26,24 @@ public struct ScheduledRemovedOccurrence: Hashable, Sendable {
 }
 
 extension LedgerBook {
-    /// What happens to the occurrences with their own values after a Starts, repeat (`ruleChanged`) or End date edit,
-    /// once `resumesOn` is set, since that decides what's on the new rule (D435, D436, D442). Settled ones never
-    /// change. Returns the ones removed, by due day.
-    /// - An End date edit removes a move whose moved day is after the new End (D442.1).
+    /// What happens to the occurrences with their own values after a Starts or repeat edit (`ruleChanged`), or a save
+    /// that checks the End date (`checksEnd`: one that changes it, or any form save, D443), once `resumesOn` is set,
+    /// since that decides what's on the new rule (D435, D436, D442). Settled ones never change. Returns the ones
+    /// removed, by due day. This is the one check the item-save path runs.
+    /// - Checking the End removes a move whose moved day is after the End (D442.1, D443).
     /// - A Starts or repeat edit removes an occurrence that wasn't moved and whose own day the new rule doesn't have
     ///   (D442.2). One before `today` was already kept as `pending` by `keepUnpaidDays`, so it stays due.
     /// - Every other move whose own day is off the rule stays due on its moved day (`keepOrphanedMoves`).
     ///
     /// A removed occurrence takes no period, so the new rule's own occurrence there is due as normal (D442.3).
     static func resolvingOwnValues(
-        after existing: ScheduledItem,
         in item: inout ScheduledItem,
         ruleChanged: Bool,
+        checksEnd: Bool,
         now: Date,
     ) -> [ScheduledRemovedOccurrence] {
         var removed: [ScheduledRemovedOccurrence] = []
-        if existing.endDay != item.endDay, let end = item.endDay {
+        if checksEnd, let end = item.endDay {
             removed += item.occurrences
                 .filter { record in
                     record.deletedAt == nil && !record.outcome.isSettled && record.edit?.has(.day) == true
