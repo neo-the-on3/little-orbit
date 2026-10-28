@@ -85,6 +85,9 @@
                         Text(model.totalText)
                             .font(.title.bold())
                             .monospacedDigit()
+                            // Scales down rather than wrapping or truncating at narrow Mac widths (below about 440 pt).
+                            .lineLimit(1)
+                            .minimumScaleFactor(0.5)
                         Text(model.totalCaption)
                             .font(.subheadline)
                             .foregroundStyle(.secondary)
