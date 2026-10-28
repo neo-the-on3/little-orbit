@@ -57,9 +57,13 @@
             let input = UndoKeyPolicy.Input(
                 characters: characters,
                 modifiers: keyModifiers,
-                isAppKeyWindow: window.map { window in
-                    window.isKeyWindow && NSApp.windows.contains { $0 === window }
-                } ?? false,
+                isAppKeyWindow: UndoKeyWindowPolicy.isAppKeyWindow(
+                    eventWindow: window,
+                    keyWindow: NSApp.keyWindow,
+                    appWindows: NSApp.windows,
+                    isKey: { $0.isKeyWindow },
+                    parent: { $0.sheetParent ?? $0.parent },
+                ),
                 isMenuTracking: UndoCommandGate.mainIsTracking(),
                 gateClosed: gate.isClosed,
                 canUndo: items.canUndo,
