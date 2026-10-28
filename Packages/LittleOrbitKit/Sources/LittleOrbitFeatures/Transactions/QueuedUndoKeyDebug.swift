@@ -80,24 +80,50 @@
             }
         }
 
+        /// `press`, then the window to post the key-down to, read as it's posted, not when chosen: the key window
+        /// then, by `keyWindowNumber` (Tech Architect on Tester2's 6473659858). Chosen during a batch, the key window
+        /// was the batch's progress sheet, gone by the send, so a number read when chosen named no window and the
+        /// monitor passed it as `notKeyWindow`. With no key window at the send it posts nothing, signposted as
+        /// `debug.queuedUndo.noKeyWindow` with the send's tag and press time; never the main window or another.
+        @discardableResult
+        static func pressForKeyWindow(
+            updates: LedgerUpdates,
+            stamp: Stamp = .whenChosen,
+            command: UndoCommandGate.Command = .undo,
+            uptime: @escaping @MainActor () -> TimeInterval = { ProcessInfo.processInfo.systemUptime },
+            sleep: @escaping @MainActor (Duration) async -> Void = { try? await Task.sleep(for: $0) },
+            keyWindowNumber: @escaping @MainActor () -> Int?,
+            post: @escaping @MainActor (_ pressTime: TimeInterval, _ windowNumber: Int) -> Void,
+        ) -> Task<Void, Never> {
+            press(updates: updates, stamp: stamp, command: command, uptime: uptime, sleep: sleep) { pressTime in
+                guard let windowNumber = keyWindowNumber() else {
+                    BatchTrace.event("debug.queuedUndo.noKeyWindow", tag(stamp, command), values: [pressTime])
+                    return
+                }
+                post(pressTime, windowNumber)
+            }
+        }
+
         #if canImport(AppKit) && os(macOS)
-            /// The menu command: a ⌘Z key-down (⇧⌘Z with `redo`) for the key window as it was when chosen, posted
-            /// to the end of the event queue with `NSApp.postEvent(_:atStart:)` once any batch running then has
-            /// ended, so it's dequeued, and seen by the local key-down monitor, like a typed key. Nothing when there
-            /// was no key window. `rightAfterBatch` stamps it as it's sent (`Stamp.atSend`).
+            /// The key window's number now, or `nil` with none.
+            private static func keyWindowNumber() -> Int? {
+                NSApp.keyWindow?.windowNumber
+            }
+
+            /// The menu command: a ⌘Z key-down (⇧⌘Z with `redo`) for the key window as it is when it's posted, to
+            /// the end of the event queue with `NSApp.postEvent(_:atStart:)` once any batch running then has ended,
+            /// so it's dequeued, and seen by the local key-down monitor, like a typed key. Nothing, signposted, when
+            /// there's no key window then (`pressForKeyWindow`). `rightAfterBatch` stamps it as it's sent
+            /// (`Stamp.atSend`).
             public static func sendQueuedUndo(
                 updates: LedgerUpdates,
                 rightAfterBatch: Bool = false,
                 redo: Bool = false,
             ) {
-                guard let window = NSApp.keyWindow else {
-                    return
-                }
-                let windowNumber = window.windowNumber
                 let command: UndoCommandGate.Command = redo ? .redo : .undo
                 let key = key(for: command)
                 let stamp: Stamp = rightAfterBatch ? .atSend : .whenChosen
-                press(updates: updates, stamp: stamp, command: command) { pressTime in
+                let post: @MainActor (TimeInterval, Int) -> Void = { pressTime, windowNumber in
                     let event = NSEvent.keyEvent(
                         with: .keyDown,
                         location: .zero,
@@ -114,6 +140,13 @@
                         NSApp.postEvent(event, atStart: false)
                     }
                 }
+                pressForKeyWindow(
+                    updates: updates,
+                    stamp: stamp,
+                    command: command,
+                    keyWindowNumber: keyWindowNumber,
+                    post: post,
+                )
             }
         #endif
     }

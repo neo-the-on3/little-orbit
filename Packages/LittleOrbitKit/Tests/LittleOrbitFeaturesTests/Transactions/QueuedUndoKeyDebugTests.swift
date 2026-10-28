@@ -188,4 +188,60 @@ struct QueuedUndoKeyDebugTests {
         #expect(app.contains("Text(verbatim: \"Send ⇧⌘Z Right After Batch\")"))
         #expect(app.contains("redo: true"))
     }
+
+    /// Tester2 at 1aa17a3 (6473659858): chosen 527 ms into a batch, the key window was its progress sheet, gone
+    /// by the send, so (1), (3) and (7) logged `notKeyWindow`. The window is read as the key-down is posted.
+    @Test(
+        "The key-down goes to the key window at the send, not the one when chosen",
+        arguments: [QueuedUndoKeyDebug.Stamp.whenChosen, .atSend],
+    )
+    func keyWindowReadAtSend(stamp: QueuedUndoKeyDebug.Stamp) async throws {
+        let updates = LedgerUpdates()
+        var now: TimeInterval = 40
+        updates.uptime = { now }
+        #expect(updates.beginBatch())
+        // The progress sheet is key as the command is chosen, and gone with the batch.
+        var keyWindow: Int? = 7
+        var posted: [Int] = []
+        var checks = 0
+        let task = QueuedUndoKeyDebug.pressForKeyWindow(
+            updates: updates,
+            stamp: stamp,
+            command: stamp == .atSend ? .redo : .undo,
+            uptime: { now },
+            sleep: { _ in
+                checks += 1
+                if checks == 2 {
+                    now = 41
+                    updates.endBatch()
+                    keyWindow = 3
+                }
+            },
+            keyWindowNumber: { keyWindow },
+            post: { _, number in posted.append(number) },
+        )
+        await task.value
+        #expect(posted == [3], "The main window, key at the send; never the sheet's 7")
+    }
+
+    @Test("No key window at the send: nothing is posted, never to the main window or a stale one")
+    func noKeyWindowPostsNothing() async {
+        let updates = LedgerUpdates()
+        var asked = 0
+        var posted: [Int] = []
+        let task = QueuedUndoKeyDebug.pressForKeyWindow(
+            updates: updates,
+            stamp: .atSend,
+            uptime: { 5 },
+            sleep: { _ in },
+            keyWindowNumber: {
+                asked += 1
+                return nil
+            },
+            post: { _, number in posted.append(number) },
+        )
+        await task.value
+        #expect(posted.isEmpty)
+        #expect(asked == 1, "Read once, at the send")
+    }
 }
