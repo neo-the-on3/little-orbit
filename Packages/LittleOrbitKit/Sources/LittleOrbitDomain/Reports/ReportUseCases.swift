@@ -34,8 +34,14 @@ public struct DefaultLoadSpendingReportUseCase: LoadSpendingReportUseCase {
 
     public func spendingEntries(_ query: SpendingReportQuery, categoryID: UUID?) async throws -> [SpendingReportEntry] {
         let snapshot = try source.backupSnapshot()
+        let defaultCurrency = defaultCurrency
         return try await ReportWork.offMain {
-            SpendingReportBuilder.entries(in: snapshot, query: query, categoryID: categoryID)
+            SpendingReportBuilder.entries(
+                in: snapshot,
+                query: query,
+                categoryID: categoryID,
+                defaultCurrency: defaultCurrency,
+            )
         }
     }
 }

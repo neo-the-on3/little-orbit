@@ -68,9 +68,11 @@ extension SpendingReportViewModel {
     /// “Only INR accounts are listed because the report shows INR.”
     public var accountsFooter: String { ReportText.accountsFooter(currencyCode: currencyCode) }
 
-    /// The last ticked account can't be unticked (UI Designer's slice 1 spec): its row is disabled.
+    /// The last ticked account can't be unticked (UI Designer's slice 1 spec): its row is disabled. It reads the
+    /// filter itself, not the last loaded list, so two quick unticks can't both go through before the reload
+    /// (Tech Architect's N1 on #307).
     public func canUntick(_ accountID: UUID) -> Bool {
-        accounts.contains { $0.id != accountID && $0.isIncluded }
+        accounts.contains { $0.id != accountID && accountFilter.includes($0.id) }
     }
 
     /// Ticks or unticks an account, then reloads. Hidden accounts start ticked like the others (D417). Unticking
