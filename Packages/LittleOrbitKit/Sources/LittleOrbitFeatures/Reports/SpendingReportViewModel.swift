@@ -143,7 +143,7 @@ public final class SpendingReportViewModel {
     /// The preset the period picker shows; `nil` for a custom range.
     public var period: ReportPeriod? { selection.preset }
 
-    public var periods: [ReportPeriod] { ReportPeriod.allCases }
+    public var periods: [ReportPeriod] { ReportPeriod.categoryPresets }
 
     public func periodName(_ period: ReportPeriod) -> String {
         ReportText.periodName(period)
@@ -308,15 +308,15 @@ public final class SpendingReportViewModel {
             .formatted(.percent.precision(.fractionLength(1)).sign(strategy: .automatic).locale(locale))
     }
 
-    /// “October 2026” for a month, “Oct – Dec 2026” for a quarter, “2026” for a year, and “15 Sep – 14 Oct 2026” for
-    /// any other range, in the view model's locale, from the system formatters (UI Designer's slice 1 spec).
+    /// “October 2026” for a month, “Oct – Dec 2026” for a quarter, “2026” for a year, “May – Oct 2026” for other
+    /// whole months, and “15 Sep – 14 Oct 2026” for any other range, in the view model's locale, from the system formatters (UI Designer's slice 1 spec).
     func title(of range: ReportDayRange) -> String {
         switch range.shape {
         case .month:
             text.format(range.start, template: "MMMMyyyy")
         case .year:
             text.format(range.start, template: "yyyy")
-        case .quarter:
+        case .quarter, .months:
             interval(range, days: false)
         case .days:
             interval(range, days: true)

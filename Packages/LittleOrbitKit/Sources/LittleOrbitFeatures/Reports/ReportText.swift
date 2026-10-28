@@ -48,6 +48,11 @@ enum ReportText {
             FeatureText.string("This Year", comment: "Spending report period preset: the current calendar year.")
         case .lastYear:
             FeatureText.string("Last Year", comment: "Spending report period preset: the previous calendar year.")
+        case .lastSixMonths:
+            FeatureText.string(
+                "Last 6 Months",
+                comment: "Over-time report period preset: this calendar month and the five before it.",
+            )
         }
     }
 
