@@ -262,42 +262,17 @@ final class EventDispatch {
 
         /// Undo and Redo sent while a batch runs do nothing, however they got past validation: Edit › Undo and
         /// Redo send theirs through here (`UndoCommandGate.perform`, D407.6), so this guard covers them too. Each one
-        /// sent is signposted as `ledger.editMenu.action` (`traceAction`).
+        /// sent is signposted as `ledger.editMenu.action` (`UndoCommandGate.traceAction`). A press `perform` refuses
+        /// never gets here, so it's signposted there instead, once.
         override public func sendAction(_ action: Selector, to target: Any?, from sender: Any?) -> Bool {
             let name = NSStringFromSelector(action)
             guard let command = UndoCommandGate.command(forAction: name) else {
                 return super.sendAction(action, to: target, from: sender)
             }
-            let allowed = UndoCommandGate.shared.allows(command)
-            traceAction(command, allowed: allowed)
+            let gate = UndoCommandGate.shared
+            let allowed = gate.allows(command)
+            gate.actionTrace(command, allowed)
             return allowed && super.sendAction(action, to: target, from: sender)
-        }
-
-        /// The signpost `ledger.editMenu.action`, tagged `undoSent`, `undoBlocked`, `redoSent` or `redoBlocked`,
-        /// with, in order: `NSApp.currentEvent`'s type and timestamp, the outermost and innermost events being
-        /// dispatched's types, the dispatched key-down's time, and whether the gate is closed (1 or 0); -1 for each
-        /// one there's none of, and -2 as the outer type with no `sendEvent` wrapper.
-        private func traceAction(_ command: UndoCommandGate.Command, allowed: Bool) {
-            let tag: StaticString =
-                switch (command, allowed) {
-                case (.undo, true): "undoSent"
-                case (.undo, false): "undoBlocked"
-                case (.redo, true): "redoSent"
-                case (.redo, false): "redoBlocked"
-                }
-            let dispatch = EventDispatch.shared
-            BatchTrace.event(
-                "ledger.editMenu.action",
-                tag,
-                values: [
-                    currentEvent.map { Double($0.type.rawValue) } ?? -1,
-                    currentEvent?.timestamp ?? -1,
-                    Double(dispatch.outermostType),
-                    Double(dispatch.innermostType),
-                    dispatch.current?.time ?? -1,
-                    UndoCommandGate.shared.isClosed ? 1 : 0,
-                ],
-            )
         }
     }
 #endif
