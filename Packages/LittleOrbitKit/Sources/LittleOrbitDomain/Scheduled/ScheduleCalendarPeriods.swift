@@ -11,15 +11,21 @@ import Foundation
 /// of another occurrence is taken too (D429.2). Each day of a rule is in the first unit of its block, so an
 /// occurrence's old block is the N units from its own day's unit.
 ///
+/// The held blocks are worked out once, when the walk starts, so each walked day costs one lookup and a walk's cost
+/// grows with the history, not its square (#316 review).
+///
 /// Calendar days are already the device's days (`TransactionTiming.today` reads the device time zone, as the rest
 /// of scheduling does), so the units are counted on the days themselves and no time zone applies here.
 struct TakenPeriods {
     private let count: Int
     private let unit: ScheduleUnit?
     private let origin: Int
-    private let days: [CalendarDay]
+    /// The first unit of each block an occurrence holds.
+    private var held: Set<Int> = []
     /// The days with a real record of their own.
-    private let own: Set<CalendarDay>
+    private var own: Set<CalendarDay> = []
+    /// How many times a record was looked at, so a test can keep the walk's cost linear.
+    private(set) var looks = 0
 
     init(_ item: ScheduledItem) {
         if case .every(let count, let unit) = item.repeatRule, count >= 1 {
@@ -31,8 +37,17 @@ struct TakenPeriods {
             unit = nil
             origin = 0
         }
-        days = Self.realDays(of: item)
-        own = Set(days)
+        guard let unit else {
+            return
+        }
+        for day in Self.realDays(of: item) {
+            looks += 1
+            own.insert(day)
+            // Its old block, the N units from its own day's unit, overlaps at most two blocks (D429.2).
+            let index = Self.index(of: day, in: unit)
+            held.insert(block(of: index))
+            held.insert(block(of: index + count - 1))
+        }
     }
 
     /// The days of the item's real occurrences: posted, skipped and pending records that aren't deleted.
@@ -45,18 +60,18 @@ struct TakenPeriods {
             .map(\.day)
     }
 
-    /// Whether `day` has no record of its own, and another occurrence of the item is in its block or has its own
-    /// block overlap it.
-    func contains(_ day: CalendarDay) -> Bool {
-        guard let unit, !days.isEmpty, !own.contains(day) else {
+    /// Whether `day` has no record of its own and another occurrence of the item holds its block.
+    mutating func contains(_ day: CalendarDay) -> Bool {
+        guard let unit, !held.isEmpty, !own.contains(day) else {
             return false
         }
-        let first = origin + Self.floorDivide(Self.index(of: day, in: unit) - origin, by: count) * count
-        let last = first + count - 1
-        return days.contains { other in
-            let held = Self.index(of: other, in: unit)
-            return held <= last && held + count - 1 >= first
-        }
+        looks += 1
+        return held.contains(block(of: Self.index(of: day, in: unit)))
+    }
+
+    /// The first unit of the block that holds unit `index`.
+    private func block(of index: Int) -> Int {
+        origin + Self.floorDivide(index - origin, by: count) * count
     }
 
     /// The number of `unit`s from a fixed origin to the one that holds `day`.
