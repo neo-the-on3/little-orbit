@@ -106,7 +106,12 @@ public final class SpendingReportViewModel {
     }
 
     /// Shows `code` and keeps it while the period changes, as long as the period has spending in it.
+    /// A new currency ticks every account again, since the list shows only that currency's accounts (UI Designer's
+    /// slice 1 spec).
     public func selectCurrency(_ code: String) async {
+        if code != currencyCode {
+            accountFilter = .all
+        }
         requestedCurrency = code
         await load()
     }
@@ -229,6 +234,7 @@ public final class SpendingReportViewModel {
             caption: ReportText.drillDownCaption(
                 share: current?.shareText,
                 period: title(of: report.range),
+                accounts: accountsText(report.accounts),
                 currencyCode: report.currencyCode,
             ),
             countText: ReportText.transactionCount(entries.count),
@@ -245,8 +251,8 @@ public final class SpendingReportViewModel {
         totalText = formatter.string(report.total, currencyCode: report.currencyCode)
         totalCaption = ReportText.spentCaption(
             period: periodTitle,
-            currencyCode: report.currencyCode,
             accounts: accountsText(report.accounts),
+            currencyCode: report.currencyCode,
         )
         accounts = report.accounts
         let largest = report.rows.map(\.amount).max() ?? 0
@@ -296,22 +302,35 @@ public final class SpendingReportViewModel {
             .formatted(.percent.precision(.fractionLength(1)).sign(strategy: .automatic).locale(locale))
     }
 
-    /// “October 2026” for a month, “Q4 2026” for a quarter, “2026” for a year, and “15 Sep 2026 – 14 Oct 2026”
-    /// for any other range, in the view model's locale.
+    /// “October 2026” for a month, “Oct – Dec 2026” for a quarter, “2026” for a year, and “15 Sep – 14 Oct 2026” for
+    /// any other range, in the view model's locale, from the system formatters (UI Designer's slice 1 spec).
     func title(of range: ReportDayRange) -> String {
         switch range.shape {
         case .month:
             text.format(range.start, template: "MMMMyyyy")
-        case .quarter(let quarter):
-            ReportText.quarterTitle(quarter, year: text.format(range.start, template: "yyyy"))
         case .year:
             text.format(range.start, template: "yyyy")
+        case .quarter:
+            interval(range, days: false)
         case .days:
-            ReportText.rangeTitle(
-                from: text.format(range.start, template: "dMMMyyyy"),
-                to: text.format(range.end, template: "dMMMyyyy"),
-            )
+            interval(range, days: true)
         }
+    }
+
+    /// The system's interval format, as DateIntervalFormatter's MMMyyyy (or dMMMyyyy) template gives it: “Oct – Dec
+    /// 2026”, “15 Sep – 14 Oct 2026”.
+    private func interval(_ range: ReportDayRange, days: Bool) -> String {
+        var calendar = Calendar(identifier: .gregorian)
+        calendar.locale = locale
+        calendar.timeZone = timeZone
+        var style = Date.IntervalFormatStyle(locale: locale, calendar: calendar, timeZone: timeZone)
+        if days {
+            style = style.day()
+        }
+        style = style.month(.abbreviated).year()
+        let start = TransactionCalendar.noon(on: range.start, timeZoneID: timeZone.identifier) ?? now()
+        let end = TransactionCalendar.noon(on: range.end, timeZoneID: timeZone.identifier) ?? now()
+        return style.format(start..<max(start, end))
     }
 
     private func entryRow(_ entry: SpendingReportEntry, currencyCode: String, today: CalendarDay)

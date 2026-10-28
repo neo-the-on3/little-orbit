@@ -64,6 +64,7 @@
                     } label: {
                         Label(model.accountsTitle, systemImage: "line.3.horizontal.decrease.circle")
                     }
+                    .accessibilityValue(model.accountsValue)
                     .disabled(model.accounts.isEmpty)
                 }
             }

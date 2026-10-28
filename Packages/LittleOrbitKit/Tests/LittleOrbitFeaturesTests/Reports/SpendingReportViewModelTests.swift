@@ -137,7 +137,7 @@ struct SpendingReportViewModelTests {
         #expect(model.period == .thisMonth)
         #expect(model.periodTitle == "October 2026")
         #expect(model.totalText == "₹60,650.50")
-        #expect(model.totalCaption == "Spent in October 2026 · INR · all accounts")
+        #expect(model.totalCaption == "Spent in October 2026 · all accounts · INR")
         #expect(model.rows.map(\.name) == ["Rent", "Food & Dining › Groceries", "Uncategorised"])
         #expect(model.rows.map(\.amountText) == ["₹45,000.00", "₹12,450.50", "₹3,200.00"])
         #expect(model.rows.map(\.shareText) == ["74.2%", "20.5%", "5.3%"])
@@ -182,7 +182,8 @@ struct SpendingReportViewModelTests {
         // The drill-down header carries the same signed share (D319.7).
         let refunds = try #require(model.rows.last)
         #expect(
-            try #require(await model.drillDown(for: refunds)).caption == "\(negative) of spending · October 2026 · INR"
+            try #require(await model.drillDown(for: refunds)).caption
+                == "\(negative) of spending · October 2026 · all accounts · INR"
         )
     }
 
@@ -295,7 +296,7 @@ struct SpendingReportViewModelTests {
         let drill = try #require(await model.drillDown(for: row))
         #expect(drill.title == "Food & Dining › Groceries")
         #expect(drill.amountText == row.amountText)
-        #expect(drill.caption == "86.3% of spending · October 2026 · INR")
+        #expect(drill.caption == "86.3% of spending · October 2026 · all accounts · INR")
         #expect(drill.countText == "3 transactions")
         #expect(drill.entries.map(\.title) == ["Expense", "Refund (original deleted)", "Green Basket"])
         #expect(drill.entries.map(\.amountText) == ["−₹1,240.00", "+₹100.00", "−₹2,000.00"])

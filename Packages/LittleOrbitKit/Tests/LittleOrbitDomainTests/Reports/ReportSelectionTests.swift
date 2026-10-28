@@ -33,9 +33,9 @@ struct ReportSelectionTests {
     @Test("Given October 2026, › shows November 2026 and ‹ goes back to October 2026")
     func stepMonth() {
         let today = F.day(2026, 10, 25)
-        let next = ReportSelection.default.stepped(by: 1, today: today)
+        let next = ReportSelection.default.stepped(by: 1)
         #expect(next.range(today: today) == .init(start: F.day(2026, 11, 1), end: F.day(2026, 11, 30)))
-        #expect(next.stepped(by: -1, today: today).range(today: today) == ReportPeriod.thisMonth.range(today: today))
+        #expect(next.stepped(by: -1).range(today: today) == ReportPeriod.thisMonth.range(today: today))
         #expect(next.preset == .thisMonth)
     }
 
@@ -54,7 +54,7 @@ struct ReportSelectionTests {
         #expect(ReportSelection.preset(.thisMonth, offset: -14).range(today: today).start == F.day(2025, 11, 1))
     }
 
-    @Test("A custom range keeps both end days, reads an end-first range start first, and steps by its own length")
+    @Test("A custom range keeps both end days, reads an end-first range start first, and doesn't step")
     func custom() {
         let today = F.day(2026, 10, 25)
         let range = ReportDayRange(start: F.day(2026, 9, 15), end: F.day(2026, 10, 14))
@@ -62,10 +62,11 @@ struct ReportSelectionTests {
         #expect(
             ReportSelection.custom(.init(start: range.end, end: range.start)).range(today: today) == range
         )
-        #expect(range.dayCount == 30)
-        let next = ReportSelection.custom(range).stepped(by: 1, today: today)
-        #expect(next.range(today: today) == .init(start: F.day(2026, 10, 15), end: F.day(2026, 11, 13)))
-        #expect(next.preset == nil)
+        #expect(ReportSelection.custom(range).stepped(by: 1) == .custom(range))
+        #expect(range.stepped(by: -1) == range)
+        #expect(!ReportSelection.custom(range).canStep)
+        #expect(ReportSelection.default.canStep)
+        #expect(ReportSelection.custom(range).preset == nil)
     }
 
     @Test("A range's shape names it: month, quarter, year or days")

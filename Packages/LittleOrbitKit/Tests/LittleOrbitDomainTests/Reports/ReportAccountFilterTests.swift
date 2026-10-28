@@ -61,7 +61,9 @@ struct ReportAccountFilterTests {
         #expect(Self.report(snapshot, SpendingReportQuery(range: Self.october, accounts: filter)).total == 1_500)
     }
 
-    @Test("Unticking every INR account leaves INR on the currency picker, with an empty report")
+    // The view model never sends this query: the last ticked account can't be unticked (UI Designer's B1 on #307;
+    // SpendingReportFiltersTests.lastTickedAccount). The builder still keeps the currency if one arrives.
+    @Test("A query that unticks every INR account still leaves INR on the currency picker")
     func currencyStaysWhenUnticked() {
         let snapshot = Self.snapshot([
             R.expense(100, R.rent, on: F.date(2026, 10, 1)),

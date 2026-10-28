@@ -51,16 +51,6 @@ enum ReportText {
         }
     }
 
-    /// “Q4 2026”: a calendar quarter's title. `year` is already formatted for the locale.
-    static func quarterTitle(_ quarter: Int, year: String) -> String {
-        FeatureText.format("Q%1$lld %2$@", quarter, year)
-    }
-
-    /// “15 Sep 2026 – 14 Oct 2026”: a custom range's title, both end days included.
-    static func rangeTitle(from start: String, to end: String) -> String {
-        FeatureText.format("%1$@ – %2$@", start, end)
-    }
-
     static var uncategorised: String {
         FeatureText.string(
             "Uncategorised",
@@ -78,22 +68,46 @@ enum ReportText {
         FeatureText.plural("%lld transactions", one: "%lld transaction", count)
     }
 
-    /// “Spent in October 2026 · INR · all accounts”, under the total (D318.1; “· all accounts” from #184).
-    static func spentCaption(period: String, currencyCode: String, accounts: String) -> String {
-        FeatureText.format("Spent in %1$@ · %2$@ · %3$@", period, currencyCode, accounts)
+    /// “Spent in October 2026 · all accounts · INR”, under the total (D318.1; the account part from #184's
+    /// slice 1 spec, D420).
+    static func spentCaption(period: String, accounts: String, currencyCode: String) -> String {
+        FeatureText.format("Spent in %1$@ · %2$@ · %3$@", period, accounts, currencyCode)
     }
 
     static var allAccounts: String {
         FeatureText.string(
             "all accounts",
             comment:
-                "Spending report caption’s end, “Spent in October 2026 · INR · all accounts”: every account counts.",
+                "Report captions’ account part, “Spent in October 2026 · all accounts · INR”: every listed account counts.",
         )
     }
 
-    /// “2 accounts”: how many of the shown currency's accounts are ticked, when not all of them are.
-    static func accountCount(_ count: Int) -> String {
-        FeatureText.plural("%lld accounts", one: "%lld account", count)
+    /// “2 of 3 accounts”: the caption's account part when some of the shown currency's accounts are unticked.
+    static func accountsOf(_ included: Int, total: Int) -> String {
+        FeatureText.pluralFormat(
+            "%1$lld of %2$lld accounts",
+            one: "%1$lld of %2$lld account",
+            count: total,
+            included,
+            total,
+        )
+    }
+
+    /// The Accounts row's value: “All”, or “2 of 3”.
+    static func accountsValue(_ included: Int, total: Int) -> String {
+        guard included < total else {
+            return FeatureText.string(
+                key: "report.accounts.all",
+                defaultValue: "All",
+                comment: "Report Accounts row value when every listed account is ticked: “Accounts  All”.",
+            )
+        }
+        return FeatureText.format("%1$lld of %2$lld", included, total)
+    }
+
+    /// “Only INR accounts are listed because the report shows INR.”: the account list's footer.
+    static func accountsFooter(currencyCode: String) -> String {
+        FeatureText.format("Only %1$@ accounts are listed because the report shows %1$@.", currencyCode)
     }
 
     static var accountsTitle: String {
@@ -113,7 +127,14 @@ enum ReportText {
     }
 
     static var customRange: String {
-        FeatureText.string("Custom Range", comment: "Report period picker: choose your own first and last day.")
+        FeatureText.string("Custom…", comment: "Report period picker: choose your own first and last day.")
+    }
+
+    static var bothDatesIncluded: String {
+        FeatureText.string(
+            "Both dates are included.",
+            comment: "Report custom range: the note under the From and To day pickers.",
+        )
     }
 
     static var customStart: String {
@@ -146,15 +167,16 @@ enum ReportText {
         )
     }
 
-    /// “16.9% of spending · October 2026 · INR”, under a category's total in its drill-down: the category's share
-    /// (D319.7), then the report's period and currency, with no filter wording until #184 adds filters (D319.5).
-    /// `share` is the percent formatter's output, sign included; without one the header is the period and currency.
-    static func drillDownCaption(share: String?, period: String, currencyCode: String) -> String {
-        let periodAndCurrency = FeatureText.format("%1$@ · %2$@", period, currencyCode)
+    /// “16.9% of spending · October 2026 · all accounts · INR”, under a category's total in its drill-down: the
+    /// category's share (D319.7), then the report's period, account part and currency, as the report's caption
+    /// names them (D319.5: the account wording returns with #184). `share` is the percent formatter's output, sign
+    /// included; without one the header starts at the period.
+    static func drillDownCaption(share: String?, period: String, accounts: String, currencyCode: String) -> String {
+        let scope = FeatureText.format("%1$@ · %2$@ · %3$@", period, accounts, currencyCode)
         guard let share else {
-            return periodAndCurrency
+            return scope
         }
-        return FeatureText.format("%1$@ · %2$@", FeatureText.format("%1$@ of spending", share), periodAndCurrency)
+        return FeatureText.format("%1$@ · %2$@", FeatureText.format("%1$@ of spending", share), scope)
     }
 
     static var allCategories: String {
