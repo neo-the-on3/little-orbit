@@ -110,7 +110,7 @@
                         .monospacedDigit()
                         .lineLimit(1)
                         .truncationMode(.tail)
-                        .help(row.amount)
+                        .help(row.amountHelp)
                         .frame(maxWidth: .infinity, alignment: .trailing)
                 }
                 .width(min: 100, ideal: 100, max: 180)
