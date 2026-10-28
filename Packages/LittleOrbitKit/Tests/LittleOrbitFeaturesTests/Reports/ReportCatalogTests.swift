@@ -10,6 +10,7 @@ struct ReportCatalogTests {
         let entries = try StringCatalogTests.entries()
         let keys = [
             "Reports", "Spending", "What do I spend my money on?", "Period", "Currency", "This Month", "Last Month",
+            "This Quarter", "Last Quarter",
             "This Year", "Last Year", "%1$@ › %2$@", "Spent in %1$@ · %2$@", "%1$@ · %2$@", "%1$@ of spending",
             "All Categories", "No Expenses", "There are no expenses in this period. Try another period.",
             "Couldn’t Load Report", "Refund", "Refund · %@", "Refund (original deleted)",

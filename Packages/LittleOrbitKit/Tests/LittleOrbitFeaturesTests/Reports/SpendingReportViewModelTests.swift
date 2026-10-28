@@ -239,7 +239,11 @@ struct SpendingReportViewModelTests {
         model.period = .lastYear
         #expect(model.periodTitle == "2025")
         #expect(model.totalText == "₹50.00")
-        #expect(model.periods.map(model.periodName) == ["This Month", "Last Month", "This Year", "Last Year"])
+        #expect(
+            model.periods.map(model.periodName) == [
+                "This Month", "Last Month", "This Quarter", "Last Quarter", "This Year", "Last Year",
+            ]
+        )
     }
 
     @Test("Several currencies show the picker, default first; picking one shows only that currency")

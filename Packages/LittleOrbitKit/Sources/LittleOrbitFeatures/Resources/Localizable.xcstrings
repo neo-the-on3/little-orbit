@@ -2833,6 +2833,19 @@
         }
       }
     },
+    "Last Quarter": {
+      "comment": "Report period preset: the previous calendar quarter.",
+      "extractionState": "manual",
+      "generatesSymbol": false,
+      "localizations": {
+        "en": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Last Quarter"
+          }
+        }
+      }
+    },
     "scheduled.payee.create": {
       "comment": "Scheduled form payee field: the row that saves the typed name as a new payee. %@ is the name typed, trimmed.",
       "extractionState": "manual",
@@ -7164,6 +7177,19 @@
           "stringUnit": {
             "state": "translated",
             "value": "This file isn’t encrypted and contains all your financial data."
+          }
+        }
+      }
+    },
+    "This Quarter": {
+      "comment": "Report period preset: the current calendar quarter.",
+      "extractionState": "manual",
+      "generatesSymbol": false,
+      "localizations": {
+        "en": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "This Quarter"
           }
         }
       }

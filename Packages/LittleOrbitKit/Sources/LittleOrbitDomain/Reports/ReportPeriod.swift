@@ -1,10 +1,12 @@
 import Foundation
 
-/// The periods the spending report offers for Monday's core (#27, D316): presets only. Quarters and a custom
-/// range are a Follow-up to #27.
+/// The preset periods the reports offer: months and years from #27's core (D316), and quarters from the
+/// Follow-up to #27 (#184). A custom range and ‹ › stepping are `ReportSelection`.
 public enum ReportPeriod: String, CaseIterable, Identifiable, Sendable {
     case thisMonth
     case lastMonth
+    case thisQuarter
+    case lastQuarter
     case thisYear
     case lastYear
 
@@ -14,6 +16,7 @@ public enum ReportPeriod: String, CaseIterable, Identifiable, Sendable {
     public var length: ReportPeriodLength {
         switch self {
         case .thisMonth, .lastMonth: .month
+        case .thisQuarter, .lastQuarter: .quarter
         case .thisYear, .lastYear: .year
         }
     }
@@ -28,6 +31,10 @@ public enum ReportPeriod: String, CaseIterable, Identifiable, Sendable {
             ReportDayRange.month(year: today.year - 1, month: 12)
         case .lastMonth:
             ReportDayRange.month(year: today.year, month: today.month - 1)
+        case .thisQuarter:
+            ReportDayRange.quarter(year: today.year, quarter: ReportDayRange.quarter(of: today.month))
+        case .lastQuarter:
+            ReportDayRange.quarter(year: today.year, quarter: ReportDayRange.quarter(of: today.month)).stepped(by: -1)
         case .thisYear:
             ReportDayRange.year(today.year)
         case .lastYear:
@@ -38,6 +45,7 @@ public enum ReportPeriod: String, CaseIterable, Identifiable, Sendable {
 
 public enum ReportPeriodLength: Sendable, Equatable {
     case month
+    case quarter
     case year
 }
 
@@ -60,6 +68,20 @@ public struct ReportDayRange: Equatable, Hashable, Sendable {
             start: CalendarDay(year: year, month: month, day: 1),
             end: CalendarDay(year: year, month: month, day: daysInMonth(year: year, month: month)),
         )
+    }
+
+    /// Calendar quarter `quarter` (1 to 4) of `year`: Q4 is 1 Oct to 31 Dec.
+    public static func quarter(year: Int, quarter: Int) -> ReportDayRange {
+        let first = (quarter - 1) * 3 + 1
+        return ReportDayRange(
+            start: CalendarDay(year: year, month: first, day: 1),
+            end: CalendarDay(year: year, month: first + 2, day: daysInMonth(year: year, month: first + 2)),
+        )
+    }
+
+    /// The quarter, 1 to 4, that `month` is in.
+    public static func quarter(of month: Int) -> Int {
+        (month - 1) / 3 + 1
     }
 
     public static func year(_ year: Int) -> ReportDayRange {
