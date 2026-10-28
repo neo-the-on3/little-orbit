@@ -101,6 +101,28 @@ struct ReportCatalogTests {
         #expect(entries["report.title.income"] == ["Income"])
     }
 
+    @Test(
+        "Income vs expenses and the Reports summary are in the catalog, the series and columns as own keys (#184 slice 5)"
+    )
+    func incomeExpenseEntries() throws {
+        let entries = try StringCatalogTests.entries()
+        for key in [
+            "How much do I earn compared to my expenses?", "Income vs Expenses", "Earned", "Spent", "Left over",
+            "In %1$@ · Out %2$@", "%1$@, left over %2$@, income %3$@, expenses %4$@",
+            "Transfers between your own accounts aren’t counted. Refunds reduce expenses and are never income.",
+            "No Income or Expenses", "There’s nothing to compare in this period. Try another period.", "Total",
+            "Earned − spent, %1$@ · %2$@", "%1$@, %2$@",
+        ] {
+            #expect(entries[key] == [key], "\(key) is one entry with its English value")
+        }
+        #expect(entries["report.series.income"] == ["Income"])
+        #expect(entries["report.series.expenses"] == ["Expenses"])
+        #expect(entries["report.column.month"] == ["Month"])
+        #expect(entries["report.column.income"] == ["Income"])
+        #expect(entries["report.column.expenses"] == ["Expenses"])
+        #expect(entries["report.column.leftOver"] == ["Left over"])
+    }
+
     @Test("The transaction count has one and other variants, each with %lld")
     func countPlural() throws {
         let values = try #require(try StringCatalogTests.entries()["%lld transactions"])

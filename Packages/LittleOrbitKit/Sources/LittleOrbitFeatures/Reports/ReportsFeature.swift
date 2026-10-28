@@ -32,9 +32,21 @@ public final class ReportsFeature {
     public var payeeQuestion: String { ReportText.payeeQuestion }
     /// “Where does my money come from?”: the income report's row on Reports (#184 slice 5).
     public var incomeQuestion: String { ReportText.incomeQuestion }
+    /// “How much do I earn compared to my expenses?”: its row on Reports (#184 slice 5, D420).
+    public var incomeExpenseQuestion: String { ReportText.incomeExpenseQuestion }
 
     public func makeSpendingReport() -> SpendingReportViewModel {
         SpendingReportViewModel(useCase: spendingReport, locale: locale, timeZone: timeZone, now: now)
+    }
+
+    /// “How much do I earn compared to my expenses?” (#184 slice 5).
+    public func makeIncomeExpenseReport() -> IncomeExpenseReportViewModel {
+        IncomeExpenseReportViewModel(useCase: spendingReport, locale: locale, timeZone: timeZone, now: now)
+    }
+
+    /// The Reports list's This Month summary (#184 slice 5).
+    public func makeSummary() -> ReportsSummaryModel {
+        ReportsSummaryModel(useCase: spendingReport, locale: locale, timeZone: timeZone, now: now)
     }
 
     /// The report counting income by category (#184 slice 5).
