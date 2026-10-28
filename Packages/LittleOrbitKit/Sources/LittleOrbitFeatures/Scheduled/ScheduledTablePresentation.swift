@@ -17,11 +17,20 @@ public struct ScheduledTableRow: Identifiable, Equatable, Sendable {
     public let account: String
     public let amount: String
     public let tone: AmountTone
+    /// "received $12.00" in To's currency, for a transfer between currencies only; `nil` otherwise. The cell
+    /// still shows only the amount sent (D364).
+    public let received: String?
     /// The time state, then the mode (D355.2, D356.1): "Overdue · 5 days", "Due today · Automatic",
     /// "Due today · 09:00", "Automatic", "Automatic + notify", "Notify 09:00", "Ended" (D365.1), or blank for a plain
     /// manual upcoming item (D355.1). With notifications denied, the notify part reads "Notifications off"
     /// (D365.2, D366).
     public let status: String
+
+    /// The Amount cell's help: the amount sent, then "received $12.00" on a transfer between currencies
+    /// ("₹1,000.00 · received $12.00"), so hovering shows what arrives (D364, #205 merge gate on #207).
+    public var amountHelp: String {
+        received.map { ScheduledText.pair(amount, $0) } ?? amount
+    }
 }
 
 /// One section of the Table: Overdue, Due Today, Upcoming, then Completed. No header has a count; the footer
@@ -150,6 +159,7 @@ extension ScheduledListViewModel {
             account: listing.account(item.accountID)?.name ?? "",
             amount: amount,
             tone: tone,
+            received: presenter.receivedText(of: item),
             status: status(of: item, on: day, kind: kind, presenter: presenter),
         )
     }
