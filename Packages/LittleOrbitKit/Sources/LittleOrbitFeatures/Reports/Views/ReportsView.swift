@@ -26,8 +26,8 @@
     }
 
     /// “What do I spend my money on?”: the period and currency pickers, the total, then one row per category
-    /// with its amount, share and a bar, each opening its transactions. Standard list rows, so they get the
-    /// system chevrons, Dynamic Type and keyboard focus.
+    /// with its amount, share and a bar, each opening its transactions. On the Mac each row is a button that
+    /// opens through `ReportDrillDownPresentation` (#315); on iOS each row is a navigation link.
     struct SpendingReportView: View {
         @State private var model: SpendingReportViewModel
         @State private var showsAccounts = false
