@@ -176,4 +176,31 @@ struct ScheduledPayUndoTests {
         #expect(scene.recorded.count == 1)
         #expect(relaunched.overdueRows.isEmpty)
     }
+
+    @Test("D344 with D45: a waiting occurrence moved to another day still lists without Auto, by its key")
+    func movedWaitingRow() throws {
+        let scene = try ScheduledScene()
+        try scene.add(scene.item("Rent", day: 1, automatic: true, month: 10))
+        let (list, window) = window(scene)
+        list.payNow(try #require(list.overdueRows.first))
+        window.history.undo()
+        let october = CalendarDay(year: 2026, month: 10, day: 1)
+        let moved = CalendarDay(year: 2026, month: 10, day: 3)
+        let item = try #require(try scene.repository.scheduleLedger().scheduledItems.first)
+        var form = item.resolved(for: october)
+        form.occurrences = item.occurrences
+        _ = try scene.useCases.manage.update(
+            form,
+            editing: ScheduledOccurrenceSave(occurrence: october, dueDay: moved, scope: .thisOccurrence),
+            payee: nil,
+        )
+        let feature = scene.feature()
+        feature.catchUp(atLaunch: true)
+        #expect(scene.recorded.isEmpty)
+        let relaunched = feature.makeList()
+        relaunched.load()
+        let row = try #require(relaunched.overdueRows.first)
+        #expect(row.occurrence == october)
+        #expect(row.detail == "Monthly · Everyday Savings")
+    }
 }

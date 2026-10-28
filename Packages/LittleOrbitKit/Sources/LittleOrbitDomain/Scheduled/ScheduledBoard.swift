@@ -25,7 +25,7 @@ public struct ScheduledDue: Hashable, Sendable, Identifiable {
 
     /// An automatic item's occurrence whose Pay was undone: the user pays or skips it (D344).
     public var waitsForUser: Bool {
-        item.occurrence(on: day)?.waitsForUser == true
+        item.occurrence(on: key)?.waitsForUser == true
     }
 }
 

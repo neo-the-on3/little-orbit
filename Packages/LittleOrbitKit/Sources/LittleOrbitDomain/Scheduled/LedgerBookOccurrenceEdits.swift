@@ -239,20 +239,30 @@ extension LedgerBook {
                 && (record.day == key || (record.day > key && record.outcome == .edited))
         }
         item.occurrences.removeAll { record in moving.contains { $0.id == record.id } }
-        for record in moving {
+        for moved in moving {
             let offset: Int?
-            if record.day == key {
+            if moved.day == key {
                 offset = 0
             } else if let keyIndex,
-                let index = ScheduleCalendar.index(of: record.day, from: item.startDay, repeating: rule)
+                let index = ScheduleCalendar.index(of: moved.day, from: item.startDay, repeating: rule)
             {
                 offset = index - keyIndex
             } else {
                 offset = nil
             }
             guard let offset, let newKey = ScheduleCalendar.occurrence(offset, from: start, repeating: rule),
-                item.occurrence(on: newKey) == nil, var edit = record.edit
+                item.occurrence(on: newKey) == nil
             else {
+                continue
+            }
+            // An undone automatic Pay still waits for the user on its new day, so catch-up never records it (D344.1).
+            if moved.waitsForUser {
+                var waiting = record(newKey, of: item.id, outcome: .pending, edit: nil, now: now)
+                waiting.transactionID = moved.transactionID
+                item.occurrences.append(waiting)
+                item.occurrences.sort { $0.day < $1.day }
+            }
+            guard var edit = moved.edit else {
                 continue
             }
             if edit.day == newKey {

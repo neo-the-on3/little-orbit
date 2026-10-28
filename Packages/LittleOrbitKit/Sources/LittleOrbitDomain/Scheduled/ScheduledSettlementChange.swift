@@ -98,6 +98,8 @@ extension LedgerBook {
                 day: change.day,
                 outcome: .pending,
                 transactionID: transaction.id,
+                // The occurrence's own values stay with it (D45).
+                edit: change.replaced?.edit ?? change.record.edit,
                 createdAt: change.replaced?.createdAt ?? now,
                 updatedAt: now,
             )
