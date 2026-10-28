@@ -30,7 +30,8 @@ extension LedgerBook {
     /// that checks the End date (`checksEnd`: one that changes it, or any form save, D443), once `resumesOn` is set,
     /// since that decides what's on the new rule (D435, D436, D442). Settled ones never change. Returns the ones
     /// removed, by due day. This is the one check the item-save path runs.
-    /// - Checking the End removes a move whose moved day is after the End (D442.1, D443).
+    /// - Checking the End removes a move whose moved day is after the End (D442.1, D443), and an occurrence that
+    ///   wasn't moved and whose own day is after it (D444.2).
     /// - A Starts or repeat edit removes an occurrence that wasn't moved and whose own day the new rule doesn't have
     ///   (D442.2). One before `today` was already kept as `pending` by `keepUnpaidDays`, so it stays due.
     /// - Every other move whose own day is off the rule stays due on its moved day (`keepOrphanedMoves`).
@@ -44,14 +45,19 @@ extension LedgerBook {
     ) -> [ScheduledRemovedOccurrence] {
         var removed: [ScheduledRemovedOccurrence] = []
         if checksEnd, let end = item.endDay {
-            removed += item.occurrences
-                .filter { record in
-                    record.deletedAt == nil && !record.outcome.isSettled && record.edit?.has(.day) == true
-                        && item.dueDay(of: record.day) > end
-                }
+            let open = item.occurrences.filter { $0.deletedAt == nil && !$0.outcome.isSettled && $0.edit != nil }
+            removed +=
+                open
+                .filter { $0.edit?.has(.day) == true && item.dueDay(of: $0.day) > end }
                 .map {
                     ScheduledRemovedOccurrence(reason: .movedAfterEnd, key: $0.day, dueDay: item.dueDay(of: $0.day))
                 }
+            // An occurrence with its own values, not moved, whose own day is past the End (D444.2). One kept as
+            // `pending` from before an edit stays due, as D442.2 keeps it.
+            removed +=
+                open
+                .filter { $0.outcome == .edited && $0.edit?.has(.day) != true && $0.day > end }
+                .map { ScheduledRemovedOccurrence(reason: .editedOffSchedule, key: $0.day, dueDay: $0.day) }
         }
         if ruleChanged {
             removed += item.occurrences
@@ -61,6 +67,9 @@ extension LedgerBook {
                 }
                 .map { ScheduledRemovedOccurrence(reason: .editedOffSchedule, key: $0.day, dueDay: $0.day) }
         }
+        // Once each, even when both checks find it.
+        var seen = Set<CalendarDay>()
+        removed = removed.filter { seen.insert($0.key).inserted }
         let keys = Set(removed.map(\.key))
         item.occurrences.removeAll { $0.deletedAt == nil && keys.contains($0.day) }
         keepOrphanedMoves(in: &item, now: now)

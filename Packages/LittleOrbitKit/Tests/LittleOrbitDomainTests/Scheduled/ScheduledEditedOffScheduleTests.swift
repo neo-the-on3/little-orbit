@@ -14,7 +14,10 @@ struct ScheduledEditedOffScheduleTests {
     private static let key = Fix.day(2026, 10, 26)
     private static let tuesday = Fix.day(2026, 10, 27)
 
-    private static func example() throws -> (repository: FakeScheduleRepository, change: ScheduledItemSaveChange) {
+    private static func example(
+        key: CalendarDay = Self.key,
+        save: (inout ScheduledItem) -> Void = { $0.startDay = Self.tuesday },
+    ) throws -> (repository: FakeScheduleRepository, change: ScheduledItemSaveChange) {
         let repository = FakeScheduleRepository()
         repository.now = Fix.created
         let useCases = repository.useCases()
@@ -31,9 +34,9 @@ struct ScheduledEditedOffScheduleTests {
         let edit = ScheduledOccurrenceSave(occurrence: key, dueDay: key, scope: .thisOccurrence)
         _ = try useCases.update(dearer, editing: edit, payee: nil)
         repository.now = Fix.date(2026, 10, 21)
-        var tuesdays = repository.snapshot.scheduledItems[0]
-        tuesdays.startDay = tuesday
-        let change = try useCases.update(tuesdays, payee: nil)
+        var changed = repository.snapshot.scheduledItems[0]
+        save(&changed)
+        let change = try useCases.update(changed, payee: nil)
         return (repository, change)
     }
 
@@ -96,5 +99,36 @@ struct ScheduledEditedOffScheduleTests {
         let item = repository.snapshot.scheduledItems[0]
         #expect(item.occurrence(on: Self.key)?.outcome == .pending)
         #expect(item.resolved(for: Self.key).amount == 249)
+    }
+
+    // MARK: D444.2: past an End date
+
+    @Test("D444.2: ₹249.00 on Mon 2 Nov, then End 31 Oct: 2 Nov is removed and reported; Undo restores it")
+    func editedPastTheNewEndIsRemoved() throws {
+        let november = Fix.day(2026, 11, 2)
+        let (repository, change) = try Self.example(key: november) { $0.endDay = Fix.day(2026, 10, 31) }
+        #expect(change.removed == [.init(reason: .editedOffSchedule, key: november, dueDay: november)])
+        let item = repository.snapshot.scheduledItems[0]
+        #expect(item.occurrence(on: november) == nil)
+        #expect(ScheduleCalendar.dueOccurrences(of: item, through: Fix.day(2026, 11, 30)).map(\.day) == [Self.key])
+        let reminders = ScheduledReminderPlanner.plan(
+            [item],
+            now: Fix.date(2026, 10, 21),
+            timeZone: Self.kolkata,
+            time: .standard,
+            limit: 3,
+        )
+        #expect(!reminders.contains { $0.id == ScheduledReminder.identifier(item: item.id, day: november) })
+        repository.now = Fix.date(2026, 10, 21, 11)
+        guard case .reverted = try repository.revertScheduledItemSave(change, undone: false) else {
+            Issue.record("Undo was stale")
+            return
+        }
+        let restored = repository.snapshot.scheduledItems[0]
+        #expect(restored.endDay == nil)
+        #expect(restored.resolved(for: november).amount == 249)
+        #expect(
+            ScheduleCalendar.dueOccurrences(of: restored, through: Fix.day(2026, 11, 2)).map(\.day).contains(november)
+        )
     }
 }
