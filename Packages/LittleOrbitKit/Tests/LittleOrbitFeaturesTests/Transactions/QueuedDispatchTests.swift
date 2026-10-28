@@ -77,7 +77,7 @@ struct QueuedDispatchTests {
         Policy.Event(time: time, type: Kind.keyDown)
     }
 
-    private static func endedBatch() async throws -> Ended {
+    static func endedBatch() async throws -> Ended {
         let updates = LedgerUpdates()
         let clock = UptimeClock(now: 10)
         clock.drive(updates)

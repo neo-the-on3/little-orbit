@@ -218,8 +218,10 @@ final class EventDispatch {
             }
         }
 
-        /// No target for Undo or Redo while a batch runs: AppKit's menu validation then dims the item, for VoiceOver
-        /// too, and its key equivalent beeps (D407.1). Every other action, and these once the batch ends, as AppKit
+        /// No target for Undo or Redo while a batch runs: anything that looks one up by its `undo:` or `redo:`
+        /// action, AppKit's validation of a menu item that sends it among them, finds none, so that item dims and its
+        /// key equivalent beeps (D407.1). Edit › Undo and Redo themselves are the app's SwiftUI items, dimmed from
+        /// the gate instead (`UndoMenuItems`, #293). Every other action, and these once the batch ends, as AppKit
         /// finds it.
         override public func target(forAction action: Selector, to target: Any?, from sender: Any?) -> Any? {
             let name = NSStringFromSelector(action)
@@ -258,8 +260,9 @@ final class EventDispatch {
             )
         }
 
-        /// Undo and Redo sent while a batch runs do nothing, however they got past validation. Each one sent is
-        /// signposted as `ledger.editMenu.action` (`traceAction`).
+        /// Undo and Redo sent while a batch runs do nothing, however they got past validation: Edit › Undo and
+        /// Redo send theirs through here (`UndoCommandGate.perform`, D407.6), so this guard covers them too. Each one
+        /// sent is signposted as `ledger.editMenu.action` (`traceAction`).
         override public func sendAction(_ action: Selector, to target: Any?, from sender: Any?) -> Bool {
             let name = NSStringFromSelector(action)
             guard let command = UndoCommandGate.command(forAction: name) else {
