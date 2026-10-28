@@ -1,5 +1,6 @@
-// Debug-only S33 testing hooks for a tapped scheduled reminder: the launch argument's tap and Debug › Tap
-// Scheduled Reminder. None of it is in release builds or on the watch.
+// Debug-only testing hooks: for a tapped scheduled reminder (S33), the launch argument's tap and Debug › Tap
+// Scheduled Reminder; on the Mac, Debug › Send Queued ⌘Z (n2 on #201). None of it is in release builds or on the
+// watch.
 #if (os(iOS) || os(macOS)) && DEBUG
     import Foundation
     import LittleOrbitFeatures
@@ -42,8 +43,9 @@
     /// Debug › Tap Scheduled Reminder (S33), on the Mac and in the iPad menu bar: a warm tap on a scheduled
     /// item's reminder, which Tester can't click on demand, through the same handler as
     /// `-LittleOrbitScheduledReminderTap`. On the Mac, like a real tap, it unhides the app after Cmd-H, brings
-    /// back a minimised window, or opens a new one when every window is closed. Debug builds only; the titles
-    /// are fixed English, not catalog entries.
+    /// back a minimised window, or opens a new one when every window is closed. On the Mac, Debug › Send Queued ⌘Z
+    /// sends a ⌘Z typed during a Bulk Edit as AppKit would once the batch ends (`QueuedUndoKeyDebug`). Debug
+    /// builds only; the titles are fixed English, not catalog entries.
     struct ScheduledReminderTapCommand: Commands {
         let features: Result<AppFeatures, any Error>
 
@@ -56,6 +58,15 @@
                 } label: {
                     Text(verbatim: "Tap Scheduled Reminder")
                 }
+                #if os(macOS)
+                    Button {
+                        if case .success(let features) = features {
+                            QueuedUndoKeyDebug.sendQueuedUndo(updates: features.transactions.updates)
+                        }
+                    } label: {
+                        Text(verbatim: "Send Queued ⌘Z")
+                    }
+                #endif
             }
         }
     }
