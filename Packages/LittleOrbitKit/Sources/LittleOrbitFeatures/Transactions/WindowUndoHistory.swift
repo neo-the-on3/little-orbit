@@ -382,6 +382,20 @@ public final class WindowUndoHistory {
         undo()
     }
 
+    /// The newest step, for a notice whose Undo belongs to it (the Scheduled removed-occurrences notice, D444).
+    public var newestStepID: UUID? {
+        undoSteps.last?.id
+    }
+
+    /// A notice's Undo: the window's Undo, only while `stepID` is still the newest step, so it never reverses
+    /// something else (as the toast's, D187.7).
+    public func undo(step stepID: UUID) {
+        guard let step = undoSteps.last, step.id == stepID, registrar?.undoActionName == step.title else {
+            return
+        }
+        undo()
+    }
+
     /// Closes the toast, after its time or when its list goes away.
     public func dismissToast() {
         toast = nil

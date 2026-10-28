@@ -1,27 +1,37 @@
 import Foundation
 
-/// An occurrence with its own values that a Starts, repeat or End date edit removed, because the new schedule has no
-/// place for it (D442). The save reports each one, so the form's save shows one notice naming them (D442.3), and the
-/// save's Undo puts them back with the rest of the item.
+/// An occurrence with its own values that an item save removed, because the schedule has no place for it (D442, D443,
+/// D444). The save reports each one, so the form's save shows one notice naming them (D442.3, D444), and the save's
+/// Undo puts them back with the rest of the item.
 public struct ScheduledRemovedOccurrence: Hashable, Sendable {
     public enum Reason: Hashable, Sendable {
-        /// A "This occurrence only" move whose moved day is after the new End date (D442.1).
-        case movedAfterEnd
-        /// An occurrence whose amount or other values, but not its day, were its own, and whose own day the new
-        /// rule doesn't have (D442.2).
+        /// A "This occurrence only" move whose moved day is after the End date, and whose own day is still on the
+        /// schedule, so the payment is back on its own day, its key (D442.1, D444.1).
+        case movedBackToScheduledDay
+        /// A "This occurrence only" move whose moved day and own day are both past the End date, so nothing is left
+        /// of it (D444.1).
+        case movedRemoved
+        /// An occurrence whose amount or other values, but not its day, were its own, and whose own day the
+        /// schedule no longer has (D442.2, D444.2).
         case editedOffSchedule
     }
 
     public var reason: Reason
     /// The occurrence's own day: its key.
     public var key: CalendarDay
-    /// The day it was due, which the notice names: the moved day for a move, else its key.
+    /// The day it was due: the moved day for a move, else its key.
     public var dueDay: CalendarDay
 
     public init(reason: Reason, key: CalendarDay, dueDay: CalendarDay) {
         self.reason = reason
         self.key = key
         self.dueDay = dueDay
+    }
+
+    /// The day the notice names (D444.1): the scheduled day a move went back to, the moved day of a move that's gone,
+    /// or the day of an edited occurrence.
+    public var shownDay: CalendarDay {
+        reason == .movedRemoved ? dueDay : key
     }
 }
 
@@ -50,7 +60,7 @@ extension LedgerBook {
                 open
                 .filter { $0.edit?.has(.day) == true && item.dueDay(of: $0.day) > end }
                 .map {
-                    ScheduledRemovedOccurrence(reason: .movedAfterEnd, key: $0.day, dueDay: item.dueDay(of: $0.day))
+                    ScheduledRemovedOccurrence(reason: .movedRemoved, key: $0.day, dueDay: item.dueDay(of: $0.day))
                 }
             // An occurrence with its own values, not moved, whose own day is past the End (D444.2). One kept as
             // `pending` from before an edit stays due, as D442.2 keeps it.
@@ -72,6 +82,11 @@ extension LedgerBook {
         removed = removed.filter { seen.insert($0.key).inserted }
         let keys = Set(removed.map(\.key))
         item.occurrences.removeAll { $0.deletedAt == nil && keys.contains($0.day) }
+        // A move whose own day is still on the schedule goes back to it (D444.1).
+        for index in removed.indices
+        where removed[index].reason == .movedRemoved && ScheduleCalendar.isOccurrence(removed[index].key, of: item) {
+            removed[index].reason = .movedBackToScheduledDay
+        }
         keepOrphanedMoves(in: &item, now: now)
         return removed.sorted { $0.dueDay == $1.dueDay ? $0.key < $1.key : $0.dueDay < $1.dueDay }
     }

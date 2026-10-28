@@ -36,7 +36,10 @@ enum UndoText {
     /// The Edit menu's Undo: "Undo Pay Phone Plan", or "Undo" when the step has no name.
     static func menuUndo(_ title: String?) -> String {
         guard let title else {
-            return FeatureText.string("Undo", comment: "Mac Edit menu: Undo when there's nothing named to undo.")
+            return FeatureText.string(
+                "Undo",
+                comment: "The Mac Edit menu's unnamed Undo, and the Undo on the Scheduled removed-payments notice.",
+            )
         }
         return FeatureText.string("Undo \(title)", comment: "Mac Edit menu: Undo with the step's name.")
     }

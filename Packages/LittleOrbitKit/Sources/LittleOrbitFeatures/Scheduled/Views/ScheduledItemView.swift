@@ -17,9 +17,7 @@
                 .onAppear {
                     // A form save is this window's Undo step (D351.1), also when a reminder tap opened the item
                     // straight onto the Mac stack and the list under it never appeared.
-                    model.recordStep = { [undoHistory] change, name, subject in
-                        undoHistory.record(change, named: name, subject: subject)
-                    }
+                    model.useUndoHistory(undoHistory)
                     model.screenAppeared(.item(itemID))
                     model.loadIfNeeded()
                 }

@@ -128,7 +128,9 @@ struct ScheduledEndDateMoveTests {
     @Test("D442 (B): 26 Oct moved to Tue 3 Nov is removed when End becomes 31 Oct, and the save reports it")
     func movedAfterTheNewEndIsRemoved() throws {
         let (repository, change) = try Self.example(key: Self.keyB, movedTo: Self.movedB)
-        #expect(change.removed == [.init(reason: .movedAfterEnd, key: Self.keyB, dueDay: Self.movedB)])
+        #expect(change.removed == [.init(reason: .movedBackToScheduledDay, key: Self.keyB, dueDay: Self.movedB)])
+        // The notice names the scheduled day it went back to (D444.1).
+        #expect(change.removed.first?.shownDay == Self.keyB)
         let snapshot = repository.snapshot
         let item = snapshot.scheduledItems[0]
         #expect(item.endDay == Self.newEnd)
@@ -195,12 +197,13 @@ struct ScheduledEndDateMoveTests {
         #expect(reminders.contains { $0.id == ScheduledReminder.identifier(item: item.id, day: Self.keyB) })
     }
 
-    @Test("D442.1: a move whose own day and moved day are both after the new End (2 Nov to Thu 5 Nov) is removed")
-    func movedOffTheRuleAndAfterTheEndIsRemoved() throws {
+    @Test("D444.1 (E): Mon 2 Nov moved to Tue 3 Nov is removed when End becomes 31 Oct, shown on 3 Nov; Undo restores")
+    func movedWithItsOwnDayPastTheEndIsRemoved() throws {
         let key = Fix.day(2026, 11, 2)
-        let movedTo = Fix.day(2026, 11, 5)
+        let movedTo = Fix.day(2026, 11, 3)
         let (repository, change) = try Self.example(key: key, movedTo: movedTo)
-        #expect(change.removed == [.init(reason: .movedAfterEnd, key: key, dueDay: movedTo)])
+        #expect(change.removed == [.init(reason: .movedRemoved, key: key, dueDay: movedTo)])
+        #expect(change.removed.first?.shownDay == movedTo)
         let item = repository.snapshot.scheduledItems[0]
         #expect(item.occurrence(on: key) == nil)
         #expect(
@@ -208,6 +211,22 @@ struct ScheduledEndDateMoveTests {
                 Fix.day(2026, 10, 26)
             ]
         )
+        let reminders = ScheduledReminderPlanner.plan(
+            [item],
+            now: Fix.date(2026, 10, 21),
+            timeZone: Self.kolkata,
+            time: .standard,
+            limit: 3,
+        )
+        #expect(!reminders.contains { $0.id == ScheduledReminder.identifier(item: item.id, day: key) })
+        repository.now = Fix.date(2026, 10, 21, 11)
+        guard case .reverted = try repository.revertScheduledItemSave(change, undone: false) else {
+            Issue.record("Undo was stale")
+            return
+        }
+        let restored = repository.snapshot.scheduledItems[0]
+        #expect(restored.endDay == nil)
+        #expect(restored.dueDay(of: key) == movedTo)
     }
 
     // MARK: D443: a move made past an End that's already set
@@ -251,7 +270,7 @@ struct ScheduledEndDateMoveTests {
         var dearer = item
         dearer.amount = 209
         let change = try useCases.update(dearer, payee: nil)
-        #expect(change.removed == [.init(reason: .movedAfterEnd, key: Self.keyB, dueDay: Self.movedB)])
+        #expect(change.removed == [.init(reason: .movedBackToScheduledDay, key: Self.keyB, dueDay: Self.movedB)])
         item = repository.snapshot.scheduledItems[0]
         #expect(item.occurrence(on: Self.keyB) == nil)
         #expect(ScheduleCalendar.dueOccurrences(of: item, through: Fix.day(2026, 11, 30)).map(\.day) == [Self.keyB])

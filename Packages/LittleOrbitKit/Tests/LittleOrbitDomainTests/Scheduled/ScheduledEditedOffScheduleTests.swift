@@ -103,7 +103,7 @@ struct ScheduledEditedOffScheduleTests {
 
     // MARK: D444.2: past an End date
 
-    @Test("D444.2: ₹249.00 on Mon 2 Nov, then End 31 Oct: 2 Nov is removed and reported; Undo restores it")
+    @Test("D444.2 (D): ₹249.00 on Mon 2 Nov, then End 31 Oct: 2 Nov is removed and reported; Undo restores it")
     func editedPastTheNewEndIsRemoved() throws {
         let november = Fix.day(2026, 11, 2)
         let (repository, change) = try Self.example(key: november) { $0.endDay = Fix.day(2026, 10, 31) }
