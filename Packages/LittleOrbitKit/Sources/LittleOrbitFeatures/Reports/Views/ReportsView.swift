@@ -63,7 +63,7 @@
             .navigationTitle(ReportText.spendingTitle)
             .task { model.load() }
             // Any edit to the shared store, from any window, regenerates the report.
-            .onChange(of: updates.revision) { model.load() }
+            .onChange(of: updates.revision) { model.load(at: updates.revision) }
         }
 
         private var currency: Binding<String> {
@@ -97,7 +97,7 @@
                 Section {
                     ForEach(model.rows) { row in
                         NavigationLink {
-                            SpendingTransactionsView(model: model, row: row)
+                            SpendingTransactionsView(model: model, row: row, updates: updates)
                         } label: {
                             SpendingRowView(row: row)
                         }

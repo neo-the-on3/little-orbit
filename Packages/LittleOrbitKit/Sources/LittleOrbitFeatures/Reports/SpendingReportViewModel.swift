@@ -75,10 +75,13 @@ public final class SpendingReportViewModel {
     public private(set) var loadFailed = false
     /// True until the first load.
     public private(set) var isLoading = true
-    /// Goes up on every load, whether or not the rows changed, so an open drill-down reads its transactions
-    /// again after any change to the store, such as a payee rename (Tech Architect's NB9 on #185).
+    /// Goes up on every load, whether or not the rows changed (Tech Architect's NB9 on #185). An open drill-down
+    /// follows the store itself (`SpendingDrillDownModel.refresh(at:)`).
     public private(set) var revision = 0
 
+    /// The shared store's revision the last `load(at:)` read, so a change is read once, whether the report or
+    /// its open drill-down hears it first.
+    @ObservationIgnored private var storeRevision: Int?
     @ObservationIgnored private var report: SpendingReport?
     @ObservationIgnored private var requestedCurrency: String?
     @ObservationIgnored private let useCase: any LoadSpendingReportUseCase
@@ -144,6 +147,21 @@ public final class SpendingReportViewModel {
             currencies = []
             periodTitle = title(of: period.range(today: TransactionTiming.today(now(), timeZone: timeZone)))
         }
+    }
+
+    /// Loads again after a change to the shared store at `storeRevision`, from any window, unless that change has
+    /// already been read.
+    public func load(at storeRevision: Int) {
+        guard storeRevision != self.storeRevision else {
+            return
+        }
+        self.storeRevision = storeRevision
+        load()
+    }
+
+    /// A drill-down for `row`, kept current while it's open.
+    public func makeDrillDown(for row: SpendingRowModel) -> SpendingDrillDownModel {
+        SpendingDrillDownModel(report: self, row: row)
     }
 
     /// The transactions behind `row`, read when its drill-down opens and again after each load. Its title is the
