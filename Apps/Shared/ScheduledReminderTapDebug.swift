@@ -44,8 +44,9 @@
     /// item's reminder, which Tester can't click on demand, through the same handler as
     /// `-LittleOrbitScheduledReminderTap`. On the Mac, like a real tap, it unhides the app after Cmd-H, brings
     /// back a minimised window, or opens a new one when every window is closed. On the Mac, Debug › Send Queued ⌘Z
-    /// sends a ⌘Z typed during a Bulk Edit as AppKit would once the batch ends (`QueuedUndoKeyDebug`). Debug
-    /// builds only; the titles are fixed English, not catalog entries.
+    /// sends a ⌘Z typed during a Bulk Edit as AppKit would once the batch ends, and Send ⌘Z Right After Batch,
+    /// chosen during one, a ⌘Z typed just as it ends (`QueuedUndoKeyDebug`). Debug builds only; the titles are
+    /// fixed English, not catalog entries.
     struct ScheduledReminderTapCommand: Commands {
         let features: Result<AppFeatures, any Error>
 
@@ -65,6 +66,16 @@
                         }
                     } label: {
                         Text(verbatim: "Send Queued ⌘Z")
+                    }
+                    Button {
+                        if case .success(let features) = features {
+                            QueuedUndoKeyDebug.sendQueuedUndo(
+                                updates: features.transactions.updates,
+                                rightAfterBatch: true,
+                            )
+                        }
+                    } label: {
+                        Text(verbatim: "Send ⌘Z Right After Batch")
                     }
                 #endif
             }
