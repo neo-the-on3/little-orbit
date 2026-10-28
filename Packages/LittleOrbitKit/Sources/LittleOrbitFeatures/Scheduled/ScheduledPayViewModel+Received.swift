@@ -2,9 +2,10 @@ import Foundation
 import LittleOrbitDomain
 
 /// Pay with a custom date or amount on a transfer between currencies (#207, second-lander gate on #201, D415): the
-/// sheet asks for the amount received in To's currency, prefilled with the item's amount received when it has one and
-/// empty otherwise, never worked out from a rate, and records it with To's currency code, so a custom amount sent
-/// never keeps the old amount received and #207's store check still holds. Record waits until both amounts read.
+/// sheet asks for the amount received in To's currency, prefilled with the occurrence's amount received when it has
+/// one (#202 B1) and empty otherwise, never worked out from a rate, and records it with To's currency code, so a
+/// custom amount sent never keeps the old amount received and #207's store check still holds. Record waits until both
+/// amounts read.
 extension ScheduledPayViewModel {
     /// Whether From, as chosen, is in another currency than To, so the sheet asks for the amount received.
     public var needsReceivedAmount: Bool {

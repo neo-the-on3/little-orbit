@@ -23,7 +23,8 @@ public final class ScheduledPayViewModel: Identifiable {
     }
     public var categoryID: UUID?
     public var changesFutureOccurrences = false
-    /// A transfer between currencies: the amount To receives, in To's currency, prefilled with the item's (#207).
+    /// A transfer between currencies: the amount To receives, in To's currency, prefilled with the occurrence's (#207,
+    /// #202 B1).
     public var receivedText: String {
         didSet {
             if oldValue != receivedText {
@@ -43,7 +44,11 @@ public final class ScheduledPayViewModel: Identifiable {
 
     @ObservationIgnored private let useCases: ScheduledScreenUseCases
     @ObservationIgnored let listing: ScheduledListing
+    /// The occurrence as it records: the item with the occurrence's own values in place of its own (D45, D111), so
+    /// the prefill, From's choices and Received's currency are the occurrence's (#202 B1).
     @ObservationIgnored let item: ScheduledItem
+    /// The item itself, for what the schedule keeps: "The schedule stays ₹1,200.00" and the next due date.
+    @ObservationIgnored private let schedule: ScheduledItem
     @ObservationIgnored private let occurrence: CalendarDay
     @ObservationIgnored let locale: Locale
     @ObservationIgnored private let paid: (ScheduledSettlementChange?) -> Void
@@ -59,6 +64,8 @@ public final class ScheduledPayViewModel: Identifiable {
     ) {
         self.useCases = useCases
         self.listing = listing
+        schedule = item
+        let item = item.resolved(for: occurrence)
         self.item = item
         self.occurrence = occurrence
         self.locale = locale
@@ -123,6 +130,12 @@ public final class ScheduledPayViewModel: Identifiable {
         MoneyFormatter(locale: locale).string(item.amount, currencyCode: scheduleCurrencyCode)
     }
 
+    /// The item's own amount, in its own From's currency: what the schedule keeps while the toggle is off.
+    private var seriesAmountText: String {
+        let code = listing.account(schedule.accountID)?.currencyCode ?? CurrencyCode.deviceDefault
+        return MoneyFormatter(locale: locale).string(schedule.amount, currencyCode: code)
+    }
+
     /// "Scheduled amount: ₹1,850.00.", under the amount; once From is in another currency than the schedule's,
     /// "Scheduled amount: ₹5,000.00, in INR. The amount paid is in USD." (D415).
     public var amountFooter: String {
@@ -157,10 +170,10 @@ public final class ScheduledPayViewModel: Identifiable {
             sentences = [ScheduledText.laterOccurrencesChange]
         } else {
             sentences = [ScheduledText.onlyThisOccurrence]
-            if case .every(1, .month) = item.repeatRule, let ordinal = ordinal(item.startDay.day) {
-                sentences.append(ScheduledText.scheduleStays(scheduledAmountText, onThe: ordinal))
+            if case .every(1, .month) = schedule.repeatRule, let ordinal = ordinal(schedule.startDay.day) {
+                sentences.append(ScheduledText.scheduleStays(seriesAmountText, onThe: ordinal))
             } else {
-                sentences.append(ScheduledText.scheduleStays(scheduledAmountText))
+                sentences.append(ScheduledText.scheduleStays(seriesAmountText))
             }
         }
         if let next = nextDue {
@@ -173,7 +186,7 @@ public final class ScheduledPayViewModel: Identifiable {
     private var nextDue: CalendarDay? {
         ScheduleCalendar.adding(days: 1, to: occurrence)
             .flatMap { after in
-                ScheduleCalendar.firstOccurrence(of: item, onOrAfter: after, where: { !item.isSettled($0) })
+                ScheduleCalendar.firstOccurrence(of: schedule, onOrAfter: after, where: { !schedule.isSettled($0) })
             }
     }
 
