@@ -11171,6 +11171,30 @@
           }
         }
       }
+    },
+    "%lld payees you’ve changed since the import are kept.": {
+      "comment": "Undo Import confirmation: after “That includes …”, when payees the import created were changed since and stay (D384.3). %lld is how many.",
+      "extractionState": "manual",
+      "localizations": {
+        "en": {
+          "variations": {
+            "plural": {
+              "one": {
+                "stringUnit": {
+                  "state": "translated",
+                  "value": "%lld payee you’ve changed since the import is kept."
+                }
+              },
+              "other": {
+                "stringUnit": {
+                  "state": "translated",
+                  "value": "%lld payees you’ve changed since the import are kept."
+                }
+              }
+            }
+          }
+        }
+      }
     }
   },
   "version": "1.0"

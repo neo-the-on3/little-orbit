@@ -10,8 +10,8 @@ extension PayeeCleanup {
         return payees.compactMap { payee in current.first { $0.id == payee.id } }
     }
 
-    /// `removeUnused(_:)`: removes each payee nothing uses and no one has edited since its save created it
-    /// (D191.4a), and returns the ones removed, as they were, for Redo.
+    /// `removeUnused(_:)`: removes each payee nothing uses and nothing has touched since its save created it
+    /// (D191.4a, D362, D384.7), and returns the ones removed, as they were, for Redo.
     nonisolated static func removingUnused(
         _ payees: [Payee],
         from snapshot: inout LedgerSnapshot,
@@ -20,8 +20,7 @@ extension PayeeCleanup {
         var removed: [Payee] = []
         for created in payees {
             guard let now = snapshot.payeesVisible().first(where: { $0.id == created.id }),
-                now.name == created.name, now.defaultCategoryID == created.defaultCategoryID,
-                now.isArchived == created.isArchived, now.deletedAt == nil,
+                now.isUntouched(since: created),
                 snapshot.payeeReferenceCount(now.id) == 0
             else {
                 continue

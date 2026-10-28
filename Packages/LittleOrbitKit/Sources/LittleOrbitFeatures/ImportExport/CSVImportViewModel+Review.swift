@@ -217,9 +217,12 @@ extension CSVImportViewModel {
         ImportExportText.undoTitle(receipt?.importedCount ?? 0)
     }
 
-    /// D281 and D323.8: names the file, then lists only what the import created.
+    /// D281 and D323.8: names the file, then lists only what the import created. Its payee count is only the
+    /// payees Undo Import would remove; the ones changed since are kept, and get their own sentence (D384.3).
     public var undoMessage: String {
         guard let receipt else { return "" }
+        let createdPayees = Set(receipt.createdPayees.map(\.id)).count
+        let removedPayees = (try? useCases.ledger.payeesUndoRemoves(receipt)) ?? createdPayees
         var created: [String] = []
         if receipt.createdAccounts.count == 1, let account = receipt.createdAccounts.first {
             created.append(ImportExportText.createdAccount(named: account.name))
@@ -229,9 +232,14 @@ extension CSVImportViewModel {
         if !receipt.createdCategories.isEmpty {
             created.append(ImportExportText.createdCategories(receipt.createdCategories.count))
         }
-        if !receipt.createdPayees.isEmpty {
-            created.append(ImportExportText.createdPayees(receipt.createdPayees.count))
+        if removedPayees > 0 {
+            created.append(ImportExportText.createdPayees(removedPayees))
         }
-        return ImportExportText.undoMessage(fileName: receipt.fileName, created: created, locale: locale)
+        return ImportExportText.undoMessage(
+            fileName: receipt.fileName,
+            created: created,
+            keptPayees: createdPayees - removedPayees,
+            locale: locale,
+        )
     }
 }

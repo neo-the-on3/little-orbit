@@ -37,6 +37,15 @@ final class InMemoryLedgerRepositoryTests: XCTestCase {
         }
     }
 
+    /// #254, D384: Undo Import keeps the created payees touched since the import.
+    func testImportUndoKeepsTouchedPayees() throws {
+        try onMain {
+            try assertImportUndoKeepsTouchedPayees {
+                InMemoryLedgerRepository()
+            }
+        }
+    }
+
     func testScheduledItemsStoreAndPostOnce() throws {
         try onMain {
             try assertScheduledStorage {

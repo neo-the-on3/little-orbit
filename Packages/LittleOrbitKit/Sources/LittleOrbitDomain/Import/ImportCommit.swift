@@ -8,6 +8,8 @@ public struct ImportReceipt: Equatable, Sendable {
     public var transactions: [Transaction]
     public var createdAccounts: [Account]
     public var createdCategories: [TransactionCategory]
+    /// The payees the import created, as its save left them: after its rows set `lastUsedAt` and maybe the
+    /// default category. Undo Import removes one only while it's still exactly this (D384).
     public var createdPayees: [Payee]
     /// “Already imported” rows that weren't ticked.
     public var skippedAlreadyImported: Int
@@ -103,7 +105,8 @@ struct ImportCommitter {
                 transactions: saved.compactMap { stored[$0] },
                 createdAccounts: created.accounts,
                 createdCategories: created.categories,
-                createdPayees: created.payees,
+                // As stored after the rows: their save sets the payees' last use and default category (#254).
+                createdPayees: try PayeeCleanup(repository: repository).stored(created.payees),
                 skippedAlreadyImported: skipped { if case .alreadyImported = $0 { true } else { false } },
                 skippedPossibleDuplicates: skipped { if case .possibleDuplicate = $0 { true } else { false } },
                 skippedOther: skipped { $0 == .ready },
@@ -117,7 +120,8 @@ struct ImportCommitter {
     }
 
     /// Removes everything the import added: its transactions, then the payees, categories and accounts it
-    /// created that nothing else uses now. All or nothing.
+    /// created that nothing else uses now. A created payee goes only if nothing has touched it since the import
+    /// either (`removablePayees`, D384); any other stays as it is, with no error. All or nothing.
     ///
     /// It refuses with `changedSinceImport`, changing nothing, when removing the batch would also change
     /// something the user did since: an imported transaction was edited or deleted, a refund was linked to
@@ -139,12 +143,14 @@ struct ImportCommitter {
             if linked || hasSplits || hasAttachments {
                 throw ImportUndoError.changedSinceImport
             }
+            // Read before the delete, so the check sees the payees as the user left them (D384).
+            let untouched = try removablePayees(receipt)
             try repository.deleteTransactions(ids: receipt.transactions.map(\.id))
             let remaining = try repository.transactions()
             // One pass for what still uses the created payees, then one batch delete, instead of a count and a
             // delete per payee that each read the whole ledger (#250).
-            let inUse = try repository.payeesInUse(among: Set(receipt.createdPayees.map(\.id)))
-            let unused = receipt.createdPayees.map(\.id).filter { !inUse.contains($0) }
+            let inUse = try repository.payeesInUse(among: Set(untouched))
+            let unused = untouched.filter { !inUse.contains($0) }
             if !unused.isEmpty {
                 try repository.deletePayees(ids: unused)
             }
@@ -168,6 +174,37 @@ struct ImportCommitter {
                 try repository.deleteAccount(id: account.id)
             }
         }
+    }
+
+    /// The payees the import created that nothing has touched since (`Payee.isUntouched(since:)`, D362, D384),
+    /// each once, in the receipt's order. Undo Import removes these unless something else still uses them; a
+    /// touched payee stays.
+    func removablePayees(_ receipt: ImportReceipt) throws -> [UUID] {
+        let stored = Dictionary(try repository.payees().map { ($0.id, $0) }) { first, _ in first }
+        var seen: Set<UUID> = []
+        return receipt.createdPayees.compactMap { created in
+            guard seen.insert(created.id).inserted, stored[created.id]?.isUntouched(since: created) == true else {
+                return nil
+            }
+            return created.id
+        }
+    }
+
+    /// How many created payees Undo Import would remove now, without changing anything, for the confirmation
+    /// (D384.3): the untouched ones that nothing but the imported transactions uses. Those are unchanged while
+    /// Undo Import can run, so their uses are the receipt's.
+    func payeesUndoRemoves(_ receipt: ImportReceipt) throws -> Int {
+        var importedUses: [UUID: Int] = [:]
+        for transaction in receipt.transactions where transaction.deletedAt == nil {
+            if let payeeID = transaction.payeeID {
+                importedUses[payeeID, default: 0] += 1
+            }
+        }
+        return try removablePayees(receipt)
+            .filter { id in
+                try repository.payeeReferenceCount(id) <= importedUses[id, default: 0]
+            }
+            .count
     }
 
     private struct Created {

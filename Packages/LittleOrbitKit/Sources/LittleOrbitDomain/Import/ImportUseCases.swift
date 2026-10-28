@@ -123,6 +123,9 @@ public protocol ImportLedgerUseCase {
     /// Removes the whole batch again (Undo Import, D51, D281). Throws `ImportUndoError.changedSinceImport` and
     /// changes nothing if an imported transaction changed since.
     func undo(_ receipt: ImportReceipt) throws
+    /// How many of the payees the import created Undo Import would remove now: the ones nothing has touched
+    /// since and nothing else uses (D384). The rest stay. For the confirmation's counts (D384.3).
+    func payeesUndoRemoves(_ receipt: ImportReceipt) throws -> Int
 }
 
 @MainActor
@@ -150,6 +153,10 @@ public struct DefaultImportLedgerUseCase: ImportLedgerUseCase {
 
     public func undo(_ receipt: ImportReceipt) throws {
         try ImportCommitter(repository: repository, now: now).undo(receipt)
+    }
+
+    public func payeesUndoRemoves(_ receipt: ImportReceipt) throws -> Int {
+        try ImportCommitter(repository: repository, now: now).payeesUndoRemoves(receipt)
     }
 }
 
