@@ -8,6 +8,8 @@ public enum ScheduledEditField: String, CaseIterable, Sendable, Codable {
     case amount
     case account
     case transferAccount
+    /// A transfer's amount received, with the currency it was entered in (#207 B1): they go with the To account.
+    case received
     case category
     case payee
     case details
@@ -26,6 +28,9 @@ public struct ScheduledOccurrenceEdit: Hashable, Sendable, Codable {
     public var amount: Decimal?
     public var accountID: UUID?
     public var transferAccountID: UUID?
+    public var destinationAmount: Decimal?
+    /// The currency `destinationAmount` was entered in; `nil` with no amount received (#207 B1).
+    public var receivedCurrencyCode: String?
     public var categoryID: UUID?
     public var payeeID: UUID?
     public var details: String?
@@ -37,6 +42,8 @@ public struct ScheduledOccurrenceEdit: Hashable, Sendable, Codable {
         amount: Decimal? = nil,
         accountID: UUID? = nil,
         transferAccountID: UUID? = nil,
+        destinationAmount: Decimal? = nil,
+        receivedCurrencyCode: String? = nil,
         categoryID: UUID? = nil,
         payeeID: UUID? = nil,
         details: String? = nil,
@@ -47,6 +54,8 @@ public struct ScheduledOccurrenceEdit: Hashable, Sendable, Codable {
         self.amount = amount
         self.accountID = accountID
         self.transferAccountID = transferAccountID
+        self.destinationAmount = destinationAmount
+        self.receivedCurrencyCode = destinationAmount == nil ? nil : receivedCurrencyCode
         self.categoryID = categoryID
         self.payeeID = payeeID
         self.details = details
@@ -68,6 +77,9 @@ public struct ScheduledOccurrenceEdit: Hashable, Sendable, Codable {
         case .amount: amount = source.amount
         case .account: accountID = source.accountID
         case .transferAccount: transferAccountID = source.transferAccountID
+        case .received:
+            destinationAmount = source.destinationAmount
+            receivedCurrencyCode = source.destinationAmount == nil ? nil : source.receivedCurrencyCode
         case .category: categoryID = source.categoryID
         case .payee: payeeID = source.payeeID
         case .details: details = source.details
@@ -84,6 +96,9 @@ public struct ScheduledOccurrenceEdit: Hashable, Sendable, Codable {
         case .amount: amount = nil
         case .account: accountID = nil
         case .transferAccount: transferAccountID = nil
+        case .received:
+            destinationAmount = nil
+            receivedCurrencyCode = nil
         case .category: categoryID = nil
         case .payee: payeeID = nil
         case .details: details = nil
@@ -100,6 +115,9 @@ public struct ScheduledOccurrenceEdit: Hashable, Sendable, Codable {
             case .amount: item.amount = amount ?? item.amount
             case .account: item.accountID = accountID
             case .transferAccount: item.transferAccountID = transferAccountID
+            case .received:
+                item.destinationAmount = destinationAmount
+                item.receivedCurrencyCode = receivedCurrencyCode
             case .category: item.categoryID = categoryID
             case .payee: item.payeeID = payeeID
             case .details: item.details = details
@@ -123,6 +141,7 @@ public struct ScheduledOccurrenceEdit: Hashable, Sendable, Codable {
             case .amount: shown.amount != edited.amount
             case .account: shown.accountID != edited.accountID
             case .transferAccount: shown.transferAccountID != edited.transferAccountID
+            case .received: !hasSameReceived(shown, edited)
             case .category: shown.categoryID != edited.categoryID
             case .payee: shown.payeeID != edited.payeeID
             case .details: shown.details != edited.details
@@ -138,11 +157,20 @@ public struct ScheduledOccurrenceEdit: Hashable, Sendable, Codable {
         case .amount: edit.amount == item.amount
         case .account: edit.accountID == item.accountID
         case .transferAccount: edit.transferAccountID == item.transferAccountID
+        case .received:
+            edit.destinationAmount == item.destinationAmount
+                && (edit.destinationAmount == nil || edit.receivedCurrencyCode == item.receivedCurrencyCode)
         case .category: edit.categoryID == item.categoryID
         case .payee: edit.payeeID == item.payeeID
         case .details: edit.details == item.details
         case .note: edit.note == item.note
         }
+    }
+
+    /// Whether `lhs` and `rhs` receive the same amount in the same currency; with none, the code doesn't count.
+    private static func hasSameReceived(_ lhs: ScheduledItem, _ rhs: ScheduledItem) -> Bool {
+        lhs.destinationAmount == rhs.destinationAmount
+            && (lhs.destinationAmount == nil || lhs.receivedCurrencyCode == rhs.receivedCurrencyCode)
     }
 
     private static func ordered(_ fields: [ScheduledEditField]) -> [ScheduledEditField] {
