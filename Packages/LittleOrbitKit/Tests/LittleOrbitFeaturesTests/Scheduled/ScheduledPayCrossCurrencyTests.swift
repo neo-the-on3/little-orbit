@@ -129,4 +129,66 @@ struct ScheduledPayCrossCurrencyTests {
         #expect(names.contains("Long Term Fund · INR"))
         #expect(!names.contains { $0.hasPrefix("Travel Card") }, "To is never From")
     }
+
+    // MARK: Amount in From's currency (Tester's iPhone and iPad run at 7c8a893, 6472280527)
+
+    @Test("From switched to USD Card: Amount is in USD, reformatted, and the footer names both currencies")
+    func amountFollowsFrom() throws {
+        let scene = try ScheduledScene()
+        let sheet = try sameCurrencySheet(scene)
+        #expect(sheet.amountCurrencyCode == "INR")
+        #expect(sheet.amountFooter == "Scheduled amount: ₹500.00.", "One currency: unchanged")
+        sheet.accountID = usdCard.id
+        #expect(sheet.amountCurrencyCode == "USD")
+        #expect(sheet.amountText == "500.00")
+        #expect(sheet.amountFooter == "Scheduled amount: ₹500.00, in INR. The amount paid is in USD.")
+        sheet.amountText = "6.25"
+        sheet.receivedText = "520"
+        #expect(sheet.record())
+        let paid = try #require(scene.recorded.first)
+        #expect(paid.accountID == usdCard.id && paid.amount == 6.25, "Posted from USD Card in USD")
+        #expect(paid.destinationAmount == 520, "Received in To's INR")
+    }
+
+    @Test("Amount reads in From's decimals: 1.234 is too many for INR, and fine once From is in KWD")
+    func amountDecimalsFollowFrom() throws {
+        let scene = try ScheduledScene()
+        let dinar = Account(name: "Dinar Card", type: .cash, currencyCode: "KWD", sortOrder: 4)
+        try scene.repository.saveAccount(dinar)
+        let sheet = try sameCurrencySheet(scene)
+        sheet.amountText = "1.234"
+        if case .success = sheet.readAmount() {
+            Issue.record("1.234 read in INR")
+        }
+        sheet.accountID = dinar.id
+        #expect(sheet.amountText == "1.234", "Kept as typed: it reads in KWD")
+        #expect(sheet.amountCurrencyCode == "KWD")
+        #expect(try sheet.readAmount().get() == Decimal(string: "1.234"))
+    }
+
+    @Test("From switched to a JPY account: ₹500.00 as typed becomes 500, in yen's decimals; then KWD, 500.000")
+    func amountReformatsInFromsDecimals() throws {
+        let scene = try ScheduledScene()
+        let yen = Account(name: "Yen Card", type: .cash, currencyCode: "JPY", sortOrder: 4)
+        let dinar = Account(name: "Dinar Card", type: .cash, currencyCode: "KWD", sortOrder: 5)
+        try scene.repository.saveAccount(yen)
+        try scene.repository.saveAccount(dinar)
+        let sheet = try sameCurrencySheet(scene)
+        sheet.accountID = yen.id
+        #expect(sheet.amountText == "500")
+        sheet.accountID = dinar.id
+        #expect(sheet.amountText == "500.000")
+        sheet.amountText = "1.234"
+        sheet.accountID = yen.id
+        #expect(sheet.amountText == "1.234", "Not exact in yen, so kept as typed for its hint")
+        #expect(sheet.amountHint != nil)
+    }
+
+    @Test("Amount and Received have their own accessibility labels")
+    func accessibilityLabels() throws {
+        let scene = try ScheduledScene()
+        let sheet = try crossSheet(scene)
+        #expect(sheet.amountAccessibilityLabel == "Amount paid")
+        #expect(sheet.receivedAccessibilityLabel == "Amount received")
+    }
 }

@@ -16,10 +16,22 @@
         var body: some View {
             Form {
                 Section {
-                    TextField(model.amountLabel, text: $model.amountText)
+                    // In From's currency, named beside it (D415).
+                    HStack {
+                        TextField(
+                            model.amountLabel,
+                            text: $model.amountText,
+                            prompt: Text(verbatim: model.amountCurrencyCode),
+                        )
+                        .accessibilityLabel(Text(model.amountAccessibilityLabel))
                         #if os(iOS)
                             .keyboardType(.decimalPad)
                         #endif
+                        Text(verbatim: model.amountCurrencyCode)
+                            .foregroundStyle(.secondary)
+                            // The field's label and value already say it.
+                            .accessibilityHidden(true)
+                    }
                     if let error = model.amountError {
                         Text(error).foregroundStyle(Color(ThemeColor.destructiveDefault))
                     } else if let hint = model.amountHint {
@@ -33,6 +45,7 @@
                             text: $model.receivedText,
                             prompt: Text(verbatim: model.receivedCurrencyCode ?? ""),
                         )
+                        .accessibilityLabel(Text(model.receivedAccessibilityLabel))
                         .accessibilityHint(Text(verbatim: model.receivedHint ?? ""))
                         #if os(iOS)
                             .keyboardType(.decimalPad)

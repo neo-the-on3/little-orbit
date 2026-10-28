@@ -51,6 +51,34 @@ extension ScheduledText {
         FeatureText.format("Scheduled amount: %@.", amount)
     }
 
+    /// "Scheduled amount: ₹5,000.00, in INR. The amount paid is in USD.": the footer once From is in another currency
+    /// than the schedule's (D415), so the schedule's amount never reads as the Amount field's currency.
+    static func scheduledAmount(_ amount: String, in scheduleCode: String, paidIn paidCode: String) -> String {
+        FeatureText.format(
+            "Scheduled amount: %1$@, in %2$@. The amount paid is in %3$@.",
+            amount,
+            scheduleCode,
+            paidCode,
+        )
+    }
+
+    /// The Amount field's accessibility label on the custom pay sheet.
+    static var amountPaid: String {
+        FeatureText.string(
+            "Amount paid",
+            comment: "Custom pay sheet: accessibility label of the Amount field, in From’s currency.",
+        )
+    }
+
+    /// The Received field's accessibility label on the custom pay sheet.
+    static var amountReceived: String {
+        FeatureText.string(
+            "Amount received",
+            comment:
+                "Custom pay sheet: accessibility label of the Received field, in To’s currency (a transfer between currencies).",
+        )
+    }
+
     static var changeFutureOccurrences: String {
         FeatureText.string(
             "Also change future occurrences",
