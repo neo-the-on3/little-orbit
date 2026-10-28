@@ -294,9 +294,37 @@ extension LedgerBook {
             resumes = after
         }
         item.resumesOn = resumes
-        // The moved occurrence itself is always due, even before the creation day or after a settled day.
-        if start < max(item.creationDay, resumes) {
+        // The moved occurrence itself is always due, even before the creation day or after a settled day, or in a
+        // period that already holds an occurrence: the user's move wins over D427 (D433.1).
+        if start < max(item.creationDay, resumes) || periodIsTaken(start, of: item) {
             setOutcome(.pending, on: start, of: &item, now: now)
+        }
+    }
+
+    /// Whether another live occurrence of the item shares `day`'s period of the rule, with `day` as its Starts: the
+    /// rule's N calendar units from `day`'s, overlapping the N units from the other's (D427.1, D428.1, D429.2).
+    private static func periodIsTaken(_ day: CalendarDay, of item: ScheduledItem) -> Bool {
+        guard case .every(let count, let unit) = item.repeatRule, count >= 1 else {
+            return false
+        }
+        let held = unitIndex(of: day, in: unit)
+        return item.occurrences.contains { record in
+            record.deletedAt == nil && record.day != day && abs(unitIndex(of: record.day, in: unit) - held) < count
+        }
+    }
+
+    /// The number of `unit`s from a fixed origin to the one that holds `day`: Julian days, ISO weeks (Monday
+    /// first), calendar months or years.
+    private static func unitIndex(of day: CalendarDay, in unit: ScheduleUnit) -> Int {
+        let shift = (14 - day.month) / 12
+        let year = day.year + 4800 - shift
+        let month = day.month + 12 * shift - 3
+        let julian = day.day + (153 * month + 2) / 5 + 365 * year + year / 4 - year / 100 + year / 400 - 32045
+        switch unit {
+        case .day: return julian
+        case .week: return julian >= 0 ? julian / 7 : (julian - 6) / 7
+        case .month: return day.year * 12 + day.month - 1
+        case .year: return day.year
         }
     }
 
