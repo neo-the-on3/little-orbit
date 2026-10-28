@@ -5,15 +5,22 @@
 
     /// A category's drill-down (#27): the row's total, then the transactions that add up to it, newest first.
     struct SpendingTransactionsView: View {
-        let model: SpendingReportViewModel
-        let row: SpendingRowModel
-        @State private var drillDown: SpendingDrillDown?
-        @State private var loadFailed = false
+        private let model: SpendingReportViewModel
+        private let row: SpendingRowModel
+        private let updates: LedgerUpdates
+        @State private var drill: SpendingDrillDownModel
         @Environment(\.dynamicTypeSize) private var dynamicTypeSize
+
+        init(model: SpendingReportViewModel, row: SpendingRowModel, updates: LedgerUpdates) {
+            self.model = model
+            self.row = row
+            self.updates = updates
+            _drill = State(initialValue: model.makeDrillDown(for: row))
+        }
 
         var body: some View {
             List {
-                if let drillDown {
+                if let drillDown = drill.drillDown {
                     Section {
                         VStack(alignment: .leading) {
                             // As the report's total: one line, scaling down rather than breaking inside the number.
@@ -35,7 +42,7 @@
                             entryRow(entry)
                         }
                     }
-                } else if loadFailed {
+                } else if drill.loadFailed {
                     ContentUnavailableView(
                         model.loadFailedTitle,
                         systemImage: "exclamationmark.triangle",
@@ -43,11 +50,11 @@
                     )
                 }
             }
-            .navigationTitle(drillDown?.title ?? row.name)
-            .task { reload() }
-            // The report reloaded, after any change to the store or another period, even when no row changed
-            // (a payee rename): read the transactions again.
-            .onChange(of: model.revision) { reload() }
+            .navigationTitle(drill.drillDown?.title ?? row.name)
+            .task { drill.load() }
+            // Any change to the shared store, from any window, reads the report and the transactions again, even
+            // when no row changed (a payee rename) and while the report's list underneath isn't on screen.
+            .onChange(of: updates.revision) { drill.refresh(at: updates.revision) }
         }
 
         /// At accessibility text sizes the amount moves under the title and subtitle, as in the report's rows, so
@@ -71,11 +78,6 @@
             }
             .accessibilityElement(children: .ignore)
             .accessibilityLabel(entry.accessibilityLabel)
-        }
-
-        private func reload() {
-            drillDown = model.drillDown(for: row)
-            loadFailed = drillDown == nil
         }
     }
 #endif
