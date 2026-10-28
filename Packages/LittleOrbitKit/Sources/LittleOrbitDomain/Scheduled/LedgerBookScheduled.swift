@@ -68,7 +68,9 @@ extension LedgerBook {
                 item.resumesOn = [afterLast, today, existing.resumesOn].compactMap { $0 }.max()
             }
             foldingOneOffEdit(of: &item, now: now)
+            droppingStaleOwnReceived(from: &item, in: snapshot, except: nil, now: now)
             try validate(item, in: snapshot)
+            try validateOpenOccurrences(of: item, in: snapshot)
             touchPayees(from: existing.payeeID, to: item.payeeID, in: &snapshot, now: now)
             replace(&snapshot.scheduledItems, with: item)
         } else {

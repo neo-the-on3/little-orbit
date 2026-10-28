@@ -82,10 +82,14 @@ extension LedgerBook {
         }
         let target = try apply(save, fields: changed, from: edited, to: &current, now: now)
         current.updatedAt = now
+        // No occurrence is left with an amount received Pay Now refuses (#202 B2).
+        let thisOne = save.scope == .thisOccurrence ? target : nil
+        droppingStaleOwnReceived(from: &current, in: result, except: thisOne, now: now)
         try validate(current, in: result)
         if let target {
             try validate(withoutMissingEditReferences(current, in: result).resolved(for: target), in: result)
         }
+        try validateOpenOccurrences(of: current, in: result)
         replace(&result.scheduledItems, with: current)
         return result
     }
