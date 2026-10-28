@@ -112,7 +112,7 @@
                 // Export CSV (#187): the system exporter saves the file the model made from the results on screen.
                 .fileExporter(
                     isPresented: $model.isExporterPresented,
-                    document: model.exportFile.map { SearchCSVDocument(data: $0.data) },
+                    document: model.exportFile.map { CSVFileDocument(data: $0.data) },
                     contentTypes: [.commaSeparatedText],
                     defaultFilename: model.exportFileName,
                     onCompletion: { result in
