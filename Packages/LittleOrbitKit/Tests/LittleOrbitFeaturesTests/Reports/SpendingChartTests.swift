@@ -150,6 +150,20 @@ struct SpendingChartTests {
         #expect(model.rows.first?.countNumberText == "1")
     }
 
+    @Test("Given a chart with bars, when the next load fails, then the bars and audio graph points are cleared")
+    func failedLoadClearsBars() async {
+        let fake = FakeSpendingReportUseCase(snapshot: Self.snapshot(Self.seven))
+        let model = S.model(fake)
+        await model.load()
+        #expect(model.chartBars.count == 6)
+        fake.fails = true
+        await model.load()
+        #expect(model.loadFailed)
+        #expect(model.chartBars.isEmpty)
+        #expect(model.chartAudioPoints.isEmpty)
+        #expect(model.chartRow(id: Self.travel.id.uuidString) == nil)
+    }
+
     @Test("With no expenses there are no bars")
     func empty() async {
         let model = S.model(FakeSpendingReportUseCase(snapshot: Self.snapshot([])))
