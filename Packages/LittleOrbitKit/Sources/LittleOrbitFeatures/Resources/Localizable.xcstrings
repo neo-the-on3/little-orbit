@@ -5851,6 +5851,19 @@
         }
       }
     },
+    "No Transactions": {
+      "comment": "All Transactions and search, when the store has no transactions at all (D320.5, D425.1).",
+      "extractionState": "manual",
+      "localizations": {
+        "en": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "No Transactions"
+          }
+        }
+      },
+      "generatesSymbol": false
+    },
     "No Transactions Found in This File": {
       "comment": "CSV import: alert title when the picked file has only a header row (D323.7).",
       "extractionState": "manual",
@@ -7538,6 +7551,19 @@
           }
         }
       }
+    },
+    "Transactions you add will appear here.": {
+      "comment": "All Transactions and search, under “No Transactions”, when the store has no transactions at all (D320.5, D425.1).",
+      "extractionState": "manual",
+      "localizations": {
+        "en": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Transactions you add will appear here."
+          }
+        }
+      },
+      "generatesSymbol": false
     },
     "Transfer Account must differ from Account": {
       "comment": "Debit & Credit import row issue (D50, D111): both sides of a transfer are the same account. “Transfer Account” and “Account” are the file’s column names.",
