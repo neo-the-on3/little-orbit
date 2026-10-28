@@ -50,6 +50,11 @@ public final class AccountFormViewModel {
     /// Save stays off, so an edit never creates a new account.
     public private(set) var loadError: String?
 
+    /// Posts a VoiceOver announcement; the form sets `AccessibilityNotification.Announcement`. A Save the store
+    /// refuses for the currency lock announces the lock message once, from the Save itself, so a redraw never
+    /// repeats it; focus stays where it was, and the message stays on screen (L7, UI Designer note of 28 Oct 2026).
+    @ObservationIgnored public var announce: (String) -> Void = { _ in }
+
     public static let missingAccountMessage = "This account was deleted, so your changes can’t be saved."
     public static let loadFailedMessage = "Couldn’t load this account. Close this form and try again."
 
@@ -276,7 +281,11 @@ public final class AccountFormViewModel {
             loadError = Self.missingAccountMessage
             return nil
         } catch {
-            saveError = AccountsViewModel.message(for: error)
+            let message = AccountsViewModel.message(for: error)
+            saveError = message
+            if error as? LedgerValidationError == .currencyLocked {
+                announce(message)
+            }
             return nil
         }
     }
