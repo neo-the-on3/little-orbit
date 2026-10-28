@@ -29,8 +29,8 @@ public struct PlannedItemCounts: Equatable, Sendable {
 public protocol PlannedItemsSource: AnyObject {
     func plannedItemCounts() -> PlannedItemCounts
     /// The accounts a scheduled item uses, as its account or as To, Completed items included: Edit Account locks
-    /// their currency (D381.3).
-    func scheduledAccountIDs() -> Set<UUID>
+    /// their currency (D381.3). Throws when the items can't be read, so Edit Account can fail closed.
+    func scheduledAccountIDs() throws -> Set<UUID>
 }
 
 extension PlannedItemsSource {
