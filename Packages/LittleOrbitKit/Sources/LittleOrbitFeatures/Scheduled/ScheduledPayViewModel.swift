@@ -20,6 +20,8 @@ public final class ScheduledPayViewModel: Identifiable {
     /// The amount field's error, after a Record attempt.
     public private(set) var amountError: String?
     public var alert: CategoryAlert?
+    /// The fields as the sheet opened, for `hasUnsavedEdits`.
+    @ObservationIgnored private var openedFields: [AnyHashable] = []
 
     @ObservationIgnored private let useCases: ScheduledScreenUseCases
     @ObservationIgnored private let listing: ScheduledListing
@@ -50,6 +52,18 @@ public final class ScheduledPayViewModel: Identifiable {
         postedOn = useCases.load.today()
         accountID = item.accountID
         categoryID = item.categoryID
+        openedFields = fields
+    }
+
+    /// Whether closing the sheet would lose a change: a tapped reminder closes an untouched Pay sheet first and
+    /// leaves one with changes open (S33, D383). Every field the user can edit counts (D385.1).
+    public var hasUnsavedEdits: Bool {
+        fields != openedFields
+    }
+
+    /// The fields as they are now; `openedFields` holds them as the sheet opened.
+    private var fields: [AnyHashable] {
+        [amountText, postedOn, accountID, categoryID, changesFutureOccurrences]
     }
 
     public var amountLabel: String { ScheduledText.amount }

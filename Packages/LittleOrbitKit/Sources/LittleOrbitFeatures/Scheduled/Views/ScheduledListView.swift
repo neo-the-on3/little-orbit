@@ -388,6 +388,7 @@
                     NavigationStack {
                         ScheduledPayView(model: payment)
                     }
+                    .openSheet(hasUnsavedEdits: { payment.hasUnsavedEdits }, close: { model.payment = nil })
                 }
                 .alert(
                     model.confirmation?.title ?? "",
