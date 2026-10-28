@@ -66,6 +66,12 @@ extension SpendingReportViewModel {
         chartBar(id: id)?.row
     }
 
+    /// The row the Mac table's primary action opens: double-click or Return on the selection `ids`. A click
+    /// only selects (UI Designer's answer on #310). With more than one selected, the first in the table opens.
+    public func tableRow(for ids: Set<SpendingRowModel.ID>) -> SpendingRowModel? {
+        rows.first { ids.contains($0.id) }
+    }
+
     /// The audio graph's points, one per bar in the chart's order. A name that more than one bar has gets its
     /// position among them after the first, as in “Uncategorised (2)”, because the audio graph's category axis
     /// tells points apart by their name alone.

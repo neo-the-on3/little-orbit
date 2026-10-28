@@ -68,7 +68,8 @@
             .contextMenu(forSelectionType: SpendingRowModel.ID.self) { _ in
                 EmptyView()
             } primaryAction: { ids in
-                guard let id = ids.first, let row = model.rows.first(where: { $0.id == id }) else {
+                // Double-click or Return, even on a row still selected from before Back (#315).
+                guard let row = model.tableRow(for: ids) else {
                     return
                 }
                 open(row)
