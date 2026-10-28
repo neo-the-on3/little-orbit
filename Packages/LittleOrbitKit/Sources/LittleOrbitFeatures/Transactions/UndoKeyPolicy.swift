@@ -58,34 +58,83 @@ enum UndoKeyPolicy {
         case act(UndoCommandGate.Command)
     }
 
-    /// The command a key is: ⌘Z exactly is Undo, ⇧⌘Z exactly is Redo; anything else, ⌥ or ⌃ added among them, none.
-    static func command(characters: String?, modifiers: Modifiers) -> UndoCommandGate.Command? {
-        guard characters?.lowercased() == "z" else {
-            return nil
-        }
-        switch modifiers {
-        case [.command]: return .undo
-        case [.command, .shift]: return .redo
-        default: return nil
+    /// Why the monitor acted or passed, signposted on every pass in Debug builds as `ledger.keyMonitor.pass`
+    /// (Tester2 at 7c8a893), in the order `reason(_:)` checks them.
+    enum Reason: String, CaseIterable, Sendable {
+        /// `charactersIgnoringModifiers` isn't "z" or "Z".
+        case notZ
+        /// Z, but the modifiers aren't exactly ⌘ or ⇧⌘.
+        case flagsMismatch
+        /// The event's window isn't one of the app's own, or isn't key.
+        case notKeyWindow
+        /// A menu is tracking.
+        case tracking
+        /// The gate is closed: a batch is running, or a menu holds it.
+        case gateClosed
+        /// The undo manager ⌘Z reaches can't run the command.
+        case cannotRun
+        /// The command's Edit menu item can't be found.
+        case noItem
+        /// The item is enabled already, so AppKit's menu runs it.
+        case itemEnabled
+        /// The item lags disabled with the gate open: the monitor runs it.
+        case act
+
+        /// The signpost tag, which must be a static string: the case's name.
+        var tag: StaticString {
+            switch self {
+            case .notZ: "notZ"
+            case .flagsMismatch: "flagsMismatch"
+            case .notKeyWindow: "notKeyWindow"
+            case .tracking: "tracking"
+            case .gateClosed: "gateClosed"
+            case .cannotRun: "cannotRun"
+            case .noItem: "noItem"
+            case .itemEnabled: "itemEnabled"
+            case .act: "act"
+            }
         }
     }
 
-    /// Acts only when every one holds: the key is ⌘Z or ⇧⌘Z exactly, in the app's key window, with no menu
-    /// tracking, the gate open, the manager able to run it, and its menu item disabled.
-    static func decide(_ input: Input) -> Decision {
-        guard let command = command(characters: input.characters, modifiers: input.modifiers),
-            input.isAppKeyWindow,
-            !input.isMenuTracking,
-            !input.gateClosed
-        else {
-            return .pass
+    /// The command a key is: ⌘Z exactly is Undo, ⇧⌘Z exactly is Redo; anything else, ⌥ or ⌃ added among them, none.
+    static func command(characters: String?, modifiers: Modifiers) -> UndoCommandGate.Command? {
+        keyReason(characters: characters, modifiers: modifiers) == nil
+            ? (modifiers == [.command] ? .undo : .redo) : nil
+    }
+
+    /// `notZ` or `flagsMismatch` for a key that's neither ⌘Z nor ⇧⌘Z exactly, else `nil`; the cheap first check.
+    static func keyReason(characters: String?, modifiers: Modifiers) -> Reason? {
+        guard characters?.lowercased() == "z" else {
+            return .notZ
         }
+        return modifiers == [.command] || modifiers == [.command, .shift] ? nil : .flagsMismatch
+    }
+
+    /// The first thing that stops the monitor, or `act` when nothing does: the key is ⌘Z or ⇧⌘Z exactly, in the
+    /// app's key window, with no menu tracking, the gate open, the manager able to run it, and its menu item
+    /// disabled.
+    static func reason(_ input: Input) -> Reason {
+        if let key = keyReason(characters: input.characters, modifiers: input.modifiers) {
+            return key
+        }
+        let redo = input.modifiers.contains(.shift)
         let (can, itemEnabled) =
-            switch command {
-            case .undo: (input.canUndo, input.undoItemEnabled)
-            case .redo: (input.canRedo, input.redoItemEnabled)
-            }
-        guard can, itemEnabled == false else {
+            redo ? (input.canRedo, input.redoItemEnabled) : (input.canUndo, input.undoItemEnabled)
+        let stops: [(Bool, Reason)] = [
+            (!input.isAppKeyWindow, .notKeyWindow),
+            (input.isMenuTracking, .tracking),
+            (input.gateClosed, .gateClosed),
+            (!can, .cannotRun),
+            (itemEnabled == nil, .noItem),
+            (itemEnabled == true, .itemEnabled),
+        ]
+        return stops.first { $0.0 }?.1 ?? .act
+    }
+
+    /// Acts only when `reason(_:)` is `act`.
+    static func decide(_ input: Input) -> Decision {
+        guard reason(input) == .act, let command = command(characters: input.characters, modifiers: input.modifiers)
+        else {
             return .pass
         }
         return .act(command)

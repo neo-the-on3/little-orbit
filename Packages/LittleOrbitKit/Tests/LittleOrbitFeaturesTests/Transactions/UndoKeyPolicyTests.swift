@@ -66,6 +66,7 @@ struct UndoKeyPolicyTests {
                     expected = .pass
                 }
                 #expect(Policy.decide(input) == expected, "\(String(describing: characters)) \(modifiers) \(bits)")
+                #expect((Policy.reason(input) == .act) == (expected != .pass), "The signposted reason agrees")
             }
         }
         // ⌘Z, and ⇧⌘Z as "Z" and as "z": five inputs fixed, the other command's two free, so 4 each act.
@@ -126,5 +127,39 @@ struct UndoKeyPolicyTests {
         input = Self.lagging()
         input.isAppKeyWindow = false
         #expect(Policy.decide(input) == .pass)
+    }
+
+    @Test("ledger.keyMonitor.pass names the first thing that stops it, in order, and act when nothing does")
+    func reasons() {
+        func with(_ change: (inout Policy.Input) -> Void, _ command: UndoCommandGate.Command = .undo) -> Policy.Reason {
+            var input = Self.lagging(command)
+            change(&input)
+            return Policy.reason(input)
+        }
+        #expect(with({ _ in }) == .act)
+        #expect(with({ _ in }, .redo) == .act)
+        #expect(with { $0.characters = "y" } == .notZ)
+        #expect(with { $0.characters = nil } == .notZ)
+        #expect(with { $0.modifiers = [.command, .option] } == .flagsMismatch)
+        #expect(with { $0.modifiers = [] } == .flagsMismatch)
+        #expect(with { $0.isAppKeyWindow = false } == .notKeyWindow)
+        #expect(with { $0.isMenuTracking = true } == .tracking)
+        #expect(with { $0.gateClosed = true } == .gateClosed)
+        #expect(with { $0.canUndo = false } == .cannotRun)
+        #expect(with({ $0.canRedo = false }, .redo) == .cannotRun)
+        #expect(with { $0.undoItemEnabled = nil } == .noItem)
+        #expect(with { $0.undoItemEnabled = true } == .itemEnabled)
+        #expect(with({ $0.redoItemEnabled = true }, .redo) == .itemEnabled)
+        #expect(with({ $0.undoItemEnabled = true }, .redo) == .act, "Redo reads Redo's item, not Undo's")
+        // The earliest stop wins: not key and gate closed reads notKeyWindow.
+        #expect(
+            with {
+                $0.isAppKeyWindow = false
+                $0.gateClosed = true
+            } == .notKeyWindow
+        )
+        for reason in Policy.Reason.allCases {
+            #expect(reason.tag.description == reason.rawValue, "The signpost's tag is the case's name")
+        }
     }
 }
