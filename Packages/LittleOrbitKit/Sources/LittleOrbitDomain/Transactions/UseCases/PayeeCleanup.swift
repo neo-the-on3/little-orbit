@@ -6,16 +6,14 @@ import Foundation
 struct PayeeCleanup {
     let repository: any LedgerRepository
 
-    /// Removes each payee that nothing uses any more and no one has edited since its save created it: the same
-    /// name, default category and archived state, and not deleted. `lastUsedAt` isn't compared, because every
-    /// save of a transaction with the payee sets it. Any other payee stays, silently, as it is now (D191.4a).
+    /// Removes each payee that nothing uses any more and nothing has touched since its save created it
+    /// (`Payee.isUntouched(since:)`, D362, D384.7). Any other payee stays, silently, as it is now (D191.4a).
     /// Returns the ones removed, as they were, for Redo.
     func removeUnused(_ payees: [Payee]) throws -> [Payee] {
         var removed: [Payee] = []
         for created in payees {
             guard let now = try repository.payees().first(where: { $0.id == created.id }),
-                now.name == created.name, now.defaultCategoryID == created.defaultCategoryID,
-                now.isArchived == created.isArchived, now.deletedAt == nil,
+                now.isUntouched(since: created),
                 try repository.payeeReferenceCount(now.id) == 0
             else {
                 continue

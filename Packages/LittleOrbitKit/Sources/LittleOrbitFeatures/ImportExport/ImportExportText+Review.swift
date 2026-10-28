@@ -220,18 +220,31 @@ extension ImportExportText {
         FeatureText.format("Everything this import added from “%@” is removed.", fileName)
     }
 
-    static func undoMessage(fileName: String, created: [String], locale: Locale) -> String {
-        let removed = removedFromFile(fileName)
+    /// `keptPayees`: created payees changed since the import, which Undo Import keeps; its sentence comes after
+    /// “That includes …” and before the last one (D384.3).
+    static func undoMessage(fileName: String, created: [String], keptPayees: Int = 0, locale: Locale) -> String {
+        var message = removedFromFile(fileName)
+        if !created.isEmpty {
+            let list = created.formatted(.list(type: .and).locale(locale))
+            message = sentences(message, FeatureText.format("That includes %@.", list))
+        }
+        if keptPayees > 0 {
+            message = sentences(message, keptPayeesSentence(keptPayees))
+        }
         let rest = FeatureText.string(
             "Nothing else changes.",
             comment: "Undo Import confirmation: the message’s last sentence (D281, D323.8).",
         )
-        guard !created.isEmpty else {
-            return sentences(removed, rest)
-        }
-        let list = created.formatted(.list(type: .and).locale(locale))
-        let includes = FeatureText.format("That includes %@.", list)
-        return sentences(sentences(removed, includes), rest)
+        return sentences(message, rest)
+    }
+
+    /// D384.3: “1 payee you’ve changed since the import is kept.”
+    static func keptPayeesSentence(_ count: Int) -> String {
+        FeatureText.plural(
+            "%lld payees you’ve changed since the import are kept.",
+            one: "%lld payee you’ve changed since the import is kept.",
+            count,
+        )
     }
 
     private static func sentences(_ first: String, _ second: String) -> String {
