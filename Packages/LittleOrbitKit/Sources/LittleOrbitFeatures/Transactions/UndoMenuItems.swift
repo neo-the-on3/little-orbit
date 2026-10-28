@@ -1,8 +1,8 @@
 import Foundation
 
-/// The Mac Edit menu's Undo and Redo items for the undo manager ⌘Z reaches (D285.5): "Undo Typing" while a field
-/// has its own undo, "Undo Pay Phone Plan" for a window step, and dimmed when there's nothing to undo or redo, or
-/// while a batch runs (D407.1, #293).
+/// The Mac Edit menu's Undo and Redo items for the undo manager ⌘Z reaches, titled with the step's name (D288.3,
+/// D290.2): "Undo Typing" while a field has its own undo, "Undo Pay Phone Plan" for a window step, and dimmed when
+/// there's nothing to undo or redo, or while a batch runs (D407.1, #293).
 ///
 /// Which manager: `UndoRedoCommands` passes the one `NSApp.sendAction(undo:, to: nil, from: nil)` reaches, the key
 /// window's first responder's `undoManager` (a field editor's while someone types, which `NSResponder` otherwise

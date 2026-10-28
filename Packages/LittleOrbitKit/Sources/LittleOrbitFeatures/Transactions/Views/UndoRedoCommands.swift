@@ -3,8 +3,8 @@
     import Combine
     import SwiftUI
 
-    /// Edit > Undo and Redo, named and enabled from the undo manager ⌘Z actually reaches (D285.5, UI Designer on
-    /// #201): the key window's first responder's `undoManager`, else the window's. While someone types in the pay
+    /// Edit > Undo and Redo, named and enabled from the undo manager ⌘Z actually reaches (D288.3, D290.2, UI
+    /// Designer on #201): the key window's first responder's `undoManager`, else the window's. While someone types in the pay
     /// sheet's amount field that's the field's, so the menu reads "Undo Typing"; elsewhere it's the window's,
     /// "Undo Pay Phone Plan"; and each item dims when its manager has nothing to undo or redo, or while a batch runs
     /// (D407.1, #293). The SwiftUI app's own items show no action name, so these replace them. Each item runs only
