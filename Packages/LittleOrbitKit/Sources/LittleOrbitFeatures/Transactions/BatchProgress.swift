@@ -48,6 +48,9 @@ public final class BatchProgress {
     /// The transactions being changed, for the message and the bar.
     public let total: Int
     public private(set) var done = 0
+    /// How many row counts have reached the main actor, used or not: tests await it rather than a stretch of real
+    /// time, as a count arrives through the stream on a later turn (#303).
+    private(set) var rowReports = 0
     public private(set) var stage = Stage.updating
     public private(set) var isShown = false
     /// Whether the batch was handed off to a save off the main actor, so the bar moves while it runs (#285, B).
@@ -296,6 +299,7 @@ public final class BatchProgress {
     }
 
     private func rowsDone(_ count: Int) {
+        rowReports += 1
         guard stage == .updating else {
             return
         }

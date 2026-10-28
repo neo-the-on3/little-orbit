@@ -9,7 +9,7 @@ import Testing
 /// before the save or the half-second timer asks first; the timer keeps running through the save; "Saving…" can
 /// move; and a batch Undo holds the shared busy flag for the whole save and leaves one Undo step.
 @MainActor
-@Suite("Progress sheet with the save off the main actor (#285, B)")
+@Suite("Progress sheet with the save off the main actor (#285, B)", .timeLimit(.minutes(1)))
 struct OffMainSaveSheetTests {
     typealias F = TransactionFeatureFixture  // swiftlint:disable:this type_name
 
@@ -68,11 +68,9 @@ struct OffMainSaveSheetTests {
         let reporter = progress.start()
         let title = progress.title
         reporter.rowsDone(2)
-        let clock = ContinuousClock()
-        let start = clock.now
-        while progress.done < 2, clock.now - start < .seconds(10) {
-            try await Task.sleep(for: .milliseconds(10))
-        }
+        // The count arrives on a later turn of the main actor: wait for it, not for real time (#303).
+        await ObservedState.until { progress.done == 2 }
+        #expect(progress.rowReports == 1)
         #expect(!progress.showsIndeterminateBar, "Determinate while the rows are checked")
         #expect(progress.value == 2)
         #expect(progress.message == "Updating 4 transactions.")
@@ -84,7 +82,7 @@ struct OffMainSaveSheetTests {
         #expect(progress.message == "Saving…", "Saving… once it's indeterminate")
         // A row count that arrives late, then a save that falls back to the main actor, then another hand-off.
         reporter.rowsDone(3)
-        try await Task.sleep(for: .milliseconds(50))
+        await ObservedState.until { progress.rowReports == 2 }
         seen.append(progress.showsIndeterminateBar)
         await reporter.willSave(4)
         seen.append(progress.showsIndeterminateBar)
