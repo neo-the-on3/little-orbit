@@ -156,8 +156,9 @@ public final class ScheduledFeature: PlannedItemsSource {
         return (items.first(where: \.notifiesWhenDue) ?? items.first)?.id
     }
 
-    public func scheduledItems() -> [ScheduledItem] {
-        (try? useCases.load.listing().board.items) ?? []
+    /// The items an account delete deletes with it (D288). Throws when the store can't be read (n5).
+    public func scheduledItems() throws -> [ScheduledItem] {
+        try useCases.load.listing().board.items
     }
 
     public func makeList() -> ScheduledListViewModel {
