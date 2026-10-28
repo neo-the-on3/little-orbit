@@ -10,6 +10,8 @@ final class UnreadableAccountsRepository: LedgerRepository {
 
     let base: InMemoryLedgerRepository
     var failsReads = false
+    /// Makes `saveAccount` fail as the store's read inside the save would, before anything is written.
+    var failsSaves = false
 
     init(_ base: InMemoryLedgerRepository) {
         self.base = base
@@ -25,7 +27,12 @@ final class UnreadableAccountsRepository: LedgerRepository {
         return try base.accounts()
     }
 
-    func saveAccount(_ account: Account) throws { try base.saveAccount(account) }
+    func saveAccount(_ account: Account) throws {
+        if failsSaves {
+            throw ReadFailure()
+        }
+        try base.saveAccount(account)
+    }
     func deleteAccount(id: UUID) throws { try base.deleteAccount(id: id) }
 
     func transactions() throws -> [Transaction] {

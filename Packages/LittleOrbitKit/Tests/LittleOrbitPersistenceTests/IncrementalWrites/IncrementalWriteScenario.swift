@@ -178,9 +178,9 @@ enum IncrementalWriteScenario: String, CaseIterable {
         }
     }
 
-    /// D288.1: an account with no live transactions, only a deleted one and a scheduled item, moved to a
-    /// currency with other decimal places. The deleted transaction was removed outright, so only the scheduled
-    /// item is stored again, in the new currency's minor units.
+    /// An account with no live transactions, only a deleted one, moved to a currency with other decimal places.
+    /// A scheduled item locks the currency at the store (D410.1), so its item is deleted first, as D410.3 asks;
+    /// the deleted transaction was removed outright, so only the account is stored again.
     private func runCurrencyChange(
         on repository: IncrementalWriteRepository,
         _ fixture: IncrementalWriteFixture,
@@ -211,6 +211,7 @@ enum IncrementalWriteScenario: String, CaseIterable {
             today: IncrementalWriteFixture.start,
             now: IncrementalWriteFixture.created,
         )
+        try repository.deleteScheduledItem(id: pass.id)
         wallet.currencyCode = "JPY"
         try measured { try repository.saveAccount(wallet) }
     }
