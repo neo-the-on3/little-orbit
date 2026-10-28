@@ -1,9 +1,9 @@
 import Foundation
 
 /// The periods of a scheduled item's rule that already have an occurrence (D426.1, D427.1), so a moved anchor
-/// never adds a second occurrence to one. Any live occurrence counts, whether it's paid, skipped or still open (due
-/// or overdue), and it keeps its own date (D427.2). An occurrence on the day itself is that day's own record, so it
-/// never takes its period.
+/// never adds a second occurrence to one. A real occurrence counts, whether it's paid, skipped or still open (due or
+/// overdue), and it keeps its own date (D427.2). A day of the rule with its own real record is that occurrence, so
+/// it's never passed over, even in a period another one holds: a move the user made is kept (D433.1).
 ///
 /// A period is a block of the rule's N units counted from its Starts date (D428.1): the calendar day, the ISO week
 /// (Monday first), the calendar month or the calendar year, so a single-unit rule's period is that calendar unit
@@ -18,6 +18,8 @@ struct TakenPeriods {
     private let unit: ScheduleUnit?
     private let origin: Int
     private let days: [CalendarDay]
+    /// The days with a real record of their own.
+    private let own: Set<CalendarDay>
 
     init(_ item: ScheduledItem) {
         if case .every(let count, let unit) = item.repeatRule, count >= 1 {
@@ -29,19 +31,31 @@ struct TakenPeriods {
             unit = nil
             origin = 0
         }
-        days = item.occurrences.filter { $0.deletedAt == nil }.map(\.day)
+        days = Self.realDays(of: item)
+        own = Set(days)
     }
 
-    /// Whether another occurrence of the item is in `day`'s block, or its own block overlaps `day`'s.
+    /// The days of the item's real occurrences: posted, skipped and pending records that aren't deleted.
+    static func realDays(of item: ScheduledItem) -> [CalendarDay] {
+        item.occurrences
+            .filter { record in
+                record.deletedAt == nil
+                    && (record.outcome == .posted || record.outcome == .skipped || record.outcome == .pending)
+            }
+            .map(\.day)
+    }
+
+    /// Whether `day` has no record of its own, and another occurrence of the item is in its block or has its own
+    /// block overlap it.
     func contains(_ day: CalendarDay) -> Bool {
-        guard let unit, !days.isEmpty else {
+        guard let unit, !days.isEmpty, !own.contains(day) else {
             return false
         }
         let first = origin + Self.floorDivide(Self.index(of: day, in: unit) - origin, by: count) * count
         let last = first + count - 1
         return days.contains { other in
             let held = Self.index(of: other, in: unit)
-            return other != day && held <= last && held + count - 1 >= first
+            return held <= last && held + count - 1 >= first
         }
     }
 
