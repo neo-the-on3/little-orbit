@@ -1,57 +1,75 @@
 import Foundation
 
 /// The periods of a scheduled item's rule that already have an occurrence (D426.1, D427.1), so a moved anchor
-/// never adds a second occurrence to one. A period is the calendar unit of the rule that holds the day: the
-/// month for a monthly rule, the year for a yearly one, the ISO week (Monday first) for a weekly one, and the day
-/// itself for a daily one. Any live occurrence counts, whether it's paid, skipped or still open (due or overdue),
-/// and it keeps its own date (D427.2). An occurrence on the day itself is that day's own record, so it never
-/// takes its period.
+/// never adds a second occurrence to one. Any live occurrence counts, whether it's paid, skipped or still open (due
+/// or overdue), and it keeps its own date (D427.2). An occurrence on the day itself is that day's own record, so it
+/// never takes its period.
+///
+/// A period is a block of the rule's N units counted from its Starts date (D428.1): the calendar day, the ISO week
+/// (Monday first), the calendar month or the calendar year, so a single-unit rule's period is that calendar unit
+/// (D429.3). After a Starts edit the blocks re-align to the new Starts date, and a block that overlaps the old block
+/// of another occurrence is taken too (D429.2). Each day of a rule is in the first unit of its block, so an
+/// occurrence's old block is the N units from its own day's unit.
+///
+/// Calendar days are already the device's days (`TransactionTiming.today` reads the device time zone, as the rest
+/// of scheduling does), so the units are counted on the days themselves and no time zone applies here.
 struct TakenPeriods {
-    private static let calendar: Calendar = {
-        var calendar = Calendar(identifier: .iso8601)
-        calendar.timeZone = TimeZone(identifier: "UTC") ?? TimeZone(secondsFromGMT: 0)!
-        return calendar
-    }()
-
+    private let count: Int
     private let unit: ScheduleUnit?
+    private let origin: Int
     private let days: [CalendarDay]
 
     init(_ item: ScheduledItem) {
-        if case .every(_, let unit) = item.repeatRule {
+        if case .every(let count, let unit) = item.repeatRule, count >= 1 {
+            self.count = count
             self.unit = unit
+            origin = Self.index(of: item.startDay, in: unit)
         } else {
-            self.unit = nil
+            count = 1
+            unit = nil
+            origin = 0
         }
         days = item.occurrences.filter { $0.deletedAt == nil }.map(\.day)
     }
 
-    /// Whether another occurrence of the item is in `day`'s period.
+    /// Whether another occurrence of the item is in `day`'s block, or its own block overlaps `day`'s.
     func contains(_ day: CalendarDay) -> Bool {
         guard let unit, !days.isEmpty else {
             return false
         }
-        return days.contains { $0 != day && Self.samePeriod($0, day, unit) }
+        let first = origin + Self.floorDivide(Self.index(of: day, in: unit) - origin, by: count) * count
+        let last = first + count - 1
+        return days.contains { other in
+            let held = Self.index(of: other, in: unit)
+            return other != day && held <= last && held + count - 1 >= first
+        }
     }
 
-    static func samePeriod(_ lhs: CalendarDay, _ rhs: CalendarDay, _ unit: ScheduleUnit) -> Bool {
+    /// The number of `unit`s from a fixed origin to the one that holds `day`.
+    static func index(of day: CalendarDay, in unit: ScheduleUnit) -> Int {
         switch unit {
         case .day:
-            return lhs == rhs
+            return dayNumber(day)
         case .week:
-            return week(of: lhs) == week(of: rhs)
+            // Julian day 0 is a Monday, so ISO weeks start where the day number is a multiple of 7.
+            return floorDivide(dayNumber(day), by: 7)
         case .month:
-            return lhs.year == rhs.year && lhs.month == rhs.month
+            return day.year * 12 + day.month - 1
         case .year:
-            return lhs.year == rhs.year
+            return day.year
         }
     }
 
-    /// The ISO week-numbering year and week of `day`, worked out in UTC like every other calendar step here.
-    private static func week(of day: CalendarDay) -> [Int?] {
-        guard let date = calendar.date(from: DateComponents(year: day.year, month: day.month, day: day.day)) else {
-            return []
-        }
-        let parts = calendar.dateComponents([.yearForWeekOfYear, .weekOfYear], from: date)
-        return [parts.yearForWeekOfYear, parts.weekOfYear]
+    /// The Julian day number of `day` on the Gregorian calendar.
+    static func dayNumber(_ day: CalendarDay) -> Int {
+        let shift = (14 - day.month) / 12
+        let year = day.year + 4800 - shift
+        let month = day.month + 12 * shift - 3
+        return day.day + (153 * month + 2) / 5 + 365 * year + year / 4 - year / 100 + year / 400 - 32045
+    }
+
+    private static func floorDivide(_ value: Int, by divisor: Int) -> Int {
+        let quotient = value / divisor
+        return value % divisor < 0 ? quotient - 1 : quotient
     }
 }
