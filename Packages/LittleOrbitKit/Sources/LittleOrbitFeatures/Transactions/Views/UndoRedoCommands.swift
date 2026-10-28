@@ -34,8 +34,9 @@
         }
 
         /// The command's `undo:` or `redo:` down the responder chain, through the app's `NSApplication`, whose
-        /// guard refuses it while the gate is closed (`LittleOrbitApplication.sendAction(_:to:from:)`).
-        private static func send(_ command: UndoCommandGate.Command) -> Bool {
+        /// guard refuses it while the gate is closed (`LittleOrbitApplication.sendAction(_:to:from:)`). The key-down
+        /// monitor sends through it too (`UndoKeyMonitor`).
+        static func send(_ command: UndoCommandGate.Command) -> Bool {
             NSApp.sendAction(command.action, to: nil, from: nil)
         }
     }
@@ -52,6 +53,8 @@
 
         @Published private(set) var items = UndoMenuItems(nil, gateClosed: false)
         private var refresher: UndoMenuRefresher?
+        /// Runs ⌘Z or ⇧⌘Z while its item is still disabled just after a batch ends (n2, `UndoKeyPolicy`).
+        private var keyMonitor: UndoKeyMonitor?
 
         private init() {
             let names: [Notification.Name] = [
@@ -73,6 +76,7 @@
             UndoCommandGate.shared.editMenuObserver = { [weak self] gateClosed in
                 self?.refresher?.refresh() ?? Self.read(gateClosed: gateClosed)
             }
+            keyMonitor = UndoKeyMonitor(read: { Self.read(gateClosed: $0) }, send: UndoRedoCommands.send)
         }
 
         /// For the manager ⌘Z reaches, as `NSApp.sendAction(undo:, to: nil, from: nil)` finds it: the key window's
