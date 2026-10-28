@@ -144,6 +144,19 @@
         }
       }
     },
+    "%1$@ · %2$@ · %3$@": {
+      "comment": "Spending drill-down header's scope: %1$@ is the period, %2$@ the account part (“all accounts” or “2 of 3 accounts”), %3$@ the currency code, “October 2026 · all accounts · INR”.",
+      "extractionState": "manual",
+      "generatesSymbol": false,
+      "localizations": {
+        "en": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "%1$@ · %2$@ · %3$@"
+          }
+        }
+      }
+    },
     "%1$@ · %2$@.": {
       "comment": "Apple Watch message, first sentence: %1$@ is the scheduled item’s name and %2$@ the occurrence’s due date, such as 20 Oct.",
       "extractionState": "manual",
@@ -308,19 +321,6 @@
         }
       }
     },
-    "%1$@ – %2$@": {
-      "comment": "A custom report period’s title, e.g. “15 Sep 2026 – 14 Oct 2026”: its first and last days, both included.",
-      "extractionState": "manual",
-      "generatesSymbol": false,
-      "localizations": {
-        "en": {
-          "stringUnit": {
-            "state": "translated",
-            "value": "%1$@ – %2$@"
-          }
-        }
-      }
-    },
     "%1$@ › %2$@": {
       "comment": "A subcategory with its parent: %1$@ is the parent category, %2$@ the subcategory, as in “Food & Dining › Groceries”. Spending report rows (D289.2) and the CSV import Match step.",
       "extractionState": "manual",
@@ -403,6 +403,54 @@
           "stringUnit": {
             "state": "translated",
             "value": "%1$@: “%2$@”"
+          }
+        }
+      }
+    },
+    "%1$lld of %2$lld": {
+      "comment": "Report Accounts row value when some accounts are unticked: %1$lld ticked of %2$lld listed, “2 of 3”.",
+      "extractionState": "manual",
+      "generatesSymbol": false,
+      "localizations": {
+        "en": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "%1$lld of %2$lld"
+          }
+        }
+      }
+    },
+    "%1$lld of %2$lld accounts": {
+      "comment": "Report captions’ account part when some accounts are unticked: %1$lld ticked of %2$lld listed, “Spent in October 2026 · 2 of 3 accounts · INR”.",
+      "extractionState": "manual",
+      "generatesSymbol": false,
+      "localizations": {
+        "en": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "%1$lld of %#@total@"
+          },
+          "substitutions": {
+            "total": {
+              "argNum": 2,
+              "formatSpecifier": "lld",
+              "variations": {
+                "plural": {
+                  "one": {
+                    "stringUnit": {
+                      "state": "translated",
+                      "value": "%arg account"
+                    }
+                  },
+                  "other": {
+                    "stringUnit": {
+                      "state": "translated",
+                      "value": "%arg accounts"
+                    }
+                  }
+                }
+              }
+            }
           }
         }
       }
@@ -1011,7 +1059,7 @@
       }
     },
     "all accounts": {
-      "comment": "Spending report caption’s end, “Spent in October 2026 · INR · all accounts”: every account in the currency counts. Lowercase, mid-sentence.",
+      "comment": "Report captions’ account part, “Spent in October 2026 · all accounts · INR”: every listed account counts.",
       "extractionState": "manual",
       "generatesSymbol": false,
       "localizations": {
@@ -1506,6 +1554,19 @@
           "stringUnit": {
             "state": "translated",
             "value": "Blue"
+          }
+        }
+      }
+    },
+    "Both dates are included.": {
+      "comment": "Report custom range: the note under the From and To day pickers.",
+      "extractionState": "manual",
+      "generatesSymbol": false,
+      "localizations": {
+        "en": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Both dates are included."
           }
         }
       }
@@ -2859,15 +2920,15 @@
         }
       }
     },
-    "Custom Range": {
-      "comment": "Report period picker: the option to choose your own first and last day, both included.",
+    "Custom…": {
+      "comment": "Report period picker: choose your own first and last day.",
       "extractionState": "manual",
       "generatesSymbol": false,
       "localizations": {
         "en": {
           "stringUnit": {
             "state": "translated",
-            "value": "Custom Range"
+            "value": "Custom…"
           }
         }
       }
@@ -2911,6 +2972,19 @@
         }
       }
     },
+    "Only %1$@ accounts are listed because the report shows %1$@.": {
+      "comment": "Report account list footer: %1$@ is the report's currency code, “Only INR accounts are listed because the report shows INR.”",
+      "extractionState": "manual",
+      "generatesSymbol": false,
+      "localizations": {
+        "en": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Only %1$@ accounts are listed because the report shows %1$@."
+          }
+        }
+      }
+    },
     "Previous Period": {
       "comment": "Report ‹ button (⌘← on macOS): the month, quarter or year before the one shown.",
       "extractionState": "manual",
@@ -2924,15 +2998,15 @@
         }
       }
     },
-    "Q%1$lld %2$@": {
-      "comment": "A calendar quarter as a report period’s title, e.g. “Q4 2026”: the quarter number, then the year.",
+    "report.accounts.all": {
+      "comment": "Report Accounts row value when every listed account is ticked: “Accounts  All”.",
       "extractionState": "manual",
       "generatesSymbol": false,
       "localizations": {
         "en": {
           "stringUnit": {
             "state": "translated",
-            "value": "Q%1$lld %2$@"
+            "value": "All"
           }
         }
       }
@@ -6847,7 +6921,7 @@
       }
     },
     "Spent in %1$@ · %2$@ · %3$@": {
-      "comment": "Caption under the spending report’s total, e.g. “Spent in October 2026 · INR · all accounts”: the period, the currency, then which accounts count (D318.1, #184).",
+      "comment": "Spending report total's caption: %1$@ is the period, %2$@ the account part (“all accounts” or “2 of 3 accounts”), %3$@ the currency code.",
       "extractionState": "manual",
       "generatesSymbol": false,
       "localizations": {

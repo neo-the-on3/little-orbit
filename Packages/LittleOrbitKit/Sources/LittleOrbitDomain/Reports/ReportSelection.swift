@@ -1,11 +1,11 @@
 import Foundation
 
 /// What a report covers (#184): a preset period, moved back or on by ‹ › some whole periods, or a custom range
-/// with both end days included.
+/// with both end days included. A custom range doesn't step: ‹ › are disabled for it (UI Designer's slice 1 spec).
 public enum ReportSelection: Hashable, Sendable {
     /// `offset` whole periods from `period`: This Month moved on 1 is next month.
     case preset(ReportPeriod, offset: Int = 0)
-    /// Both end days included. ‹ › moves it by its own length.
+    /// Both end days included.
     case custom(ReportDayRange)
 
     public static let `default` = ReportSelection.preset(.thisMonth)
@@ -20,15 +20,18 @@ public enum ReportSelection: Hashable, Sendable {
         }
     }
 
-    /// The same selection `steps` periods on (back when negative).
-    public func stepped(by steps: Int, today: CalendarDay) -> ReportSelection {
+    /// The same preset `steps` periods on (back when negative). A custom range comes back unchanged.
+    public func stepped(by steps: Int) -> ReportSelection {
         switch self {
         case .preset(let period, let offset):
             .preset(period, offset: offset + steps)
         case .custom:
-            .custom(range(today: today).stepped(by: steps))
+            self
         }
     }
+
+    /// Whether ‹ › step it: presets only.
+    public var canStep: Bool { preset != nil }
 
     /// The preset it started from, or `nil` for a custom range.
     public var preset: ReportPeriod? {

@@ -28,8 +28,8 @@ extension ReportDayRange {
         }
     }
 
-    /// The same length of calendar period `steps` periods later (earlier when negative): a month moves by months,
-    /// a quarter by quarters, a year by years. Any other range moves by its own number of days.
+    /// The same calendar period `steps` periods later (earlier when negative): a month moves by months, a quarter
+    /// by quarters, a year by years. Any other range doesn't step, and comes back unchanged.
     public func stepped(by steps: Int) -> ReportDayRange {
         switch shape {
         case .month:
@@ -41,14 +41,8 @@ extension ReportDayRange {
         case .year:
             return .year(start.year + steps)
         case .days:
-            let length = dayCount
-            return ReportDayRange(start: start.adding(days: steps * length), end: end.adding(days: steps * length))
+            return self
         }
-    }
-
-    /// How many days it covers, both ends included.
-    public var dayCount: Int {
-        end.dayNumber - start.dayNumber + 1
     }
 
     static func month(_ year: Int, _ month: Int, plus months: Int) -> (year: Int, month: Int) {

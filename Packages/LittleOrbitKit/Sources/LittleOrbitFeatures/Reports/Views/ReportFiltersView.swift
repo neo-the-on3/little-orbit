@@ -2,13 +2,17 @@
     import LittleOrbitDomain
     import SwiftUI
 
-    /// The report's period controls (#184): the preset picker with Custom Range, the From and To day pickers for a
-    /// custom range, and ‹ period › to step one whole period back or on (⌘← and ⌘→ on macOS).
+    /// The report's period controls (#184): the preset picker with Custom…, the From and To day pickers for a
+    /// custom range with “Both dates are included.”, and ‹ period › to step one whole period back or on (⌘← and ⌘→
+    /// on macOS), disabled for a custom range.
     struct ReportPeriodControls: View {
         let model: SpendingReportViewModel
 
         var body: some View {
             Picker(ReportText.period, selection: pick) {
+                if model.isStepped {
+                    Text(model.periodTitle).tag(Pick.stepped)
+                }
                 ForEach(model.periods) { period in
                     Text(model.periodName(period)).tag(Pick.preset(period))
                 }
@@ -17,7 +21,10 @@
             .pickerStyle(.menu)
             if model.isCustomRange {
                 DatePicker(model.customStartLabel, selection: start, displayedComponents: .date)
-                DatePicker(model.customEndLabel, selection: end, displayedComponents: .date)
+                DatePicker(model.customEndLabel, selection: end, in: model.customStart..., displayedComponents: .date)
+                Text(model.bothDatesIncluded)
+                    .font(.footnote)
+                    .foregroundStyle(.secondary)
             }
             HStack {
                 Button {
@@ -25,6 +32,7 @@
                 } label: {
                     Label(model.previousPeriodLabel, systemImage: "chevron.left")
                 }
+                .help(model.previousPeriodLabel)
                 .keyboardShortcut(.leftArrow, modifiers: .command)
                 Spacer()
                 Text(model.periodTitle)
@@ -37,24 +45,34 @@
                 } label: {
                     Label(model.nextPeriodLabel, systemImage: "chevron.right")
                 }
+                .help(model.nextPeriodLabel)
                 .keyboardShortcut(.rightArrow, modifiers: .command)
             }
             .labelStyle(.iconOnly)
             .buttonStyle(.borderless)
+            .disabled(!model.canStep)
         }
 
         enum Pick: Hashable {
             case preset(ReportPeriod)
+            /// A preset moved by ‹ or ›: its choice reads the period on screen.
+            case stepped
             case custom
         }
 
         private var pick: Binding<Pick> {
             Binding(
-                get: { model.period.map(Pick.preset) ?? .custom },
+                get: {
+                    if model.isStepped {
+                        return .stepped
+                    }
+                    return model.period.map(Pick.preset) ?? .custom
+                },
                 set: { pick in
                     Task {
                         switch pick {
                         case .preset(let period): await model.select(period)
+                        case .stepped: break
                         case .custom: await model.selectCustomRange()
                         }
                     }
@@ -78,7 +96,8 @@
     }
 
     /// The account filter (#184): every account in the shown currency, hidden ones too, each ticked by default
-    /// (D417). Unticking one removes its spending from the report and its drill-downs.
+    /// (D417). Unticking one removes its spending from the report and its drill-downs. The last ticked account's row
+    /// is disabled, so at least one always counts.
     struct ReportAccountsSheet: View {
         let model: SpendingReportViewModel
         @Environment(\.dismiss) private var dismiss
@@ -86,7 +105,7 @@
         var body: some View {
             NavigationStack {
                 List {
-                    Section(model.currencyCode) {
+                    Section {
                         ForEach(model.accounts) { option in
                             Toggle(isOn: included(option)) {
                                 VStack(alignment: .leading) {
@@ -99,7 +118,13 @@
                                     }
                                 }
                             }
+                            // The last ticked account can't be unticked (UI Designer's B1 on #307).
+                            .disabled(option.isIncluded && !model.canUntick(option.id))
                         }
+                    } header: {
+                        Text(model.currencyCode)
+                    } footer: {
+                        Text(model.accountsFooter)
                     }
                 }
                 .navigationTitle(model.accountsTitle)

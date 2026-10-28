@@ -56,7 +56,9 @@ struct SpendingDrillDownModelTests {
         let row = try #require(report.rows.first { $0.categoryID == S.groceries.id })
         let drill = report.makeDrillDown(for: row)
         await drill.load()
-        #expect(drill.drillDown?.caption == "\(try #require(row.shareText)) of spending · October 2026 · INR")
+        #expect(
+            drill.drillDown?.caption == "\(try #require(row.shareText)) of spending · October 2026 · all accounts · INR"
+        )
 
         fake.snapshot.transactions = fake.snapshot.transactions.map { transaction in
             guard transaction.id == only.id else {
@@ -75,7 +77,7 @@ struct SpendingDrillDownModelTests {
         #expect(after.countText == "0 transactions")
         #expect(after.entries.isEmpty)
         // No stale share: the header falls back to the period and currency, as for any row without a share.
-        #expect(after.caption == "October 2026 · INR")
+        #expect(after.caption == "October 2026 · all accounts · INR")
     }
 
     @Test("Given an open drill-down, when its category is renamed, then its title follows the new name")
