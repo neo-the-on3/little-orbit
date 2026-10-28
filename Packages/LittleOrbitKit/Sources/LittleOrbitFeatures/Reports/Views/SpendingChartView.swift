@@ -73,6 +73,7 @@
                     summary: model.chartSummary,
                     categoryAxis: model.chartCategoryAxis,
                     amountAxis: model.chartAmountAxis,
+                    shareAxis: model.shareColumn,
                     currencyCode: model.currencyCode,
                     locale: model.locale,
                     points: model.chartAudioPoints,
@@ -93,44 +94,28 @@
         }
     }
 
-    /// The audio graph (UI Designer's slice 3 spec): the report title and caption, a categorical Category axis, an
-    /// Amount axis read in the shown currency, and one series of the bars.
+    /// The audio graph, built by `SpendingChartAudioGraph` from the model's points.
     struct SpendingChartDescriptor: AXChartDescriptorRepresentable {
         let title: String
         let summary: String
         let categoryAxis: String
         let amountAxis: String
+        let shareAxis: String
         let currencyCode: String
         let locale: Locale
         /// One per bar, each with its own category name.
         let points: [SpendingChartAudioPoint]
 
         func makeChartDescriptor() -> AXChartDescriptor {
-            let code = currencyCode
-            let locale = locale
-            let largest = points.map(\.amount).max() ?? 0
-            let xAxis = AXCategoricalDataAxisDescriptor(title: categoryAxis, categoryOrder: points.map(\.category))
-            let yAxis = AXNumericDataAxisDescriptor(
-                title: amountAxis,
-                range: 0...max(largest, 1),
-                gridlinePositions: [],
-            ) { value in
-                Decimal(value).formatted(.currency(code: code).locale(locale))
-            }
-            let series = AXDataSeriesDescriptor(
-                name: title,
-                isContinuous: false,
-                dataPoints: points.map { point in
-                    AXDataPoint(x: point.category, y: point.amount, additionalValues: [], label: point.label)
-                },
-            )
-            return AXChartDescriptor(
+            SpendingChartAudioGraph.descriptor(
                 title: title,
                 summary: summary,
-                xAxis: xAxis,
-                yAxis: yAxis,
-                additionalAxes: [],
-                series: [series],
+                categoryAxis: categoryAxis,
+                amountAxis: amountAxis,
+                shareAxis: shareAxis,
+                currencyCode: currencyCode,
+                locale: locale,
+                points: points,
             )
         }
     }

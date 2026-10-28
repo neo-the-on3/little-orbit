@@ -124,7 +124,7 @@ struct SpendingChartTests {
         let points = model.chartAudioPoints
         #expect(points.map(\.id) == model.chartBars.map(\.id))
         #expect(points.map(\.category) == ["Uncategorised", "Uncategorised (2)"])
-        #expect(points.map(\.label) == ["₹500.00, 62.5%", "₹300.00, 37.5%"])
+        #expect(points.map(\.share) == [0.625, 0.375])
     }
 
     @Test("The audio graph has one point per bar, in the chart's order, Other last")

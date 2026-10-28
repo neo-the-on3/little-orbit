@@ -15,6 +15,8 @@ public struct SpendingChartBar: Identifiable, Equatable, Sendable {
     public var compactAmountText: String
     /// “16.9%”, or `nil` when the total isn't above 0.
     public var shareText: String?
+    /// 0.169 for 16.9%, from the same tenths as `shareText`, for the audio graph's Share axis.
+    public var share: Double?
     /// The category's colour, or `nil` for Other, which is secondary.
     public var hue: CategoryHue?
     /// The row whose drill-down a tap opens, or `nil` for Other, which isn't tappable.
@@ -22,19 +24,20 @@ public struct SpendingChartBar: Identifiable, Equatable, Sendable {
     /// “Rent”, or “Other, 2 categories”: the bar's name in the audio graph. The bars themselves are hidden from
     /// VoiceOver (UI Designer's answer on #310).
     public var accessibilityLabel: String
-    /// “₹12,450.50, 16.9%”: the amount, then the share, read for the bar's point in the audio graph.
+    /// “₹12,450.50, 16.9%”: the bar's amount, then its share.
     public var accessibilityValue: String
 }
 
-/// One point of the chart's audio graph: a bar, named so no two points share a category.
+/// One point of the chart's audio graph: a bar, named so no two points share a category. VoiceOver reads it as
+/// its category, its amount from the Amount axis, then its share from the Share axis, each once.
 public struct SpendingChartAudioPoint: Identifiable, Equatable, Sendable {
     /// The bar's ID.
     public var id: String
     /// “Rent”, “Other, 2 categories”, or “Uncategorised (2)” for the second bar named “Uncategorised”.
     public var category: String
     public var amount: Double
-    /// “₹12,450.50, 16.9%”.
-    public var label: String
+    /// 0.169 for 16.9%, or `nil` when the rows have no shares.
+    public var share: Double?
 }
 
 extension SpendingReportViewModel {
@@ -77,7 +80,7 @@ extension SpendingReportViewModel {
                 id: bar.id,
                 category: category,
                 amount: bar.amount,
-                label: bar.accessibilityValue,
+                share: bar.share,
             )
         }
     }
@@ -86,6 +89,7 @@ extension SpendingReportViewModel {
         report.chartBars.map { bar in
             let amountText = formatter.string(bar.amount, currencyCode: report.currencyCode)
             let shareText = bar.shareTenths.map(shareString)
+            let share = bar.shareTenths.map { Double($0) / 1000 }
             let value = [amountText, shareText].compactMap(\.self).joined(separator: ", ")
             let compact = bar.amount.formatted(
                 .currency(code: report.currencyCode).notation(.compactName).locale(locale)
@@ -101,6 +105,7 @@ extension SpendingReportViewModel {
                     amountText: amountText,
                     compactAmountText: compact,
                     shareText: shareText,
+                    share: share,
                     hue: row.hue,
                     row: row,
                     accessibilityLabel: row.name,
@@ -114,6 +119,7 @@ extension SpendingReportViewModel {
                     amountText: amountText,
                     compactAmountText: compact,
                     shareText: shareText,
+                    share: share,
                     hue: nil,
                     row: nil,
                     accessibilityLabel: ReportText.otherCategoriesSpoken(count),
