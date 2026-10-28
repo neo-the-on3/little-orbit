@@ -65,6 +65,56 @@ struct UndoCommandPerformTests {
         #expect(sends.sent == [.undo])
     }
 
+    // MARK: ledger.editMenu.action, once per press (Tester2 on #201)
+
+    /// A gate whose `ledger.editMenu.action` records are kept, and a send that does what the app's `sendAction`
+    /// guard does: signpost the command, sent or blocked, then run it only if allowed.
+    @MainActor
+    final class Traced {
+        let gate = UndoCommandGate()
+        private(set) var records: [String] = []
+
+        init() {
+            gate.isTracking = { false }
+            gate.nextDefaultModeTurn = { _ in }
+            gate.actionTrace = { [weak self] command, allowed in
+                self?.records.append("\(command == .undo ? "undo" : "redo")\(allowed ? "Sent" : "Blocked")")
+            }
+        }
+
+        func press(_ command: UndoCommandGate.Command) -> Bool {
+            gate.perform(command) { command in
+                let allowed = gate.allows(command)
+                gate.actionTrace(command, allowed)
+                return allowed
+            }
+        }
+    }
+
+    @Test("A press refused during a batch logs exactly one undoBlocked or redoBlocked record, and sends nothing")
+    func refusedLogsOnce() {
+        let traced = Traced()
+        traced.gate.batchStarted(at: 10)
+        #expect(!traced.press(.undo))
+        #expect(traced.records == ["undoBlocked"])
+        #expect(!traced.press(.redo))
+        #expect(traced.records == ["undoBlocked", "redoBlocked"])
+        traced.gate.batchEnded(at: 11)
+        #expect(traced.records.count == 2, "Nothing more at the end")
+    }
+
+    @Test("A press let through logs no blocked record from perform; only the send's own sent record, once")
+    func allowedLogsNoBlocked() {
+        let traced = Traced()
+        var plain: [String] = []
+        traced.gate.actionTrace = { command, allowed in plain.append("\(command)\(allowed)") }
+        _ = traced.gate.perform(.undo) { _ in true }
+        #expect(plain.isEmpty, "perform logs nothing when it lets a press through")
+        let both = Traced()
+        #expect(both.press(.undo))
+        #expect(both.records == ["undoSent"], "No double log")
+    }
+
     @Test("The actions sent are the standard undo: and redo:, which the gate reads back")
     func actionNames() {
         #expect(UndoCommandGate.Command.undo.actionName == "undo:")

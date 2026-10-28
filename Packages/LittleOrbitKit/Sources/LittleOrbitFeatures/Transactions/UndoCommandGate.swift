@@ -74,6 +74,11 @@ final class UndoCommandGate {
     var editMenuObserver: (@MainActor (_ gateClosed: Bool) -> UndoMenuItems)?
     /// Keeps the menu-tracking observation for the app's life.
     var menuTrackingObservation: (any NSObjectProtocol)?
+    /// Signposts an Undo or Redo pressed or sent as `ledger.editMenu.action` (`traceAction(_:allowed:)`); tests
+    /// record it.
+    var actionTrace: @MainActor (_ command: Command, _ allowed: Bool) -> Void = { command, allowed in
+        UndoCommandGate.traceAction(command, allowed: allowed)
+    }
     /// Reads the Edit menu's items again and signposts them (`refreshEditMenu`); tests count it.
     var refreshMenu: @MainActor (_ phase: StaticString) -> Void = { _ in }
     /// Whether a menu, or a control, is tracking the mouse or keyboard now: the main run loop runs in its
@@ -94,7 +99,8 @@ final class UndoCommandGate {
 
     /// Edit › Undo or Redo pressed, by a click, its key equivalent, VoiceOver or Voice Control (D403.1): while the
     /// gate is closed it returns false and never calls `send`, and nothing is kept to run later, so the batch's end
-    /// runs nothing. While open, `send` runs once, with the command; the Mac app's sends its action down the
+    /// runs nothing. That refusal is signposted once as `ledger.editMenu.action` `undoBlocked` or `redoBlocked`
+    /// (`actionTrace`); a press it lets through is signposted by the app's `sendAction` guard instead. While open, `send` runs once, with the command; the Mac app's sends its action down the
     /// responder chain, `NSApp.sendAction(command.action, to: nil, from: nil)` (D407.6). Returns what `send` did.
     ///
     /// It checks only whether the gate is closed. A ⌘Z pressed during the batch but delivered after its end finds
@@ -103,6 +109,8 @@ final class UndoCommandGate {
     @discardableResult
     func perform(_ command: Command, send: (Command) -> Bool) -> Bool {
         guard allows(command) else {
+            // Refused here, so the app's `sendAction` guard never sees it: signposted once, as blocked.
+            actionTrace(command, false)
             return false
         }
         return send(command)
