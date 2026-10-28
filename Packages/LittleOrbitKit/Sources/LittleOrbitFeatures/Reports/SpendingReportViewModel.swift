@@ -15,6 +15,8 @@ public struct SpendingRowModel: Identifiable, Equatable, Sendable {
     public var shareText: String?
     /// “6 transactions”.
     public var countText: String
+    /// “6”: the Mac table's Transactions column.
+    public var countNumberText: String
     /// The bar's length as a fraction of the largest row, from 0 to 1. `nil` when the row is 0 or below (a
     /// refund-only row): it shows no bar, never a negative one.
     public var barFraction: Double?
@@ -62,6 +64,8 @@ public final class SpendingReportViewModel {
     public internal(set) var accountFilter: ReportAccountFilter = .all
 
     public private(set) var rows: [SpendingRowModel] = []
+    /// The ranked bar chart above the rows (#184 slice 3): the 5 largest, then Other when it combines 2 or more.
+    public private(set) var chartBars: [SpendingChartBar] = []
     public private(set) var totalText = ""
     public private(set) var totalCaption = ""
     public private(set) var periodTitle = ""
@@ -86,7 +90,7 @@ public final class SpendingReportViewModel {
     @ObservationIgnored private var loadCount = 0
     @ObservationIgnored private let useCase: any LoadSpendingReportUseCase
     @ObservationIgnored let locale: Locale
-    @ObservationIgnored private let formatter: MoneyFormatter
+    @ObservationIgnored let formatter: MoneyFormatter
     @ObservationIgnored let text: TransactionText
     @ObservationIgnored let timeZone: TimeZone
     @ObservationIgnored let now: () -> Date
@@ -183,6 +187,7 @@ public final class SpendingReportViewModel {
             report = nil
             loadFailed = true
             rows = []
+            chartBars = []
             totalText = ""
             totalCaption = ""
             currencies = []
@@ -257,6 +262,7 @@ public final class SpendingReportViewModel {
         accounts = report.accounts
         let largest = report.rows.map(\.amount).max() ?? 0
         rows = report.rows.map { row(for: $0, largest: largest, currencyCode: report.currencyCode) }
+        chartBars = chartBars(for: report)
     }
 
     private func row(for row: SpendingReportRow, largest: Decimal, currencyCode: String) -> SpendingRowModel {
@@ -279,6 +285,7 @@ public final class SpendingReportViewModel {
             amountText: amountText,
             shareText: shareText,
             countText: countText,
+            countNumberText: row.transactionCount.formatted(.number.locale(locale)),
             barFraction: barFraction,
             amountTone: row.amount < 0 ? .negative : .neutral,
             accessibilityLabel: spoken.joined(separator: ", "),
@@ -297,7 +304,7 @@ public final class SpendingReportViewModel {
 
     /// 169 tenths is “16.9%” in the view model's locale. A negative share takes the locale's own minus sign
     /// and its place from the format style, rather than one added in front (Tech Architect's NB8 on #185).
-    private func shareString(_ tenths: Int) -> String {
+    func shareString(_ tenths: Int) -> String {
         (Decimal(tenths) / 1000)
             .formatted(.percent.precision(.fractionLength(1)).sign(strategy: .automatic).locale(locale))
     }

@@ -25,13 +25,14 @@
         }
     }
 
-    /// “What do I spend my money on?”: the period and currency pickers, the total, then one row per category
-    /// with its amount, share and a bar, each opening its transactions. On the Mac each row is a button that
-    /// opens through `ReportDrillDownPresentation` (#315); on iOS each row is a navigation link.
+    /// “What do I spend my money on?”: the period and currency pickers, the total, the ranked bar chart (#184
+    /// slice 3), then one row per category with its amount, share and a bar, each opening its transactions.
+    /// Standard list rows, so they get the system chevrons, Dynamic Type and keyboard focus. On the Mac a table
+    /// replaces the list.
     struct SpendingReportView: View {
         @State private var model: SpendingReportViewModel
         @State private var showsAccounts = false
-        /// The row the Mac list opened (#315).
+        /// The row a chart bar or a Mac table row opened. Back forgets it, so the same row opens again (#315).
         @State private var opened = ReportDrillDownPresentation<SpendingRowModel>()
         private let updates: LedgerUpdates
 
@@ -41,51 +42,81 @@
         }
 
         var body: some View {
-            List {
-                Section {
-                    Text(ReportText.spendingQuestion)
-                        .font(.title3)
-                        .accessibilityAddTraits(.isHeader)
-                    ReportPeriodControls(model: model)
-                    if model.showsCurrencyPicker {
-                        Picker(ReportText.currency, selection: currency) {
-                            ForEach(model.currencies, id: \.self) { code in
-                                Text(code).tag(code)
-                            }
+            layout
+                .navigationTitle(ReportText.spendingTitle)
+                .toolbar {
+                    ToolbarItem {
+                        Button {
+                            showsAccounts = true
+                        } label: {
+                            Label(model.accountsTitle, systemImage: "line.3.horizontal.decrease.circle")
                         }
-                        .pickerStyle(.segmented)
+                        .accessibilityValue(model.accountsValue)
+                        .disabled(model.accounts.isEmpty)
                     }
                 }
-                content
-            }
-            .navigationTitle(ReportText.spendingTitle)
-            .toolbar {
-                ToolbarItem {
-                    Button {
-                        showsAccounts = true
-                    } label: {
-                        Label(model.accountsTitle, systemImage: "line.3.horizontal.decrease.circle")
-                    }
-                    .accessibilityValue(model.accountsValue)
-                    .disabled(model.accounts.isEmpty)
+                .sheet(isPresented: $showsAccounts) {
+                    ReportAccountsSheet(model: model)
                 }
-            }
-            .sheet(isPresented: $showsAccounts) {
-                ReportAccountsSheet(model: model)
-            }
-            #if os(macOS)
                 .navigationDestination(isPresented: $opened.isPresented) {
                     if let row = opened.row {
                         SpendingTransactionsView(model: model, row: row, updates: updates)
                     }
                 }
+                .task { await model.load() }
+                // Any edit to the shared store, from any window, regenerates the report.
+                .onChange(of: updates.revision) {
+                    let revision = updates.revision
+                    Task { await model.load(at: revision) }
+                }
+        }
+
+        @ViewBuilder private var layout: some View {
+            #if os(macOS)
+                VStack(alignment: .leading, spacing: 12) {
+                    VStack(alignment: .leading) {
+                        controls
+                    }
+                    .padding([.horizontal, .top])
+                    if model.loadFailed {
+                        ReportLoadFailedView(model: model) { await model.retry() }
+                            .frame(maxHeight: .infinity)
+                    } else if model.isEmpty {
+                        emptyView
+                            .frame(maxHeight: .infinity)
+                    } else if !model.rows.isEmpty {
+                        SpendingReportMacContent(model: model) { opened.open($0) }
+                    } else {
+                        Spacer()
+                    }
+                }
+            #else
+                List {
+                    Section {
+                        controls
+                    }
+                    content
+                }
             #endif
-            .task { await model.load() }
-            // Any edit to the shared store, from any window, regenerates the report.
-            .onChange(of: updates.revision) {
-                let revision = updates.revision
-                Task { await model.load(at: revision) }
+        }
+
+        @ViewBuilder private var controls: some View {
+            Text(ReportText.spendingQuestion)
+                .font(.title3)
+                .accessibilityAddTraits(.isHeader)
+            ReportPeriodControls(model: model)
+            if model.showsCurrencyPicker {
+                Picker(ReportText.currency, selection: currency) {
+                    ForEach(model.currencies, id: \.self) { code in
+                        Text(code).tag(code)
+                    }
+                }
+                .pickerStyle(.segmented)
             }
+        }
+
+        private var emptyView: some View {
+            ContentUnavailableView(model.emptyTitle, systemImage: "cart", description: Text(model.emptyMessage))
         }
 
         private var currency: Binding<String> {
@@ -96,7 +127,7 @@
             if model.loadFailed {
                 ReportLoadFailedView(model: model) { await model.retry() }
             } else if model.isEmpty {
-                ContentUnavailableView(model.emptyTitle, systemImage: "cart", description: Text(model.emptyMessage))
+                emptyView
             } else if !model.rows.isEmpty {
                 Section {
                     VStack(alignment: .leading) {
@@ -112,25 +143,18 @@
                     }
                     .accessibilityElement(children: .combine)
                 }
+                if !model.chartBars.isEmpty {
+                    Section {
+                        SpendingChartView(model: model) { opened.open($0) }
+                    }
+                }
                 Section {
                     ForEach(model.rows) { row in
-                        #if os(macOS)
-                            // A Mac list keeps a link's row selected after Back, so a second click on it was
-                            // ignored (#315). A button opens the row on every click.
-                            Button {
-                                opened.open(row)
-                            } label: {
-                                SpendingRowView(row: row)
-                                    .contentShape(.rect)
-                            }
-                            .buttonStyle(.plain)
-                        #else
-                            NavigationLink {
-                                SpendingTransactionsView(model: model, row: row, updates: updates)
-                            } label: {
-                                SpendingRowView(row: row)
-                            }
-                        #endif
+                        NavigationLink {
+                            SpendingTransactionsView(model: model, row: row, updates: updates)
+                        } label: {
+                            SpendingRowView(row: row)
+                        }
                     }
                 } header: {
                     Text(ReportText.allCategories)
