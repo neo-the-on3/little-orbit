@@ -4,7 +4,7 @@ import Testing
 @testable import LittleOrbitFeatures
 
 /// Debug › Send Queued ⌘Z (n2 on #201): when it sends its ⌘Z, and with what press time. The key-down itself and
-/// `NSApp.sendEvent(_:)` are AppKit's, checked by Tester2 in a Debug Mac build; the drop it then gets is
+/// `NSApp.postEvent(_:atStart:)` are AppKit's, checked by Tester2 in a Debug Mac build; the drop it then gets is
 /// `QueuedDispatchTests`'. Mutants: sending as soon as it's chosen fails `inBatchWaits`; taking the press time at
 /// the send fails `inBatchKeepsPressTime`; dropping the `#if DEBUG` fails `debugOnly`. For Send ⌘Z Right After
 /// Batch (`.atSend`): keeping the chosen time fails `atSendStampsAfterEnd`; sending before the end fails it too.
@@ -150,5 +150,42 @@ struct QueuedUndoKeyDebugTests {
         #expect(guardLine.upperBound < use.lowerBound)
         let tail = app[guardLine.upperBound...]
         #expect(tail.components(separatedBy: "#if ").count == tail.components(separatedBy: "#endif").count - 1)
+    }
+
+    @Test("Send ⇧⌘Z Right After Batch: ⇧⌘Z as AppKit reports a typed one, signposted redoAtSend")
+    func redoKeyAndTags() {
+        #expect(QueuedUndoKeyDebug.key(for: .undo) == .init(characters: "z", shift: false))
+        #expect(QueuedUndoKeyDebug.key(for: .redo) == .init(characters: "Z", shift: true))
+        let redo = QueuedUndoKeyDebug.key(for: .redo)
+        #expect(
+            UndoKeyPolicy.command(characters: redo.characters, modifiers: [.command, .shift]) == .redo,
+            "The monitor reads it as Redo",
+        )
+        #expect(QueuedUndoKeyDebug.tag(.whenChosen, .undo).description == "whenChosen")
+        #expect(QueuedUndoKeyDebug.tag(.atSend, .undo).description == "atSend")
+        #expect(QueuedUndoKeyDebug.tag(.atSend, .redo).description == "redoAtSend")
+        #expect(QueuedUndoKeyDebug.tag(.whenChosen, .redo).description == "redoWhenChosen")
+    }
+
+    /// The AppKit send can't run here, so this reads the source: Tester2 at 7c8a893 never saw the monitor act,
+    /// because `NSApp.sendEvent(_:)` skips local monitors, which run as an event is dequeued.
+    @Test("The Debug key-down is posted to the event queue, never handed to sendEvent, so the monitor sees it")
+    func postsToTheQueue() throws {
+        let root = URL(filePath: #filePath)
+            .deletingLastPathComponent().deletingLastPathComponent().deletingLastPathComponent()
+            .deletingLastPathComponent()
+        let source = try String(
+            contentsOf: root.appending(path: "Sources/LittleOrbitFeatures/Transactions/QueuedUndoKeyDebug.swift"),
+            encoding: .utf8,
+        )
+        let code = source.split(separator: "\n").filter { !$0.trimmingCharacters(in: .whitespaces).hasPrefix("//") }
+        #expect(code.contains { $0.contains("NSApp.postEvent(event, atStart: false)") })
+        #expect(!code.contains { $0.contains("NSApp.sendEvent(") })
+        let app = try String(
+            contentsOf: root.appending(path: "../../Apps/Shared/ScheduledReminderTapDebug.swift"),
+            encoding: .utf8,
+        )
+        #expect(app.contains("Text(verbatim: \"Send ⇧⌘Z Right After Batch\")"))
+        #expect(app.contains("redo: true"))
     }
 }
