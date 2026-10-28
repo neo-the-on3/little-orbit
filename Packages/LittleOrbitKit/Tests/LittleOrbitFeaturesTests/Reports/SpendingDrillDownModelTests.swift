@@ -78,6 +78,30 @@ struct SpendingDrillDownModelTests {
         #expect(after.caption == "October 2026 · INR")
     }
 
+    @Test("Given an open drill-down, when its category is renamed, then its title follows the new name")
+    func titleFollowsRename() async throws {
+        let fake = FakeSpendingReportUseCase(snapshot: S.snapshot([S.expense("2000", S.groceries, 10, 3)]))
+        let report = S.model(fake)
+        await report.load(at: 0)
+        let row = try #require(report.rows.first { $0.categoryID == S.groceries.id })
+        let drill = report.makeDrillDown(for: row)
+        await drill.load()
+        #expect(drill.drillDown?.title == "Food & Dining › Groceries")
+
+        // Another window renames Groceries while the drill-down is open.
+        fake.snapshot.categories = fake.snapshot.categories.map { category in
+            var copy = category
+            if copy.id == S.groceries.id {
+                copy.name = "Fresh Produce"
+            }
+            return copy
+        }
+        await drill.refresh(at: 1)
+
+        #expect(drill.drillDown?.title == "Food & Dining › Fresh Produce")
+        #expect(drill.row.name == "Food & Dining › Groceries")
+    }
+
     @Test("One store change is read once, whether the report or its drill-down hears it first")
     func oneReadPerChange() async throws {
         let fake = FakeSpendingReportUseCase(snapshot: S.snapshot([S.expense("2000", S.groceries, 10, 3)]))
