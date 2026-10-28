@@ -36,4 +36,23 @@ extension ScheduledText {
                 "Button in the question Save asks for a repeating scheduled item: change the edited occurrence and every later one (D45, D59).",
         )
     }
+
+    /// “Can’t Move to 1 Sep” with “Rent already has an occurrence on 1 Sep. Pick another day, or change that
+    /// occurrence first.”: a new Due Date the item already has an occurrence on (D381.1). OK only.
+    static func cantMove(_ name: String, to date: String) -> CategoryAlert {
+        CategoryAlert(
+            title: FeatureText.format("Can’t Move to %@", date),
+            message: FeatureText.format(
+                "%1$@ already has an occurrence on %2$@. Pick another day, or change that occurrence first.",
+                name,
+                date,
+            ),
+        )
+    }
+
+    /// “Couldn’t Save Changes” with “Rent has changed since then. Nothing was changed.”: the occurrence was paid or
+    /// skipped in another window after the form opened (D381.2). OK only; the stale-step message, no new copy.
+    static func changedNothingSaved(_ name: String) -> CategoryAlert {
+        CategoryAlert(title: CategoryText.couldntSaveTitle, message: StaleText.changed(name))
+    }
 }

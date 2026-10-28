@@ -11235,6 +11235,32 @@
         }
       }
     },
+    "Can’t Move to %@": {
+      "comment": "Alert title (D381.1): a scheduled occurrence’s new Due Date is a day its item already has an occurrence on, so nothing was saved and the form stays open. %@ is that day’s short date (“1 Sep”). Its only button is OK.",
+      "extractionState": "manual",
+      "generatesSymbol": false,
+      "localizations": {
+        "en": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Can’t Move to %@"
+          }
+        }
+      }
+    },
+    "%1$@ already has an occurrence on %2$@. Pick another day, or change that occurrence first.": {
+      "comment": "Alert message under “Can’t Move to ‹date›” (D381.1): %1$@ is the scheduled item’s name (“Rent”), %2$@ the day’s short date (“1 Sep”), as in the title. Nothing was saved.",
+      "extractionState": "manual",
+      "generatesSymbol": false,
+      "localizations": {
+        "en": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "%1$@ already has an occurrence on %2$@. Pick another day, or change that occurrence first."
+          }
+        }
+      }
+    },
     "This occurrence only": {
       "comment": "Button in the question Save asks for a repeating scheduled item: change only the edited occurrence (D45, D59). The Mac’s default button (D106).",
       "extractionState": "manual",
