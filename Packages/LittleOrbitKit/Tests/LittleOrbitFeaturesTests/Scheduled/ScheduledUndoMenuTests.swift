@@ -5,7 +5,7 @@ import LittleOrbitPersistence
 import Testing
 
 /// Tester's #201 Mac pass: the Edit menu names Pay, Skip and custom Pay ("Undo Pay Gym") from the undo manager ⌘Z
-/// reaches, dimmed when there's nothing to undo (D285.5). The custom pay sheet's and the Scheduled alerts' controls,
+/// reaches, dimmed when there's nothing to undo (D288.3, D290.2). The custom pay sheet's and the Scheduled alerts' controls,
 /// unnamed in Tester's Mac accessibility pass at 59017dc, are named by their visible titles.
 @MainActor
 @Suite("Scheduled Undo menu names and button names (#201)")
@@ -83,7 +83,7 @@ struct ScheduledUndoMenuTests {
         #expect(menu(window).undoTitle == "Undo Pay Gym")
     }
 
-    @Test("D285.5: the menu follows the manager ⌘Z reaches: a field's Typing, not the window's Pay Gym")
+    @Test("D288.3: the menu follows the manager ⌘Z reaches: a field's Typing, not the window's Pay Gym")
     func followsFocusedManager() throws {
         let scene = try ScheduledScene()
         try scene.add(scene.item("Gym", day: 18, month: 10))
