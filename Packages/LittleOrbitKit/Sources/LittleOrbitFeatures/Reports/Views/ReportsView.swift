@@ -31,6 +31,8 @@
     struct SpendingReportView: View {
         @State private var model: SpendingReportViewModel
         @State private var showsAccounts = false
+        /// The row the Mac list opened (#315).
+        @State private var opened = ReportDrillDownPresentation<SpendingRowModel>()
         private let updates: LedgerUpdates
 
         init(feature: ReportsFeature) {
@@ -71,6 +73,13 @@
             .sheet(isPresented: $showsAccounts) {
                 ReportAccountsSheet(model: model)
             }
+            #if os(macOS)
+                .navigationDestination(isPresented: $opened.isPresented) {
+                    if let row = opened.row {
+                        SpendingTransactionsView(model: model, row: row, updates: updates)
+                    }
+                }
+            #endif
             .task { await model.load() }
             // Any edit to the shared store, from any window, regenerates the report.
             .onChange(of: updates.revision) {
@@ -105,11 +114,23 @@
                 }
                 Section {
                     ForEach(model.rows) { row in
-                        NavigationLink {
-                            SpendingTransactionsView(model: model, row: row, updates: updates)
-                        } label: {
-                            SpendingRowView(row: row)
-                        }
+                        #if os(macOS)
+                            // A Mac list keeps a link's row selected after Back, so a second click on it was
+                            // ignored (#315). A button opens the row on every click.
+                            Button {
+                                opened.open(row)
+                            } label: {
+                                SpendingRowView(row: row)
+                                    .contentShape(.rect)
+                            }
+                            .buttonStyle(.plain)
+                        #else
+                            NavigationLink {
+                                SpendingTransactionsView(model: model, row: row, updates: updates)
+                            } label: {
+                                SpendingRowView(row: row)
+                            }
+                        #endif
                     }
                 } header: {
                     Text(ReportText.allCategories)
