@@ -7,7 +7,9 @@ import Testing
 /// B1 on #201 (Tech Architect's n3): Edit › Undo's enabled state and title are current the moment an undo
 /// notification posts, with no run-loop turn, so a ⌘Z right after the first keystroke finds Undo on. The batch
 /// gate's closed state still wins. A private notification center and made-up names stand in for AppKit's.
-/// Mutant: putting the main-queue hop back (`DispatchQueue.main.async` around the refresh) fails `readAtOnce`.
+/// Mutants: putting the main-queue hop back (`DispatchQueue.main.async` around the refresh, or a `Task` hop) fails
+/// `readAtOnce`. Observing with `queue: .main` fails `requirePostingThread` in every test within seconds: posted
+/// from the main actor, a real center would wait on Linux for a main queue that the test's own turn is holding.
 @MainActor
 @Suite("Edit › Undo and Redo current at once (B1)", .timeLimit(.minutes(1)))
 struct UndoMenuRefresherTests {
@@ -17,7 +19,8 @@ struct UndoMenuRefresherTests {
     static let main: @Sendable () -> Bool = { true }
 
     @Test("A group closes: canUndo and the title are read right away, before any run-loop turn")
-    func readAtOnce() {
+    func readAtOnce() async throws {
+        try await Self.requirePostingThread()
         let center = NotificationCenter()
         let manager = FakeUndoManager()
         var heard: [UndoMenuItems] = []
@@ -40,24 +43,26 @@ struct UndoMenuRefresherTests {
     }
 
     @Test("The gate's closed state still wins: dimmed while closed, on as it opens")
-    func gateWins() {
+    func gateWins() async throws {
+        try await Self.requirePostingThread()
         let center = NotificationCenter()
         let manager = FakeUndoManager()
-        var closed = true
+        let gate = GateState()
         let refresher = UndoMenuRefresher(center: center, names: [Self.didClose], onMainThread: Self.main) {
-            UndoMenuItems(manager, gateClosed: closed)
+            UndoMenuItems(manager, gateClosed: gate.closed)
         }
         manager.registerStep(manager, named: "Typing") {}
         center.post(name: Self.didClose, object: nil)
         #expect(!refresher.items.canUndo, "Closed: still dimmed")
         #expect(refresher.items.undoTitle == "Undo Typing")
-        closed = false
+        gate.closed = false
         refresher.refresh()
         #expect(refresher.items.canUndo)
     }
 
     @Test("Only the names it observes refresh it")
-    func otherNamesIgnored() {
+    func otherNamesIgnored() async throws {
+        try await Self.requirePostingThread()
         let center = NotificationCenter()
         let manager = FakeUndoManager()
         let refresher = UndoMenuRefresher(center: center, names: [Self.didClose], onMainThread: Self.main) {
@@ -67,4 +72,54 @@ struct UndoMenuRefresherTests {
         center.post(name: Notification.Name("test.checkpoint"), object: nil)
         #expect(!refresher.items.canUndo, "A checkpoint-like name isn't observed (Tester's B1 on #87)")
     }
+
+    /// What a probe post from another thread saw: the observer asked `onMainThread` (on the posting thread or not),
+    /// then `post` returned.
+    private enum ProbeEvent: Equatable, Sendable {
+        case observed(onPostingThread: Bool)
+        case posted
+    }
+
+    /// Fails, and stops the test before it posts from the main actor, unless the refresher observes on the posting
+    /// thread. The probe posts from its own thread, so a queue hop can't hold up the main actor: the observer then
+    /// runs elsewhere, or `post` never returns and the 5-second bound ends the wait. A passing run never waits on it.
+    static func requirePostingThread() async throws {
+        let center = NotificationCenter()
+        let name = Notification.Name("test.postingThreadProbe")
+        let poster = "lo.b1.poster"  // Under 16 bytes: Linux keeps thread names that short.
+        let (events, sink) = AsyncStream.makeStream(of: ProbeEvent.self)
+        let refresher = UndoMenuRefresher(center: center, names: [name]) {
+            sink.yield(.observed(onPostingThread: Thread.current.name == poster))
+            return false
+        } read: {
+            UndoMenuItems(FakeUndoManager(), gateClosed: false)
+        }
+        let thread = Thread {
+            Thread.current.name = poster
+            center.post(name: name, object: nil)
+            sink.yield(.posted)
+            sink.finish()
+        }
+        thread.start()
+        let bound = Task {
+            try? await Task.sleep(for: .seconds(5))
+            sink.finish()
+        }
+        var seen: [ProbeEvent] = []
+        for await event in events {
+            seen.append(event)
+        }
+        bound.cancel()
+        withExtendedLifetime(refresher) {}
+        try #require(
+            seen == [.observed(onPostingThread: true), .posted],
+            "The observer runs on the posting thread before post returns (no queue: .main)",
+        )
+    }
+}
+
+/// The batch gate's closed state, shared by reference with the `@MainActor` read closure.
+@MainActor
+private final class GateState {
+    var closed = true
 }
