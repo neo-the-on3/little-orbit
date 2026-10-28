@@ -207,7 +207,7 @@ struct ScheduledPresenter {
             occurrence: kind == .overdue || kind == .dueToday ? key : nil,
             editOccurrence: kind == .completed ? nil : key,
             title: title,
-            detail: detail(of: item, on: day),
+            detail: detail(of: item, on: key),
             amount: amount,
             tone: tone,
             dateText: date,
