@@ -20,6 +20,26 @@ extension LedgerBook {
         today: CalendarDay,
         now: Date,
     ) throws -> LedgerSnapshot {
+        var removed: [ScheduledRemovedOccurrence] = []
+        return try savingScheduledOccurrence(
+            item,
+            editing: save,
+            in: snapshot,
+            today: today,
+            now: now,
+            removed: &removed,
+        )
+    }
+
+    /// As above, adding to `removed` the occurrences the SERIES fields' save removed (D442), for the form's notice.
+    static func savingScheduledOccurrence(
+        _ item: ScheduledItem,
+        editing save: ScheduledOccurrenceSave,
+        in snapshot: LedgerSnapshot,
+        today: CalendarDay,
+        now: Date,
+        removed: inout [ScheduledRemovedOccurrence],
+    ) throws -> LedgerSnapshot {
         guard let existing = snapshot.scheduledItems.first(where: { $0.id == item.id }) else {
             throw LedgerValidationError.missingScheduledItem
         }
@@ -47,7 +67,7 @@ extension LedgerBook {
                 copy(field, from: existing, to: &whole)
             }
             guard existing.repeatRule.repeats, !edited.repeatRule.repeats else {
-                return try savingScheduledItem(whole, in: snapshot, today: today, now: now)
+                return try savingScheduledItem(whole, in: snapshot, today: today, now: now, removed: &removed)
             }
             // An item that stops repeating keeps one occurrence, its start, which is now the whole item: the item
             // takes that occurrence's values, the form's when it was opened there (#202 Tester), else its own
@@ -67,7 +87,7 @@ extension LedgerBook {
                     copy(field, from: shown.resolved(for: start), to: &whole)
                 }
             }
-            var result = try savingScheduledItem(whole, in: snapshot, today: today, now: now)
+            var result = try savingScheduledItem(whole, in: snapshot, today: today, now: now, removed: &removed)
             keepOldValues(of: existing, for: folded, onOpenDaysOtherThan: start, in: &result, now: now)
             return result
         }
@@ -76,7 +96,7 @@ extension LedgerBook {
         for field in ScheduledEditField.allCases where field != .day {
             copy(field, from: existing, to: &series)
         }
-        var result = try savingScheduledItem(series, in: snapshot, today: today, now: now)
+        var result = try savingScheduledItem(series, in: snapshot, today: today, now: now, removed: &removed)
         guard !changed.isEmpty, var current = result.scheduledItems.first(where: { $0.id == item.id }) else {
             return result
         }

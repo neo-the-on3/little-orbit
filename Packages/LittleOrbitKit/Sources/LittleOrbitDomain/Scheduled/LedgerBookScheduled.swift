@@ -54,6 +54,18 @@ extension LedgerBook {
         today: CalendarDay,
         now: Date,
     ) throws -> LedgerSnapshot {
+        var removed: [ScheduledRemovedOccurrence] = []
+        return try savingScheduledItem(item, in: snapshot, today: today, now: now, removed: &removed)
+    }
+
+    /// As above, adding to `removed` the occurrences the save removed (D442), for the form's notice.
+    static func savingScheduledItem(
+        _ item: ScheduledItem,
+        in snapshot: LedgerSnapshot,
+        today: CalendarDay,
+        now: Date,
+        removed: inout [ScheduledRemovedOccurrence],
+    ) throws -> LedgerSnapshot {
         var item = normalize(item)
         var snapshot = snapshot
         if let existing = snapshot.scheduledItems.first(where: { $0.id == item.id }) {
@@ -67,10 +79,10 @@ extension LedgerBook {
                 let afterLast = existing.settledDays.max().flatMap { ScheduleCalendar.adding(days: 1, to: $0) }
                 item.resumesOn = [afterLast, today, existing.resumesOn].compactMap { $0 }.max()
             }
-            // After `resumesOn`, which decides what's on the new rule. An End date edit can take a move's own day
-            // off the rule as a Starts or repeat edit can (Tech Architect B1 on #326).
+            // After `resumesOn`, which decides what's on the new rule. An End date edit can take an occurrence's
+            // own day off the rule as a Starts or repeat edit can (Tech Architect B1 on #326, D442).
             if ruleChanged || existing.endDay != item.endDay {
-                keepOrphanedMoves(in: &item, now: now)
+                removed += resolvingOwnValues(after: existing, in: &item, ruleChanged: ruleChanged, now: now)
             }
             foldingOneOffEdit(of: &item, now: now)
             droppingStaleOwnReceived(from: &item, in: snapshot, except: nil, now: now)
@@ -359,21 +371,6 @@ extension LedgerBook {
             )
         }
         item.occurrences.sort { $0.day < $1.day }
-    }
-
-    /// A "This occurrence only" move whose own day the new rule or End date no longer has stays due on the day it
-    /// moved to, as a `pending` record with its own values, whether that day is before or after the edit (D435.1,
-    /// D436).
-    /// Without this it would be on no board and Pay would refuse it, so a payment moved on purpose would vanish.
-    private static func keepOrphanedMoves(in item: inout ScheduledItem, now: Date) {
-        let orphaned = item.occurrences.filter { record in
-            record.deletedAt == nil && record.outcome == .edited && record.edit?.has(.day) == true
-                && !ScheduleCalendar.isOccurrence(record.day, of: item)
-        }
-        for index in item.occurrences.indices where orphaned.contains(where: { $0.id == item.occurrences[index].id }) {
-            item.occurrences[index].outcome = .pending
-            item.occurrences[index].updatedAt = now
-        }
     }
 
     static func normalize(_ item: ScheduledItem) -> ScheduledItem {

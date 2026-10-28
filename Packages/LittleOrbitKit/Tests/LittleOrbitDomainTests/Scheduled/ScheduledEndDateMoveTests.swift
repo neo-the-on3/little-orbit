@@ -52,7 +52,9 @@ struct ScheduledEndDateMoveTests {
 
     @Test("D442 (A): 2 Nov moved to Fri 23 Oct stays pending and due on 23 Oct after End becomes 31 Oct")
     func movedBeforeTheNewEndStaysDue() throws {
-        let (repository, _) = try Self.example(key: Self.keyA, movedTo: Self.movedA)
+        let (repository, change) = try Self.example(key: Self.keyA, movedTo: Self.movedA)
+        // Nothing is removed, so the save shows no notice.
+        #expect(change.removed.isEmpty)
         let snapshot = repository.snapshot
         let item = snapshot.scheduledItems[0]
         #expect(item.endDay == Self.newEnd)
@@ -116,5 +118,95 @@ struct ScheduledEndDateMoveTests {
         let count = repository.posted(for: item.id).count
         _ = try useCases.catchUp(atLaunch: false)
         #expect(repository.posted(for: item.id).count == count)
+    }
+
+    // MARK: (B) Moved day after the new End
+
+    private static let keyB = Fix.day(2026, 10, 26)
+    private static let movedB = Fix.day(2026, 11, 3)
+
+    @Test("D442 (B): 26 Oct moved to Tue 3 Nov is removed when End becomes 31 Oct, and the save reports it")
+    func movedAfterTheNewEndIsRemoved() throws {
+        let (repository, change) = try Self.example(key: Self.keyB, movedTo: Self.movedB)
+        #expect(change.removed == [.init(reason: .movedAfterEnd, key: Self.keyB, dueDay: Self.movedB)])
+        let snapshot = repository.snapshot
+        let item = snapshot.scheduledItems[0]
+        #expect(item.endDay == Self.newEnd)
+        #expect(item.occurrence(on: Self.keyB) == nil)
+        // 3 Nov is gone: not due, not upcoming, no reminder.
+        let due = ScheduleCalendar.dueOccurrences(of: item, through: Fix.day(2026, 11, 30))
+        #expect(!due.contains { $0.day == Self.movedB })
+        #expect(ScheduledBoard.make(snapshot, today: Self.movedB).dueToday.isEmpty)
+        let reminders = ScheduledReminderPlanner.plan(
+            [item],
+            now: Fix.date(2026, 10, 21),
+            timeZone: Self.kolkata,
+            time: .standard,
+            limit: 3,
+        )
+        #expect(!reminders.contains { $0.fireDate == Fix.date(2026, 11, 3, 9) })
+        // It takes no period, so the rule's own Mon 26 Oct is due as normal, for ₹199.00 (D442.3).
+        #expect(due.map(\.day) == [Self.keyB])
+        #expect(item.resolved(for: Self.keyB).amount == 199)
+        _ = try LedgerBook.settlingScheduledOccurrence(
+            .pay(itemID: item.id, occurrence: Self.keyB, postedOn: Self.keyB),
+            in: snapshot,
+            now: Fix.date(2026, 10, 26),
+        )
+        #expect(throws: LedgerValidationError.notAnOccurrence) {
+            try LedgerBook.settlingScheduledOccurrence(
+                .skip(itemID: item.id, occurrence: Fix.day(2026, 11, 2)),
+                in: snapshot,
+                now: Fix.date(2026, 11, 3),
+            )
+        }
+    }
+
+    @Test("D442 (B): catch-up records no 3 Nov payment after the move is removed")
+    func movedAfterTheNewEndIsNotCaughtUp() throws {
+        let repository = try Self.example(key: Self.keyB, movedTo: Self.movedB, automatic: true).repository
+        repository.now = Fix.date(2026, 11, 4)
+        _ = try repository.useCases().catchUp(atLaunch: false)
+        let posted = repository.posted(for: repository.snapshot.scheduledItems[0].id).map(day)
+        #expect(posted == [Fix.day(2026, 10, 12), Fix.day(2026, 10, 19), Self.keyB])
+    }
+
+    @Test("D442 (B): Undo of the End date save restores 3 Nov, due with its move, and no End date")
+    func undoRestoresTheRemovedMove() throws {
+        let (repository, change) = try Self.example(key: Self.keyB, movedTo: Self.movedB)
+        repository.now = Fix.date(2026, 10, 21, 11)
+        guard case .reverted = try repository.revertScheduledItemSave(change, undone: false) else {
+            Issue.record("Undo was stale")
+            return
+        }
+        let item = repository.snapshot.scheduledItems[0]
+        #expect(item.endDay == nil)
+        #expect(item.occurrence(on: Self.keyB)?.outcome == .edited)
+        #expect(item.dueDay(of: Self.keyB) == Self.movedB)
+        let due = ScheduleCalendar.dueOccurrences(of: item, through: Fix.day(2026, 11, 3))
+        #expect(due.contains { $0.key == Self.keyB && $0.day == Self.movedB })
+        let reminders = ScheduledReminderPlanner.plan(
+            [item],
+            now: Fix.date(2026, 10, 21, 11),
+            timeZone: Self.kolkata,
+            time: .standard,
+            limit: 3,
+        )
+        #expect(reminders.contains { $0.id == ScheduledReminder.identifier(item: item.id, day: Self.keyB) })
+    }
+
+    @Test("D442.1: a move whose own day and moved day are both after the new End (2 Nov to Thu 5 Nov) is removed")
+    func movedOffTheRuleAndAfterTheEndIsRemoved() throws {
+        let key = Fix.day(2026, 11, 2)
+        let movedTo = Fix.day(2026, 11, 5)
+        let (repository, change) = try Self.example(key: key, movedTo: movedTo)
+        #expect(change.removed == [.init(reason: .movedAfterEnd, key: key, dueDay: movedTo)])
+        let item = repository.snapshot.scheduledItems[0]
+        #expect(item.occurrence(on: key) == nil)
+        #expect(
+            ScheduleCalendar.dueOccurrences(of: item, through: Fix.day(2026, 11, 30)).map(\.day) == [
+                Fix.day(2026, 10, 26)
+            ]
+        )
     }
 }

@@ -23,6 +23,9 @@ public struct ScheduledItemSaveChange: Equatable, Sendable {
     /// That payee as the save (or the last Redo) left it, unarchived. Undo archives it again only while it's still
     /// exactly this, so nothing touched it since (D363); `nil` once an Undo kept it unarchived.
     public var unarchivedPayeeAsSaved: Payee?
+    /// The occurrences with their own values the save removed because the new schedule has no place for them, by
+    /// due day, for the save's notice (D442.3). `before` still has them, so Undo puts them back.
+    public var removed: [ScheduledRemovedOccurrence]
 
     public init(
         before: ScheduledItem?,
@@ -30,12 +33,14 @@ public struct ScheduledItemSaveChange: Equatable, Sendable {
         createdPayee: Payee? = nil,
         unarchivedPayee: Payee? = nil,
         unarchivedPayeeAsSaved: Payee? = nil,
+        removed: [ScheduledRemovedOccurrence] = [],
     ) {
         self.before = before
         self.after = after
         self.createdPayee = createdPayee
         self.unarchivedPayee = unarchivedPayee
         self.unarchivedPayeeAsSaved = unarchivedPayeeAsSaved
+        self.removed = removed
     }
 
     public var itemID: UUID { after.id }
@@ -61,8 +66,8 @@ extension LedgerBook {
         today: CalendarDay,
         now: Date,
     ) throws -> (snapshot: LedgerSnapshot, change: ScheduledItemSaveChange) {
-        try formSaving(item, payee: pending, in: snapshot, now: now) { item, snapshot in
-            try savingScheduledItem(item, in: snapshot, today: today, now: now)
+        try formSaving(item, payee: pending, in: snapshot, now: now) { item, snapshot, removed in
+            try savingScheduledItem(item, in: snapshot, today: today, now: now, removed: &removed)
         }
     }
 
@@ -80,8 +85,8 @@ extension LedgerBook {
         guard snapshot.scheduledItems.contains(where: { $0.id == item.id }) else {
             throw LedgerValidationError.missingScheduledItem
         }
-        return try formSaving(item, payee: pending, in: snapshot, now: now) { item, snapshot in
-            try savingScheduledOccurrence(item, editing: save, in: snapshot, today: today, now: now)
+        return try formSaving(item, payee: pending, in: snapshot, now: now) { item, snapshot, removed in
+            try savingScheduledOccurrence(item, editing: save, in: snapshot, today: today, now: now, removed: &removed)
         }
     }
 
@@ -93,7 +98,7 @@ extension LedgerBook {
         payee pending: ScheduledPendingPayee?,
         in snapshot: LedgerSnapshot,
         now: Date,
-        _ body: (ScheduledItem, LedgerSnapshot) throws -> LedgerSnapshot,
+        _ body: (ScheduledItem, LedgerSnapshot, inout [ScheduledRemovedOccurrence]) throws -> LedgerSnapshot,
     ) throws -> (snapshot: LedgerSnapshot, change: ScheduledItemSaveChange) {
         var snapshot = snapshot
         var item = item
@@ -128,7 +133,8 @@ extension LedgerBook {
             break
         }
         let before = snapshot.scheduledItems.first { $0.id == item.id }
-        snapshot = try body(item, snapshot)
+        var removed: [ScheduledRemovedOccurrence] = []
+        snapshot = try body(item, snapshot, &removed)
         guard let after = snapshot.scheduledItems.first(where: { $0.id == item.id }) else {
             throw LedgerValidationError.missingScheduledItem
         }
@@ -142,6 +148,7 @@ extension LedgerBook {
                 createdPayee: stored(created),
                 unarchivedPayee: unarchived,
                 unarchivedPayeeAsSaved: stored(unarchived),
+                removed: removed,
             ),
         )
     }
