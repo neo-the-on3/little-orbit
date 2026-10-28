@@ -100,10 +100,21 @@ struct OffMainSaveSheetTests {
 
     @Test("No row to change: no sheet, and the timer is stopped (D402)")
     func noRows() async throws {
-        let progress = BatchProgress(kind: .applying, total: 5, showAfter: .milliseconds(40))
+        let sleeper = ManualSleeper()
+        defer { sleeper.release() }
+        let progress = BatchProgress(
+            kind: .applying,
+            total: 5,
+            showAfter: .milliseconds(40),
+            timerSleep: sleeper.sleep,
+        )
         let reporter = progress.start()
+        let timer = try #require(progress.timer)
+        #expect(await sleeper.next() == .milliseconds(40))
         await reporter.reportSaving(0, offMain: true)
-        try await Task.sleep(for: .milliseconds(150))
+        // Its sleep ends as if its time had come: a timer left running would show the sheet now.
+        sleeper.release()
+        await timer.value
         #expect(!progress.isShown)
         #expect(progress.timesShown == 0)
         progress.finish()
@@ -112,10 +123,21 @@ struct OffMainSaveSheetTests {
     @Test("The main-actor save keeps its behaviour: the bar stays full, the timer stops")
     func mainActorSave() async throws {
         let clock = ManualClock()
-        let progress = BatchProgress(kind: .redoing, total: 20, showAfter: .milliseconds(40), now: { clock.instant })
+        let sleeper = ManualSleeper()
+        defer { sleeper.release() }
+        let progress = BatchProgress(
+            kind: .redoing,
+            total: 20,
+            showAfter: .milliseconds(40),
+            now: { clock.instant },
+            timerSleep: sleeper.sleep,
+        )
         let reporter = progress.start()
+        let timer = try #require(progress.timer)
+        #expect(await sleeper.next() == .milliseconds(40))
         await reporter.reportSaving(20, offMain: false)
-        try await Task.sleep(for: .milliseconds(150))
+        sleeper.release()
+        await timer.value
         #expect(!progress.savesOffMain)
         #expect(!progress.isShown, "The save cancels the timer")
         progress.finish()

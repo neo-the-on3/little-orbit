@@ -209,18 +209,45 @@ struct BatchProgressTests {
     @Test("The sheet shows only once the work has run for its delay (half a second in the app)")
     func delay() async throws {
         #expect(BatchProgress.showDelay == .milliseconds(500))
-        let progress = BatchProgress(kind: .applying, total: 10, showAfter: .milliseconds(20))
+        // The timer's sleep waits for the test, so a main actor held up by other suites can't decide it (#303).
+        let sleeper = ManualSleeper()
+        defer { sleeper.release() }
+        let progress = BatchProgress(
+            kind: .applying,
+            total: 10,
+            showAfter: .milliseconds(20),
+            timerSleep: sleeper.sleep,
+        )
         _ = progress.start()
-        #expect(!progress.isShown)
-        // Other tests share the main actor, so the delay is a lower bound here: wait for it, up to 10 s.
-        let clock = ContinuousClock()
-        let start = clock.now
-        while !progress.isShown, clock.now - start < .seconds(10) {
-            try await Task.sleep(for: .milliseconds(10))
-        }
+        #expect(await sleeper.next() == .milliseconds(20), "The timer sleeps for its delay")
+        #expect(!progress.isShown, "Not while the delay runs")
+        await sleeper.advance()
+        await progress.timer?.value
         #expect(progress.isShown)
-        #expect(clock.now - start >= .milliseconds(20))
+        #expect(progress.timesShown == 1)
+        #expect(sleeper.asked == [.milliseconds(20)])
         progress.finish()
+    }
+
+    @Test("Finished before its delay ends, the timer never shows the sheet")
+    func finishedBeforeDelay() async throws {
+        let sleeper = ManualSleeper()
+        defer { sleeper.release() }
+        let progress = BatchProgress(
+            kind: .undoing,
+            total: 10,
+            showAfter: .milliseconds(20),
+            timerSleep: sleeper.sleep,
+        )
+        _ = progress.start()
+        let timer = try #require(progress.timer)
+        #expect(await sleeper.next() == .milliseconds(20))
+        progress.finish()
+        // Ends the sleep as if its time had come: a timer that ignored the cancellation would show the sheet now.
+        sleeper.release()
+        await timer.value
+        #expect(!progress.isShown)
+        #expect(progress.timesShown == 0)
     }
 
     @Test("Saving… gives the UI a turn of the run loop even before the sheet shows, so it draws first (N5)")
