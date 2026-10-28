@@ -49,8 +49,22 @@ public final class AccountsFeature {
             mode: mode,
             defaultCurrency: defaultCurrency,
             locale: locale,
-            scheduledAccountIDs: plannedItems.scheduledAccountIDs(),
+            scheduledAccountIDs: scheduledAccountIDs(locking: mode),
             changed: { [weak updates] in updates?.changed() },
         )
+    }
+
+    /// The accounts scheduled items use (D381.3). When they can't be read, the account being edited counts as one
+    /// of them, so its currency shows locked with the usual message: the lock fails closed (Tech Architect n1).
+    /// The store refuses the change either way (D410.1).
+    private func scheduledAccountIDs(locking mode: AccountFormMode) -> Set<UUID> {
+        do {
+            return try plannedItems.scheduledAccountIDs()
+        } catch {
+            guard case .edit(let id) = mode else {
+                return []
+            }
+            return [id]
+        }
     }
 }

@@ -139,13 +139,10 @@ public final class ScheduledFeature: PlannedItemsSource {
         return PlannedItemCounts(scheduledItemCount: board.itemCount, overdueOccurrenceCount: board.overdueCount)
     }
 
-    /// Every listed item's accounts, Completed items included, for Edit Account's currency lock (D381.3). Empty
+    /// Every listed item's accounts, Completed items included, for Edit Account's currency lock (D381.3). Throws
     /// when the store can't be read.
-    public func scheduledAccountIDs() -> Set<UUID> {
-        guard let items = try? useCases.load.listing().board.items else {
-            return []
-        }
-        return CurrencyLock.scheduledAccountIDs(items)
+    public func scheduledAccountIDs() throws -> Set<UUID> {
+        try CurrencyLock.scheduledAccountIDs(useCases.load.listing().board.items)
     }
 
     /// The item a reminder tap that names none opens, for Debug › Tap Scheduled Reminder (S33): the first item with
