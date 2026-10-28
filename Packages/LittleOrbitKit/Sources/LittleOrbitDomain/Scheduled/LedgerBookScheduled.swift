@@ -192,12 +192,17 @@ extension LedgerBook {
     }
 
     /// `item` with a custom payment's amount, account and category: what this payment records, or, with "Also
-    /// change future occurrences", the schedule from now on.
+    /// change future occurrences", the schedule from now on. A transfer takes the payment's amount received and its
+    /// currency code too, never the item's, so a custom amount sent never keeps the old amount received (#207 B1,
+    /// second-lander gate on #201); the posting then checks that code against To's currency.
     static func applying(_ custom: ScheduledCustomPayment, to item: ScheduledItem) -> ScheduledItem {
         var item = item
         item.amount = custom.amount
         item.accountID = custom.accountID
-        if item.type != .transfer {
+        if item.type == .transfer {
+            item.destinationAmount = custom.receivedAmount
+            item.receivedCurrencyCode = custom.receivedAmount == nil ? nil : custom.receivedCurrencyCode
+        } else {
             item.categoryID = custom.categoryID
         }
         return item
