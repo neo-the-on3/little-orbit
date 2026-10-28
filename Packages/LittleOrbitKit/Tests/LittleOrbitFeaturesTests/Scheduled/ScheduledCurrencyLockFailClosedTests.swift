@@ -47,6 +47,41 @@ struct ScheduledCurrencyLockFailClosedTests {
     }
 }
 
+extension ScheduledCurrencyLockFailClosedTests {
+    @Test("n5: a failed read of the scheduled items throws, and the account delete confirmation isn't shown")
+    func unreadableItemsNoDeletePrompt() throws {
+        let scene = try ScheduledScene()
+        let travel = Account(name: "Travel Wallet", type: .cash, currencyCode: "USD", sortOrder: 2)
+        try scene.repository.saveAccount(travel)
+        let unreadable = DefaultScheduledUseCases(
+            repository: UnreadableScheduleStore(),
+            now: { scene.now },
+            timeZone: { TimeZone(identifier: ScheduledScene.zone)! },
+        )
+        let scheduled = ScheduledFeature(
+            useCases: ScheduledScreenUseCases(
+                load: unreadable,
+                manage: unreadable,
+                catchUp: unreadable,
+                notices: ScheduledCatchUpNotices(store: InMemoryScheduledCatchUpNoticeStore()),
+            ),
+            updates: scene.updates,
+            locale: Locale(identifier: "en_IN"),
+        )
+        #expect(throws: (any Error).self) { try scheduled.scheduledItems() }
+        let accounts = AccountsFeature(
+            useCases: AccountUseCases(repository: scene.repository),
+            plannedItems: scheduled,
+            defaultCurrency: "INR",
+            locale: Locale(identifier: "en_IN"),
+        )
+        accounts.accounts.load()
+        #expect(accounts.accounts.account(id: travel.id) != nil)
+        #expect(accounts.accounts.deletePrompt(accountID: travel.id) == nil, "Fails closed: no count without items")
+        #expect(accounts.accounts.errorMessage != nil)
+    }
+}
+
 /// A schedule store whose read fails; nothing else is called here.
 @MainActor
 private final class UnreadableScheduleStore: ScheduleRepository {

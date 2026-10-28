@@ -175,7 +175,8 @@ public final class AccountsViewModel {
         }
     }
 
-    /// The delete confirmation for an account, with its counts; `nil` while reordering or if it can't be read.
+    /// The delete confirmation for an account, with its counts; `nil` while reordering or if it, or the scheduled
+    /// items, can't be read (n5): never a confirmation that leaves out items it would delete.
     /// Each window keeps the prompt it asked for in its own `AccountDeleteConfirmation` (#87 B3).
     public func deletePrompt(accountID: UUID) -> AccountDeletePrompt? {
         guard allowsRowActions, let account = account(id: accountID) else {
@@ -183,7 +184,7 @@ public final class AccountsViewModel {
         }
         do {
             let impact = try deleteAccount.deletionImpact(of: accountID)
-                .adding(scheduled: plannedItems.scheduledItems(), accountID: accountID)
+                .adding(scheduled: try plannedItems.scheduledItems(), accountID: accountID)
             return AccountDeletePrompt(account: account, impact: impact)
         } catch {
             errorMessage = Self.message(for: error)

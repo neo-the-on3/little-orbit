@@ -32,13 +32,15 @@ public protocol PlannedItemsSource: AnyObject {
     /// The accounts a scheduled item uses, as its account or as To, Completed items included: Edit Account locks
     /// their currency (D381.3). Throws when the items can't be read, so Edit Account can fail closed.
     func scheduledAccountIDs() throws -> Set<UUID>
-    /// The scheduled items an account delete deletes with it, for its confirmation (D288).
-    func scheduledItems() -> [ScheduledItem]
+    /// The scheduled items an account delete deletes with it, for its confirmation (D288). Throws when the items
+    /// can't be read, so the confirmation fails closed rather than leaving them out (n5, Tech Architect 5681779824).
+    func scheduledItems() throws -> [ScheduledItem]
 }
 
 extension PlannedItemsSource {
     /// None, for a source with no scheduled items.
     public func scheduledAccountIDs() -> Set<UUID> { [] }
+    /// None, for a source with no scheduled items.
     public func scheduledItems() -> [ScheduledItem] { [] }
 }
 
