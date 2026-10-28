@@ -1,8 +1,60 @@
 import Foundation
 import LittleOrbitDomain
+import Observation
 
-/// The spending report's period stepping, custom range, account filter and Try Again (#184).
-extension SpendingReportViewModel {
+/// The period, currency and account controls every report screen shares (#184): the preset picker with
+/// Custom…, ‹ › stepping, the account filter and Try Again. The spending, payee and income reports and income
+/// vs expenses (slice 5) all conform, so the controls are built once.
+@MainActor
+public protocol ReportFilterModel: AnyObject, Observable {
+    /// The period shown: a preset, moved by ‹ ›, or a custom range.
+    var selection: ReportSelection { get }
+    /// The accounts counted: all of them, hidden ones too, until some are unticked (D417).
+    var accountFilter: ReportAccountFilter { get }
+    /// The account filter's list: every account in the shown currency, hidden ones included (D417).
+    var accounts: [ReportAccountOption] { get }
+    var currencies: [String] { get }
+    /// The currency shown: one at a time, never added together (D17).
+    var currencyCode: String { get }
+    var periodTitle: String { get }
+    /// The period picker's presets.
+    var periods: [ReportPeriod] { get }
+    var locale: Locale { get }
+    var timeZone: TimeZone { get }
+    var now: () -> Date { get }
+
+    /// Shows `selection`, then reloads.
+    func select(_ selection: ReportSelection) async
+    /// Shows `code` and keeps it while the report is open, as long as the period has it.
+    func selectCurrency(_ code: String) async
+    /// Counts the accounts `filter` ticks, then reloads.
+    func setAccountFilter(_ filter: ReportAccountFilter) async
+    /// Reads the report again.
+    func load() async
+}
+
+/// The shared controls' behaviour and wording.
+extension ReportFilterModel {
+    /// Today in the report's time zone.
+    public var today: CalendarDay { TransactionTiming.today(now(), timeZone: timeZone) }
+
+    // MARK: - Period
+
+    /// Shows `period` from today, then reloads.
+    public func select(_ period: ReportPeriod) async {
+        await select(.preset(period))
+    }
+
+    /// The preset the period picker shows; `nil` for a custom range.
+    public var period: ReportPeriod? { selection.preset }
+
+    public func periodName(_ period: ReportPeriod) -> String {
+        ReportText.periodName(period)
+    }
+
+    /// The picker only shows when the period has more than one currency.
+    public var showsCurrencyPicker: Bool { currencies.count > 1 }
+
     // MARK: - ‹ › stepping
 
     /// One whole period back (‹, −1) or on (›, +1): a month, quarter or year. Nothing for a custom range.
@@ -86,8 +138,7 @@ extension SpendingReportViewModel {
         guard filter != accountFilter else {
             return
         }
-        accountFilter = filter
-        await load()
+        await setAccountFilter(filter)
     }
 
     /// “all accounts”, or “2 of 3 accounts”: how many of the shown currency's accounts count.
@@ -102,6 +153,8 @@ extension SpendingReportViewModel {
     // MARK: - Try Again
 
     public var tryAgainButton: String { ReportText.tryAgainButton }
+    public var loadFailedTitle: String { ReportText.loadFailedTitle }
+    public var loadFailedMessage: String { ReportText.tryAgain }
 
     /// Try Again after a failed read (D318.5).
     public func retry() async {
@@ -109,6 +162,37 @@ extension SpendingReportViewModel {
     }
 
     // MARK: - Days and dates
+
+    /// “October 2026” for a month, “Oct – Dec 2026” for a quarter, “2026” for a year, “May – Oct 2026” for other
+    /// whole months, and “15 Sep – 14 Oct 2026” for any other range, in the view model's locale, from the system formatters (UI Designer's slice 1 spec).
+    public func title(of range: ReportDayRange) -> String {
+        switch range.shape {
+        case .month:
+            TransactionText(locale: locale).format(range.start, template: "MMMMyyyy")
+        case .year:
+            TransactionText(locale: locale).format(range.start, template: "yyyy")
+        case .quarter, .months:
+            interval(range, days: false)
+        case .days:
+            interval(range, days: true)
+        }
+    }
+
+    /// The system's interval format, as DateIntervalFormatter's MMMyyyy (or dMMMyyyy) template gives it: “Oct – Dec
+    /// 2026”, “15 Sep – 14 Oct 2026”.
+    private func interval(_ range: ReportDayRange, days: Bool) -> String {
+        var calendar = Calendar(identifier: .gregorian)
+        calendar.locale = locale
+        calendar.timeZone = timeZone
+        var style = Date.IntervalFormatStyle(locale: locale, calendar: calendar, timeZone: timeZone)
+        if days {
+            style = style.day()
+        }
+        style = style.month(.abbreviated).year()
+        let start = TransactionCalendar.noon(on: range.start, timeZoneID: timeZone.identifier) ?? now()
+        let end = TransactionCalendar.noon(on: range.end, timeZoneID: timeZone.identifier) ?? now()
+        return style.format(start..<max(start, end))
+    }
 
     private func noon(on day: CalendarDay) -> Date {
         TransactionCalendar.noon(on: day, timeZoneID: timeZone.identifier) ?? now()

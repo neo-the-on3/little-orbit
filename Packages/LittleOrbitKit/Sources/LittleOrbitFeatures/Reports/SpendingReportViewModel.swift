@@ -59,7 +59,7 @@ public struct SpendingDrillDown: Equatable, Sendable {
 /// and every read is async, so the report is built off the main actor (Tech Architect's NB1 on #185).
 @MainActor
 @Observable
-public final class SpendingReportViewModel {
+public final class SpendingReportViewModel: ReportFilterModel {
     /// Whether the rows are categories or payees. Fixed for the screen.
     public let grouping: ReportGrouping
     /// Whether the rows count spending or income. Fixed for the screen.
@@ -95,11 +95,11 @@ public final class SpendingReportViewModel {
     /// Counts loads, so only the latest one started is shown when two overlap.
     @ObservationIgnored private var loadCount = 0
     @ObservationIgnored private let useCase: any LoadSpendingReportUseCase
-    @ObservationIgnored let locale: Locale
+    @ObservationIgnored public let locale: Locale
     @ObservationIgnored let formatter: MoneyFormatter
     @ObservationIgnored let text: TransactionText
-    @ObservationIgnored let timeZone: TimeZone
-    @ObservationIgnored let now: () -> Date
+    @ObservationIgnored public let timeZone: TimeZone
+    @ObservationIgnored public let now: () -> Date
 
     public init(
         useCase: any LoadSpendingReportUseCase,
@@ -130,9 +130,10 @@ public final class SpendingReportViewModel {
         await load()
     }
 
-    /// Shows `period` from today, then reloads.
-    public func select(_ period: ReportPeriod) async {
-        await select(.preset(period))
+    /// Counts the accounts `filter` ticks, then reloads.
+    public func setAccountFilter(_ filter: ReportAccountFilter) async {
+        accountFilter = filter
+        await load()
     }
 
     /// Shows `selection`, then reloads.
@@ -144,27 +145,13 @@ public final class SpendingReportViewModel {
         await load()
     }
 
-    /// The preset the period picker shows; `nil` for a custom range.
-    public var period: ReportPeriod? { selection.preset }
-
     public var periods: [ReportPeriod] { ReportPeriod.categoryPresets }
-
-    public func periodName(_ period: ReportPeriod) -> String {
-        ReportText.periodName(period)
-    }
-
-    /// The picker only shows when the period has spending in more than one currency.
-    public var showsCurrencyPicker: Bool { currencies.count > 1 }
 
     /// No expenses or refunds in this period (and currency): the empty state.
     public var isEmpty: Bool { !isLoading && !loadFailed && rows.isEmpty }
 
     public var emptyTitle: String { flow == .income ? ReportText.noIncomeTitle : ReportText.emptyTitle }
     public var emptyMessage: String { flow == .income ? ReportText.noIncomeMessage : ReportText.emptyMessage }
-    public var loadFailedTitle: String { ReportText.loadFailedTitle }
-    public var loadFailedMessage: String { ReportText.tryAgain }
-
-    var today: CalendarDay { TransactionTiming.today(now(), timeZone: timeZone) }
 
     /// What the next load reads.
     var query: SpendingReportQuery {
@@ -314,37 +301,6 @@ public final class SpendingReportViewModel {
     func shareString(_ tenths: Int) -> String {
         (Decimal(tenths) / 1000)
             .formatted(.percent.precision(.fractionLength(1)).sign(strategy: .automatic).locale(locale))
-    }
-
-    /// “October 2026” for a month, “Oct – Dec 2026” for a quarter, “2026” for a year, “May – Oct 2026” for other
-    /// whole months, and “15 Sep – 14 Oct 2026” for any other range, in the view model's locale, from the system formatters (UI Designer's slice 1 spec).
-    func title(of range: ReportDayRange) -> String {
-        switch range.shape {
-        case .month:
-            text.format(range.start, template: "MMMMyyyy")
-        case .year:
-            text.format(range.start, template: "yyyy")
-        case .quarter, .months:
-            interval(range, days: false)
-        case .days:
-            interval(range, days: true)
-        }
-    }
-
-    /// The system's interval format, as DateIntervalFormatter's MMMyyyy (or dMMMyyyy) template gives it: “Oct – Dec
-    /// 2026”, “15 Sep – 14 Oct 2026”.
-    private func interval(_ range: ReportDayRange, days: Bool) -> String {
-        var calendar = Calendar(identifier: .gregorian)
-        calendar.locale = locale
-        calendar.timeZone = timeZone
-        var style = Date.IntervalFormatStyle(locale: locale, calendar: calendar, timeZone: timeZone)
-        if days {
-            style = style.day()
-        }
-        style = style.month(.abbreviated).year()
-        let start = TransactionCalendar.noon(on: range.start, timeZoneID: timeZone.identifier) ?? now()
-        let end = TransactionCalendar.noon(on: range.end, timeZoneID: timeZone.identifier) ?? now()
-        return style.format(start..<max(start, end))
     }
 
     private func entryRow(_ entry: SpendingReportEntry, currencyCode: String, today: CalendarDay)
