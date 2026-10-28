@@ -10,10 +10,12 @@ struct AccountsViewModelTests {
     private func model(
         _ repository: InMemoryLedgerRepository,
         planned: PlannedItemCounts = PlannedItemCounts(),
+        budgetsEnabled: Bool = FeatureFlags.budgetsEnabled,
     ) -> AccountsViewModel {
         let model = AccountsViewModel(
             useCases: FeatureFixture.useCases(repository),
             plannedItems: StubPlannedItems(planned),
+            budgetsEnabled: budgetsEnabled,
             locale: FeatureFixture.india,
         )
         model.load()
@@ -27,8 +29,8 @@ struct AccountsViewModelTests {
         #expect(model.assets.isEmpty && model.credit.isEmpty)
         #expect(model.netWealth.isEmpty)
         #expect(model.netWealthSummary == "—")
-        #expect(model.homeRows.map(\.title) == ["Budgets", "Scheduled", "Reports"])
-        #expect(model.homeRows.map(\.subtitle) == ["No budgets yet", "Nothing scheduled", "No transactions yet"])
+        #expect(model.homeRows.map(\.title) == ["Scheduled", "Reports"])
+        #expect(model.homeRows.map(\.subtitle) == ["Nothing scheduled", "No transactions yet"])
         #expect(model.homeRows.allSatisfy { $0.badge == nil })
     }
 
@@ -393,6 +395,7 @@ struct AccountsViewModelTests {
                 scheduledItemCount: 5,
                 overdueOccurrenceCount: 120,
             ),
+            budgetsEnabled: true,
         )
         let rows = model.homeRows
         #expect(rows.map(\.badge) == ["2", "99+", nil])
@@ -409,8 +412,9 @@ struct AccountsViewModelTests {
         let hidden = try #require(try repository.accounts().first { $0.isHidden })
         try repository.saveTransaction(Transaction(type: .expense, amount: 1, accountID: hidden.id))
         model.load()
-        #expect(model.homeRows[2].subtitle == nil)
-        #expect(model.homeRows[2].accessibilityLabel == "Reports")
+        let reports = try #require(model.homeRows.first { $0.destination == .reports })
+        #expect(reports.subtitle == nil)
+        #expect(reports.accessibilityLabel == "Reports")
         #expect(model.assets.first { $0.name == "Everyday Savings" }?.hasTransactions == false)
     }
 
