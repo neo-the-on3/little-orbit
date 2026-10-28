@@ -32,7 +32,7 @@ struct CurrencyLockTests {
     @Test("The message matches D104 exactly")
     func message() {
         #expect(
-            CurrencyLock.message == "Currency can't be changed once the account has transactions or scheduled items."
+            CurrencyLock.message == "Currency can’t be changed once the account has transactions or scheduled items."
         )
     }
 }

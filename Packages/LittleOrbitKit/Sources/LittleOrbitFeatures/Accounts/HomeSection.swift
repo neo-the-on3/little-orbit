@@ -28,6 +28,14 @@ public struct PlannedItemCounts: Equatable, Sendable {
 @MainActor
 public protocol PlannedItemsSource: AnyObject {
     func plannedItemCounts() -> PlannedItemCounts
+    /// The accounts a scheduled item uses, as its account or as To, Completed items included: Edit Account locks
+    /// their currency (D381.3).
+    func scheduledAccountIDs() -> Set<UUID>
+}
+
+extension PlannedItemsSource {
+    /// None, for a source with no scheduled items.
+    public func scheduledAccountIDs() -> Set<UUID> { [] }
 }
 
 /// Used until #25 and #26 provide real counts.
