@@ -20,6 +20,8 @@ public final class ScheduledPayViewModel: Identifiable {
     /// The amount field's error, after a Record attempt.
     public private(set) var amountError: String?
     public var alert: CategoryAlert?
+    /// “Discard Changes?” for Cancel, Esc on the Mac or a swipe down with unsaved edits (D411, D300.1).
+    public var discard = DiscardConfirmation()
     /// The fields as the sheet opened, for `hasUnsavedEdits`.
     @ObservationIgnored private var openedFields: [AnyHashable] = []
 
@@ -64,6 +66,14 @@ public final class ScheduledPayViewModel: Identifiable {
     /// The fields as they are now; `openedFields` holds them as the sheet opened.
     private var fields: [AnyHashable] {
         [amountText, postedOn, accountID, categoryID, changesFutureOccurrences]
+    }
+
+    /// Cancel, Esc on the Mac or a swipe down on iOS (D411): with unsaved edits, the same fields as `hasUnsavedEdits`,
+    /// it asks the Scheduled form's “Discard Changes?” and returns false, so the sheet stays open; otherwise it
+    /// returns true, and the sheet closes with nothing paid. Discard Changes closes it with nothing paid too; Keep
+    /// Editing leaves every value as it was. A tapped reminder never asks (D383).
+    public func requestDismiss(from source: DiscardConfirmation.Source) -> Bool {
+        discard.requestDismiss(isDirty: hasUnsavedEdits, from: source)
     }
 
     public var amountLabel: String { ScheduledText.amount }
