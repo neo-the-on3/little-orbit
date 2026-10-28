@@ -27,7 +27,8 @@
             Chart(model.chartBars) { bar in
                 BarMark(
                     x: .value(model.chartAmountAxis, bar.amount),
-                    y: .value(model.chartCategoryAxis, bar.name),
+                    // Keyed by the row's ID, so two rows with the same name get two bars; the axis shows the name.
+                    y: .value(model.chartCategoryAxis, bar.id),
                 )
                 .foregroundStyle(bar.hue.map { Color($0.token) } ?? Color.secondary)
                 .annotation(position: .trailing, alignment: .leading) {
@@ -45,8 +46,8 @@
             .chartYAxis {
                 AxisMarks(position: .leading) { value in
                     AxisValueLabel {
-                        if let name = value.as(String.self) {
-                            Text(name).lineLimit(2)
+                        if let id = value.as(String.self), let bar = model.chartBar(id: id) {
+                            Text(bar.name).lineLimit(2)
                         }
                     }
                 }
@@ -74,7 +75,7 @@
                     amountAxis: model.chartAmountAxis,
                     currencyCode: model.currencyCode,
                     locale: model.locale,
-                    bars: model.chartBars,
+                    points: model.chartAudioPoints,
                 )
             )
         }
@@ -85,8 +86,7 @@
                 return
             }
             let origin = geometry[plot].origin
-            guard let name: String = proxy.value(atY: location.y - origin.y), let row = model.chartRow(named: name)
-            else {
+            guard let id: String = proxy.value(atY: location.y - origin.y), let row = model.chartRow(id: id) else {
                 return
             }
             open(row)
@@ -102,13 +102,14 @@
         let amountAxis: String
         let currencyCode: String
         let locale: Locale
-        let bars: [SpendingChartBar]
+        /// One per bar, each with its own category name.
+        let points: [SpendingChartAudioPoint]
 
         func makeChartDescriptor() -> AXChartDescriptor {
             let code = currencyCode
             let locale = locale
-            let largest = bars.map(\.amount).max() ?? 0
-            let xAxis = AXCategoricalDataAxisDescriptor(title: categoryAxis, categoryOrder: bars.map(\.name))
+            let largest = points.map(\.amount).max() ?? 0
+            let xAxis = AXCategoricalDataAxisDescriptor(title: categoryAxis, categoryOrder: points.map(\.category))
             let yAxis = AXNumericDataAxisDescriptor(
                 title: amountAxis,
                 range: 0...max(largest, 1),
@@ -119,8 +120,8 @@
             let series = AXDataSeriesDescriptor(
                 name: title,
                 isContinuous: false,
-                dataPoints: bars.map { bar in
-                    AXDataPoint(x: bar.name, y: bar.amount, additionalValues: [], label: bar.accessibilityValue)
+                dataPoints: points.map { point in
+                    AXDataPoint(x: point.category, y: point.amount, additionalValues: [], label: point.label)
                 },
             )
             return AXChartDescriptor(

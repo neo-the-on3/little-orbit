@@ -55,6 +55,11 @@ struct ReportCatalogTests {
         )
     }
 
+    @Test("The audio graph's name for a repeated bar name is one entry with its English value (#310 n1)")
+    func repeatedBarName() throws {
+        #expect(try StringCatalogTests.entries()["%1$@ (%2$lld)"] == ["%1$@ (%2$lld)"])
+    }
+
     @Test("The Mac table's column titles are their own keys, apart from the shared Category, Amount and Transactions")
     func tableColumns() throws {
         let entries = try StringCatalogTests.entries()

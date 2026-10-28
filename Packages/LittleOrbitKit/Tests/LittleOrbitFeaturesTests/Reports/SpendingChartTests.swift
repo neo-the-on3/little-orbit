@@ -61,9 +61,9 @@ struct SpendingChartTests {
         #expect(rent.accessibilityLabel == "Rent")
         #expect(rent.accessibilityValue == "₹45,000.00, 60.9%")
         #expect(rent.hue == model.rows.first?.hue)
-        #expect(model.chartRow(named: "Rent") == model.rows.first)
-        #expect(model.chartRow(named: "Other · 2 categories") == nil)
-        #expect(model.chartRow(named: "Nothing") == nil)
+        #expect(model.chartRow(id: rent.id) == model.rows.first)
+        #expect(model.chartRow(id: "other") == nil)
+        #expect(model.chartRow(id: "Rent") == nil, "a tap resolves by ID, never by name")
         // The annotation is compact; the list keeps the full amount.
         #expect(rent.compactAmountText != rent.amountText)
         #expect(rent.compactAmountText.contains("45"))
@@ -100,6 +100,43 @@ struct SpendingChartTests {
         #expect(model.chartCategoryAxis == "Category")
         #expect(model.chartAmountAxis == "Amount")
         #expect(model.chartAmountText(12_450.5) == "₹12,450.50")
+    }
+
+    @Test(
+        "Given a category I named “Uncategorised” and uncategorised spending, when the chart shows, then there are two bars, each tap opens its own row, and the audio graph has two points"
+    )
+    func duplicateNames() async throws {
+        let lookalike = TransactionCategory(name: "Uncategorised", iconName: "tag.fill")
+        var snapshot = Self.snapshot([S.expense("500", lookalike, 10, 1), S.expense("300", nil, 10, 2)])
+        snapshot.categories.append(lookalike)
+        let model = S.model(FakeSpendingReportUseCase(snapshot: snapshot))
+        await model.load()
+        #expect(model.rows.map(\.name) == ["Uncategorised", "Uncategorised"])
+        #expect(model.chartBars.map(\.name) == ["Uncategorised", "Uncategorised"])
+        #expect(Set(model.chartBars.map(\.id)).count == 2)
+        let mine = try #require(model.chartBars.first)
+        let none = try #require(model.chartBars.last)
+        #expect(mine.id == lookalike.id.uuidString)
+        #expect(model.chartRow(id: mine.id)?.categoryID == lookalike.id)
+        #expect(model.chartRow(id: none.id) == model.rows.last)
+        #expect(model.chartRow(id: none.id)?.categoryID == nil)
+        #expect(model.chartBar(id: none.id)?.amountText == "₹300.00")
+        let points = model.chartAudioPoints
+        #expect(points.map(\.id) == model.chartBars.map(\.id))
+        #expect(points.map(\.category) == ["Uncategorised", "Uncategorised (2)"])
+        #expect(points.map(\.label) == ["₹500.00, 62.5%", "₹300.00, 37.5%"])
+    }
+
+    @Test("The audio graph has one point per bar, in the chart's order, Other last")
+    func audioPoints() async {
+        let model = S.model(FakeSpendingReportUseCase(snapshot: Self.snapshot(Self.seven)))
+        await model.load()
+        let points = model.chartAudioPoints
+        #expect(points.count == model.chartBars.count)
+        #expect(points.map(\.id) == model.chartBars.map(\.id))
+        #expect(points.map(\.amount) == model.chartBars.map(\.amount))
+        #expect(points.last?.category == "Other, 2 categories")
+        #expect(points.first?.category == "Rent")
     }
 
     @Test("The Mac table's columns are Category, Transactions, Amount and Share; Transactions is a number")

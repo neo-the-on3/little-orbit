@@ -12,6 +12,12 @@ extension ReportText {
         FeatureText.plural("Other, %lld categories", one: "Other, %lld category", count)
     }
 
+    /// “Uncategorised (2)”: the audio graph's name for the second of two bars with the same name, such as a
+    /// category the user named “Uncategorised” next to the Uncategorised row (Tech Architect's n1 on #310).
+    static func repeatedBarName(_ name: String, _ ordinal: Int) -> String {
+        FeatureText.format("%1$@ (%2$lld)", name, ordinal)
+    }
+
     /// The Mac table’s first column and the audio graph’s category axis.
     static var categoryColumn: String {
         FeatureText.string(

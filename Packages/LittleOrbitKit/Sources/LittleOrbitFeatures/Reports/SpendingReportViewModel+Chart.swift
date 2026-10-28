@@ -26,6 +26,17 @@ public struct SpendingChartBar: Identifiable, Equatable, Sendable {
     public var accessibilityValue: String
 }
 
+/// One point of the chart's audio graph: a bar, named so no two points share a category.
+public struct SpendingChartAudioPoint: Identifiable, Equatable, Sendable {
+    /// The bar's ID.
+    public var id: String
+    /// “Rent”, “Other, 2 categories”, or “Uncategorised (2)” for the second bar named “Uncategorised”.
+    public var category: String
+    public var amount: Double
+    /// “₹12,450.50, 16.9%”.
+    public var label: String
+}
+
 extension SpendingReportViewModel {
     /// The audio graph's title: the report's question.
     public var chartTitle: String { ReportText.spendingQuestion }
@@ -41,9 +52,34 @@ extension SpendingReportViewModel {
         formatter.string(Decimal(amount), currencyCode: currencyCode)
     }
 
-    /// The bar whose drill-down a tap on `name` opens, or `nil` for Other or no bar.
-    public func chartRow(named name: String) -> SpendingRowModel? {
-        chartBars.first { $0.name == name }?.row
+    /// The bar with `id`, the value Swift Charts gives back for a tap or an axis label. Bars are keyed by their
+    /// row's ID, never their name, since two rows can share a name (Tech Architect's n1 on #310).
+    public func chartBar(id: String) -> SpendingChartBar? {
+        chartBars.first { $0.id == id }
+    }
+
+    /// The row whose drill-down a tap on the bar with `id` opens, or `nil` for Other or no bar.
+    public func chartRow(id: String) -> SpendingRowModel? {
+        chartBar(id: id)?.row
+    }
+
+    /// The audio graph's points, one per bar in the chart's order. A name that more than one bar has gets its
+    /// position among them after the first, as in “Uncategorised (2)”, because the audio graph's category axis
+    /// tells points apart by their name alone.
+    public var chartAudioPoints: [SpendingChartAudioPoint] {
+        var seen: [String: Int] = [:]
+        return chartBars.map { bar in
+            let ordinal = (seen[bar.accessibilityLabel] ?? 0) + 1
+            seen[bar.accessibilityLabel] = ordinal
+            let category =
+                ordinal == 1 ? bar.accessibilityLabel : ReportText.repeatedBarName(bar.accessibilityLabel, ordinal)
+            return SpendingChartAudioPoint(
+                id: bar.id,
+                category: category,
+                amount: bar.amount,
+                label: bar.accessibilityValue,
+            )
+        }
     }
 
     func chartBars(for report: SpendingReport) -> [SpendingChartBar] {
