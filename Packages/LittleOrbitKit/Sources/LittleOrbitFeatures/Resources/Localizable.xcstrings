@@ -9231,6 +9231,76 @@
         }
       }
     },
+    "%1$lld edited occurrences no longer match the schedule and were removed: %2$@": {
+      "comment": "Scheduled notice after saving a new Starts date or repeat that no longer has the day of one or more occurrences whose amount or other details were edited for that occurrence only, so they were removed; Edit › Undo brings them back (D442.2, D442.3): %1$lld is how many were removed, %2$@ their days, as a list (“26 Oct” or “26 Oct and 2 Nov”).",
+      "extractionState": "manual",
+      "generatesSymbol": false,
+      "localizations": {
+        "en": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "%#@count@"
+          },
+          "substitutions": {
+            "count": {
+              "argNum": 1,
+              "formatSpecifier": "lld",
+              "variations": {
+                "plural": {
+                  "one": {
+                    "stringUnit": {
+                      "state": "translated",
+                      "value": "%1$lld edited occurrence no longer matches the schedule and was removed: %2$@"
+                    }
+                  },
+                  "other": {
+                    "stringUnit": {
+                      "state": "translated",
+                      "value": "%1$lld edited occurrences no longer match the schedule and were removed: %2$@"
+                    }
+                  }
+                }
+              }
+            }
+          }
+        }
+      }
+    },
+    "%1$lld moved payments after the end date were removed: %2$@": {
+      "comment": "Scheduled notice after saving an item whose new End date is before the day “This occurrence only” moved one or more payments to, so they were removed; Edit › Undo brings them back (D442.1, D442.3): %1$lld is how many were removed, %2$@ the days they were due, as a list (“3 Nov” or “3 Nov and 10 Nov”).",
+      "extractionState": "manual",
+      "generatesSymbol": false,
+      "localizations": {
+        "en": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "%#@count@"
+          },
+          "substitutions": {
+            "count": {
+              "argNum": 1,
+              "formatSpecifier": "lld",
+              "variations": {
+                "plural": {
+                  "one": {
+                    "stringUnit": {
+                      "state": "translated",
+                      "value": "%1$lld moved payment after the end date was removed: %2$@"
+                    }
+                  },
+                  "other": {
+                    "stringUnit": {
+                      "state": "translated",
+                      "value": "%1$lld moved payments after the end date were removed: %2$@"
+                    }
+                  }
+                }
+              }
+            }
+          }
+        }
+      }
+    },
     "Each is recorded only once.": {
       "comment": "Catch-up hint sentence after two or more recorded occurrences (D338).",
       "extractionState": "manual",

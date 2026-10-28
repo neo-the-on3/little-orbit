@@ -243,6 +243,7 @@ public final class ScheduledListViewModel {
             let change = $0
             self?.load()
             self?.recordSave(change)
+            self?.showRemovedNotice(change)
             self?.changed()
         }
     }
