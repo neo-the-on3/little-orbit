@@ -26,7 +26,7 @@ struct ScheduledUndoMenuTests {
     }
 
     private func menu(_ window: TestWindow) -> UndoMenuItems {
-        UndoMenuItems(window.undoManager)
+        UndoMenuItems(window.undoManager, gateClosed: false)
     }
 
     @Test("Before any step the menu reads Undo and Redo, both dimmed; with no window too")
@@ -37,7 +37,7 @@ struct ScheduledUndoMenuTests {
         #expect(menu(window).redoTitle == "Redo")
         #expect(!menu(window).canUndo)
         #expect(!menu(window).canRedo)
-        #expect(UndoMenuItems(nil) == menu(window))
+        #expect(UndoMenuItems(nil, gateClosed: false) == menu(window))
     }
 
     @Test("Pay Now reaches the window's UndoManager as Pay Gym; the menu reads Undo Pay Gym, then Redo Pay Gym")
@@ -90,11 +90,11 @@ struct ScheduledUndoMenuTests {
         let (list, window) = window(scene)
         list.payNow(try #require(list.overdueRows.first))
         let field = FakeUndoManager()
-        #expect(UndoMenuItems(field).undoTitle == "Undo")
-        #expect(!UndoMenuItems(field).canUndo)
+        #expect(UndoMenuItems(field, gateClosed: false).undoTitle == "Undo")
+        #expect(!UndoMenuItems(field, gateClosed: false).canUndo)
         field.registerStep(field, named: "Typing") {}
-        #expect(UndoMenuItems(field).undoTitle == "Undo Typing")
-        #expect(UndoMenuItems(field).canUndo)
+        #expect(UndoMenuItems(field, gateClosed: false).undoTitle == "Undo Typing")
+        #expect(UndoMenuItems(field, gateClosed: false).canUndo)
         #expect(menu(window).undoTitle == "Undo Pay Gym")
     }
 
