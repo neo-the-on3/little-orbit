@@ -61,12 +61,13 @@ struct ScheduledPayReceivedTests {
         #expect(stored.receivedCurrencyCode == "USD")
     }
 
-    @Test("Received empty: Record shows the error and pays nothing; an edit clears the error")
+    @Test("Received empty: Record is disabled with the hint, and Record anyway shows the error and pays nothing")
     func emptyReceived() throws {
         let scene = try ScheduledScene()
         let (_, sheet) = try sheet(scene)
         sheet.receivedText = ""
         #expect(sheet.receivedHint == "Enter the amount received in USD.")
+        #expect(!sheet.canRecord, "D415: Record waits for Received")
         #expect(!sheet.record())
         #expect(sheet.receivedError == "Enter the amount received in USD.")
         #expect(scene.recorded.isEmpty)
