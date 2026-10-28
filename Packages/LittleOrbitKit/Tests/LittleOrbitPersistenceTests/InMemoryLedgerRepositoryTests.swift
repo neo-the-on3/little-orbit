@@ -61,6 +61,15 @@ final class InMemoryLedgerRepositoryTests: XCTestCase {
         }
     }
 
+    /// #207 t3: a scheduled item's received currency is stored and read back, set, `nil` and cleared.
+    func testReceivedCurrencyIsStoredAndReadBack() throws {
+        try onMain {
+            try assertReceivedCurrencyStorage {
+                InMemoryLedgerRepository()
+            }
+        }
+    }
+
     func testAccountDeleteKeepsAThreeDecimalScheduledItem() throws {
         try onMain {
             try assertAccountDeleteKeepsAThreeDecimalItem {
