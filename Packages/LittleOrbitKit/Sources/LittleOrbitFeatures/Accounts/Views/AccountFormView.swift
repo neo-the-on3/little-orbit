@@ -23,11 +23,15 @@
         }
 
         public var body: some View {
-            #if os(macOS)
-                macBody
-            #else
-                iOSBody
-            #endif
+            Group {
+                #if os(macOS)
+                    macBody
+                #else
+                    iOSBody
+                #endif
+            }
+            // A refused Save's lock message is announced once, by the model (L7).
+            .onAppear { model.announce = { AccessibilityNotification.Announcement($0).post() } }
         }
 
         private func save() {
