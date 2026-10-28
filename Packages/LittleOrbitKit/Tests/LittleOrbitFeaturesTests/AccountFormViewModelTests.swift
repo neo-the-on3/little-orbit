@@ -256,7 +256,7 @@ struct AccountFormViewModelTests {
         #expect(locked.isCurrencyLocked)
         #expect(
             locked.currencyLockMessage
-                == "Currency can't be changed once the account has transactions or scheduled items."
+                == "Currency can’t be changed once the account has transactions or scheduled items."
         )
     }
 

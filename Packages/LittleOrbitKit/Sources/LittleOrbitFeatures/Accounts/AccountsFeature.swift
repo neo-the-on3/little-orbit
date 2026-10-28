@@ -10,6 +10,8 @@ public final class AccountsFeature {
     private let defaultCurrency: String
     private let locale: Locale
     private let updates: LedgerUpdates?
+    /// Scheduled items lock their accounts' currency in Edit Account (D381.3).
+    private let plannedItems: any PlannedItemsSource
 
     /// `ledgerChanges` reloads the list after a restore replaced the ledger, so it never shows, or writes back,
     /// the old data (#40). `updates` tells every window to reload after an account is added, edited, hidden,
@@ -26,6 +28,7 @@ public final class AccountsFeature {
         self.defaultCurrency = defaultCurrency
         self.locale = locale
         self.updates = updates
+        self.plannedItems = plannedItems
         let accounts = AccountsViewModel(
             useCases: useCases,
             plannedItems: plannedItems,
@@ -46,6 +49,7 @@ public final class AccountsFeature {
             mode: mode,
             defaultCurrency: defaultCurrency,
             locale: locale,
+            scheduledAccountIDs: plannedItems.scheduledAccountIDs(),
             changed: { [weak updates] in updates?.changed() },
         )
     }
