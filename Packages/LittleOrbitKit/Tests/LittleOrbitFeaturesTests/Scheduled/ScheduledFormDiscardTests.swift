@@ -99,6 +99,20 @@ struct ScheduledFormDiscardTests {
         #expect(form.discard.isPresentedFromCancel)
     }
 
+    @Test("Opened on one occurrence: untouched it closes; a new Due Date alone asks (D383, D385)")
+    func dueDateAsks() throws {
+        let key = try #require(list.overdueRows.first { $0.itemID == rent.id }?.editOccurrence)
+        list.openEditor(rent.id, occurrence: key)
+        let form = try #require(list.form)
+        #expect(form.showsDueDate)
+        #expect(!form.hasUnsavedEdits)
+        #expect(form.requestDismiss(from: .cancel))
+        form.dueDay = try #require(ScheduleCalendar.adding(days: 2, to: form.dueDay))
+        #expect(form.hasUnsavedEdits)
+        #expect(!form.requestDismiss(from: .cancel))
+        #expect(form.discard.isPresentedFromCancel)
+    }
+
     @Test("A tapped reminder never asks: a form with unsaved edits just stays open (D383, D388.3)")
     func reminderTapDoesNotAsk() throws {
         let form = try editRent()
