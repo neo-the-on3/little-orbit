@@ -136,20 +136,29 @@ public enum ScheduledReminderPlanner {
         return Array(reminders.prefix(limit))
     }
 
-    /// The item's first `limit` days from `today` that can still be reminded of, oldest first. These are only
-    /// candidates: `plan` merges every item's and keeps the nearest `limit` overall.
+    /// The keys of the item's first `limit` occurrences due from `today` that can still be reminded of, by due day
+    /// then key. These are only candidates: `plan` merges every item's and keeps the nearest `limit` overall.
+    ///
+    /// They're chosen and cut by the day each is due, not by its key (#317, D428.4), so an occurrence "This
+    /// occurrence only" moved earlier from past the rule's window is still reminded, and one moved later gives up
+    /// its place to nearer ones.
     static func candidateDays(of item: ScheduledItem, from today: CalendarDay, limit: Int) -> [CalendarDay] {
-        // Settled records can only shorten the list, so asking for that many more always leaves `limit` open days.
+        // Settled and moved records can only shorten the list of unmoved keys, so asking for that many more always
+        // leaves `limit` open ones: no unmoved key past them can be among the nearest `limit`.
         let ruled = ScheduleCalendar.occurrences(of: item, from: today, count: limit + item.occurrences.count)
         let pending = item.pendingDays.filter { $0 >= today }
-        // An earlier occurrence "This occurrence only" moved to today or later is still ahead (D45).
-        let movedAhead = item.occurrences
-            .filter { $0.deletedAt == nil && $0.day < today && item.dueDay(of: $0.day) >= today }
+        // Occurrences "This occurrence only" moved, whatever their key: before today, in the window or past it (D45).
+        // `editedKeys` has the open ones. One the app recorded keeps its reminder (D354.1), so it's a candidate too.
+        let movedRecorded = item.occurrences
+            .filter { $0.deletedAt == nil && $0.edit?.has(.day) == true && $0.outcome == .posted }
             .map(\.day)
-        let extra = pending + movedAhead
-        let days = extra.isEmpty ? ruled : Array(Set(ruled + extra)).sorted()
+        let extra = pending + ScheduleCalendar.editedKeys(of: item) + movedRecorded
+        let keys = extra.isEmpty ? ruled : Array(Set(ruled + extra))
         // One moved before today is overdue or past, so it never notifies (S10).
-        return Array(days.filter { isRemindable($0, of: item) && item.dueDay(of: $0) >= today }.prefix(limit))
+        let slots: [ScheduledSlot] = keys.map { ScheduledSlot(key: $0, day: item.dueDay(of: $0)) }
+            .filter { slot in slot.day >= today && isRemindable(slot.key, of: item) }
+            .sorted { lhs, rhs in lhs.day == rhs.day ? lhs.key < rhs.key : lhs.day < rhs.day }
+        return slots.prefix(limit).map(\ScheduledSlot.key)
     }
 
     /// Whether the occurrence on `day` still gets its reminder.

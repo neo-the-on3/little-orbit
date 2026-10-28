@@ -131,4 +131,30 @@ struct ScheduledReminderPayTests {
         #expect(!pending(item, today))
         #expect(notifications.days == [Fix.day(2026, 11, 20), Fix.day(2026, 12, 20)])
     }
+
+    @Test("#317 check 3: paying an occurrence moved from 70 weeks out drops its reminder and no other")
+    func payMovedFromBeyondTheWindow() async throws {
+        var item = Fix.rent(amount: 199, start: Fix.day(2026, 7, 6), rule: .weekly, automatic: false)
+        item.details = "Phone Plan"
+        item.notifiesWhenDue = true
+        repository.now = Fix.created
+        try repository.useCases().save(item)
+        repository.now = Fix.date(2026, 10, 28, 8)
+        let far = Fix.day(2028, 3, 6)
+        let moveTo = Fix.day(2026, 11, 3)
+        let save = ScheduledOccurrenceSave(occurrence: far, dueDay: moveTo, scope: .thisOccurrence)
+        _ = try repository.useCases().update(item, editing: save, payee: nil)
+        try await reminders.reschedule()
+        #expect(pending(item, far))
+        #expect(notifications.pending[ScheduledReminder.identifier(item: item.id, day: far)]?.day == moveTo)
+        let others = notifications.pending.filter { $0.key != ScheduledReminder.identifier(item: item.id, day: far) }
+        repository.now = Fix.date(2026, 11, 3, 8)
+        try repository.useCases().payNow(itemID: item.id, occurrence: far)
+        try await reminders.reschedule()
+        #expect(!pending(item, far))
+        // Mon 2 Nov's has passed; every other reminder is the one it was, plus the next Monday in the freed slot.
+        let after = notifications.pending
+        #expect(others.filter { $0.value.day > moveTo }.allSatisfy { after[$0.key] == $0.value })
+        #expect(after.count == ScheduledReminderPlanner.pendingBudget)
+    }
 }
