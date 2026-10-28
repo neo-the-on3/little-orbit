@@ -60,4 +60,36 @@ struct ScheduledPayUnsavedTests {
         #expect(sheets.prepareForReminder() == .afterClosing)
         #expect(list.payment == nil)
     }
+
+    /// Every field the Pay sheet edits (D385.1). A field added to the sheet gets a case here in the same PR
+    /// (D385.3).
+    enum PayField: String, CaseIterable, Sendable {
+        case amount, paidOn, account, category, changeFuture
+
+        /// One switch case per field: changes only that one.
+        @MainActor
+        func change(_ sheet: ScheduledPayViewModel, _ scene: ScheduledScene) {
+            switch self {
+            case .amount: sheet.amountText = "26,000"
+            case .paidOn: sheet.postedOn = CalendarDay(year: 2026, month: 10, day: 19)
+            case .account: sheet.accountID = scene.fund.id
+            case .category: sheet.categoryID = nil
+            case .changeFuture: sheet.changesFutureOccurrences.toggle()
+            }
+        }
+    }
+
+    @Test(
+        "D385: changing only one field of the Pay sheet counts as unsaved edits, so a tapped reminder leaves it open",
+        arguments: PayField.allCases,
+    )
+    func everyFieldCounts(_ field: PayField) throws {
+        let scene = try ScheduledScene()
+        let opened = try paySheet(scene)
+        #expect(!opened.sheet.hasUnsavedEdits)
+        field.change(opened.sheet, scene)
+        #expect(opened.sheet.hasUnsavedEdits, "\(field.rawValue)")
+        #expect(opened.sheets.prepareForReminder() == .underneath)
+        #expect(opened.list.payment === opened.sheet)
+    }
 }
