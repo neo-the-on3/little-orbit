@@ -42,14 +42,16 @@
 
     /// The Edit menu's items, read again whenever they may have changed: a group opened or closed, an Undo or a Redo
     /// on any undo manager, a window becoming or leaving key, the menu bar opening (menu update), and the batch gate
-    /// closing or opening (`UndoCommandGate.editMenuObserver`, read in the same turn, D407.2). Never on
-    /// `NSUndoManagerCheckpoint`, which reading `canUndo` posts (Tester's B1 on #87).
+    /// closing or opening (`UndoCommandGate.editMenuObserver`, read in the same turn, D407.2). Each notification is
+    /// read synchronously as it posts, with no main-queue hop (`UndoMenuRefresher`, B1), so a ⌘Z right after the
+    /// first keystroke finds Undo already on. Never on `NSUndoManagerCheckpoint`, which reading `canUndo` posts
+    /// (Tester's B1 on #87).
     @MainActor
     final class FocusedUndoMenu: ObservableObject {
         static let shared = FocusedUndoMenu()
 
         @Published private(set) var items = UndoMenuItems(nil, gateClosed: false)
-        private var tokens: [any NSObjectProtocol] = []
+        private var refresher: UndoMenuRefresher?
 
         private init() {
             let names: [Notification.Name] = [
@@ -61,33 +63,24 @@
                 NSWindow.didResignKeyNotification,
                 NSMenu.didBeginTrackingNotification,
             ]
-            tokens = names.map { name in
-                NotificationCenter.default.addObserver(forName: name, object: nil, queue: .main) { [weak self] _ in
-                    MainActor.assumeIsolated { self?.refresh() }
-                }
+            let refresher = UndoMenuRefresher(names: names) {
+                Self.read(gateClosed: UndoCommandGate.shared.isClosed)
             }
+            refresher.changed = { [weak self] next in self?.items = next }
+            self.refresher = refresher
+            items = refresher.items
+            // The gate calls this with its own `isClosed`, which `read` takes too, so one refresher owns the items.
             UndoCommandGate.shared.editMenuObserver = { [weak self] gateClosed in
-                self?.refresh(gateClosed: gateClosed) ?? UndoMenuItems(nil, gateClosed: gateClosed)
+                self?.refresher?.refresh() ?? Self.read(gateClosed: gateClosed)
             }
-            refresh()
-        }
-
-        /// `refresh(gateClosed:)` for the gate as it is now.
-        func refresh() {
-            refresh(gateClosed: UndoCommandGate.shared.isClosed)
         }
 
         /// For the manager ⌘Z reaches, as `NSApp.sendAction(undo:, to: nil, from: nil)` finds it: the key window's
-        /// first responder's `undoManager`, else the key window's (`UndoMenuItems`).
-        @discardableResult
-        func refresh(gateClosed: Bool) -> UndoMenuItems {
+        /// first responder's `undoManager`, else the key window's (`UndoMenuItems`). The gate's closed state wins.
+        private static func read(gateClosed: Bool) -> UndoMenuItems {
             let window = NSApp?.keyWindow
             let manager = window?.firstResponder?.undoManager ?? window?.undoManager
-            let next = UndoMenuItems(manager, gateClosed: gateClosed)
-            if next != items {
-                items = next
-            }
-            return next
+            return UndoMenuItems(manager, gateClosed: gateClosed)
         }
     }
 #endif
