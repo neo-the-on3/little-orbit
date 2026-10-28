@@ -135,4 +135,40 @@ struct ScheduledMovedPeriodTests {
         let due = ScheduleCalendar.dueOccurrences(of: item, through: Fix.day(2026, 12, 31)).map(\.day)
         #expect(due.suffix(2) == [Fix.day(2026, 11, 1), Fix.day(2026, 11, 30)])
     }
+
+    @Test(
+        "D433.1 with D437: a kept move due Wed 4 Nov, then Tue 10 Nov moved to Thu 5 Nov for all future: 5 Nov is kept"
+    )
+    func allFutureIntoAKeptMovesPeriod() throws {
+        var phone = Fix.rent(amount: 199, start: Fix.day(2026, 10, 27), rule: .weekly, automatic: false)
+        var edit = ScheduledOccurrenceEdit()
+        edit.set(.day, from: phone, day: Fix.day(2026, 11, 4))
+        let kept = ScheduledOccurrence(
+            id: UUID(),
+            day: Fix.day(2026, 10, 26),
+            outcome: .pending,
+            edit: edit,
+            createdAt: Fix.created,
+        )
+        phone.occurrences = [kept]
+        var ledger = Fix.ledger
+        ledger.scheduledItems = [phone]
+        let save = ScheduledOccurrenceSave(
+            occurrence: Fix.day(2026, 11, 10),
+            dueDay: Fix.day(2026, 11, 5),
+            scope: .allFuture,
+        )
+        let snapshot = try LedgerBook.savingScheduledOccurrence(
+            phone,
+            editing: save,
+            in: ledger,
+            today: Fix.day(2026, 10, 21),
+            now: Fix.date(2026, 10, 21),
+        )
+        let item = try #require(snapshot.scheduledItems.first)
+        let due = ScheduleCalendar.dueOccurrences(of: item, through: Fix.day(2026, 11, 12)).map(\.day)
+        #expect(due.contains(Fix.day(2026, 11, 5)), "\(due)")
+        #expect(due.contains(Fix.day(2026, 11, 4)), "\(due)")
+        #expect(ScheduleCalendar.isOccurrence(Fix.day(2026, 11, 5), of: item))
+    }
 }
