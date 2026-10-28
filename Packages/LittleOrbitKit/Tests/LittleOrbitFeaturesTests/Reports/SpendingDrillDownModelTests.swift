@@ -47,6 +47,37 @@ struct SpendingDrillDownModelTests {
         #expect(drill.loadFailed == false)
     }
 
+    @Test("Given an open drill-down, when its category's last transaction is deleted, then it shows ₹0.00 and no share")
+    func refreshAfterLastDeletion() throws {
+        let only = S.expense("450", S.groceries, 10, 7)
+        let fake = FakeSpendingReportUseCase(snapshot: S.snapshot([only, S.expense("2000", S.rent, 10, 1)]))
+        let report = S.model(fake)
+        report.load(at: 0)
+        let row = try #require(report.rows.first { $0.categoryID == S.groceries.id })
+        let drill = report.makeDrillDown(for: row)
+        drill.load()
+        #expect(drill.drillDown?.caption == "\(try #require(row.shareText)) of spending · October 2026 · INR")
+
+        fake.snapshot.transactions = fake.snapshot.transactions.map { transaction in
+            guard transaction.id == only.id else {
+                return transaction
+            }
+            var gone = transaction
+            gone.deletedAt = S.date(10, 25)
+            return gone
+        }
+        drill.refresh(at: 1)
+
+        let after = try #require(drill.drillDown)
+        #expect(report.rows.contains { $0.categoryID == S.groceries.id } == false)
+        #expect(after.title == "Food & Dining › Groceries")
+        #expect(after.amountText == "₹0.00")
+        #expect(after.countText == "0 transactions")
+        #expect(after.entries.isEmpty)
+        // No stale share: the header falls back to the period and currency, as for any row without a share.
+        #expect(after.caption == "October 2026 · INR")
+    }
+
     @Test("One store change is read once, whether the report or its drill-down hears it first")
     func oneReadPerChange() throws {
         let fake = FakeSpendingReportUseCase(snapshot: S.snapshot([S.expense("2000", S.groceries, 10, 3)]))

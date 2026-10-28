@@ -165,7 +165,8 @@ public final class SpendingReportViewModel {
     }
 
     /// The transactions behind `row`, read when its drill-down opens and again after each load. Its title is the
-    /// row's current name, in case the category was renamed. `nil` if they can't be read.
+    /// row's current name, in case the category was renamed, and its share is the current one. `nil` if they can't
+    /// be read.
     public func drillDown(for row: SpendingRowModel) -> SpendingDrillDown? {
         guard let report else {
             return nil
@@ -181,12 +182,14 @@ public final class SpendingReportViewModel {
         }
         let today = TransactionTiming.today(now(), timeZone: timeZone)
         let total = entries.reduce(Decimal(0)) { $0 + $1.amount }
-        let current = rows.first { $0.categoryID == row.categoryID } ?? row
+        // The report's current row, for its name and share. Gone once its last transaction is: no share then, so
+        // the header is the period and currency only, as for any row without a share.
+        let current = rows.first { $0.categoryID == row.categoryID }
         return SpendingDrillDown(
-            title: current.name,
+            title: (current ?? row).name,
             amountText: formatter.string(total, currencyCode: report.currencyCode),
             caption: ReportText.drillDownCaption(
-                share: current.shareText,
+                share: current?.shareText,
                 period: title(of: report.range),
                 currencyCode: report.currencyCode,
             ),

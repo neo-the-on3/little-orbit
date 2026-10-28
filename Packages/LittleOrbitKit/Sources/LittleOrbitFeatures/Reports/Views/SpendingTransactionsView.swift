@@ -57,23 +57,42 @@
             .onChange(of: updates.revision) { drill.refresh(at: updates.revision) }
         }
 
-        /// At accessibility text sizes the amount moves under the title and subtitle, as in the report's rows, so
-        /// the title keeps its width.
+        /// At accessibility text sizes each part gets its own full-width line, as in the report's rows: the icon,
+        /// the title and subtitle wrapping between words, then the amount whole on one line, scaled down to fit.
         private func entryRow(_ entry: SpendingEntryRowModel) -> some View {
-            HStack {
-                ReportCategoryIcon(symbolName: row.symbolName, hue: row.hue)
-                ReportPairLayout(stacked: dynamicTypeSize.isAccessibilitySize, alignment: .center) {
+            Group {
+                if dynamicTypeSize.isAccessibilitySize {
                     VStack(alignment: .leading) {
+                        ReportCategoryIcon(symbolName: row.symbolName, hue: row.hue)
                         Text(entry.title)
+                            .fixedSize(horizontal: false, vertical: true)
+                            .frame(maxWidth: .infinity, alignment: .leading)
                         Text(entry.subtitle)
                             .font(.subheadline)
                             .foregroundStyle(.secondary)
+                            .fixedSize(horizontal: false, vertical: true)
+                            .frame(maxWidth: .infinity, alignment: .leading)
+                        Text(entry.amountText)
+                            .monospacedDigit()
+                            .foregroundStyle(entry.amountTone.color)
+                            .reportFullWidthLine(minimumScale: 0.5)
                     }
-                } trailing: {
-                    Text(entry.amountText)
-                        .monospacedDigit()
-                        .foregroundStyle(entry.amountTone.color)
-                        .fixedSize()
+                    .frame(maxWidth: .infinity, alignment: .leading)
+                } else {
+                    HStack {
+                        ReportCategoryIcon(symbolName: row.symbolName, hue: row.hue)
+                        VStack(alignment: .leading) {
+                            Text(entry.title)
+                            Text(entry.subtitle)
+                                .font(.subheadline)
+                                .foregroundStyle(.secondary)
+                        }
+                        Spacer()
+                        Text(entry.amountText)
+                            .monospacedDigit()
+                            .foregroundStyle(entry.amountTone.color)
+                            .fixedSize()
+                    }
                 }
             }
             .accessibilityElement(children: .ignore)

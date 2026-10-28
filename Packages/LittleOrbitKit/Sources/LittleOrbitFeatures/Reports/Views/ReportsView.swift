@@ -113,29 +113,43 @@
 
     /// One category row: icon, name and amount, then the transaction count and share, then a bar as long as
     /// the row's share of the largest row. A row at 0 or below (refund-only) has no bar. VoiceOver reads the
-    /// row as one line of the data table: name, amount, currency, share and count. At accessibility text sizes
-    /// the name sits above the amount and the count above the share, so the name keeps its width and wraps
-    /// rather than being squeezed out by the amount (Tester's AX5 check on #185).
+    /// row as one line of the data table: name, amount, currency, share and count.
+    ///
+    /// At accessibility text sizes (UI Designer's ruling on #185) every part gets its own full-width line, the
+    /// icon first, so nothing is wider than the row: the name wraps between words, the amount stays whole on one
+    /// line and scales down to fit, and the count and share scale a little rather than break inside a word.
     struct SpendingRowView: View {
         let row: SpendingRowModel
         @Environment(\.dynamicTypeSize) private var dynamicTypeSize
 
         var body: some View {
+            Group {
+                if dynamicTypeSize.isAccessibilitySize {
+                    stacked
+                } else {
+                    standard
+                }
+            }
+            .accessibilityElement(children: .ignore)
+            .accessibilityLabel(row.accessibilityLabel)
+        }
+
+        private var standard: some View {
             HStack(alignment: .top) {
                 ReportCategoryIcon(symbolName: row.symbolName, hue: row.hue)
                 VStack(alignment: .leading) {
-                    ReportPairLayout(stacked: stacked) {
+                    HStack(alignment: .firstTextBaseline) {
                         Text(row.name)
-                    } trailing: {
+                        Spacer()
                         // An amount is never truncated (UI Designer, #82).
                         Text(row.amountText)
                             .monospacedDigit()
                             .foregroundStyle(row.amountTone.color)
                             .fixedSize()
                     }
-                    ReportPairLayout(stacked: stacked) {
+                    HStack(alignment: .firstTextBaseline) {
                         Text(row.countText)
-                    } trailing: {
+                        Spacer()
                         if let share = row.shareText {
                             Text(share)
                                 .monospacedDigit()
@@ -144,53 +158,54 @@
                     }
                     .font(.subheadline)
                     .foregroundStyle(.secondary)
-                    if let fraction = row.barFraction {
-                        ProgressView(value: fraction)
-                            .tint(Color(row.hue.token))
+                    bar
+                }
+            }
+        }
+
+        private var stacked: some View {
+            VStack(alignment: .leading) {
+                ReportCategoryIcon(symbolName: row.symbolName, hue: row.hue)
+                Text(row.name)
+                    .fixedSize(horizontal: false, vertical: true)
+                    .frame(maxWidth: .infinity, alignment: .leading)
+                Text(row.amountText)
+                    .monospacedDigit()
+                    .foregroundStyle(row.amountTone.color)
+                    .reportFullWidthLine(minimumScale: 0.5)
+                Group {
+                    Text(row.countText)
+                        .reportFullWidthLine(minimumScale: 0.7)
+                    if let share = row.shareText {
+                        Text(share)
+                            .monospacedDigit()
+                            .reportFullWidthLine(minimumScale: 0.7)
                     }
                 }
+                .font(.subheadline)
+                .foregroundStyle(.secondary)
+                bar
             }
-            .accessibilityElement(children: .ignore)
-            .accessibilityLabel(row.accessibilityLabel)
+            .frame(maxWidth: .infinity, alignment: .leading)
         }
 
-        private var stacked: Bool { dynamicTypeSize.isAccessibilitySize }
+        @ViewBuilder private var bar: some View {
+            if let fraction = row.barFraction {
+                ProgressView(value: fraction)
+                    .tint(Color(row.hue.token))
+            }
+        }
     }
 
-    /// Two texts on one line, the second pushed to the trailing edge, as at the default sizes; or, `stacked`, the
-    /// first above the second, both leading-aligned, for accessibility text sizes.
-    struct ReportPairLayout<Leading: View, Trailing: View>: View {
-        private let stacked: Bool
-        private let alignment: VerticalAlignment
-        private let leading: Leading
-        private let trailing: Trailing
-
-        /// `alignment` is the one line's vertical alignment, as the row's own `HStack` had it.
-        init(
-            stacked: Bool,
-            alignment: VerticalAlignment = .firstTextBaseline,
-            @ViewBuilder leading: () -> Leading,
-            @ViewBuilder trailing: () -> Trailing,
-        ) {
-            self.stacked = stacked
-            self.alignment = alignment
-            self.leading = leading()
-            self.trailing = trailing()
-        }
-
-        var body: some View {
-            if stacked {
-                VStack(alignment: .leading) {
-                    leading
-                    trailing
-                }
-            } else {
-                HStack(alignment: alignment) {
-                    leading
-                    Spacer()
-                    trailing
-                }
-            }
+    extension View {
+        /// At accessibility text sizes: one whole line across the row, scaled down to `minimumScale` to fit
+        /// rather than wrapped, broken inside a word or clipped. It keeps its full line height, so it scales only
+        /// for the row's width, never because a long name above it took the height.
+        func reportFullWidthLine(minimumScale: CGFloat) -> some View {
+            lineLimit(1)
+                .minimumScaleFactor(minimumScale)
+                .fixedSize(horizontal: false, vertical: true)
+                .frame(maxWidth: .infinity, alignment: .leading)
         }
     }
 
