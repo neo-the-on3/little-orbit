@@ -21,4 +21,10 @@ final class InMemoryBulkEditTests: XCTestCase {
             try assertBulkEditWritesOnlyTickedFieldsOnStoredRows(make: { repository }, reopen: { repository })
         }
     }
+
+    /// #254 n1, D384.7: Batch Undo keeps a created payee renamed since, and removes an untouched one.
+    func testBatchUndoKeepsTouchedPayees() async throws {
+        let repository = InMemoryLedgerRepository()
+        try await assertBatchUndoKeepsTouchedPayees(make: { repository }, reopen: { repository })
+    }
 }
