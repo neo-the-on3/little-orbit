@@ -42,16 +42,28 @@ extension IncomeExpenseReportViewModel {
         let start = month.range.start
         let date = TransactionCalendar.noon(on: start, timeZoneID: timeZone.identifier) ?? now()
         let monthTitle = text.format(start, template: "MMMMyyyy")
-        return [(incomeSeries, month.income), (expensesSeries, month.expenses)]
-            .map { series, amount in
-                IncomeExpenseChartBar(
-                    id: "\(start.year)-\(start.month)-\(series)",
+        return [("income", incomeSeries, month.income), ("expenses", expensesSeries, month.expenses)]
+            .map { key, series, amount in
+                let value = NSDecimalNumber(decimal: amount).doubleValue
+                return IncomeExpenseChartBar(
+                    id: "\(start.year)-\(start.month)-\(key)",
                     month: date,
                     monthTitle: monthTitle,
                     series: series,
-                    amount: max(0, NSDecimalNumber(decimal: amount).doubleValue),
+                    isIncome: key == "income",
+                    amount: max(0, value),
+                    value: value,
                     amountText: formatter.string(amount, currencyCode: currencyCode),
                 )
+            }
+    }
+
+    /// The audio graph's two series, Income then Expenses, each oldest month first. The bars are split by their
+    /// series, never by its shown name.
+    public var chartAudioSeries: [(name: String, bars: [IncomeExpenseChartBar])] {
+        [(incomeSeries, true), (expensesSeries, false)]
+            .map { name, isIncome in
+                (name, chartBars.filter { $0.isIncome == isIncome })
             }
     }
 

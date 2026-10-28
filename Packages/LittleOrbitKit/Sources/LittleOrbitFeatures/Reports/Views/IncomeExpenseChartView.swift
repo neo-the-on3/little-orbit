@@ -35,7 +35,7 @@
     }
 
     /// The audio graph: a categorical Month axis, an Amount axis read in the shown currency, and two series,
-    /// Income and Expenses.
+    /// Income and Expenses, each point read once (`IncomeExpenseAudioGraph`).
     struct IncomeExpenseChartDescriptor: AXChartDescriptorRepresentable {
         let title: String
         let summary: String
@@ -51,40 +51,20 @@
             summary = model.chartSummary
             monthAxis = model.monthColumn
             amountAxis = model.amountAxis
-            series = [model.incomeSeries, model.expensesSeries]
-                .map { name in
-                    (name, model.chartBars.filter { $0.series == name })
-                }
+            series = model.chartAudioSeries
             currencyCode = model.currencyCode
             locale = model.locale
         }
 
         func makeChartDescriptor() -> AXChartDescriptor {
-            let months = series.first?.bars.map(\.monthTitle) ?? []
-            let largest = series.flatMap(\.bars).map(\.amount).max() ?? 0
-            let code = currencyCode
-            let locale = locale
-            return AXChartDescriptor(
+            IncomeExpenseAudioGraph.descriptor(
                 title: title,
                 summary: summary,
-                xAxis: AXCategoricalDataAxisDescriptor(title: monthAxis, categoryOrder: months),
-                yAxis: AXNumericDataAxisDescriptor(
-                    title: amountAxis,
-                    range: 0...max(largest, 1),
-                    gridlinePositions: [],
-                ) { value in
-                    Decimal(value).formatted(.currency(code: code).locale(locale))
-                },
-                additionalAxes: [],
-                series: series.map { name, bars in
-                    AXDataSeriesDescriptor(
-                        name: name,
-                        isContinuous: false,
-                        dataPoints: bars.map { bar in
-                            AXDataPoint(x: bar.monthTitle, y: bar.amount, additionalValues: [], label: bar.amountText)
-                        },
-                    )
-                },
+                monthAxis: monthAxis,
+                amountAxis: amountAxis,
+                currencyCode: currencyCode,
+                locale: locale,
+                series: series,
             )
         }
     }

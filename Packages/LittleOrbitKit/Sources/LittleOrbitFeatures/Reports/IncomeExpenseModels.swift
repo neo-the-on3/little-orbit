@@ -35,6 +35,7 @@ public struct IncomeExpenseRowModel: Identifiable, Equatable, Sendable {
 
 /// One bar of the income vs expenses chart: a month's income or its expenses (#184 slice 5).
 public struct IncomeExpenseChartBar: Identifiable, Equatable, Sendable {
+    /// The month and series, “2026-10-income” or “2026-10-expenses”: never a shown name.
     public var id: String
     /// The month's first day at noon, for the chart's month axis.
     public var month: Date
@@ -42,8 +43,12 @@ public struct IncomeExpenseChartBar: Identifiable, Equatable, Sendable {
     public var monthTitle: String
     /// “Income” or “Expenses”.
     public var series: String
+    /// The Income series, not Expenses: what the audio graph splits the bars by, never the shown name.
+    public var isIncome: Bool
     /// The bar's height: 0 for a month with nothing, never below 0.
     public var amount: Double
-    /// “₹1,62,000.00”, for the audio graph. Expenses below 0 (refunds only) read signed.
+    /// The signed amount the audio graph reads: below 0 for a month of refunds only, where the bar stays at 0.
+    public var value: Double
+    /// “₹1,62,000.00”. Expenses below 0 (refunds only) read signed.
     public var amountText: String
 }
