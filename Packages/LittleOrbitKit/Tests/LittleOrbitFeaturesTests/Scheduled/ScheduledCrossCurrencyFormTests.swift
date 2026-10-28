@@ -269,6 +269,33 @@ struct ScheduledCrossCurrencyFormTests {
         #expect(form.save())
     }
 
+    @Test("D385: changing only Received counts as unsaved edits, so a tapped reminder leaves the form open with it")
+    func receivedCountsAsUnsaved() throws {
+        let scene = try scene()
+        let euro = Account(name: "Euro Pocket", currencyCode: "EUR", sortOrder: 4)
+        try scene.repository.saveAccount(euro)
+        let (list, form) = try newTransfer(scene, platform: .iOS)
+        form.transferAccountID = euro.id
+        form.receivedText = "40"
+        #expect(form.save())
+        list.load()
+        list.openEditor(try #require(list.dueTodayRows.first?.itemID))
+        let edit = try #require(list.form)
+        let opened = edit.receivedText
+        let sheets = OpenSheets()
+        sheets.opened(UUID(), hasUnsavedEdits: { edit.hasUnsavedEdits }, close: { list.form = nil })
+        #expect(!edit.hasUnsavedEdits)
+
+        edit.receivedText = "42.50"
+        #expect(edit.hasUnsavedEdits)
+        #expect(sheets.prepareForReminder() == .underneath)
+        #expect(list.form === edit)
+        #expect(edit.receivedText == "42.50")
+
+        edit.receivedText = opened
+        #expect(!edit.hasUnsavedEdits, "Put back, it's clean again")
+    }
+
     @Test("From and To are never the same account, in any currency")
     func fromChanges() throws {
         let scene = try scene()
