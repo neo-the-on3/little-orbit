@@ -46,14 +46,15 @@ public struct ScheduledTableSection: Identifiable, Equatable, Sendable {
     public let rows: [ScheduledTableRow]
 }
 
-/// A Mac Table keyboard command on the selected row (D360.2). There's no Pay command: ⌘↩ would record straight
-/// away until #201's "Pay ‹item›" sheet is on this base (D360, D341.1). It comes back opening that sheet, wired by
-/// whichever of #201 and #205 lands second.
+/// A Mac Table keyboard command on the selected row (D360.2). There's no Pay Now command: ⌘↩ opens the
+/// "Pay ‹item›" sheet instead, so no key records straight away (D360, D341.1, D413).
 public enum ScheduledTableCommand: Sendable {
     /// ⌘E: the selected row's editor.
     case edit
     /// ⌘⌫, the Delete key or Edit ▸ Delete: always the delete confirmation first (D334.9).
     case delete
+    /// ⌘↩: Pay with Custom Date or Amount… for a due row's occurrence (D413); nothing for any other row.
+    case payCustom
 }
 
 extension ScheduledListViewModel {
@@ -67,6 +68,11 @@ extension ScheduledListViewModel {
         switch command {
         case .edit: openEditor(row.itemID)
         case .delete: confirmDelete(row.itemID)
+        case .payCustom:
+            guard row.canSettle else {
+                return false
+            }
+            openCustomPay(row)
         }
         return true
     }
