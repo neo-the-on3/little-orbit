@@ -109,6 +109,10 @@ public enum LedgerValidationError: Error, Equatable, Sendable {
     case duplicateScheduledItemID
     /// An occurrence is settled twice, or two share an ID. Only an edited backup has them (#26).
     case duplicateScheduledOccurrence
+    /// An occurrence edit would put an occurrence on a day the item already has one on, the day given (D381.1).
+    case occurrenceDayTaken(CalendarDay)
+    /// "This occurrence only" for an occurrence paid or skipped since the form opened (D381.2).
+    case occurrenceSettledSinceOpened
 }
 
 /// Why a category merge was refused: subcategories of the category being merged have the same names as

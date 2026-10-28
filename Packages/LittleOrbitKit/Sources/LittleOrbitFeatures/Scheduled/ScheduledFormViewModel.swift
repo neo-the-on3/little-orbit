@@ -109,10 +109,10 @@ public final class ScheduledFormViewModel: Identifiable {
     /// The Received field's error, after a save attempt.
     public internal(set) var receivedError: String?
     /// An account, transfer or date error, after a save attempt.
-    public private(set) var formError: String?
+    public internal(set) var formError: String?
     public var alert: CategoryAlert?
     /// Dismissing the alert also closes the form: its item was deleted elsewhere, so there's nothing left to edit (#258).
-    public private(set) var alertClosesForm = false
+    public internal(set) var alertClosesForm = false
     /// Set once the deleted-item alert has been dismissed by any route, for the view to close the form (#258).
     public private(set) var closeRequested = false
     /// “Discard Changes?” for Cancel, Esc on the Mac or a swipe down with unsaved edits (D300.1, #248).
@@ -460,21 +460,8 @@ public final class ScheduledFormViewModel: Identifiable {
                 change =
                     try isNew ? useCases.manage.save(item, payee: payee) : useCases.manage.update(item, payee: payee)
             }
-        } catch LedgerValidationError.scheduleEndsBeforeStart {
-            formError = ScheduledText.endBeforeStart
-            return false
-        } catch LedgerValidationError.receivedCurrencyMismatch {
-            // To's currency changed since the form read it: nothing was saved, and the form stays open with its
-            // edits, under the stale-step message "‹To› has changed since then. Nothing was changed." (#207 B1).
-            alert = ScheduledText.toChangedNothingSaved(listing.account(transferAccountID)?.name)
-            return false
-        } catch LedgerValidationError.missingScheduledItem where !isNew {
-            // Deleted elsewhere while the form was open: nothing was saved, and OK closes the form (#258).
-            alert = ScheduledText.deletedNothingSaved(itemName)
-            alertClosesForm = true
-            return false
         } catch {
-            alert = saveFailedAlert(error)
+            showSaveFailure(error)
             return false
         }
         isFinished = true

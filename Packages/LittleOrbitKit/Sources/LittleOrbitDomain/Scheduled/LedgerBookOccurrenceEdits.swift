@@ -28,6 +28,7 @@ extension LedgerBook {
         let shown = withoutMissingEditReferences(existing, in: snapshot)
         let edited = normalize(item)
         let key = save.occurrence
+        try refuseIfSettledSinceOpened(save, existing)
         let changed = ScheduledOccurrenceEdit.changedFields(
             shown: shown.resolved(for: key),
             shownDay: shown.dueDay(of: key),
@@ -79,7 +80,7 @@ extension LedgerBook {
         guard !changed.isEmpty, var current = result.scheduledItems.first(where: { $0.id == item.id }) else {
             return result
         }
-        let target = apply(save, fields: changed, from: edited, to: &current, now: now)
+        let target = try apply(save, fields: changed, from: edited, to: &current, now: now)
         current.updatedAt = now
         try validate(current, in: result)
         if let target {
@@ -112,6 +113,14 @@ extension LedgerBook {
 
     // MARK: - Private
 
+    /// Paid or skipped since the form opened, in another window: the form is stale, so nothing is saved. Only a
+    /// SERIES change that takes the occurrence off the rule saves to the next one (D346.2, D381.2).
+    private static func refuseIfSettledSinceOpened(_ save: ScheduledOccurrenceSave, _ existing: ScheduledItem) throws {
+        if save.scope == .thisOccurrence, existing.isSettled(save.occurrence) {
+            throw LedgerValidationError.occurrenceSettledSinceOpened
+        }
+    }
+
     /// Gives every open occurrence but `key` the values `existing` had for `fields`, where they now differ, unless
     /// it has its own (S58): they don't take the values the item took from the occurrence at `key`.
     private static func keepOldValues(
@@ -143,7 +152,7 @@ extension LedgerBook {
         from edited: ScheduledItem,
         to current: inout ScheduledItem,
         now: Date,
-    ) -> CalendarDay? {
+    ) throws -> CalendarDay? {
         let key = save.occurrence
         // A SERIES change can take the occurrence off the rule: the choice then applies to the next one still open.
         var target: CalendarDay? = key
@@ -155,7 +164,7 @@ extension LedgerBook {
         case (.thisOccurrence, let target?):
             editOne(&current, key: target, fields: changed, from: edited, day: save.dueDay, now: now)
         case (.allFuture, let target?):
-            editFuture(&current, key: target, fields: changed, from: edited, day: save.dueDay, now: now)
+            try editFuture(&current, key: target, fields: changed, from: edited, day: save.dueDay, now: now)
         case (.allFuture, nil):
             for field in changed where field != .day {
                 copy(field, from: edited, to: &current)
@@ -188,7 +197,7 @@ extension LedgerBook {
         from edited: ScheduledItem,
         day: CalendarDay,
         now: Date,
-    ) {
+    ) throws {
         let values = fields.filter { $0 != .day }
         let earlier =
             ScheduleCalendar.adding(days: -1, to: key)
@@ -215,19 +224,21 @@ extension LedgerBook {
         }
         setEdit(own, on: key, of: &item, now: now)
         if fields.contains(.day) {
-            moveAnchor(of: &item, from: key, to: day, keeping: earlier, now: now)
+            try moveAnchor(of: &item, from: key, to: day, keeping: earlier, now: now)
         }
     }
 
     /// "All future occurrences" with a new due day (D106): the occurrence at `key` and every later one follow the rule
-    /// from `start`. Earlier open days stay due on their own days, as `pending` (D336.1).
+    /// from `start`. Earlier open days stay due on their own days, as `pending` (D336.1). A move onto a day the item
+    /// already has an occurrence on, earlier and still due or paid or skipped, is refused, as is one that would put
+    /// a later occurrence with its own values on such a day: neither merges nor drops an occurrence (D381.1).
     private static func moveAnchor(
         of item: inout ScheduledItem,
         from key: CalendarDay,
         to start: CalendarDay,
         keeping earlier: [CalendarDay],
         now: Date,
-    ) {
+    ) throws {
         let rule = item.repeatRule
         let keyIndex = ScheduleCalendar.index(of: key, from: item.startDay, repeating: rule)
         for earlierKey in earlier {
@@ -239,21 +250,21 @@ extension LedgerBook {
                 && (record.day == key || (record.day > key && record.outcome == .edited))
         }
         item.occurrences.removeAll { record in moving.contains { $0.id == record.id } }
+        if item.occurrence(on: start) != nil {
+            throw LedgerValidationError.occurrenceDayTaken(start)
+        }
         for moved in moving {
-            let offset: Int?
-            if moved.day == key {
-                offset = 0
-            } else if let keyIndex,
-                let index = ScheduleCalendar.index(of: moved.day, from: item.startDay, repeating: rule)
-            {
-                offset = index - keyIndex
-            } else {
-                offset = nil
-            }
-            guard let offset, let newKey = ScheduleCalendar.occurrence(offset, from: start, repeating: rule),
-                item.occurrence(on: newKey) == nil
-            else {
+            let offset: Int? =
+                moved.day == key
+                ? 0
+                : keyIndex.flatMap { keyIndex in
+                    ScheduleCalendar.index(of: moved.day, from: item.startDay, repeating: rule).map { $0 - keyIndex }
+                }
+            guard let offset, let newKey = ScheduleCalendar.occurrence(offset, from: start, repeating: rule) else {
                 continue
+            }
+            if item.occurrence(on: newKey) != nil {
+                throw LedgerValidationError.occurrenceDayTaken(newKey)
             }
             // An undone automatic Pay still waits for the user on its new day, so catch-up never records it (D344.1).
             if moved.waitsForUser {
