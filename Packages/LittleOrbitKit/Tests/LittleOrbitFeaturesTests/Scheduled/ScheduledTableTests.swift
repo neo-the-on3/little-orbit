@@ -346,7 +346,7 @@ struct ScheduledTableTests {
         #expect(iOS.upcomingRows.first?.detail.hasPrefix("Monthly") == true, "iOS keeps the short names")
     }
 
-    @Test("D360.2: ⌘E and Delete act only on the selected row, Delete asks first, and there's no Pay command")
+    @Test("D360.2: ⌘E and Delete act only on the selected row, Delete asks first, and there's no Pay Now command")
     func shortcuts() throws {
         let scene = try ScheduledScene()
         let rent = scene.item("Rent", day: 1, month: 11)
@@ -365,6 +365,24 @@ struct ScheduledTableTests {
         #expect(list.form?.title == "Edit Scheduled Item")
         #expect(scene.recorded.isEmpty, "No shortcut records anything")
         #expect(list.addTitle == "Add Scheduled Item", "The toolbar +'s title, help and spoken name (D334.6)")
+    }
+
+    @Test("D413: ⌘↩ opens Pay with Custom Date or Amount for the selected due row only, and records nothing")
+    func payCustomShortcut() throws {
+        let scene = try ScheduledScene()
+        try scene.add(scene.item("Gym", day: 18, month: 10))
+        try scene.add(scene.item("Rent", day: 1, month: 11))
+        let list = macList(scene)
+        let rows = list.tableSections.flatMap(\.rows)
+        let gym = try #require(rows.first { $0.name == "Gym" }?.id)
+        let rent = try #require(rows.first { $0.name == "Rent" }?.id)
+        #expect(!list.tableCommand(.payCustom, selection: nil))
+        #expect(!list.tableCommand(.payCustom, selection: "gone"))
+        #expect(!list.tableCommand(.payCustom, selection: rent), "Not due: nothing to pay")
+        #expect(list.payment == nil)
+        #expect(list.tableCommand(.payCustom, selection: gym))
+        #expect(list.payment?.title == "Pay Gym")
+        #expect(scene.recorded.isEmpty, "The sheet opens; nothing is recorded until Record")
     }
 
     @Test("Tech Architect, #198: the Mac hint is shown once drawn, and again when a catch-up replaces it on screen")

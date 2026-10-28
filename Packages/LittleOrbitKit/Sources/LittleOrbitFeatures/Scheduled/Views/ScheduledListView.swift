@@ -253,19 +253,19 @@
 
     /// Pay Now, Pay with Custom Date or Amount and Skip This Occurrence for a due occurrence, then Edit and Delete
     /// for its item. On the Mac the items that ask first or open a sheet take an ellipsis; Pay with Custom Date or
-    /// Amount, Edit and Delete show ⌥⌘↩, ⌘E and ⌘⌫ (D334.10, #197 design answers). Pay Now has no shortcut (D360.2,
-    /// D361).
+    /// Amount, Edit and Delete show ⌘↩, ⌘E and ⌘⌫ (D334.10, D413). Pay Now has no shortcut (D360.2, D361, D413).
+    /// The Mac Table runs the same three keys on its selected row (`ScheduledTableView`, `tableCommand`).
     struct ScheduledRowActions: View {
         let model: ScheduledListViewModel
         let row: ScheduledRow
 
         var body: some View {
             if row.canSettle {
-                // No ⌘↩ on Pay Now: it would record straight away (D360.2). The Mac Table's ⌘↩ opening the
-                // "Pay ‹item›" sheet is #205's gate, still open on #201.
+                // No shortcut on Pay Now: ⌘↩ would record straight away (D360.2). ⌘↩ opens the "Pay ‹item›"
+                // sheet instead, and nothing has ⌥⌘↩ (D413).
                 Button(model.payNowTitle, systemImage: "checkmark.circle") { model.payNow(row) }
                 Button(model.payCustomTitle, systemImage: "square.and.pencil") { model.openCustomPay(row) }
-                    .macShortcut(.return, modifiers: [.command, .option])
+                    .macShortcut(.return)
                 Button(model.skipMenuTitle, systemImage: "forward") { model.confirmSkip(row) }
                 Divider()
             }
@@ -281,9 +281,9 @@
     extension View {
         /// A ⌘ shortcut on the Mac menu item; iOS row menus show none.
         @ViewBuilder
-        fileprivate func macShortcut(_ key: KeyEquivalent, modifiers: EventModifiers = .command) -> some View {
+        fileprivate func macShortcut(_ key: KeyEquivalent) -> some View {
             #if os(macOS)
-                keyboardShortcut(key, modifiers: modifiers)
+                keyboardShortcut(key, modifiers: .command)
             #else
                 self
             #endif

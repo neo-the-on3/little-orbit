@@ -8,8 +8,8 @@
     /// context menu shows it (UI Designer on #205), in sections
     /// Overdue, Due Today, Upcoming and Completed with no counts (D334.2), each ordered by due date. Return or a
     /// double-click opens the item. With a row selected, ⌘E edits it, and ⌘⌫, the Delete key or Edit ▸ Delete asks
-    /// to delete it. ⌘↩ waits for #201's Pay sheet (D360.2); the menu's Pay Now and Skip This Occurrence… have no
-    /// shortcut. The catch-up and overdue hints sit above it, and the counts and the automatic line below it.
+    /// to delete it, and ⌘↩ opens Pay with Custom Date or Amount… for a due row (D413); the menu's Pay Now and Skip
+    /// This Occurrence… have no shortcut. The catch-up and overdue hints sit above it, and the counts and the automatic line below it.
     /// Columns aren't sortable.
     struct ScheduledTableView: View {
         let model: ScheduledListViewModel
@@ -162,17 +162,22 @@
             #endif
         }
 
-        /// Delete and E: with ⌘, the context menu's shortcuts. ⌘↩ isn't one until #201's Pay sheet is on this base,
-        /// because it would record straight away (D360.2).
-        private static let shortcutKeys: Set<KeyEquivalent> = [.delete, "e", "E"]
+        /// Delete, E and Return: with ⌘, the context menu's shortcuts. ⌘↩ opens the "Pay ‹item›" sheet, never
+        /// records on its own (D360.2, D413). Return alone stays the Table's primary action, opening the item.
+        private static let shortcutKeys: Set<KeyEquivalent> = [.delete, "e", "E", .return]
 
-        /// ⌘E Edit… and ⌘⌫ Delete Scheduled Item… on the selected row only (D360.2). ⌘ must be held, with no other
-        /// modifier; Caps Lock and the keypad flag don't count.
+        /// ⌘E Edit…, ⌘⌫ Delete Scheduled Item… and ⌘↩ Pay with Custom Date or Amount… on the selected row only
+        /// (D360.2, D413). ⌘ must be held, with no other modifier; Caps Lock and the keypad flag don't count.
         private func handle(_ press: KeyPress) -> KeyPress.Result {
             guard press.modifiers.subtracting([.capsLock, .numericPad]) == .command else {
                 return .ignored
             }
-            let command: ScheduledTableCommand = press.key == .delete ? .delete : .edit
+            let command: ScheduledTableCommand =
+                switch press.key {
+                case .delete: .delete
+                case .return: .payCustom
+                default: .edit
+                }
             return model.tableCommand(command, selection: selection) ? .handled : .ignored
         }
 
