@@ -8,11 +8,12 @@ extension ScheduledFormViewModel {
         fields != openedFields
     }
 
-    /// The fields as they are now; `openedFields` holds them as the form opened.
+    /// The fields as they are now; `openedFields` holds them as the form opened. Every editable field is here,
+    /// Received included (D385.1).
     var fields: [AnyHashable] {
         [
-            type, amountText, details, note, accountID, transferAccountID, categoryID, payeeID, payeeText, startDay,
-            frequency, interval, hasEnd, endDay, processesAutomatically, notifiesWhenDue,
+            type, amountText, details, note, accountID, transferAccountID, receivedText, categoryID, payeeID,
+            payeeText, startDay, frequency, interval, hasEnd, endDay, processesAutomatically, notifiesWhenDue,
         ]
     }
 

@@ -199,8 +199,8 @@ struct ScheduledReminderSheetTests {
 
     /// Every field the Scheduled form lets the user edit (D385.1). A field added later gets a case here.
     enum FormField: String, CaseIterable, Sendable {
-        case type, amount, details, note, account, toAccount, category, payee, payeeText, starts, repeats
-        case interval, ends, endDate, automatic, notify
+        case type, amount, details, note, account, toAccount, received, category, payee, payeeText, starts
+        case repeats, interval, ends, endDate, automatic, notify
 
         /// One switch case per field, so the switch's size is the field count.
         @MainActor  // swiftlint:disable:next cyclomatic_complexity
@@ -212,6 +212,7 @@ struct ScheduledReminderSheetTests {
             case .note: form.note = "Landlord"
             case .account: form.accountID = scene.fund.id
             case .toAccount: form.transferAccountID = scene.fund.id
+            case .received: form.receivedText = "42.50"
             case .category: form.categoryID = nil
             case .payee: form.payeeID = UUID()
             case .payeeText: form.payeeText = "Landlord Ltd"
