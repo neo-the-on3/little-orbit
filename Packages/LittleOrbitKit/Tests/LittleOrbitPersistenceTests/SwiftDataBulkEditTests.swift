@@ -39,5 +39,19 @@
                 )
             }
         }
+
+        /// #254 n1, D384.7: Batch Undo keeps a created payee renamed since, and removes an untouched one.
+        func testBatchUndoKeepsTouchedPayees() async throws {
+            let directory = FileManager.default.temporaryDirectory
+                .appendingPathComponent("little-orbit-\(UUID().uuidString)", isDirectory: true)
+            try FileManager.default.createDirectory(at: directory, withIntermediateDirectories: true)
+            defer { try? FileManager.default.removeItem(at: directory) }
+            let configuration = StoreConfiguration(fileURL: directory.appendingPathComponent("ledger.store"))
+            let repository = try LittleOrbitStore.makeRepository(configuration: configuration)
+            try await assertBatchUndoKeepsTouchedPayees(
+                make: { repository },
+                reopen: { try LittleOrbitStore.makeRepository(configuration: configuration) },
+            )
+        }
     }
 #endif
