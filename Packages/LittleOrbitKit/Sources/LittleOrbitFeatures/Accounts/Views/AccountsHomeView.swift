@@ -208,25 +208,25 @@
             }
         }
 
+        /// A plain row, not a link: the iPhone and iPad All Transactions list comes in the next release, so the
+        /// card opens nothing in 1.0 (D422, D382.13). No chevron, no tap highlight and no button trait.
         private var netWealthSection: some View {
             Section {
-                NavigationLink(value: AccountsRoute.allTransactions) {
-                    VStack(alignment: .leading, spacing: Spacing.spaceHalf) {
-                        Text("All Accounts")
-                            .font(.theme(Typography.IOS.footnote))
-                            .foregroundStyle(Color(ThemeColor.labelSecondary))
-                        ForEach(model.netWealth) { line in
-                            // One line, never split, minus sign attached; scales only at AX sizes (#82 B7).
-                            Text(line.text)
-                                .font(.theme(Typography.Amount.iOSTitle))
-                                .foregroundStyle(Color(ThemeColor.labelPrimary))
-                                .lineLimit(1)
-                                .minimumScaleFactor(dynamicTypeSize.isAccessibilitySize ? 0.5 : 1)
-                        }
+                VStack(alignment: .leading, spacing: Spacing.spaceHalf) {
+                    Text("All Accounts")
+                        .font(.theme(Typography.IOS.footnote))
+                        .foregroundStyle(Color(ThemeColor.labelSecondary))
+                    ForEach(model.netWealth) { line in
+                        // One line, never split, minus sign attached; scales only at AX sizes (#82 B7).
+                        Text(line.text)
+                            .font(.theme(Typography.Amount.iOSTitle))
+                            .foregroundStyle(Color(ThemeColor.labelPrimary))
+                            .lineLimit(1)
+                            .minimumScaleFactor(dynamicTypeSize.isAccessibilitySize ? 0.5 : 1)
                     }
-                    .accessibilityElement(children: .ignore)
-                    .accessibilityLabel(model.allAccountsAccessibilityLabel)
                 }
+                .accessibilityElement(children: .ignore)
+                .accessibilityLabel(model.allAccountsAccessibilityLabel)
             }
         }
 
@@ -355,11 +355,8 @@
         private func destination(for route: AccountsRoute) -> some View {
             switch route {
             case .allTransactions:
-                UpcomingFeatureView(
-                    title: "All Transactions",
-                    systemImage: "list.bullet",
-                    message: "The transaction list arrives with its own issue.",
-                )
+                // Nothing on iPhone or iPad links here in 1.0 (D422); only the Mac sidebar selects it.
+                EmptyView()
             case .home(.scheduled) where scheduled != nil:
                 if let scheduled {
                     // The typed path only honours this root's destinations, so the list's links push
