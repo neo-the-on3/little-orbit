@@ -133,6 +133,19 @@
         }
       }
     },
+    "%1$@ of income": {
+      "comment": "Income drill-down header: %1$@ is the row’s share of income, “92.6% of income”.",
+      "extractionState": "manual",
+      "generatesSymbol": false,
+      "localizations": {
+        "en": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "%1$@ of income"
+          }
+        }
+      }
+    },
     "%1$@ of spending": {
       "comment": "Spending report: the start of a category drill-down’s header, before the period and currency. %1$@ is the category’s share of the period’s spending, such as “16.9%”.",
       "extractionState": "manual",
@@ -391,6 +404,19 @@
                 }
               }
             }
+          }
+        }
+      }
+    },
+    "%1$@, left over %2$@, income %3$@, expenses %4$@": {
+      "comment": "Income vs expenses: a month row as VoiceOver reads it, “October 2026, left over ₹88,251.50, income ₹1,62,000.00, expenses ₹73,748.50”.",
+      "extractionState": "manual",
+      "generatesSymbol": false,
+      "localizations": {
+        "en": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "%1$@, left over %2$@, income %3$@, expenses %4$@"
           }
         }
       }
@@ -2959,6 +2985,45 @@
         }
       }
     },
+    "Earned": {
+      "comment": "Reports: the income figure’s label, as in “Earned ₹1,62,000.00”.",
+      "extractionState": "manual",
+      "generatesSymbol": false,
+      "localizations": {
+        "en": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Earned"
+          }
+        }
+      }
+    },
+    "Earned in %1$@ · %2$@ · %3$@": {
+      "comment": "Income report total’s caption: %1$@ is the period, %2$@ the account part (“all accounts” or “2 of 3 accounts”), %3$@ the currency code, “Earned in October 2026 · all accounts · INR”.",
+      "extractionState": "manual",
+      "generatesSymbol": false,
+      "localizations": {
+        "en": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Earned in %1$@ · %2$@ · %3$@"
+          }
+        }
+      }
+    },
+    "Earned − spent, %1$@ · %2$@": {
+      "comment": "Reports list summary caption: %1$@ is the month, %2$@ the currency code, “Earned − spent, October 2026 · INR”.",
+      "extractionState": "manual",
+      "generatesSymbol": false,
+      "localizations": {
+        "en": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Earned − spent, %1$@ · %2$@"
+          }
+        }
+      }
+    },
     "Hidden": {
       "comment": "Spending report account filter: the note on a hidden account’s row. Its spending counts while it’s ticked (D417).",
       "extractionState": "manual",
@@ -2968,6 +3033,58 @@
           "stringUnit": {
             "state": "translated",
             "value": "Hidden"
+          }
+        }
+      }
+    },
+    "How much do I earn compared to my expenses?": {
+      "comment": "The income-vs-expenses report’s title, a plain question: its row on Reports and its heading (D420).",
+      "extractionState": "manual",
+      "generatesSymbol": false,
+      "localizations": {
+        "en": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "How much do I earn compared to my expenses?"
+          }
+        }
+      }
+    },
+    "In %1$@ · Out %2$@": {
+      "comment": "Income vs expenses: a month row’s subtitle, %1$@ the month’s income and %2$@ its expenses, “In ₹1,62,000.00 · Out ₹73,748.50”.",
+      "extractionState": "manual",
+      "generatesSymbol": false,
+      "localizations": {
+        "en": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "In %1$@ · Out %2$@"
+          }
+        }
+      }
+    },
+    "Income vs Expenses": {
+      "comment": "Navigation title of the income-vs-expenses report, also its Back button and Mac window title.",
+      "extractionState": "manual",
+      "generatesSymbol": false,
+      "localizations": {
+        "en": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Income vs Expenses"
+          }
+        }
+      }
+    },
+    "Last 6 Months": {
+      "comment": "Over-time report period preset: this calendar month and the five before it.",
+      "extractionState": "manual",
+      "generatesSymbol": false,
+      "localizations": {
+        "en": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Last 6 Months"
           }
         }
       }
@@ -2985,6 +3102,19 @@
         }
       }
     },
+    "Left over": {
+      "comment": "Reports: earned minus spent, as in “Left over +₹88,251.50”.",
+      "extractionState": "manual",
+      "generatesSymbol": false,
+      "localizations": {
+        "en": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Left over"
+          }
+        }
+      }
+    },
     "Next Period": {
       "comment": "Report › button (⌘→ on macOS): the month, quarter or year after the one shown.",
       "extractionState": "manual",
@@ -2994,6 +3124,32 @@
           "stringUnit": {
             "state": "translated",
             "value": "Next Period"
+          }
+        }
+      }
+    },
+    "No Income": {
+      "comment": "Income report empty state title, above “There’s no income in this period. Try another period.”",
+      "extractionState": "manual",
+      "generatesSymbol": false,
+      "localizations": {
+        "en": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "No Income"
+          }
+        }
+      }
+    },
+    "No Income or Expenses": {
+      "comment": "Income vs expenses empty state title, when the whole range has no income and no expenses.",
+      "extractionState": "manual",
+      "generatesSymbol": false,
+      "localizations": {
+        "en": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "No Income or Expenses"
           }
         }
       }
@@ -3072,6 +3228,30 @@
         }
       }
     },
+    "Other · %lld sources": {
+      "comment": "Income chart: the last bar, combining the smaller sources (always 2 or more), “Other · 2 sources”.",
+      "extractionState": "manual",
+      "localizations": {
+        "en": {
+          "variations": {
+            "plural": {
+              "one": {
+                "stringUnit": {
+                  "state": "translated",
+                  "value": "Other · %lld source"
+                }
+              },
+              "other": {
+                "stringUnit": {
+                  "state": "translated",
+                  "value": "Other · %lld sources"
+                }
+              }
+            }
+          }
+        }
+      }
+    },
     "Other, %lld categories": {
       "comment": "Spending chart: how VoiceOver names the Other bar, “Other, 2 categories”.",
       "extractionState": "manual",
@@ -3113,6 +3293,30 @@
                 "stringUnit": {
                   "state": "translated",
                   "value": "Other, %lld payees"
+                }
+              }
+            }
+          }
+        }
+      }
+    },
+    "Other, %lld sources": {
+      "comment": "Income chart: how VoiceOver and the audio graph name the Other bar, “Other, 2 sources”.",
+      "extractionState": "manual",
+      "localizations": {
+        "en": {
+          "variations": {
+            "plural": {
+              "one": {
+                "stringUnit": {
+                  "state": "translated",
+                  "value": "Other, %lld source"
+                }
+              },
+              "other": {
+                "stringUnit": {
+                  "state": "translated",
+                  "value": "Other, %lld sources"
                 }
               }
             }
@@ -3172,6 +3376,58 @@
         }
       }
     },
+    "report.column.expenses": {
+      "comment": "Income vs expenses: the Mac table’s expenses column.",
+      "extractionState": "manual",
+      "generatesSymbol": false,
+      "localizations": {
+        "en": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Expenses"
+          }
+        }
+      }
+    },
+    "report.column.income": {
+      "comment": "Income vs expenses: the Mac table’s income column.",
+      "extractionState": "manual",
+      "generatesSymbol": false,
+      "localizations": {
+        "en": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Income"
+          }
+        }
+      }
+    },
+    "report.column.leftOver": {
+      "comment": "Income vs expenses: the Mac table’s left-over column, income minus expenses.",
+      "extractionState": "manual",
+      "generatesSymbol": false,
+      "localizations": {
+        "en": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Left over"
+          }
+        }
+      }
+    },
+    "report.column.month": {
+      "comment": "Income vs expenses: the Mac table’s month column, and the audio graph’s month axis.",
+      "extractionState": "manual",
+      "generatesSymbol": false,
+      "localizations": {
+        "en": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Month"
+          }
+        }
+      }
+    },
     "report.column.payee": {
       "comment": "Spending by payee: the Mac table’s payee column title, and the audio graph’s payee axis.",
       "extractionState": "manual",
@@ -3207,6 +3463,45 @@
           "stringUnit": {
             "state": "translated",
             "value": "Transactions"
+          }
+        }
+      }
+    },
+    "report.series.expenses": {
+      "comment": "Income vs expenses chart: the expenses series, named in the legend and the audio graph.",
+      "extractionState": "manual",
+      "generatesSymbol": false,
+      "localizations": {
+        "en": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Expenses"
+          }
+        }
+      }
+    },
+    "report.series.income": {
+      "comment": "Income vs expenses chart: the income series, named in the legend and the audio graph.",
+      "extractionState": "manual",
+      "generatesSymbol": false,
+      "localizations": {
+        "en": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Income"
+          }
+        }
+      }
+    },
+    "report.title.income": {
+      "comment": "Navigation title of the income-by-category report, also its Back button and Mac window title.",
+      "extractionState": "manual",
+      "generatesSymbol": false,
+      "localizations": {
+        "en": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Income"
           }
         }
       }
@@ -7094,6 +7389,19 @@
         }
       }
     },
+    "Sorted by amount. Refunds and transfers between your accounts aren’t income.": {
+      "comment": "Income report: the footer under the category rows.",
+      "extractionState": "manual",
+      "generatesSymbol": false,
+      "localizations": {
+        "en": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Sorted by amount. Refunds and transfers between your accounts aren’t income."
+          }
+        }
+      }
+    },
     "Sorted by amount. Refunds reduce spending at their payee. Transfers between your accounts aren’t spending.": {
       "comment": "Spending by payee: the footer under the payee rows.",
       "extractionState": "manual",
@@ -7120,6 +7428,19 @@
         }
       }
     },
+    "Sources of Income": {
+      "comment": "Income report: the header of the list of category rows.",
+      "extractionState": "manual",
+      "generatesSymbol": false,
+      "localizations": {
+        "en": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Sources of Income"
+          }
+        }
+      }
+    },
     "Spending": {
       "comment": "Navigation title of the spending-by-category report.",
       "extractionState": "manual",
@@ -7142,6 +7463,19 @@
           "stringUnit": {
             "state": "translated",
             "value": "Spending by Payee"
+          }
+        }
+      }
+    },
+    "Spent": {
+      "comment": "Reports: the spending figure’s label, as in “Spent ₹73,748.50”.",
+      "extractionState": "manual",
+      "generatesSymbol": false,
+      "localizations": {
+        "en": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Spent"
           }
         }
       }
@@ -7406,6 +7740,32 @@
           "stringUnit": {
             "state": "translated",
             "value": "There’s an archived category named “%@”. Unarchive it in Categories to use it."
+          }
+        }
+      }
+    },
+    "There’s no income in this period. Try another period.": {
+      "comment": "Income report empty state message, under “No Income”.",
+      "extractionState": "manual",
+      "generatesSymbol": false,
+      "localizations": {
+        "en": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "There’s no income in this period. Try another period."
+          }
+        }
+      }
+    },
+    "There’s nothing to compare in this period. Try another period.": {
+      "comment": "Income vs expenses empty state message, under “No Income or Expenses”.",
+      "extractionState": "manual",
+      "generatesSymbol": false,
+      "localizations": {
+        "en": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "There’s nothing to compare in this period. Try another period."
           }
         }
       }
@@ -7739,6 +8099,19 @@
         }
       }
     },
+    "Total": {
+      "comment": "Income vs expenses: the Mac table’s last row, the sums of the months.",
+      "extractionState": "manual",
+      "generatesSymbol": false,
+      "localizations": {
+        "en": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Total"
+          }
+        }
+      }
+    },
     "Totals by Account": {
       "comment": "Debit & Credit import Review: the section of income and expense totals of the ticked rows.",
       "extractionState": "manual",
@@ -7800,6 +8173,19 @@
           "stringUnit": {
             "state": "translated",
             "value": "Transfer has no To Account"
+          }
+        }
+      }
+    },
+    "Transfers between your own accounts aren’t counted. Refunds reduce expenses and are never income.": {
+      "comment": "Income vs expenses: the footer under the month rows.",
+      "extractionState": "manual",
+      "generatesSymbol": false,
+      "localizations": {
+        "en": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Transfers between your own accounts aren’t counted. Refunds reduce expenses and are never income."
           }
         }
       }
@@ -8113,6 +8499,19 @@
           "stringUnit": {
             "state": "translated",
             "value": "Where do I spend the most?"
+          }
+        }
+      }
+    },
+    "Where does my money come from?": {
+      "comment": "The income-by-category report’s title, a plain question: its row on Reports and its heading.",
+      "extractionState": "manual",
+      "generatesSymbol": false,
+      "localizations": {
+        "en": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Where does my money come from?"
           }
         }
       }

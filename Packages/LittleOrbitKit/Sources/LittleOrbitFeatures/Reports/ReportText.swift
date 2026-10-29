@@ -48,6 +48,11 @@ enum ReportText {
             FeatureText.string("This Year", comment: "Spending report period preset: the current calendar year.")
         case .lastYear:
             FeatureText.string("Last Year", comment: "Spending report period preset: the previous calendar year.")
+        case .lastSixMonths:
+            FeatureText.string(
+                "Last 6 Months",
+                comment: "Over-time report period preset: this calendar month and the five before it.",
+            )
         }
     }
 
@@ -72,6 +77,14 @@ enum ReportText {
     /// slice 1 spec, D420).
     static func spentCaption(period: String, accounts: String, currencyCode: String) -> String {
         FeatureText.format("Spent in %1$@ · %2$@ · %3$@", period, accounts, currencyCode)
+    }
+
+    /// “Spent in October 2026 · all accounts · INR”, or for income “Earned in …” (#184 slice 5).
+    static func totalCaption(flow: ReportFlow, period: String, accounts: String, currencyCode: String) -> String {
+        switch flow {
+        case .spending: spentCaption(period: period, accounts: accounts, currencyCode: currencyCode)
+        case .income: FeatureText.format("Earned in %1$@ · %2$@ · %3$@", period, accounts, currencyCode)
+        }
     }
 
     static var allAccounts: String {
@@ -171,12 +184,23 @@ enum ReportText {
     /// category's share (D319.7), then the report's period, account part and currency, as the report's caption
     /// names them (D319.5: the account wording returns with #184). `share` is the percent formatter's output, sign
     /// included; without one the header starts at the period.
-    static func drillDownCaption(share: String?, period: String, accounts: String, currencyCode: String) -> String {
+    static func drillDownCaption(
+        share: String?,
+        flow: ReportFlow = .spending,
+        period: String,
+        accounts: String,
+        currencyCode: String,
+    ) -> String {
         let scope = FeatureText.format("%1$@ · %2$@ · %3$@", period, accounts, currencyCode)
         guard let share else {
             return scope
         }
-        return FeatureText.format("%1$@ · %2$@", FeatureText.format("%1$@ of spending", share), scope)
+        let part =
+            switch flow {
+            case .spending: FeatureText.format("%1$@ of spending", share)
+            case .income: FeatureText.format("%1$@ of income", share)
+            }
+        return FeatureText.format("%1$@ · %2$@", part, scope)
     }
 
     static var allCategories: String {

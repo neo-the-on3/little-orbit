@@ -5,8 +5,8 @@
     /// The report's period controls (#184): the preset picker with Custom…, the From and To day pickers for a
     /// custom range with “Both dates are included.”, and ‹ period › to step one whole period back or on (⌘← and ⌘→
     /// on macOS), disabled for a custom range.
-    struct ReportPeriodControls: View {
-        let model: SpendingReportViewModel
+    struct ReportPeriodControls<Model: ReportFilterModel>: View {
+        let model: Model
 
         var body: some View {
             Picker(ReportText.period, selection: pick) {
@@ -98,8 +98,8 @@
     /// The account filter (#184): every account in the shown currency, hidden ones too, each ticked by default
     /// (D417). Unticking one removes its spending from the report and its drill-downs. The last ticked account's row
     /// is disabled, so at least one always counts.
-    struct ReportAccountsSheet: View {
-        let model: SpendingReportViewModel
+    struct ReportAccountsSheet<Model: ReportFilterModel>: View {
+        let model: Model
         @Environment(\.dismiss) private var dismiss
 
         var body: some View {
@@ -148,8 +148,8 @@
     }
 
     /// “Couldn’t Load Report” / “Try again.” with a Try Again button (D318.5).
-    struct ReportLoadFailedView: View {
-        let model: SpendingReportViewModel
+    struct ReportLoadFailedView<Model: ReportFilterModel>: View {
+        let model: Model
         let retry: () async -> Void
 
         var body: some View {

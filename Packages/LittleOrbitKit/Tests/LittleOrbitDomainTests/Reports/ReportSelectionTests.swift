@@ -69,12 +69,12 @@ struct ReportSelectionTests {
         #expect(ReportSelection.custom(range).preset == nil)
     }
 
-    @Test("A range's shape names it: month, quarter, year or days")
+    @Test("A range's shape names it: month, quarter, year, whole months (#184 slice 5) or days")
     func shapes() {
         #expect(ReportDayRange.month(year: 2026, month: 2).shape == .month)
         #expect(ReportDayRange.quarter(year: 2026, quarter: 4).shape == .quarter(4))
         #expect(ReportDayRange.year(2026).shape == .year)
         #expect(ReportDayRange(start: F.day(2026, 9, 15), end: F.day(2026, 10, 14)).shape == .days)
-        #expect(ReportDayRange(start: F.day(2026, 2, 1), end: F.day(2026, 4, 30)).shape == .days)
+        #expect(ReportDayRange(start: F.day(2026, 2, 1), end: F.day(2026, 4, 30)).shape == .months(3))
     }
 }

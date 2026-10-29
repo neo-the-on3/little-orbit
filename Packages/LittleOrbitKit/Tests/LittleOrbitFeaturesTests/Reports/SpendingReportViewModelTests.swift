@@ -11,6 +11,7 @@ final class FakeSpendingReportUseCase: LoadSpendingReportUseCase {
     var fails = false
     private(set) var requests: [SpendingReportQuery] = []
     private(set) var entryRequests: [SpendingReportQuery] = []
+    private(set) var incomeExpenseRequests: [SpendingReportQuery] = []
 
     init(snapshot: LedgerSnapshot) {
         self.snapshot = snapshot
@@ -32,6 +33,14 @@ final class FakeSpendingReportUseCase: LoadSpendingReportUseCase {
             throw Failure()
         }
         return SpendingReportBuilder.entries(in: snapshot, query: query, categoryID: categoryID)
+    }
+
+    func incomeExpenseReport(_ query: SpendingReportQuery) async throws -> IncomeExpenseReport {
+        incomeExpenseRequests.append(query)
+        if fails {
+            throw Failure()
+        }
+        return IncomeExpenseReportBuilder.report(in: snapshot, query: query, defaultCurrency: "INR")
     }
 }
 

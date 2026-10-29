@@ -95,7 +95,11 @@ struct ReportPeriodTests {
 
     @Test("The presets are months, quarters and years, in that order (#184)")
     func offeredPresets() {
-        #expect(ReportPeriod.allCases == [.thisMonth, .lastMonth, .thisQuarter, .lastQuarter, .thisYear, .lastYear])
+        #expect(
+            ReportPeriod.allCases == [
+                .thisMonth, .lastMonth, .thisQuarter, .lastQuarter, .thisYear, .lastYear, .lastSixMonths,
+            ]
+        )
     }
 }
 

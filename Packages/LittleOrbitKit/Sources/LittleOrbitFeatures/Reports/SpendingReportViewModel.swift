@@ -54,14 +54,16 @@ public struct SpendingDrillDown: Equatable, Sendable {
     public var entries: [SpendingEntryRowModel]
 }
 
-/// “What do I spend my money on?” (#27, #184), or grouped by payee “Where do I spend the most?” (#184 slice 4),
-/// for iOS and macOS. It depends only on `LoadSpendingReportUseCase`,
+/// “What do I spend my money on?” (#27, #184), grouped by payee “Where do I spend the most?” (#184 slice 4), or
+/// counting income “Where does my money come from?” (#184 slice 5), for iOS and macOS. It depends only on `LoadSpendingReportUseCase`,
 /// and every read is async, so the report is built off the main actor (Tech Architect's NB1 on #185).
 @MainActor
 @Observable
-public final class SpendingReportViewModel {
+public final class SpendingReportViewModel: ReportFilterModel {
     /// Whether the rows are categories or payees. Fixed for the screen.
     public let grouping: ReportGrouping
+    /// Whether the rows count spending or income. Fixed for the screen.
+    public let flow: ReportFlow
     /// The period shown: a preset, moved by ‹ ›, or a custom range. Change it with `select(_:)`.
     public internal(set) var selection: ReportSelection = .default
     /// The accounts counted: all of them, hidden ones too, until some are unticked (D417).
@@ -93,21 +95,23 @@ public final class SpendingReportViewModel {
     /// Counts loads, so only the latest one started is shown when two overlap.
     @ObservationIgnored private var loadCount = 0
     @ObservationIgnored private let useCase: any LoadSpendingReportUseCase
-    @ObservationIgnored let locale: Locale
+    @ObservationIgnored public let locale: Locale
     @ObservationIgnored let formatter: MoneyFormatter
     @ObservationIgnored let text: TransactionText
-    @ObservationIgnored let timeZone: TimeZone
-    @ObservationIgnored let now: () -> Date
+    @ObservationIgnored public let timeZone: TimeZone
+    @ObservationIgnored public let now: () -> Date
 
     public init(
         useCase: any LoadSpendingReportUseCase,
         grouping: ReportGrouping = .category,
+        flow: ReportFlow = .spending,
         locale: Locale = .current,
         timeZone: TimeZone = .current,
         now: @escaping () -> Date = Date.init,
     ) {
         self.useCase = useCase
         self.grouping = grouping
+        self.flow = flow
         self.locale = locale
         self.formatter = MoneyFormatter(locale: locale)
         self.text = TransactionText(locale: locale)
@@ -126,9 +130,10 @@ public final class SpendingReportViewModel {
         await load()
     }
 
-    /// Shows `period` from today, then reloads.
-    public func select(_ period: ReportPeriod) async {
-        await select(.preset(period))
+    /// Counts the accounts `filter` ticks, then reloads.
+    public func setAccountFilter(_ filter: ReportAccountFilter) async {
+        accountFilter = filter
+        await load()
     }
 
     /// Shows `selection`, then reloads.
@@ -140,27 +145,13 @@ public final class SpendingReportViewModel {
         await load()
     }
 
-    /// The preset the period picker shows; `nil` for a custom range.
-    public var period: ReportPeriod? { selection.preset }
-
-    public var periods: [ReportPeriod] { ReportPeriod.allCases }
-
-    public func periodName(_ period: ReportPeriod) -> String {
-        ReportText.periodName(period)
-    }
-
-    /// The picker only shows when the period has spending in more than one currency.
-    public var showsCurrencyPicker: Bool { currencies.count > 1 }
+    public var periods: [ReportPeriod] { ReportPeriod.categoryPresets }
 
     /// No expenses or refunds in this period (and currency): the empty state.
     public var isEmpty: Bool { !isLoading && !loadFailed && rows.isEmpty }
 
-    public var emptyTitle: String { ReportText.emptyTitle }
-    public var emptyMessage: String { ReportText.emptyMessage }
-    public var loadFailedTitle: String { ReportText.loadFailedTitle }
-    public var loadFailedMessage: String { ReportText.tryAgain }
-
-    var today: CalendarDay { TransactionTiming.today(now(), timeZone: timeZone) }
+    public var emptyTitle: String { flow == .income ? ReportText.noIncomeTitle : ReportText.emptyTitle }
+    public var emptyMessage: String { flow == .income ? ReportText.noIncomeMessage : ReportText.emptyMessage }
 
     /// What the next load reads.
     var query: SpendingReportQuery {
@@ -169,6 +160,7 @@ public final class SpendingReportViewModel {
             currencyCode: requestedCurrency,
             accounts: accountFilter,
             grouping: grouping,
+            flow: flow,
         )
     }
 
@@ -232,6 +224,7 @@ public final class SpendingReportViewModel {
             currencyCode: report.currencyCode,
             accounts: accountFilter,
             grouping: grouping,
+            flow: flow,
         )
         guard let entries = try? await useCase.spendingEntries(query, categoryID: row.rowID) else {
             return nil
@@ -246,6 +239,7 @@ public final class SpendingReportViewModel {
             amountText: formatter.string(total, currencyCode: report.currencyCode),
             caption: ReportText.drillDownCaption(
                 share: current?.shareText,
+                flow: flow,
                 period: title(of: report.range),
                 accounts: accountsText(report.accounts),
                 currencyCode: report.currencyCode,
@@ -262,7 +256,8 @@ public final class SpendingReportViewModel {
         currencyCode = report.currencyCode
         periodTitle = title(of: report.range)
         totalText = formatter.string(report.total, currencyCode: report.currencyCode)
-        totalCaption = ReportText.spentCaption(
+        totalCaption = ReportText.totalCaption(
+            flow: flow,
             period: periodTitle,
             accounts: accountsText(report.accounts),
             currencyCode: report.currencyCode,
@@ -308,37 +303,6 @@ public final class SpendingReportViewModel {
             .formatted(.percent.precision(.fractionLength(1)).sign(strategy: .automatic).locale(locale))
     }
 
-    /// “October 2026” for a month, “Oct – Dec 2026” for a quarter, “2026” for a year, and “15 Sep – 14 Oct 2026” for
-    /// any other range, in the view model's locale, from the system formatters (UI Designer's slice 1 spec).
-    func title(of range: ReportDayRange) -> String {
-        switch range.shape {
-        case .month:
-            text.format(range.start, template: "MMMMyyyy")
-        case .year:
-            text.format(range.start, template: "yyyy")
-        case .quarter:
-            interval(range, days: false)
-        case .days:
-            interval(range, days: true)
-        }
-    }
-
-    /// The system's interval format, as DateIntervalFormatter's MMMyyyy (or dMMMyyyy) template gives it: “Oct – Dec
-    /// 2026”, “15 Sep – 14 Oct 2026”.
-    private func interval(_ range: ReportDayRange, days: Bool) -> String {
-        var calendar = Calendar(identifier: .gregorian)
-        calendar.locale = locale
-        calendar.timeZone = timeZone
-        var style = Date.IntervalFormatStyle(locale: locale, calendar: calendar, timeZone: timeZone)
-        if days {
-            style = style.day()
-        }
-        style = style.month(.abbreviated).year()
-        let start = TransactionCalendar.noon(on: range.start, timeZoneID: timeZone.identifier) ?? now()
-        let end = TransactionCalendar.noon(on: range.end, timeZoneID: timeZone.identifier) ?? now()
-        return style.format(start..<max(start, end))
-    }
-
     private func entryRow(_ entry: SpendingReportEntry, currencyCode: String, today: CalendarDay)
         -> SpendingEntryRowModel
     {
@@ -348,7 +312,7 @@ public final class SpendingReportViewModel {
         let title: String
         switch RefundStatus(of: transaction) {
         case .notRefund:
-            title = name ?? ReportText.expense
+            title = name ?? (flow == .income ? ReportText.income : ReportText.expense)
         case .linked:
             title = RefundText.rowTitle(name: name, isLinked: true)
         case .originalDeleted:
@@ -357,13 +321,15 @@ public final class SpendingReportViewModel {
         }
         let date = text.format(entry.day, template: entry.day.year == today.year ? "EEEdMMM" : "EEEdMMMyyyy")
         let subtitle = [entry.account.name, date].joined(separator: " · ")
-        let amountText = formatter.string(-entry.amount, currencyCode: currencyCode, showsPlus: true)
+        // What it did to spending (−₹1,240.00 for an expense), or to income (+₹500.00).
+        let signed = flow == .income ? entry.amount : -entry.amount
+        let amountText = formatter.string(signed, currencyCode: currencyCode, showsPlus: true)
         return SpendingEntryRowModel(
             id: entry.id,
             title: title,
             subtitle: subtitle,
             amountText: amountText,
-            amountTone: entry.amount > 0 ? .negative : entry.amount < 0 ? .positive : .neutral,
+            amountTone: signed < 0 ? .negative : signed > 0 ? .positive : .neutral,
             accessibilityLabel: [title, subtitle, amountText].joined(separator: ", "),
         )
     }
