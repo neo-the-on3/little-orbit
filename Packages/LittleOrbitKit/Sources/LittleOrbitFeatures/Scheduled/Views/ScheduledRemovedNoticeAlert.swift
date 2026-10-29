@@ -10,7 +10,7 @@
         private var isPresented: Binding<Bool> {
             Binding(
                 get: { presents && model.alert == nil && model.removedNotice != nil },
-                set: { if !$0 { model.dismissRemovedNotice() } },
+                set: { if !$0 { model.removedNoticeClosed() } },
             )
         }
 
@@ -19,10 +19,11 @@
                 model.removedNotice?.message ?? "",
                 isPresented: isPresented,
                 presenting: model.removedNotice,
-            ) { _ in
-                Button(model.removedNoticeUndoTitle) { model.undoRemovedNotice() }
+            ) { notice in
+                // Each button acts on the notice it was shown with, so it works however SwiftUI orders the binding.
+                Button(model.removedNoticeUndoTitle) { model.undoRemovedNotice(notice) }
                     .accessibilityLabel(Text(model.removedNoticeUndoTitle))
-                Button(model.okayTitle) { model.dismissRemovedNotice() }
+                Button(model.okayTitle) { model.dismissRemovedNotice(notice) }
                     .keyboardShortcut(.defaultAction)
                     .accessibilityLabel(Text(model.okayTitle))
             }
