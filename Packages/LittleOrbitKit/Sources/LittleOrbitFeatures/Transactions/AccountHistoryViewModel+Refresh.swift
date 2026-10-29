@@ -16,7 +16,7 @@ struct AccountHistoryContent: Sendable {
 typealias AccountHistoryContentBuilder =
     @Sendable (AccountHistoryPage, CalendarDay, MoneyFormatter, TransactionText) async -> AccountHistoryContent
 
-extension AccountHistoryViewModel {
+extension AccountHistoryViewModel: LedgerRefreshing {
     /// After a change to the shared store, from this window or another (N5 on #286): a change that didn't touch
     /// this account, on either side of a transfer, reloads nothing. Otherwise the history is read on the main
     /// actor, its rows are built off it, and they're shown in one assignment. Rows keep their IDs and the

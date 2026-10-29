@@ -90,6 +90,17 @@ public enum UndoEvent: Equatable, Sendable {
     }
 #endif
 
+/// A window's list that a change refreshes as it's posted (B2 on 0389f40): an account history, or All
+/// Transactions (#341). `LedgerUpdates` holds it weakly.
+@MainActor
+protocol LedgerRefreshing: AnyObject {
+    /// The change's revision, counted as running (`LedgerUpdates.refreshStarted(for:)`), when the list must
+    /// refresh for it and `runRefresh` should follow; `nil` when it's up to date or the change didn't touch it.
+    func claimRefresh(after updates: LedgerUpdates) -> Int?
+    /// The rest of a claimed refresh; it ends the count `claimRefresh` started for `revision`.
+    func runRefresh(after updates: LedgerUpdates, counted revision: Int) async
+}
+
 /// Moves on after every change to the one shared store from any window, so every window's lists and
 /// balances reload straight away (D187.4). Built once, at App level.
 @MainActor
@@ -131,7 +142,7 @@ public final class LedgerUpdates {
         [UUID: (revision: Int, continuation: CheckedContinuation<Bool, Never>)] =
             [:]
     @ObservationIgnored private var histories: [WeakHistory] = []
-    /// Every window's account history, held weakly, so a change starts their refreshes as it's posted (B2).
+    /// Every window's registered list, held weakly, so a change starts their refreshes as it's posted (B2).
     @ObservationIgnored private var registers: [WeakRegister] = []
     @ObservationIgnored private var replacedHandlers: [(id: UUID, run: @MainActor () -> Void)] = []
     @ObservationIgnored private var changedHandlers: [@MainActor () -> Void] = []
@@ -145,7 +156,7 @@ public final class LedgerUpdates {
     }
 
     private struct WeakRegister {
-        weak var model: AccountHistoryViewModel?
+        weak var model: (any LedgerRefreshing)?
     }
 
     public init() {}
@@ -332,15 +343,15 @@ public final class LedgerUpdates {
         histories.append(WeakHistory(history: history))
     }
 
-    /// Registers a window's account history, held weakly: each change then starts its refresh (B2). Adding it again
-    /// does nothing.
-    func add(_ register: AccountHistoryViewModel) {
+    /// Registers a window's list, an account history or All Transactions, held weakly: each change then starts its
+    /// refresh (B2, #341). Adding it again does nothing.
+    func add(_ register: any LedgerRefreshing) {
         remove(register)
         registers.append(WeakRegister(model: register))
     }
 
     /// Stops starting `register`'s refreshes, as when its view goes. Removing it twice does nothing.
-    func remove(_ register: AccountHistoryViewModel) {
+    func remove(_ register: any LedgerRefreshing) {
         registers.removeAll { $0.model == nil || $0.model === register }
     }
 

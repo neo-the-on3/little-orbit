@@ -13,7 +13,9 @@ public enum AllTransactionsEditTarget: Equatable, Sendable {
 /// The Mac All Transactions screen (#243, D421): every stored transaction across the live accounts, hidden ones
 /// included, newest first under day headers, in each account's own currency with no total. Edits and deletes go
 /// through the register's paths by transaction id, so each changes only its own account (D421.7, D421.12), and
-/// every change is recorded in the window's undo history by the view, as the register's are.
+/// every change is recorded in the window's undo history by the view, as the register's are. It registers with
+/// `LedgerUpdates`, so each change refreshes it as it's posted, rebuilding only the rows that change, off the main
+/// actor (#341).
 @MainActor
 @Observable
 public final class AllTransactionsViewModel {
@@ -23,12 +25,23 @@ public final class AllTransactionsViewModel {
     public var deletePrompt: BulkDeletePrompt?
     public var errorMessage: String?
 
-    @ObservationIgnored private let allTransactions: any AllTransactionsUseCase
+    @ObservationIgnored let allTransactions: any AllTransactionsUseCase
     @ObservationIgnored private let changes: any TransactionChangesUseCase
-    @ObservationIgnored private let formatter: MoneyFormatter
-    @ObservationIgnored private let text: TransactionText
-    @ObservationIgnored private let timeZone: TimeZone
-    @ObservationIgnored private let now: () -> Date
+    @ObservationIgnored let formatter: MoneyFormatter
+    @ObservationIgnored let text: TransactionText
+    @ObservationIgnored let timeZone: TimeZone
+    @ObservationIgnored let now: () -> Date
+    /// What's shown, and what the next refresh starts from.
+    @ObservationIgnored var content: AllTransactionsContent?
+    /// The newest `LedgerUpdates` revision this has claimed, and the one its rows show.
+    @ObservationIgnored var seenRevision = 0
+    @ObservationIgnored var shownRevision = 0
+    /// Moves on with each load, so a slower build never shows over a newer one.
+    @ObservationIgnored var generation = 0
+    /// Loads and refreshes started so far; skips don't count. For tests.
+    @ObservationIgnored var recomputes = 0
+    /// Builds the rows; off the main actor outside tests.
+    @ObservationIgnored var buildContent: AllTransactionsContentBuilder = AllTransactionsContent.offMain
 
     public init(
         allTransactions: any AllTransactionsUseCase,
@@ -71,36 +84,17 @@ public final class AllTransactionsViewModel {
     public var allRows: [AllTransactionsRow] { sections.flatMap(\.rows) }
 
     /// The transactions on screen, for the window's toast and notice (`UndoScreen.list`, D165.1).
-    public var visibleIDs: Set<UUID> { Set(allRows.map(\.id)) }
+    public var visibleIDs: Set<UUID> { content?.visibleIDs ?? [] }
 
     /// The account a row is listed under.
     public func accountID(of rowID: UUID) -> UUID? {
-        allRows.first { $0.id == rowID }?.accountID
+        content?.rowsByID[rowID]?.accountID
     }
 
     /// “2 selected” under the table, as in the register.
     public var selectionSummary: String? {
         let count = selection.intersection(visibleIDs).count
         return count == 0 ? nil : "\(count) selected"
-    }
-
-    /// Reads every account's stored transactions and shows them; the selection keeps the rows still shown.
-    public func load() {
-        do {
-            let today = TransactionTiming.today(now(), timeZone: timeZone)
-            let page = try allTransactions.allTransactions(today: today)
-            let builder = AllTransactionsRowBuilder(
-                ledger: page.ledger,
-                formatter: formatter,
-                text: text,
-                today: today,
-            )
-            sections = builder.sections(of: page.list)
-            selection = selection.intersection(visibleIDs)
-        } catch {
-            errorMessage = UndoText.saveFailed
-        }
-        hasLoaded = true
     }
 
     /// What opening `ids` shows, in table order; `nil` when none of them is listed.
@@ -140,8 +134,9 @@ public final class AllTransactionsViewModel {
         deletePrompt = nil
     }
 
+    /// Deletes `ids`. It doesn't reload: the change the view records is posted to `LedgerUpdates`, which starts
+    /// this list's one refresh (#341).
     private func remove(_ ids: [UUID]) -> TransactionChange? {
-        defer { load() }
         do {
             let change = try changes.remove(ids: ids)
             selection.subtract(ids)

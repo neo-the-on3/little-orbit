@@ -60,23 +60,76 @@ extension TransactionRowModel {
     }
 }
 
+/// The records rows name, by id: built once per page, so each row's lookups are dictionary reads, not scans of
+/// the ledger's arrays (#341). Two records with one id keep the first, as the scans did.
+struct TransactionRowLookups: Sendable {
+    let accounts: [UUID: Account]
+    let categories: [UUID: TransactionCategory]
+    let payees: [UUID: Payee]
+
+    init(accounts: [Account], categories: [TransactionCategory], payees: [Payee]) {
+        self.accounts = Self.byID(accounts)
+        self.categories = Self.byID(categories)
+        self.payees = Self.byID(payees)
+    }
+
+    init(ledger: TransactionLedger) {
+        self.init(accounts: ledger.accounts, categories: ledger.categories, payees: ledger.payees)
+    }
+
+    private static func byID<Record: Identifiable>(_ records: [Record]) -> [UUID: Record] where Record.ID == UUID {
+        Dictionary(records.map { ($0.id, $0) }, uniquingKeysWith: { first, _ in first })
+    }
+}
+
 /// Looks up names for rows.
 struct TransactionRowContext {
     let account: Account
-    let accounts: [Account]
-    let categories: [TransactionCategory]
-    let payees: [Payee]
+    let lookups: TransactionRowLookups
     let formatter: MoneyFormatter
     let text: TransactionText
     let today: CalendarDay
     var scope: TransactionListScope = .account
 
+    init(
+        account: Account,
+        lookups: TransactionRowLookups,
+        formatter: MoneyFormatter,
+        text: TransactionText,
+        today: CalendarDay,
+    ) {
+        self.account = account
+        self.lookups = lookups
+        self.formatter = formatter
+        self.text = text
+        self.today = today
+    }
+
+    /// One page's rows from the ledger's arrays; the lookups are built here, once.
+    init(
+        account: Account,
+        accounts: [Account],
+        categories: [TransactionCategory],
+        payees: [Payee],
+        formatter: MoneyFormatter,
+        text: TransactionText,
+        today: CalendarDay,
+    ) {
+        self.init(
+            account: account,
+            lookups: TransactionRowLookups(accounts: accounts, categories: categories, payees: payees),
+            formatter: formatter,
+            text: text,
+            today: today,
+        )
+    }
+
     func row(_ entry: HistoryEntry, isUpcoming: Bool) -> TransactionRowModel {
         let transaction = entry.transaction
         let currency = account.currencyCode
         let day = TransactionTiming.day(of: transaction)
-        let category = categories.first { $0.id == transaction.categoryID }
-        let payee = payees.first { $0.id == transaction.payeeID }
+        let category = transaction.categoryID.flatMap { lookups.categories[$0] }
+        let payee = transaction.payeeID.flatMap { lookups.payees[$0] }
         let details = TransactionText.trimmed(transaction.details)
         let isTransfer = transaction.type == .transfer
 
@@ -151,17 +204,17 @@ struct TransactionRowContext {
 
     private func transferTitle(_ transaction: Transaction) -> String {
         if transaction.accountID == account.id {
-            let name = accounts.first { $0.id == transaction.transferAccountID }?.name ?? "another account"
+            let name = transaction.transferAccountID.flatMap { lookups.accounts[$0] }?.name ?? "another account"
             return "To \(name)"
         }
-        let name = accounts.first { $0.id == transaction.accountID }?.name ?? "another account"
+        let name = transaction.accountID.flatMap { lookups.accounts[$0] }?.name ?? "another account"
         return "From \(name)"
     }
 
     /// On the sending side of a cross-currency transfer: "received $12.00" (D17).
     private func receivedText(_ transaction: Transaction) -> String? {
         guard transaction.accountID == account.id, let received = transaction.destinationAmount,
-            let destination = accounts.first(where: { $0.id == transaction.transferAccountID })
+            let destination = transaction.transferAccountID.flatMap({ lookups.accounts[$0] })
         else {
             return nil
         }

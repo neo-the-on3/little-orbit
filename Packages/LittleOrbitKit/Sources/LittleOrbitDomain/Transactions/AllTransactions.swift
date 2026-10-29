@@ -48,25 +48,86 @@ public struct BuildAllTransactions: Sendable {
         transactions: [Transaction],
         today: CalendarDay,
     ) -> AllTransactionsList {
-        let live = Dictionary(
+        let live = Self.live(accounts)
+        let listed = transactions.compactMap { Self.item($0, in: live) }.sorted(by: Self.isNewer)
+        return Self.grouped(listed, today: today)
+    }
+
+    /// `list` with the transactions in `changed` taken out and put back as `transactions` now holds them (#341):
+    /// the rest keep their places, so only the changed rows are sorted and merged in. The result is exactly what a
+    /// full build of `transactions` gives, as long as nothing but the transactions in `changed` differs from what
+    /// `list` was built from. A change to an account, a category or a payee needs a full build.
+    public func updating(
+        _ list: AllTransactionsList,
+        changed: Set<UUID>,
+        accounts: [Account],
+        transactions: [Transaction],
+        today: CalendarDay,
+    ) -> AllTransactionsList {
+        guard !changed.isEmpty else {
+            return list
+        }
+        let live = Self.live(accounts)
+        let kept =
+            (list.upcoming.map { Item(entry: $0, day: TransactionTiming.day(of: $0.transaction)) }
+            + list.days.flatMap { day in day.entries.map { Item(entry: $0, day: day.day) } })
+            .filter { !changed.contains($0.entry.id) }
+        let updated =
+            transactions
+            .filter { changed.contains($0.id) }
+            .compactMap { Self.item($0, in: live) }
+            .sorted(by: Self.isNewer)
+        return Self.grouped(Self.merged(kept, updated), today: today)
+    }
+
+    /// One listed transaction with the day it's grouped under.
+    struct Item {
+        var entry: AllTransactionsEntry
+        var day: CalendarDay
+    }
+
+    static func live(_ accounts: [Account]) -> [UUID: Account] {
+        Dictionary(
             accounts.filter { $0.deletedAt == nil }.map { ($0.id, $0) },
             uniquingKeysWith: { first, _ in first },
         )
-        let listed =
-            transactions
-            .filter { $0.deletedAt == nil }
-            .compactMap { transaction -> (entry: AllTransactionsEntry, day: CalendarDay)? in
-                guard let account = Self.listingAccount(of: transaction, in: live) else {
-                    return nil
-                }
-                let entry = AllTransactionsEntry(
-                    transaction: transaction,
-                    account: account,
-                    effect: LedgerBook.effect(of: transaction, on: account.id),
-                )
-                return (entry, TransactionTiming.day(of: transaction))
+    }
+
+    /// The row for a stored transaction, or `nil` when it's deleted or no live account lists it.
+    static func item(_ transaction: Transaction, in live: [UUID: Account]) -> Item? {
+        guard transaction.deletedAt == nil, let account = listingAccount(of: transaction, in: live) else {
+            return nil
+        }
+        let entry = AllTransactionsEntry(
+            transaction: transaction,
+            account: account,
+            effect: LedgerBook.effect(of: transaction, on: account.id),
+        )
+        return Item(entry: entry, day: TransactionTiming.day(of: transaction))
+    }
+
+    /// Two lists, each newest first, as one.
+    static func merged(_ lhs: [Item], _ rhs: [Item]) -> [Item] {
+        var result: [Item] = []
+        result.reserveCapacity(lhs.count + rhs.count)
+        var left = lhs.startIndex
+        var right = rhs.startIndex
+        while left < lhs.endIndex, right < rhs.endIndex {
+            if isNewer(rhs[right], than: lhs[left]) {
+                result.append(rhs[right])
+                right += 1
+            } else {
+                result.append(lhs[left])
+                left += 1
             }
-            .sorted { lhs, rhs in Self.isNewer(lhs.entry.transaction, lhs.day, than: rhs.entry.transaction, rhs.day) }
+        }
+        result.append(contentsOf: lhs[left...])
+        result.append(contentsOf: rhs[right...])
+        return result
+    }
+
+    /// Upcoming, then the days, from rows already newest first.
+    static func grouped(_ listed: [Item], today: CalendarDay) -> AllTransactionsList {
         var upcoming: [AllTransactionsEntry] = []
         var days: [AllTransactionsDay] = []
         for item in listed {
@@ -93,17 +154,12 @@ public struct BuildAllTransactions: Sendable {
         return nil
     }
 
-    private static func isNewer(
-        _ lhs: Transaction,
-        _ lhsDay: CalendarDay,
-        than rhs: Transaction,
-        _ rhsDay: CalendarDay,
-    )
-        -> Bool
-    {
-        if lhsDay != rhsDay {
-            return lhsDay > rhsDay
+    private static func isNewer(_ lhs: Item, than rhs: Item) -> Bool {
+        if lhs.day != rhs.day {
+            return lhs.day > rhs.day
         }
+        let lhs = lhs.entry.transaction
+        let rhs = rhs.entry.transaction
         if lhs.date != rhs.date {
             return lhs.date > rhs.date
         }
@@ -114,21 +170,11 @@ public struct BuildAllTransactions: Sendable {
     }
 }
 
-/// The cross-account list with the records its rows name: accounts, categories and payees.
-public struct AllTransactionsPage: Equatable, Sendable {
-    public var list: AllTransactionsList
-    public var ledger: TransactionLedger
-
-    public init(list: AllTransactionsList, ledger: TransactionLedger) {
-        self.list = list
-        self.ledger = ledger
-    }
-}
-
 @MainActor
 public protocol AllTransactionsUseCase {
-    /// Every stored transaction across the live accounts as of `today` (#243, D421).
-    func allTransactions(today: CalendarDay) throws -> AllTransactionsPage
+    /// The stored ledger the cross-account list is built from (#243, D421). Only the read runs on the main actor;
+    /// the list and its rows are built off it (#341).
+    func ledger() throws -> TransactionLedger
 }
 
 /// Reads the stored ledger only: Upcoming scheduled occurrences come from the account history use case, never
@@ -136,16 +182,13 @@ public protocol AllTransactionsUseCase {
 @MainActor
 public struct DefaultAllTransactionsUseCase: AllTransactionsUseCase {
     private let loadLedger: any LoadTransactionLedgerUseCase
-    private let build = BuildAllTransactions()
 
     public init(loadLedger: any LoadTransactionLedgerUseCase) {
         self.loadLedger = loadLedger
     }
 
-    public func allTransactions(today: CalendarDay) throws -> AllTransactionsPage {
-        let ledger = try loadLedger.ledger()
-        let list = build(accounts: ledger.accounts, transactions: ledger.transactions, today: today)
-        return AllTransactionsPage(list: list, ledger: ledger)
+    public func ledger() throws -> TransactionLedger {
+        try loadLedger.ledger()
     }
 }
 
