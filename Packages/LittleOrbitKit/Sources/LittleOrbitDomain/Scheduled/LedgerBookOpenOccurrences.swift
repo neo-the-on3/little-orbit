@@ -36,12 +36,53 @@ extension LedgerBook {
     }
 
     /// Checks every open occurrence with values of its own as the transaction it would record, with the item's rules;
-    /// throws the first problem, so the save writes nothing.
-    static func validateOpenOccurrences(of item: ScheduledItem, in snapshot: LedgerSnapshot) throws {
+    /// throws the first problem, so the save writes nothing. `existing` is the item before the save, for what a
+    /// currency refusal names (`validate(_:before:in:)`).
+    static func validateOpenOccurrences(
+        of item: ScheduledItem,
+        before existing: ScheduledItem,
+        in snapshot: LedgerSnapshot,
+    ) throws {
         let item = withoutMissingEditReferences(item, in: snapshot)
+        let earlier = withoutMissingEditReferences(existing, in: snapshot)
         let open = item.occurrences.filter { $0.deletedAt == nil && !$0.outcome.isSettled && $0.edit != nil }
         for record in open {
-            try validate(item.resolved(for: record.day), in: snapshot)
+            try validate(item.resolved(for: record.day), before: earlier.resolved(for: record.day), in: snapshot)
         }
+    }
+
+    /// `validate(_:in:)` for values the save left as they were, such as a later occurrence's: when the save moved
+    /// their From into another currency and they fail a currency rule, From can't pay them, so the refusal is
+    /// `fromCurrencyMismatch`, naming From and the currency they were set up in (#202 B2). The values the form
+    /// saved are checked with `validate(_:in:)`, so a stale form keeps `receivedCurrencyMismatch`.
+    static func validate(_ item: ScheduledItem, before earlier: ScheduledItem, in snapshot: LedgerSnapshot) throws {
+        do {
+            try validate(item, in: snapshot)
+        } catch let error as LedgerValidationError {
+            throw fromCurrencyMismatch(error, item, earlier, in: snapshot) ?? error
+        }
+    }
+
+    /// `fromCurrencyMismatch` for a currency `error` on `item` whose From is in another currency than `earlier`'s.
+    private static func fromCurrencyMismatch(
+        _ error: LedgerValidationError,
+        _ item: ScheduledItem,
+        _ earlier: ScheduledItem,
+        in snapshot: LedgerSnapshot,
+    ) -> LedgerValidationError? {
+        guard error == .receivedCurrencyMismatch || error == .tooManyDecimalPlaces,
+            let source = snapshot.accounts.first(where: { $0.id == item.accountID }),
+            let was = snapshot.accounts.first(where: { $0.id == earlier.accountID }),
+            source.currencyCode != was.currencyCode
+        else {
+            return nil
+        }
+        return .fromCurrencyMismatch(
+            ScheduledCurrencyMismatch(
+                accountID: source.id,
+                accountCurrencyCode: source.currencyCode,
+                paymentCurrencyCode: was.currencyCode,
+            )
+        )
     }
 }

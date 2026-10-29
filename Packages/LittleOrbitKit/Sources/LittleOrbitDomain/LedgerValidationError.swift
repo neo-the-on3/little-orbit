@@ -113,6 +113,27 @@ public enum LedgerValidationError: Error, Equatable, Sendable {
     case occurrenceDayTaken(CalendarDay)
     /// "This occurrence only" for an occurrence paid or skipped since the form opened (D381.2).
     case occurrenceSettledSinceOpened
+    /// A save moved From into another currency and would leave an open occurrence From can't pay: its own amount,
+    /// or the amount received it keeps, was set up for the account it was paid from before (#202 B2). Nothing is
+    /// written. This carries what the refusal names; a stale form's mismatch is `receivedCurrencyMismatch`.
+    case fromCurrencyMismatch(ScheduledCurrencyMismatch)
+}
+
+/// Why a save was refused with `fromCurrencyMismatch` (#202 B2): only an id and currency codes, no app text; the
+/// presentation layer builds the message.
+public struct ScheduledCurrencyMismatch: Equatable, Sendable {
+    /// The From account the save moved to (%1$@ in the message).
+    public var accountID: UUID
+    /// Its currency (%2$@).
+    public var accountCurrencyCode: String
+    /// The currency of the account the occurrence was paid from before the save (%3$@).
+    public var paymentCurrencyCode: String
+
+    public init(accountID: UUID, accountCurrencyCode: String, paymentCurrencyCode: String) {
+        self.accountID = accountID
+        self.accountCurrencyCode = accountCurrencyCode
+        self.paymentCurrencyCode = paymentCurrencyCode
+    }
 }
 
 /// Why a category merge was refused: subcategories of the category being merged have the same names as
