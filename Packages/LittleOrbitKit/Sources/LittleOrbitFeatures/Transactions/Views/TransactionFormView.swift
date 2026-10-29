@@ -138,16 +138,7 @@
                         #endif
                         .focused($focus, equals: .received)
                     }
-                    if let rate = model.rateText {
-                        Label {
-                            Text(rate)
-                        } icon: {
-                            Image(systemName: "arrow.left.arrow.right")
-                                .accessibilityHidden(true)
-                        }
-                        .font(.theme(Self.footnoteStyle))
-                        .foregroundStyle(Color(ThemeColor.labelSecondary))
-                    }
+                    TransactionReceivedNotes(rate: model.rateText)
                 }
             } else {
                 stackedRow("Account", value: model.accountName) {
