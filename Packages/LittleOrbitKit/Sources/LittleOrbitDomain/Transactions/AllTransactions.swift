@@ -170,21 +170,11 @@ public struct BuildAllTransactions: Sendable {
     }
 }
 
-/// The cross-account list with the records its rows name: accounts, categories and payees.
-public struct AllTransactionsPage: Equatable, Sendable {
-    public var list: AllTransactionsList
-    public var ledger: TransactionLedger
-
-    public init(list: AllTransactionsList, ledger: TransactionLedger) {
-        self.list = list
-        self.ledger = ledger
-    }
-}
-
 @MainActor
 public protocol AllTransactionsUseCase {
-    /// Every stored transaction across the live accounts as of `today` (#243, D421).
-    func allTransactions(today: CalendarDay) throws -> AllTransactionsPage
+    /// The stored ledger the cross-account list is built from (#243, D421). Only the read runs on the main actor;
+    /// the list and its rows are built off it (#341).
+    func ledger() throws -> TransactionLedger
 }
 
 /// Reads the stored ledger only: Upcoming scheduled occurrences come from the account history use case, never
@@ -192,16 +182,13 @@ public protocol AllTransactionsUseCase {
 @MainActor
 public struct DefaultAllTransactionsUseCase: AllTransactionsUseCase {
     private let loadLedger: any LoadTransactionLedgerUseCase
-    private let build = BuildAllTransactions()
 
     public init(loadLedger: any LoadTransactionLedgerUseCase) {
         self.loadLedger = loadLedger
     }
 
-    public func allTransactions(today: CalendarDay) throws -> AllTransactionsPage {
-        let ledger = try loadLedger.ledger()
-        let list = build(accounts: ledger.accounts, transactions: ledger.transactions, today: today)
-        return AllTransactionsPage(list: list, ledger: ledger)
+    public func ledger() throws -> TransactionLedger {
+        try loadLedger.ledger()
     }
 }
 

@@ -50,7 +50,11 @@ struct AllTransactionsRowBuilder {
         lookups = TransactionRowLookups(ledger: ledger)
     }
 
-    func sections(of list: AllTransactionsList) -> [AllTransactionsSection] {
+    /// The sections for `list`, each row from `makeRow`: a kept row, or `row(_:isUpcoming:)`.
+    func sections(
+        of list: AllTransactionsList,
+        makeRow: (AllTransactionsEntry, Bool) -> AllTransactionsRow,
+    ) -> [AllTransactionsSection] {
         var sections: [AllTransactionsSection] = []
         if !list.upcoming.isEmpty {
             sections.append(
@@ -58,7 +62,7 @@ struct AllTransactionsRowBuilder {
                     kind: .upcoming,
                     // The register's Upcoming section title.
                     title: "Upcoming · not in current balance",
-                    rows: list.upcoming.map { row($0, isUpcoming: true) },
+                    rows: list.upcoming.map { makeRow($0, true) },
                 )
             )
         }
@@ -67,7 +71,7 @@ struct AllTransactionsRowBuilder {
                 AllTransactionsSection(
                     kind: .day(day.day),
                     title: text.dayTitle(day.day, today: today),
-                    rows: day.entries.map { row($0, isUpcoming: false) },
+                    rows: day.entries.map { makeRow($0, false) },
                 )
             )
         }

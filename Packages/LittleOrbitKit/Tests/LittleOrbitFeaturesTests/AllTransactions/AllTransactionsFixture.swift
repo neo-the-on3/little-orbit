@@ -1,7 +1,8 @@
 import Foundation
 import LittleOrbitDomain
-import LittleOrbitFeatures
 import LittleOrbitPersistence
+
+@testable import LittleOrbitFeatures
 
 /// Made-up ledger from Product Manager's #243 checks: today is Wed 28 Oct 2026, 18:00 in Asia/Calcutta.
 @MainActor
@@ -108,10 +109,24 @@ enum AllTransactionsFixture {
         TransactionUseCases(repository: repository, categoryNames: CatalogDefaultCategoryNames())
     }
 
-    static func model(_ useCases: TransactionUseCases) -> AllTransactionsViewModel {
+    /// The screen's model, loaded; registered with `updates` as its view registers it, when given.
+    static func model(
+        _ useCases: TransactionUseCases,
+        updates: LedgerUpdates? = nil,
+    ) async -> AllTransactionsViewModel {
         let model = AllTransactionsViewModel(useCases: useCases, locale: locale, timeZone: zone, now: { now })
-        model.load()
+        if let updates {
+            await model.appeared(in: updates)
+        } else {
+            await model.load()
+        }
         return model
+    }
+
+    /// Until the model shows the newest change `updates` posted: its refresh was started as the change was posted,
+    /// and runs on its own (#341).
+    static func settled(_ model: AllTransactionsViewModel, _ updates: LedgerUpdates) async {
+        await RealTime.eventually { model.shownRevision == updates.revision && updates.refreshesRunning == 0 }
     }
 
     static func balance(_ accountID: UUID, _ repository: InMemoryLedgerRepository) throws -> Decimal? {

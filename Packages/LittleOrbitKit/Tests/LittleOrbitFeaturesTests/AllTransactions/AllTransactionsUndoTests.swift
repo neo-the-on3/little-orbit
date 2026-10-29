@@ -1,21 +1,25 @@
 import Foundation
 import LittleOrbitDomain
-import LittleOrbitFeatures
 import LittleOrbitPersistence
 import Testing
 
+@testable import LittleOrbitFeatures
+
 /// D421 merge gate (D285.5): no edit or delete from All Transactions touches a transaction in another account,
-/// and one Undo restores exactly what was there, both legs of a transfer included (checks 4–6).
+/// and one Undo restores exactly what was there, both legs of a transfer included (checks 4–6). The list is
+/// registered with the window's `LedgerUpdates`, as its view registers it, so every change and Undo reaches it
+/// through its own refresh (#341).
 @MainActor
 @Suite("All Transactions: edits, deletes and Undo stay in their own account (#243 gate)")
 struct AllTransactionsUndoTests {
     typealias F = AllTransactionsFixture  // swiftlint:disable:this type_name
 
     @Test("Check 4: editing Metro Ticket to €14.00 changes only Euro Card, and one Undo restores −€12.50 exactly")
-    func editOnlyItsAccount() throws {
+    func editOnlyItsAccount() async throws {
         let repository = try F.repository()
         let useCases = F.useCases(repository)
-        let model = F.model(useCases)
+        let updates = LedgerUpdates()
+        let model = await F.model(useCases, updates: updates)
         let before = try F.stored(repository)
         let balances = try F.balances(repository)
         guard case .transaction(let id) = model.editTarget(for: [F.metro.id]) else {
@@ -26,9 +30,9 @@ struct AllTransactionsUndoTests {
         #expect(form.accountID == F.euroID)
         form.expressionInput = "14"
         let change = try #require(form.save())
-        let window = TestWindow(useCases)
+        let window = TestWindow(useCases, updates: updates)
         window.history.record(change)
-        model.load()
+        await F.settled(model, updates)
 
         let after = try F.stored(repository)
         #expect(after.first { $0.id == F.metro.id }?.amount == 14)
@@ -40,23 +44,25 @@ struct AllTransactionsUndoTests {
         #expect(model.allRows.first { $0.id == F.metro.id }?.row.amountText == "−€14.00")
 
         window.history.undo()
-        model.load()
+        await F.settled(model, updates)
         #expect(try F.stored(repository) == before)
         #expect(try F.balances(repository) == balances)
         #expect(model.allRows.first { $0.id == F.metro.id }?.row.amountText == "−€12.50")
     }
 
     @Test("Check 5: deleting Corner Bakery removes it from every list, and one Undo brings it back exactly")
-    func deleteAndUndo() throws {
+    func deleteAndUndo() async throws {
         let repository = try F.repository()
         let useCases = F.useCases(repository)
-        let model = F.model(useCases)
+        let updates = LedgerUpdates()
+        let model = await F.model(useCases, updates: updates)
         let before = try F.stored(repository)
         let balances = try F.balances(repository)
         model.selection = [F.bakery.id]
         let change = try #require(model.requestDelete(ids: model.selection))
-        let window = TestWindow(useCases)
+        let window = TestWindow(useCases, updates: updates)
         window.history.record(change)
+        await F.settled(model, updates)
 
         #expect(!model.visibleIDs.contains(F.bakery.id))
         #expect(model.selection.isEmpty)
@@ -66,7 +72,7 @@ struct AllTransactionsUndoTests {
         #expect([deleted[1], deleted[2], deleted[3]] == [balances[1], balances[2], balances[3]])
 
         window.history.undo()
-        model.load()
+        await F.settled(model, updates)
         let restored = try #require(try F.stored(repository).first { $0.id == F.bakery.id })
         #expect(restored == before.first { $0.id == F.bakery.id })
         #expect(try F.stored(repository) == before)
@@ -75,32 +81,36 @@ struct AllTransactionsUndoTests {
     }
 
     @Test("Check 6: deleting the transfer and Undo remove and restore both legs, both balances exact")
-    func transferDeleteAndUndo() throws {
+    func transferDeleteAndUndo() async throws {
         let repository = try F.repository()
         let useCases = F.useCases(repository)
-        let model = F.model(useCases)
+        let updates = LedgerUpdates()
+        let model = await F.model(useCases, updates: updates)
         let before = try F.stored(repository)
         let balances = try F.balances(repository)
         let change = try #require(model.requestDelete(ids: [F.move.id]))
-        let window = TestWindow(useCases)
+        let window = TestWindow(useCases, updates: updates)
         window.history.record(change)
+        await F.settled(model, updates)
+        #expect(!model.visibleIDs.contains(F.move.id), "Both legs are one row, and it's gone")
         let deleted = try F.balances(repository)
         #expect(deleted[0] == balances[0].map { $0 + 100 })
         #expect(deleted[3] == balances[3].map { $0 - 100 })
         #expect(deleted[1] == balances[1] && deleted[2] == balances[2])
 
         window.history.undo()
-        model.load()
+        await F.settled(model, updates)
         #expect(try F.stored(repository) == before)
         #expect(try F.balances(repository) == balances)
         #expect(model.allRows.filter { $0.id == F.move.id }.count == 1)
     }
 
     @Test("Check 7: several rows across accounts ask first, then delete as one step that one Undo restores")
-    func bulkDeleteAcrossAccounts() throws {
+    func bulkDeleteAcrossAccounts() async throws {
         let repository = try F.repository()
         let useCases = F.useCases(repository)
-        let model = F.model(useCases)
+        let updates = LedgerUpdates()
+        let model = await F.model(useCases, updates: updates)
         let before = try F.stored(repository)
         #expect(model.requestDelete(ids: [F.bakery.id, F.metro.id]) == nil, "Nothing is deleted before confirming")
         let prompt = try #require(model.deletePrompt)
@@ -108,13 +118,17 @@ struct AllTransactionsUndoTests {
         #expect(try F.stored(repository) == before)
         let change = try #require(model.confirmDelete())
         #expect(model.deletePrompt == nil, "Confirming closes the prompt")
-        let window = TestWindow(useCases)
+        let window = TestWindow(useCases, updates: updates)
         window.history.record(change)
+        await F.settled(model, updates)
         #expect(model.visibleIDs == [F.tea.id, F.move.id])
         #expect(window.history.undoTitle?.hasPrefix("Delete 2 Transactions") == true)
 
         window.history.undo()
+        await F.settled(model, updates)
         #expect(try F.stored(repository) == before)
+        #expect(model.allRows.map(\.id) == [F.metro.id, F.bakery.id, F.tea.id, F.move.id])
+        #expect(model.allRows.map(\.accountID) == [F.euroID, F.checkingID, F.walletID, F.checkingID])
         model.cancelDelete()
         #expect(model.deletePrompt == nil)
     }

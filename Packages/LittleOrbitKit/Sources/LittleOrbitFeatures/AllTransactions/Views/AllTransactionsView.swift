@@ -40,12 +40,20 @@
                 } onCancel: {
                     model.cancelDelete()
                 }
-                // Any change to the shared store, from this window or another, reloads it (D187.4).
-                .onChange(of: transactions.updates.revision) { model.load() }
+                // Any change to the shared store, from this window or another, refreshes it (D187.4). A registered
+                // list's refresh starts as the change is posted, so this only catches what doesn't start one, such as
+                // a restore (#341).
+                .onChange(of: transactions.updates.revision) {
+                    Task { await model.refresh(after: transactions.updates) }
+                }
                 .onChange(of: model.visibleIDs) { undoHistory.setScreen(.list(visible: model.visibleIDs)) }
                 .task {
-                    model.load()
+                    // Registers it, and loads it off the main actor (#341).
+                    await model.appeared(in: transactions.updates)
                     undoHistory.setScreen(.list(visible: model.visibleIDs))
+                }
+                .onDisappear {
+                    model.disappeared(from: transactions.updates)
                 }
         }
 
