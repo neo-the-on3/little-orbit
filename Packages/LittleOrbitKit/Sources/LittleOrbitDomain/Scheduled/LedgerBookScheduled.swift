@@ -43,8 +43,8 @@ extension LedgerBook {
     /// Adds or changes an item. An edit keeps the stored occurrence records, never the caller's, so a form opened
     /// before a catch-up or a payment in another window can't undo them. A change to the start or the repeat
     /// applies from `today` or the day after the last settled one, whichever is later (D114), so it never makes
-    /// past days due under the new rule. The old rule's unpaid days before `today` stay due on their own days, as
-    /// `pending` records, whether or not anything was settled before (D59, D336.1). Recorded transactions never
+    /// past days due under the new rule. The old rule's unpaid days through `today` stay due on their own days, as
+    /// `pending` records, whether or not anything was settled before (D59, D336.1, D428.2). Recorded transactions never
     /// change. A new item's creation date is `now`; no occurrence before that day is ever due (D336.2, D337.1).
     /// A one-off item's occurrence keeps no values of its own but its due day, so the one-off form's values are the
     /// ones it records (#202 Tester, `foldingOneOffEdit`).
@@ -63,7 +63,9 @@ extension LedgerBook {
             item.resumesOn = existing.resumesOn
             let ruleChanged = existing.startDay != item.startDay || existing.repeatRule != item.repeatRule
             if ruleChanged {
-                keepUnpaidDays(of: existing, before: today, in: &item, now: now)
+                // Today's unpaid occurrence is still due, so it's kept too (D428.2, superseding D338.8).
+                let tomorrow = ScheduleCalendar.adding(days: 1, to: today) ?? today
+                keepUnpaidDays(of: existing, before: tomorrow, in: &item, now: now)
                 let afterLast = existing.settledDays.max().flatMap { ScheduleCalendar.adding(days: 1, to: $0) }
                 item.resumesOn = [afterLast, today, existing.resumesOn].compactMap { $0 }.max()
             }

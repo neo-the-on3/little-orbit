@@ -142,6 +142,7 @@ struct ScheduledReminderPlannerTests {
         #expect(plan([item]).map(\.day) == [Fix.day(2026, 12, 25)])
     }
 
+    /// D427.1: the pending 20 Oct is October's occurrence, so the next reminder after it is 25 Nov.
     @Test("A pending day kept from before an edit is reminded when it's today")
     func pendingToday() {
         var item = electricity(day: 25)
@@ -153,7 +154,7 @@ struct ScheduledReminderPlannerTests {
                 createdAt: Fix.created,
             )
         )
-        #expect(plan([item], limit: 2).map(\.day) == [Fix.day(2026, 10, 20), Fix.day(2026, 10, 25)])
+        #expect(plan([item], limit: 2).map(\.day) == [Fix.day(2026, 10, 20), Fix.day(2026, 11, 25)])
     }
 
     @Test("S10: a changed Reminder Time moves every reminder to it")

@@ -165,6 +165,7 @@ struct ScheduledPostingTests {
         #expect(try repository.useCases().catchUp(atLaunch: true).posted.isEmpty)
     }
 
+    /// D426.1: 20 Oct is recorded, so October has its occurrence and the new rule's next day is 25 Nov.
     @Test("D114: moving the anchor after Aug–Oct were recorded applies going forward, never to past days")
     func ruleChangeGoesForward() throws {
         var phone = Fix.rent(start: Fix.day(2026, 8, 20))
@@ -175,7 +176,7 @@ struct ScheduledPostingTests {
         try repository.useCases().save(phone)
         #expect(repository.snapshot.scheduledItems[0].resumesOn == Fix.day(2026, 10, 24))
         let board = try repository.useCases().listing().board
-        #expect(board.upcoming.map(\.day) == [Fix.day(2026, 10, 25)])
+        #expect(board.upcoming.map(\.day) == [Fix.day(2026, 11, 25)])
         #expect(try repository.useCases().catchUp(atLaunch: true).posted.isEmpty)
         #expect(repository.posted(for: phone.id).count == 3)
     }

@@ -62,6 +62,8 @@ struct ScheduledReminderNotificationTests {
         #expect(notifications.added.count == 1)
     }
 
+    /// D428.2 (superseding D338.8): the edit is saved on 20 Oct, when 20 Oct is due, so 20 Oct is kept and October
+    /// has its occurrence; the new rule's reminders start on 25 Nov.
     @Test("An edit replaces the item's reminders: the old dates go, the new ones arrive with the new words")
     func editReplaces() async throws {
         var item = try saved("Electricity", start: Fix.day(2026, 8, 20))
@@ -73,10 +75,11 @@ struct ScheduledReminderNotificationTests {
         try repository.useCases().save(item)
         try await reminders.reschedule()
 
-        let days = [Fix.day(2026, 10, 25), Fix.day(2026, 11, 25), Fix.day(2026, 12, 25)]
+        let days = [Fix.day(2026, 10, 20), Fix.day(2026, 11, 25), Fix.day(2026, 12, 25)]
+        let kept = identifiers(item, [Fix.day(2026, 10, 20)])
         #expect(Set(notifications.pending.keys) == identifiers(item, days))
-        #expect(before.isDisjoint(with: notifications.pending.keys))
-        #expect(Set(notifications.removed.flatMap { $0 }) == before)
+        #expect(before.intersection(notifications.pending.keys) == kept)
+        #expect(Set(notifications.removed.flatMap { $0 }) == before.subtracting(kept))
         #expect(notifications.fireDates == days.map { Fix.date($0.year, $0.month, $0.day, 9) })
         #expect(notifications.pending.values.allSatisfy { $0.content.title == "Power" })
     }
