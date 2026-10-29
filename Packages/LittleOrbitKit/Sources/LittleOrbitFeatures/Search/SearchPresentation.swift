@@ -203,6 +203,37 @@ struct SearchFormatting {
         )
     }
 
+    /// The macOS table's Description and Payee cells (D325.4, D326.2). Description is the row's title: a refund's
+    /// D233 title, “To/From another account” for a transfer (D320.7), else the trimmed description, else the iOS
+    /// fallback “Expense” or “Income”, marked so the cell shows it in the secondary style (D328). Payee is only the
+    /// payee, blank when there's none; the description never stands in for it.
+    func columns(_ match: TransactionSearchMatch) -> SearchTableColumns {
+        let transaction = match.transaction
+        let payee = transaction.payeeID.flatMap { lookup.payees[$0] }?.name
+        let details = TransactionText.trimmed(transaction.details)
+        let description: String
+        var isFallback = false
+        if transaction.type == .transfer {
+            description = transferTitle(match)
+        } else {
+            switch RefundStatus(of: transaction) {
+            case .notRefund:
+                if let details {
+                    description = details
+                } else {
+                    description = transaction.type == .income ? SearchText.incomeRow : SearchText.expenseRow
+                    isFallback = true
+                }
+            case .linked:
+                description = RefundText.rowTitle(name: payee ?? details, isLinked: true)
+            case .originalDeleted:
+                // Its expense was deleted, or it came in unlinked by CSV import (D35.2).
+                description = RefundText.rowTitle(name: payee ?? details, isLinked: false)
+            }
+        }
+        return SearchTableColumns(description: description, isDescriptionFallback: isFallback, payee: payee ?? "")
+    }
+
     private func nonTransferTitle(_ transaction: Transaction) -> String {
         if let payee = transaction.payeeID.flatMap({ lookup.payees[$0] }) {
             return payee.name
@@ -234,4 +265,12 @@ struct SearchFormatting {
         let amount = sending ? transaction.destinationAmount ?? transaction.amount : transaction.amount
         return formatter.string(amount, currencyCode: other.currencyCode)
     }
+}
+
+/// The macOS table's Description and Payee cells for one result (D325.4, D326.2).
+struct SearchTableColumns: Equatable, Sendable {
+    var description: String
+    /// The description is the “Expense” or “Income” fallback (D328).
+    var isDescriptionFallback: Bool
+    var payee: String
 }

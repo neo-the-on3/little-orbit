@@ -1851,7 +1851,7 @@
       }
     },
     "Check the spelling or try fewer words. Search looks at description, category, payee, tag and notes.": {
-      "comment": "Search empty state under No results for …",
+      "comment": "Search empty state: the message under the title No Results for “%@”.",
       "extractionState": "manual",
       "generatesSymbol": false,
       "localizations": {
@@ -2002,6 +2002,78 @@
           "stringUnit": {
             "state": "translated",
             "value": "Search transactions"
+          }
+        }
+      }
+    },
+    "search.column.account": {
+      "comment": "macOS search results table: the account column’s title.",
+      "extractionState": "manual",
+      "localizations": {
+        "en": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Account"
+          }
+        }
+      }
+    },
+    "search.column.amount": {
+      "comment": "macOS search results table: the amount column’s title.",
+      "extractionState": "manual",
+      "localizations": {
+        "en": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Amount"
+          }
+        }
+      }
+    },
+    "search.column.category": {
+      "comment": "macOS search results table: the category column’s title.",
+      "extractionState": "manual",
+      "localizations": {
+        "en": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Category"
+          }
+        }
+      }
+    },
+    "search.column.date": {
+      "comment": "macOS search results table: the date column’s title. Click to sort by date.",
+      "extractionState": "manual",
+      "localizations": {
+        "en": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Date"
+          }
+        }
+      }
+    },
+    "search.column.description": {
+      "comment": "macOS search results table: the description column’s title. It shows the row’s title: a refund’s title, To or From an account for a transfer, else the description.",
+      "extractionState": "manual",
+      "localizations": {
+        "en": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Description"
+          }
+        }
+      }
+    },
+    "search.column.payee": {
+      "comment": "macOS search results table: the payee column’s title. Blank when a transaction has no payee.",
+      "extractionState": "manual",
+      "localizations": {
+        "en": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Payee"
           }
         }
       }
@@ -4692,7 +4764,7 @@
       }
     },
     "Export CSV": {
-      "comment": "CSV export sheet: the title.",
+      "comment": "CSV export sheet: the title. Also the iOS search row under the summary card that saves the matching transactions as a CSV file, with no ellipsis on iOS (D325.1).",
       "extractionState": "manual",
       "generatesSymbol": false,
       "localizations": {
@@ -4700,6 +4772,19 @@
           "stringUnit": {
             "state": "translated",
             "value": "Export CSV"
+          }
+        }
+      }
+    },
+    "Export CSV…": {
+      "comment": "macOS search: toolbar button that saves the matching transactions as a CSV file in the save panel (D325.1).",
+      "extractionState": "manual",
+      "generatesSymbol": false,
+      "localizations": {
+        "en": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Export CSV…"
           }
         }
       }
@@ -6748,7 +6833,7 @@
       }
     },
     "Refund": {
-      "comment": "Refund row title when the refund has no payee and no description (D233.1), as in the spending report’s drill-down.",
+      "comment": "Refund row title when the refund has no payee and no description (D233.1), as in the spending report’s drill-down and the Description column of the Mac search table.",
       "extractionState": "manual",
       "generatesSymbol": false,
       "localizations": {

@@ -192,7 +192,7 @@ enum SearchText {
     static var noResultsMessage: String {
         FeatureText.string(
             "Check the spelling or try fewer words. Search looks at description, category, payee, tag and notes.",
-            comment: "Search empty state under No results for …",
+            comment: "Search empty state: the message under the title No Results for “%@”.",
         )
     }
 
@@ -246,6 +246,91 @@ enum SearchText {
         FeatureText.string(
             "another account",
             comment: "A transfer row’s title when the other account was deleted: To another account.",
+        )
+    }
+
+    // MARK: Export CSV (#187)
+
+    /// The macOS toolbar button, which opens the save panel (D325.1).
+    static var exportCSV: String {
+        FeatureText.string(
+            "Export CSV…",
+            comment:
+                "macOS search: toolbar button that saves the matching transactions as a CSV file in the save panel (D325.1).",
+        )
+    }
+
+    /// The iOS row under the summary card: its own entry with no ellipsis, as iOS rows have none (D325.1).
+    static var exportCSVRow: String {
+        FeatureText.string(
+            "Export CSV",
+            comment:
+                "iOS search: the row under the summary card that saves the matching transactions as a CSV file. No ellipsis on iOS (D325.1).",
+        )
+    }
+
+    static var exportFailedTitle: String {
+        FeatureText.string(
+            "Couldn’t Export",
+            comment: "CSV export: alert title when the file couldn’t be made or saved.",
+        )
+    }
+
+    static var exportFailedMessage: String {
+        FeatureText.string(
+            "The CSV file couldn’t be created. Try again.",
+            comment: "CSV export: making or saving the file failed.",
+        )
+    }
+
+    // MARK: macOS results table (#187)
+
+    static var dateColumn: String {
+        FeatureText.string(
+            key: "search.column.date",
+            defaultValue: "Date",
+            comment: "macOS search results table: the date column’s title. Click to sort by date.",
+        )
+    }
+
+    static var descriptionColumn: String {
+        FeatureText.string(
+            key: "search.column.description",
+            defaultValue: "Description",
+            comment:
+                "macOS search results table: the description column’s title. It shows the row’s title: a refund’s title, To or From an account for a transfer, else the description.",
+        )
+    }
+
+    static var payeeColumn: String {
+        FeatureText.string(
+            key: "search.column.payee",
+            defaultValue: "Payee",
+            comment: "macOS search results table: the payee column’s title. Blank when a transaction has no payee.",
+        )
+    }
+
+    static var categoryColumn: String {
+        FeatureText.string(
+            key: "search.column.category",
+            defaultValue: "Category",
+            comment: "macOS search results table: the category column’s title.",
+        )
+    }
+
+    static var accountColumn: String {
+        FeatureText.string(
+            key: "search.column.account",
+            defaultValue: "Account",
+            comment: "macOS search results table: the account column’s title.",
+        )
+    }
+
+    static var amountColumn: String {
+        FeatureText.string(
+            key: "search.column.amount",
+            defaultValue: "Amount",
+            comment: "macOS search results table: the amount column’s title.",
         )
     }
 }

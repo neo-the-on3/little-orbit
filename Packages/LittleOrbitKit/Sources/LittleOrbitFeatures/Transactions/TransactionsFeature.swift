@@ -15,11 +15,14 @@ public final class TransactionsFeature {
     private let categoryPicking: CategoryPickingUseCases?
     /// Transaction search (#28). Without it the screens offer no search.
     private let search: (any SearchTransactionsUseCase)?
+    /// Export CSV of search results (#187). Without it the search screens offer no export.
+    private let exportSearch: (any ExportSearchResultsUseCase)?
 
     public init(
         useCases: TransactionUseCases,
         categoryPicking: CategoryPickingUseCases? = nil,
         search: (any SearchTransactionsUseCase)? = nil,
+        exportSearch: (any ExportSearchResultsUseCase)? = nil,
         locale: Locale = .current,
         timeZone: TimeZone = .current,
         now: @escaping () -> Date = Date.init,
@@ -29,6 +32,7 @@ public final class TransactionsFeature {
         self.updates = updates
         self.categoryPicking = categoryPicking
         self.search = search
+        self.exportSearch = exportSearch
         self.locale = locale
         self.timeZone = timeZone
         self.now = now
@@ -55,6 +59,7 @@ public final class TransactionsFeature {
         search.map {
             TransactionSearchViewModel(
                 search: $0,
+                exporting: exportSearch,
                 accountID: accountID,
                 updates: updates,
                 locale: locale,

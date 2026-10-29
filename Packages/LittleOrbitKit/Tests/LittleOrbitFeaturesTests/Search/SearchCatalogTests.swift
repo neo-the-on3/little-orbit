@@ -9,7 +9,8 @@ struct SearchCatalogTests {
         "Upcoming matches are listed but not counted.", "Use YYYY-MM-DD", "Clear Search", "No Results for “%@”",
         "Check the spelling or try fewer words. Search looks at description, category, payee, tag and notes.",
         "No Transactions", "Transactions you add will appear here.", "Couldn’t Load Transactions", "Try again.",
-        "%@ moved", "Upcoming, %1$@, %2$@", "To %@", "From %@",
+        "%@ moved", "Upcoming, %1$@, %2$@", "To %@", "From %@", "Export CSV…", "Export CSV", "Refund · %@",
+        "Refund (original deleted) · %@", "Refund", "Refund (original deleted)",
     ]
 
     /// Search's own keys for words other screens also use, and their English text (Tech Architect NB5).
@@ -17,6 +18,7 @@ struct SearchCatalogTests {
         "search.scope.expenses": "Expenses", "search.scope.income": "Income",
         "search.total.expenses": "Expenses", "search.total.income": "Income",
         "search.row.expense": "Expense", "search.row.income": "Income",
+        "search.column.description": "Description", "search.column.payee": "Payee",
     ]
 
     @Test("Every search string has a catalog entry")
@@ -54,5 +56,12 @@ struct SearchCatalogTests {
             #expect(values.count == 2, "\(key) has one and other")
             #expect(values.allSatisfy { $0.contains("%lld") }, "\(key) fills its count")
         }
+    }
+
+    @Test("D325.1: the iOS row has its own Export CSV entry with no ellipsis, apart from the macOS button")
+    func exportLabels() throws {
+        let entries = try StringCatalogTests.entries()
+        #expect(entries["Export CSV"] == ["Export CSV"])
+        #expect(entries["Export CSV…"] == ["Export CSV…"])
     }
 }

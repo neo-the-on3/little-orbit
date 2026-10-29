@@ -2,10 +2,12 @@
     import LittleOrbitDomain
     import LittleOrbitTheme
     import SwiftUI
+    import UniformTypeIdentifiers
 
     /// Search (#28 frames “Results/“cafe”” and “No results”): the system search field and scope bar, the summary
-    /// card, then results grouped by day, newest first. A tap opens the transaction to edit. An empty query lists
-    /// every transaction. The view only lays out what `TransactionSearchViewModel` worked out.
+    /// card, then results grouped by day, newest first; on macOS a sortable table (#187). A tap, or a double-click
+    /// in the table, opens the transaction to edit. An empty query lists every transaction. Export CSV saves the
+    /// results. The view only lays out what `TransactionSearchViewModel` worked out.
     struct TransactionSearchView: View {
         let title: String
         let transactions: TransactionsFeature
@@ -30,89 +32,165 @@
         }
 
         var body: some View {
-            List {
-                if !model.hints.isEmpty {
-                    Section { hintRows }
-                }
-                if let summary = model.summary {
-                    Section { SearchSummaryView(summary: summary, note: Self.showsNote ? model.upcomingNote : nil) }
-                }
-                ForEach(model.sections) { section in
-                    Section {
-                        ForEach(section.rows) { resultRow($0) }
-                    } header: {
-                        SearchDayHeader(section: section)
+            results
+                .overlay { emptyState }
+                #if os(macOS)
+                    // The footer shows only while a result is upcoming, and leaves no space otherwise (S85, S88).
+                    .safeAreaInset(edge: .bottom) {
+                        if let footer = model.upcomingFooter {
+                            Text(footer)
+                            .font(.theme(Typography.MacOS.footnote))
+                            .foregroundStyle(Color(ThemeColor.labelSecondary))
+                            .frame(maxWidth: .infinity, alignment: .leading)
+                            .padding(.horizontal, Spacing.space3)
+                            .padding(.vertical, Spacing.space2)
+                            .background(.bar)
+                        }
                     }
-                }
-            }
-            .overlay { emptyState }
-            #if os(macOS)
-                // The footer shows only while a result is upcoming, and leaves no space otherwise (S85, S88).
-                .safeAreaInset(edge: .bottom) {
-                    if let footer = model.upcomingFooter {
-                        Text(footer)
-                        .font(.theme(Typography.MacOS.footnote))
-                        .foregroundStyle(Color(ThemeColor.labelSecondary))
-                        .frame(maxWidth: .infinity, alignment: .leading)
-                        .padding(.horizontal, Spacing.space3)
-                        .padding(.vertical, Spacing.space2)
-                        .background(.bar)
+                    .toolbar {
+                        // The design's filter bar comes with the toolbar filters (#187); until then Export CSV is a
+                        // toolbar button.
+                        ToolbarItem {
+                            exportButton(model.exportTitle)
+                        }
                     }
-                }
-                // ⌘F puts the cursor in the toolbar search field (S30); Esc clears it, as the field does.
+                #endif
+                // ⌘F puts the cursor in the search field (S30): the macOS toolbar field, and on iPad with a keyboard
+                // the field above the list (#187). Esc clears it, as the field does.
                 .background {
                     Button(model.prompt) { isSearchFocused = true }
-                    .keyboardShortcut("f", modifiers: .command)
-                    .opacity(0)
-                    .accessibilityHidden(true)
+                        .keyboardShortcut("f", modifiers: .command)
+                        .opacity(0)
+                        .accessibilityHidden(true)
+                }
+                .navigationTitle(title)
+                .searchable(
+                    text: $model.query,
+                    isPresented: $isSearchPresented,
+                    placement: Self.placement,
+                    prompt: Text(model.prompt),
+                )
+                .searchFocused($isSearchFocused)
+                #if os(iOS)
+                    // Presented search hides the bar's content by default, Back included, and iPad has no Cancel or
+                    // close button, so search there had no way out without a keyboard. Keep Back on screen.
+                    .searchPresentationToolbarBehavior(.avoidHidingContent)
+                #endif
+                .searchScopes($model.scope) {
+                    ForEach(SearchScopeOption.allCases) { option in
+                        Text(option.title).tag(option)
+                    }
+                }
+                // Typing searches after a short pause; each keystroke cancels the wait before it (Tech Architect NB2).
+                // The search itself runs over the copy of the store the model keeps.
+                .task(id: model.query) {
+                    do {
+                        try await Task.sleep(for: Self.typingPause)
+                    } catch {
+                        return
+                    }
+                    guard !Task.isCancelled else {
+                        return
+                    }
+                    model.load()
+                }
+                .onChange(of: model.scope) { model.load() }
+                // Any change to the shared store, from this window or another, or a restore, reads it again (S27).
+                // That includes a save from a result's edit sheet, so the sheet doesn't load as well (NB6).
+                .onChange(of: transactions.updates.revision) { model.load() }
+                .task {
+                    model.load()
+                    if focusesOnAppear {
+                        isSearchPresented = true
+                    }
+                }
+                .sheet(item: $formSheet) { sheet in
+                    TransactionFormView(model: sheet.model) { change in
+                        undoHistory.record(change)
+                    }
+                }
+                // Export CSV (#187): the system exporter saves the file the model made from the results on screen.
+                .fileExporter(
+                    isPresented: $model.isExporterPresented,
+                    document: model.exportFile.map { CSVFileDocument(data: $0.data) },
+                    contentTypes: [.commaSeparatedText],
+                    defaultFilename: model.exportFileName,
+                    onCompletion: { result in
+                        switch result {
+                        case .success:
+                            model.exportFinished(failed: false)
+                        case .failure:
+                            model.exportFinished(failed: true)
+                        }
+                    },
+                    onCancellation: { model.exportFinished(failed: false) },
+                )
+                .alert(
+                    model.exportFailure?.title ?? "",
+                    isPresented: Binding(
+                        get: { model.exportFailure != nil },
+                        set: { if !$0 { model.exportFailure = nil } },
+                    ),
+                    presenting: model.exportFailure,
+                ) { _ in
+                    Button(model.okayTitle) {}
+                } message: { failure in
+                    Text(failure.message)
+                }
+        }
+
+        // MARK: - Results
+
+        /// iOS: a grouped list with the summary card and Export CSV first. macOS: the summary above a sortable
+        /// table, with day headers only for a date sort (#187, S63).
+        @ViewBuilder private var results: some View {
+            #if os(macOS)
+                VStack(alignment: .leading, spacing: 0) {
+                    if !model.hints.isEmpty || model.summary != nil {
+                        VStack(alignment: .leading, spacing: Spacing.space2) {
+                            hintRows
+                            if let summary = model.summary {
+                                SearchSummaryView(summary: summary, note: nil)
+                            }
+                        }
+                        .padding(.horizontal, Spacing.space3)
+                        .padding(.vertical, Spacing.space2)
+                    }
+                    SearchResultsTable(model: model, onOpen: open)
+                }
+            #else
+                List {
+                    if !model.hints.isEmpty {
+                        Section { hintRows }
+                    }
+                    if let summary = model.summary {
+                        Section {
+                            SearchSummaryView(summary: summary, note: model.upcomingNote)
+                            // A row of its own, so VoiceOver reaches it apart from the summary it follows.
+                            if model.canExport {
+                                exportButton(model.exportRowTitle)
+                            }
+                        }
+                    }
+                    ForEach(model.sections) { section in
+                        Section {
+                            ForEach(section.rows) { resultRow($0) }
+                        } header: {
+                            SearchDayHeader(section: section)
+                        }
+                    }
                 }
             #endif
-            .navigationTitle(title)
-            .searchable(
-                text: $model.query,
-                isPresented: $isSearchPresented,
-                placement: Self.placement,
-                prompt: Text(model.prompt),
-            )
-            .searchFocused($isSearchFocused)
-            #if os(iOS)
-                // Presented search hides the bar's content by default, Back included, and iPad has no Cancel or
-                // close button, so search there had no way out without a keyboard. Keep Back on screen.
-                .searchPresentationToolbarBehavior(.avoidHidingContent)
-            #endif
-            .searchScopes($model.scope) {
-                ForEach(SearchScopeOption.allCases) { option in
-                    Text(option.title).tag(option)
-                }
-            }
-            // Typing searches after a short pause; each keystroke cancels the wait before it (Tech Architect NB2).
-            // The search itself runs over the copy of the store the model keeps.
-            .task(id: model.query) {
-                do {
-                    try await Task.sleep(for: Self.typingPause)
-                } catch {
-                    return
-                }
-                guard !Task.isCancelled else {
-                    return
-                }
-                model.load()
-            }
-            .onChange(of: model.scope) { model.load() }
-            // Any change to the shared store, from this window or another, or a restore, reads it again (S27).
-            // That includes a save from a result's edit sheet, so the sheet doesn't load as well (NB6).
-            .onChange(of: transactions.updates.revision) { model.load() }
-            .task {
-                model.load()
-                if focusesOnAppear {
-                    isSearchPresented = true
-                }
-            }
-            .sheet(item: $formSheet) { sheet in
-                TransactionFormView(model: sheet.model) { change in
-                    undoHistory.record(change)
-                }
-            }
+        }
+
+        /// “Export CSV…” in the macOS toolbar, “Export CSV” as the iOS row (D325.1).
+        private func exportButton(_ title: String) -> some View {
+            Button(title, systemImage: "square.and.arrow.up") { model.export() }
+                .disabled(!model.canExport)
+        }
+
+        private func open(_ id: UUID) {
+            formSheet = TransactionFormSheet(model: transactions.makeForm(.edit(id)))
         }
 
         // MARK: - Rows
@@ -126,7 +204,7 @@
 
         private func resultRow(_ row: TransactionRowModel) -> some View {
             Button {
-                formSheet = TransactionFormSheet(model: transactions.makeForm(.edit(row.id)))
+                open(row.id)
             } label: {
                 TransactionRowView(row: row)
             }
@@ -168,11 +246,8 @@
 
         #if os(macOS)
             private static let placement = SearchFieldPlacement.toolbar
-            /// macOS shows the footer instead of the iOS note (S91).
-            private static let showsNote = false
         #else
             private static let placement = SearchFieldPlacement.navigationBarDrawer(displayMode: .always)
-            private static let showsNote = true
         #endif
     }
 
