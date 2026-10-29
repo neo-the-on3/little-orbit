@@ -2933,14 +2933,14 @@
         }
       }
     },
-    "Drop a single file to import it. Nothing was imported.": {
-      "comment": "Mac alert message when several files are dropped on the app at once (D387.4).",
+    "Drop a single CSV file to import it.": {
+      "comment": "Mac alert message when several files are dropped on the app at once (D387.4, #339).",
       "extractionState": "manual",
       "localizations": {
         "en": {
           "stringUnit": {
             "state": "translated",
-            "value": "Drop a single file to import it. Nothing was imported."
+            "value": "Drop a single CSV file to import it."
           }
         }
       }

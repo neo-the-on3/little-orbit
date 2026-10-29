@@ -13,6 +13,7 @@
         #if os(macOS)
             /// Whether this window is the key window.
             @Environment(\.appearsActive) private var appearsActive
+            @State private var isDropTargeted = false
         #endif
         /// This window, for `ExternalImportEvents`.
         @State private var window = UUID()
@@ -50,6 +51,13 @@
                     // A drop is for the window it lands on, so it doesn't wait for the key window.
                     .dropDestination(for: URL.self) { urls, _ in
                         receive(urls)
+                    } isTargeted: { isTargeted in
+                        isDropTargeted = isTargeted
+                    }
+                    .overlay {
+                        if isDropTargeted {
+                            DropHighlight()
+                        }
                     }
                 #endif
                 // Driven by the sheet count, not a timer (Tech Architect on #339).
@@ -100,6 +108,21 @@
             return true
         }
     }
+
+    #if os(macOS)
+        /// The outline while a file is dragged over a window (UI Designer on #339): the accent colour, about 3 pt,
+        /// inset from the content's edges, with no fill and no animation of its own. The system draws the cursor's
+        /// plus badge.
+        private struct DropHighlight: View {
+            var body: some View {
+                RoundedRectangle(cornerRadius: 8, style: .continuous)
+                    .strokeBorder(Color.accentColor, lineWidth: 3)
+                    .padding(4)
+                    .allowsHitTesting(false)
+                    .accessibilityHidden(true)
+            }
+        }
+    #endif
 
     extension View {
         /// Opens a CSV file handed over from outside the app in this window's import sheet (#189).

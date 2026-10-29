@@ -71,7 +71,7 @@ struct ExternalImportRouteTests {
         #expect(Route.ignore.file == nil)
     }
 
-    @Test("The D387.4 alerts have their exact copy, with OK only")
+    @Test("The D387.4 alerts have their exact copy, with OK only (UI Designer on #339)")
     func alertCopy() throws {
         let finish = try #require(Route.finishImportFirst(current: "riverstone_oct.csv", new: "harbor_nov.csv").alert)
         #expect(finish.title == "Finish This Import First")
@@ -81,7 +81,7 @@ struct ExternalImportRouteTests {
         )
         let single = try #require(Route.oneFileAtATime.alert)
         #expect(single.title == "Import One File at a Time")
-        #expect(single.message == "Drop a single file to import it. Nothing was imported.")
+        #expect(single.message == "Drop a single CSV file to import it.")
         #expect(Route.open(Self.riverstone).alert == nil)
         #expect(Route.afterSheetsClose(Self.riverstone).alert == nil)
         #expect(Route.ignore.alert == nil)

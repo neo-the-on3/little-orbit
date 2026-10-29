@@ -24,8 +24,8 @@ extension ImportExportText {
 
     static var oneFileAtATime: String {
         FeatureText.string(
-            "Drop a single file to import it. Nothing was imported.",
-            comment: "Mac alert message when several files are dropped on the app at once (D387.4).",
+            "Drop a single CSV file to import it.",
+            comment: "Mac alert message when several files are dropped on the app at once (D387.4, #339).",
         )
     }
 }
