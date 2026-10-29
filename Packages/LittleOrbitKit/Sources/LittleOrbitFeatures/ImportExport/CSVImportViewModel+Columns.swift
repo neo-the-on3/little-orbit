@@ -23,6 +23,11 @@ extension CSVImportViewModel {
         detection?.date.order == dateOrder
     }
 
+    /// Whether the Date format picker shows: not when every date reads the same in every order (D453.3).
+    public var showsDateOrder: Bool {
+        detection?.date.ordersMatter ?? true
+    }
+
     public var hasAmbiguousDates: Bool {
         detection?.date.isAmbiguous == true
     }

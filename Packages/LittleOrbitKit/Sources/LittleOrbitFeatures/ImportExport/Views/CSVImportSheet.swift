@@ -215,9 +215,11 @@
         @ViewBuilder
         private var readFormat: some View {
             Section {
-                Picker(ImportExportText.dateFormat, selection: $model.dateOrder) {
-                    ForEach(model.dateOrderChoices, id: \.self) { order in
-                        Text(dateOrderLabel(order)).tag(order)
+                if model.showsDateOrder {
+                    Picker(ImportExportText.dateFormat, selection: $model.dateOrder) {
+                        ForEach(model.dateOrderChoices, id: \.self) { order in
+                            Text(dateOrderLabel(order)).tag(order)
+                        }
                     }
                 }
                 Picker(ImportExportText.decimalSeparator, selection: $model.decimalSeparator) {
