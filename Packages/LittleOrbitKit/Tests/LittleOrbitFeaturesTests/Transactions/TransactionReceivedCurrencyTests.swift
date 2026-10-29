@@ -197,4 +197,30 @@ struct TransactionReceivedCurrencyTests {
         #expect(model.hasUnsavedEdits)
         #expect(!model.isUnchanged)
     }
+
+    @Test("The hint shows while Received is empty, hides once it reads, and shows again when emptied (UI Designer)")
+    func hintVisibility() throws {
+        let model = form(try repository())
+        model.type = .transfer
+        model.expressionInput = "10000"
+        model.transferAccountID = Self.euroID
+        #expect(model.receivedText.isEmpty)
+        #expect(model.receivedHint == "Enter the amount received in EUR.", "A new transfer between currencies")
+        #expect(!model.canSave)
+
+        model.receivedText = "110.00"
+        #expect(model.receivedHint == nil, "Hidden as soon as Received has a valid amount")
+        #expect(model.canSave)
+
+        model.receivedText = ""
+        #expect(
+            model.receivedHint == "Enter the amount received in EUR.",
+            "Back when emptied, currencies still differ",
+        )
+        #expect(!model.canSave, "Save waits for Received (D446)")
+
+        model.transferAccountID = Self.cashID
+        #expect(model.receivedHint == nil, "Same currency as From: no Received, no hint")
+        #expect(model.canSave)
+    }
 }
