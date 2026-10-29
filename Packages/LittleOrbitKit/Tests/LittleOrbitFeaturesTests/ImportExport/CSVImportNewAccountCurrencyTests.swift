@@ -1,8 +1,9 @@
 import Foundation
 import LittleOrbitDomain
-import LittleOrbitFeatures
 import LittleOrbitPersistence
 import Testing
+
+@testable import LittleOrbitFeatures
 
 /// D453.1 (#189 I8): any import into a new account, from a file with no currency column, shows the new account's
 /// currency picker, not only Debit & Credit files. It defaults to the device locale's currency (D387.3), and
@@ -124,5 +125,34 @@ struct CSVImportNewAccountCurrencyTests {
         let euros = try F.account("Travel Euros", in: repository)
         await model.setChoice(.existing(euros.id), for: travel.id)
         #expect(model.accountMatches.first { $0.name == "Travel Card" }?.newAccountCurrency == nil)
+    }
+
+    // MARK: D454.2: the no-currency-column note, under the picker
+
+    @Test("D454.2: a generic file with no currency column shows the note under the picker, not above the accounts")
+    func noteForGenericFile() async throws {
+        let model = await match(Self.maple, file: "maple_oct.csv", in: try F.repository())
+        #expect(model.accountMatches.contains { $0.newAccountCurrency != nil })
+        #expect(model.newAccountCurrencyFootnote == ImportExportText.newAccountCurrencyNote)
+        #expect(model.accountsHeaderNote == nil)
+        #expect(model.accountsFooterNote == nil)
+    }
+
+    @Test("D454.2: with a Currency column mapped, there is no note")
+    func noNoteWithCurrencyColumn() async throws {
+        let model = await match(Self.harbor, file: "harbor_nov.csv", in: try F.repository())
+        #expect(model.newAccountCurrencyFootnote == nil)
+        #expect(model.accountsHeaderNote == nil)
+    }
+
+    @Test("D454.2: matching the new name to an existing account takes the note away with the picker")
+    func noNoteWhenMatchedToExisting() async throws {
+        let repository = try F.repository()
+        let model = await match(Self.maple, file: "maple_oct.csv", in: repository)
+        let travel = try #require(model.accountMatches.first { $0.name == "Travel Card" })
+        #expect(model.newAccountCurrencyFootnote != nil)
+        await model.setChoice(.existing(try F.account("Travel Euros", in: repository).id), for: travel.id)
+        #expect(model.newAccountCurrencyFootnote == nil)
+        #expect(model.accountsHeaderNote == nil)
     }
 }

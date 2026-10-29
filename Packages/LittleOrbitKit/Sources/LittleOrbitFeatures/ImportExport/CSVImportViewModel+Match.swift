@@ -26,4 +26,14 @@ extension CSVImportViewModel {
     public var accountsFooterNote: String? {
         isDebitAndCredit ? ImportExportText.differentCurrenciesNote : nil
     }
+
+    /// The same no-currency-column note, under the accounts, whenever a non-Debit & Credit file offers a
+    /// new account's currency picker (D454.2): no column mapped to Currency and a new account. Matching
+    /// that account to an existing one, or mapping a currency column, takes it away with the picker.
+    public var newAccountCurrencyFootnote: String? {
+        guard !isDebitAndCredit, matchSections.accounts.contains(where: { $0.newAccountCurrency != nil }) else {
+            return nil
+        }
+        return ImportExportText.newAccountCurrencyNote
+    }
 }

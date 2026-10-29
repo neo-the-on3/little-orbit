@@ -289,7 +289,8 @@
             }
         }
 
-        /// Accounts, with a currency picker under each new one when the file has no currency column (#60).
+        /// Accounts, with a currency picker under each new one when the file has no currency column (#60, D453.1),
+        /// and the no-currency-column note under them in a non-Debit & Credit file (D454.2).
         @ViewBuilder
         private var accountsSection: some View {
             let rows = model.accountMatches
@@ -316,6 +317,8 @@
                 } footer: {
                     if let note = model.accountsFooterNote {
                         Label(note, systemImage: "exclamationmark.circle")
+                    } else if let note = model.newAccountCurrencyFootnote {
+                        Text(note)
                     }
                 }
             }
