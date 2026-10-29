@@ -10,6 +10,8 @@
     public final class ImportExportRequests {
         public var isPickingImport = false
         public var isExporting = false
+        /// A file opened from outside the app (#189), for this window's import sheet to open.
+        var fileToOpen: URL?
         @ObservationIgnored private let feature: ImportExportFeature?
 
         public init(feature: ImportExportFeature? = nil) {
@@ -33,12 +35,20 @@
         let model: CSVImportViewModel
     }
 
-    /// The import file picker, then the import sheet for the picked file, or an alert when it can't be read.
+    /// The import file picker, then the import sheet for the picked file, or an alert when it can't be read. A file
+    /// opened from outside the app (`fileToOpen`, #189) takes the same path as a picked one.
     struct CSVImportModifier: ViewModifier {
         let feature: ImportExportFeature
         @Binding var isPicking: Bool
+        @Binding var fileToOpen: URL?
         @State private var session: CSVImportSession?
         @State private var openAlert: ImportAlert?
+
+        init(feature: ImportExportFeature, isPicking: Binding<Bool>, fileToOpen: Binding<URL?> = .constant(nil)) {
+            self.feature = feature
+            _isPicking = isPicking
+            _fileToOpen = fileToOpen
+        }
 
         func body(content: Content) -> some View {
             content
@@ -50,6 +60,25 @@
                 }
                 .sheet(item: $session) { session in
                     CSVImportSheet(model: session.model, feature: feature)
+                }
+                // Past its file step, this import is the one D387.4's “Finish This Import First” names.
+                .onChange(of: session?.id) { old, _ in
+                    if let old {
+                        feature.activeImports.ended(old)
+                    }
+                    if let session {
+                        feature.activeImports.began(session.id, model: session.model)
+                    }
+                }
+                .onChange(of: fileToOpen) { _, url in
+                    guard let url else {
+                        return
+                    }
+                    fileToOpen = nil
+                    Task {
+                        await open(url)
+                        ExternalImportFiles.removeInboxCopy(url)
+                    }
                 }
                 #if DEBUG
                     // Testing hook: `-LittleOrbitImportCSV <path>` opens that file here, in the first window,
@@ -94,7 +123,14 @@
 
         func body(content: Content) -> some View {
             content
-                .modifier(CSVImportModifier(feature: feature, isPicking: $requests.isPickingImport))
+                .modifier(
+                    CSVImportModifier(
+                        feature: feature,
+                        isPicking: $requests.isPickingImport,
+                        fileToOpen: $requests.fileToOpen,
+                    )
+                )
+                .externalImport(feature, fileToOpen: $requests.fileToOpen)
                 .sheet(isPresented: $requests.isExporting) {
                     CSVExportSheet(feature: feature)
                 }

@@ -27,6 +27,13 @@
       "kind": "group",
       "path": "Config",
       "children": [
+        {
+          "path": "InfoPlist.xcstrings",
+          "target-membership": [
+            "LittleOrbit iOS/resources",
+            "LittleOrbit macOS/resources",
+          ],
+        },
         { "path": "LittleOrbit-Info.plist" },
         { "path": "Shared.xcconfig" },
         { "path": "Signing.xcconfig" },

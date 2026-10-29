@@ -466,6 +466,7 @@
                         isShowingSettings = true
                     },
                 )
+                .importExport(features.importExport)
                 .sheet(isPresented: $isShowingSettings) {
                     SettingsView(
                         backups: features.backups,
