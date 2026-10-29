@@ -54,6 +54,29 @@ struct ScheduledAllFutureTakenPeriodTests {
         )
     }
 
+    @Test("Weekly on Mondays, Mon 26 Oct paid, 2 Nov moved to Sun 1 Nov for all future: the same ISO week, so pending")
+    func weeklyIntoPaidISOWeek() throws {
+        // Weeks start on Monday (ISO 8601), as #316's taken-period check counts them: Sun 1 Nov is in 26 Oct's week.
+        let groceries = Fix.rent(amount: 2_000, start: Fix.day(2026, 10, 5), rule: .weekly, automatic: false)
+        let repository = try base.scene(groceries, today: Fix.day(2026, 10, 28))
+        for day in [5, 12, 19, 26].map({ Fix.day(2026, 10, $0) }) {
+            _ = try repository.useCases().pay(itemID: groceries.id, occurrence: day, on: day, custom: nil)
+        }
+        try base.edit(
+            groceries.id,
+            in: repository,
+            occurrence: Fix.day(2026, 11, 2),
+            dueDay: Fix.day(2026, 11, 1),
+            scope: .allFuture,
+        )
+        #expect(outcome(groceries.id, on: Fix.day(2026, 11, 1), repository) == .pending)
+        #expect(
+            try base.next(groceries.id, repository, count: 2).map(\.day) == [
+                Fix.day(2026, 11, 1), Fix.day(2026, 11, 8),
+            ]
+        )
+    }
+
     @Test("A move into a period with no other occurrence stays on the rule, with no pending record")
     func freePeriodStaysOnTheRule() throws {
         let rent = Fix.rent(automatic: false)
