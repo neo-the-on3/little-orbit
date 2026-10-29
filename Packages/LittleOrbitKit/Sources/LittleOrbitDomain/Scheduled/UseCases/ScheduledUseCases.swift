@@ -92,8 +92,16 @@ public protocol ManageScheduledUseCase {
 /// and again whenever the app becomes active, so a day change while it's open is caught too.
 @MainActor
 public protocol CatchUpScheduledUseCase {
-    /// `atLaunch` also removes items whose account was deleted in an earlier session (D288.1).
-    func catchUp(atLaunch: Bool) throws -> ScheduledCatchUp
+    /// `atLaunch` also removes items whose account was deleted in an earlier session (D288.1). `holding` is the
+    /// items catch-up leaves alone for now (D447).
+    func catchUp(atLaunch: Bool, holding: Set<UUID>) throws -> ScheduledCatchUp
+}
+
+extension CatchUpScheduledUseCase {
+    /// A catch-up that holds no item.
+    public func catchUp(atLaunch: Bool) throws -> ScheduledCatchUp {
+        try catchUp(atLaunch: atLaunch, holding: [])
+    }
 }
 
 /// What catch-up recorded, per item, that the catch-up hint hasn't reported yet (D338.6). It stays pending until the
@@ -272,7 +280,7 @@ public struct DefaultScheduledUseCases: LoadScheduledUseCase, ManageScheduledUse
         try repository.settleScheduledOccurrence(.skip(itemID: itemID, occurrence: occurrence))
     }
 
-    public func catchUp(atLaunch: Bool) throws -> ScheduledCatchUp {
-        try repository.catchUpScheduledItems(today: today(), pruningOrphans: atLaunch)
+    public func catchUp(atLaunch: Bool, holding: Set<UUID>) throws -> ScheduledCatchUp {
+        try repository.catchUpScheduledItems(today: today(), pruningOrphans: atLaunch, holding: holding)
     }
 }

@@ -249,12 +249,15 @@ extension LedgerBook {
     /// (#26: 3 months away records 3 transactions; opening again records nothing). An item that can't be posted
     /// (a category since archived, say) is left as it was and reported; the others still post.
     /// `pruningOrphans` removes items whose account was deleted; the launch catch-up passes it, when no window
-    /// has an Undo that could bring the account back (D288.1, D187.8).
+    /// has an Undo that could bring the account back (D288.1, D187.8). `holding` is the items whose form save's
+    /// notice is showing a payment moved back to its own day: none of their occurrences is recorded until that
+    /// notice goes, so its Undo still puts the move back with no record (D447).
     public static func catchingUpScheduledItems(
         in snapshot: LedgerSnapshot,
         today: CalendarDay,
         now: Date,
         pruningOrphans: Bool = false,
+        holding: Set<UUID> = [],
     ) -> (snapshot: LedgerSnapshot, result: ScheduledCatchUp) {
         var snapshot = snapshot
         var result = ScheduledCatchUp()
@@ -267,6 +270,9 @@ extension LedgerBook {
         // day is ever due (D336.2, D337.1), so it shows nothing until then; the App logs it (Tech Architect NB 3).
         result.createdAfterTodayItemIDs = activeScheduledItems(in: snapshot).filter { $0.creationDay > today }.map(\.id)
         for item in activeScheduledItems(in: snapshot) where item.processesAutomatically {
+            guard !holding.contains(item.id) else {
+                continue
+            }
             // An occurrence whose Pay was undone waits for the user: it's never recorded for them again (D344).
             let due = ScheduleCalendar.dueOccurrences(of: item, through: today)
                 .filter { item.occurrence(on: $0.key)?.waitsForUser != true }

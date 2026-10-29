@@ -181,12 +181,15 @@ final class FakeScheduleRepository: ScheduleRepository {
         return outcome.result
     }
 
-    func catchUpScheduledItems(today: CalendarDay, pruningOrphans: Bool) throws -> ScheduledCatchUp {
+    func catchUpScheduledItems(today: CalendarDay, pruningOrphans: Bool, holding: Set<UUID>) throws
+        -> ScheduledCatchUp
+    {
         let outcome = LedgerBook.catchingUpScheduledItems(
             in: snapshot,
             today: today,
             now: now,
             pruningOrphans: pruningOrphans,
+            holding: holding,
         )
         snapshot = outcome.snapshot
         saves += 1

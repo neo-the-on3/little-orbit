@@ -163,7 +163,9 @@
             return outcome.result
         }
 
-        public func catchUpScheduledItems(today: CalendarDay, pruningOrphans: Bool) throws -> ScheduledCatchUp {
+        public func catchUpScheduledItems(today: CalendarDay, pruningOrphans: Bool, holding: Set<UUID>) throws
+            -> ScheduledCatchUp
+        {
             // Most activations find nothing due. That depends only on the scheduled items and the accounts, so it's
             // checked on those first; the whole ledger is read only when something is due, removed or failing.
             let check = LedgerBook.catchingUpScheduledItems(
@@ -171,6 +173,7 @@
                 today: today,
                 now: now(),
                 pruningOrphans: pruningOrphans,
+                holding: holding,
             )
             if !check.result.changedLedger && check.result.failedItemIDs.isEmpty {
                 return check.result
@@ -180,6 +183,7 @@
                 today: today,
                 now: now(),
                 pruningOrphans: pruningOrphans,
+                holding: holding,
             )
             // Nothing posted or removed: no save at all.
             if outcome.result.changedLedger {

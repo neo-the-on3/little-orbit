@@ -164,13 +164,20 @@ struct ScheduledEndDateMoveTests {
         }
     }
 
-    @Test("D442 (B): catch-up records no 3 Nov payment after the move is removed")
+    @Test("D442 (B), D447: no 3 Nov payment; 26 Oct waits while the notice shows and is recorded once after OK")
     func movedAfterTheNewEndIsNotCaughtUp() throws {
-        let repository = try Self.example(key: Self.keyB, movedTo: Self.movedB, automatic: true).repository
+        let (repository, change) = try Self.example(key: Self.keyB, movedTo: Self.movedB, automatic: true)
         repository.now = Fix.date(2026, 11, 4)
+        let id = repository.snapshot.scheduledItems[0].id
+        let paid = [Fix.day(2026, 10, 12), Fix.day(2026, 10, 19)]
+        // While the save's notice shows, catch-up holds the item (D447.1).
+        #expect(try repository.useCases().catchUp(atLaunch: false, holding: [change.itemID]).posted.isEmpty)
+        #expect(repository.posted(for: id).map(day) == paid)
+        // After OK, the next catch-up records 26 Oct once, and never 3 Nov (D447.3).
         _ = try repository.useCases().catchUp(atLaunch: false)
-        let posted = repository.posted(for: repository.snapshot.scheduledItems[0].id).map(day)
-        #expect(posted == [Fix.day(2026, 10, 12), Fix.day(2026, 10, 19), Self.keyB])
+        #expect(repository.posted(for: id).map(day) == paid + [Self.keyB])
+        _ = try repository.useCases().catchUp(atLaunch: false)
+        #expect(repository.posted(for: id).map(day) == paid + [Self.keyB])
     }
 
     @Test("D442 (B): Undo of the End date save restores 3 Nov, due with its move, and no End date")
