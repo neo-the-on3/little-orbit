@@ -68,6 +68,8 @@ struct ImportRowFormatter: Sendable {
     let file: ImportFile
     let ledger: TransactionLedger
     let dateOrder: ImportDateOrder
+    /// Whether a column is mapped to Currency. Without one, a new account asks for its currency (D453.1).
+    let readsCurrency: Bool
     let defaultCurrency: String
     let money: MoneyFormatter
     let dateStyle: Date.FormatStyle
@@ -76,7 +78,7 @@ struct ImportRowFormatter: Sendable {
     init(
         file: ImportFile,
         ledger: TransactionLedger,
-        dateOrder: ImportDateOrder,
+        settings: ImportReadSettings,
         locale: Locale,
         timeZone: TimeZone,
         defaultCurrency: String,
@@ -84,7 +86,8 @@ struct ImportRowFormatter: Sendable {
     ) {
         self.file = file
         self.ledger = ledger
-        self.dateOrder = dateOrder
+        dateOrder = settings.dateOrder
+        readsCurrency = settings.mapping.column(for: .currency) != nil
         self.defaultCurrency = defaultCurrency
         self.money = money
         dateStyle = Date.FormatStyle(date: .abbreviated, time: .omitted, locale: locale, timeZone: timeZone)
@@ -300,9 +303,12 @@ struct ImportRowFormatter: Sendable {
         return sections
     }
 
-    /// Only a Debit & Credit file asks for a new account's currency; #30's files name it in a column.
+    /// A new account asks for its currency in a Debit & Credit file (#60) and in any file with no currency
+    /// column (D453.1); otherwise the file names it. It starts at the device locale's currency (D387.3).
     private func newAccountCurrency(_ match: ImportMatch) -> String? {
-        guard isDebitAndCredit, case .account = match.key.kind, match.choice == .new else { return nil }
+        guard isDebitAndCredit || !readsCurrency, case .account = match.key.kind, match.choice == .new else {
+            return nil
+        }
         return match.currencyCode ?? defaultCurrency
     }
 
