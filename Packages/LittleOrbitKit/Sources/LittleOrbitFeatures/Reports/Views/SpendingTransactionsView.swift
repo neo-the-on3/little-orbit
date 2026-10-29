@@ -62,7 +62,9 @@
             Group {
                 if dynamicTypeSize.isAccessibilitySize {
                     VStack(alignment: .leading) {
-                        ReportCategoryIcon(symbolName: row.symbolName, hue: row.hue)
+                        if let symbolName = row.symbolName, let hue = row.hue {
+                            ReportCategoryIcon(symbolName: symbolName, hue: hue)
+                        }
                         Text(entry.title)
                             .fixedSize(horizontal: false, vertical: true)
                             .frame(maxWidth: .infinity, alignment: .leading)
@@ -79,7 +81,9 @@
                     .frame(maxWidth: .infinity, alignment: .leading)
                 } else {
                     HStack {
-                        ReportCategoryIcon(symbolName: row.symbolName, hue: row.hue)
+                        if let symbolName = row.symbolName, let hue = row.hue {
+                            ReportCategoryIcon(symbolName: symbolName, hue: hue)
+                        }
                         VStack(alignment: .leading) {
                             Text(entry.title)
                             Text(entry.subtitle)

@@ -20,7 +20,7 @@ struct SpendingDrillDownModelTests {
         )
         let report = S.model(fake)
         await report.load(at: 0)
-        let row = try #require(report.rows.first { $0.categoryID == S.groceries.id })
+        let row = try #require(report.rows.first { $0.rowID == S.groceries.id })
         let drill = report.makeDrillDown(for: row)
         await drill.load()
         #expect(drill.drillDown?.entries.count == 2)
@@ -43,7 +43,7 @@ struct SpendingDrillDownModelTests {
         #expect(after.countText == "1 transaction")
         #expect(after.caption.hasPrefix("1.8% of spending"))
         #expect(report.totalText == "₹25,450.50")
-        #expect(report.rows.first { $0.categoryID == S.groceries.id }?.amountText == "₹450.50")
+        #expect(report.rows.first { $0.rowID == S.groceries.id }?.amountText == "₹450.50")
         #expect(drill.loadFailed == false)
     }
 
@@ -53,7 +53,7 @@ struct SpendingDrillDownModelTests {
         let fake = FakeSpendingReportUseCase(snapshot: S.snapshot([only, S.expense("2000", S.rent, 10, 1)]))
         let report = S.model(fake)
         await report.load(at: 0)
-        let row = try #require(report.rows.first { $0.categoryID == S.groceries.id })
+        let row = try #require(report.rows.first { $0.rowID == S.groceries.id })
         let drill = report.makeDrillDown(for: row)
         await drill.load()
         #expect(
@@ -71,7 +71,7 @@ struct SpendingDrillDownModelTests {
         await drill.refresh(at: 1)
 
         let after = try #require(drill.drillDown)
-        #expect(report.rows.contains { $0.categoryID == S.groceries.id } == false)
+        #expect(report.rows.contains { $0.rowID == S.groceries.id } == false)
         #expect(after.title == "Food & Dining › Groceries")
         #expect(after.amountText == "₹0.00")
         #expect(after.countText == "0 transactions")
@@ -85,7 +85,7 @@ struct SpendingDrillDownModelTests {
         let fake = FakeSpendingReportUseCase(snapshot: S.snapshot([S.expense("2000", S.groceries, 10, 3)]))
         let report = S.model(fake)
         await report.load(at: 0)
-        let row = try #require(report.rows.first { $0.categoryID == S.groceries.id })
+        let row = try #require(report.rows.first { $0.rowID == S.groceries.id })
         let drill = report.makeDrillDown(for: row)
         await drill.load()
         #expect(drill.drillDown?.title == "Food & Dining › Groceries")

@@ -1,6 +1,7 @@
 import Foundation
 
-/// One row of “What do I spend my money on?” (#27): a category's net spending in one currency.
+/// One row of “What do I spend my money on?” (#27): a category's net spending in one currency. In “Where do I
+/// spend the most?” (#184 slice 4) a row is a payee's instead, with no category.
 ///
 /// Each category is its own row, subcategories included, and counts only its own transactions and split lines
 /// (D289.1): nothing is rolled up into a parent, so nothing is counted twice.
@@ -19,8 +20,13 @@ public struct SpendingReportRow: Identifiable, Equatable, Sendable {
     /// the shares add up to exactly 1000. A refund-only row has a negative share. `nil` when the total isn't
     /// above 0, since a share of that means nothing.
     public var shareTenths: Int?
+    /// A payee row's payee ID, or `nil` for No Payee and for category rows.
+    public var payeeID: UUID?
+    /// A payee row's payee, or `nil` for No Payee and for category rows.
+    public var payee: Payee?
 
-    public var id: UUID? { categoryID }
+    /// The category's ID in a category report, the payee's in a payee report; `nil` for Uncategorised or No Payee.
+    public var id: UUID? { categoryID ?? payeeID }
 
     public init(
         categoryID: UUID?,
@@ -29,6 +35,8 @@ public struct SpendingReportRow: Identifiable, Equatable, Sendable {
         amount: Decimal,
         transactionCount: Int,
         shareTenths: Int? = nil,
+        payeeID: UUID? = nil,
+        payee: Payee? = nil,
     ) {
         self.categoryID = categoryID
         self.category = category
@@ -36,6 +44,8 @@ public struct SpendingReportRow: Identifiable, Equatable, Sendable {
         self.amount = amount
         self.transactionCount = transactionCount
         self.shareTenths = shareTenths
+        self.payeeID = payeeID
+        self.payee = payee
     }
 }
 
@@ -150,27 +160,22 @@ public enum SpendingReportBuilder {
             requestedCode.flatMap { currencies.contains($0) ? $0 : nil } ?? currencies.first ?? requestedCode
             ?? defaultCode
 
+        let key = rowKey(in: snapshot, grouping: query.grouping)
         var amounts: [UUID?: Decimal] = [:]
         var transactions: [UUID?: Set<UUID>] = [:]
         for line in lines where line.currency == currency {
-            amounts[line.categoryID, default: 0] += line.amount
-            transactions[line.categoryID, default: []].insert(line.transaction.id)
+            amounts[key(line), default: 0] += line.amount
+            transactions[key(line), default: []].insert(line.transaction.id)
         }
-        let categories = Dictionary(
-            snapshot.categoriesVisible().map { ($0.id, $0) },
-            uniquingKeysWith: { first, _ in first },
-        )
-        var rows = amounts.map { categoryID, amount in
-            let category = categoryID.flatMap { categories[$0] }
-            return SpendingReportRow(
-                categoryID: categoryID,
-                category: category,
-                parent: category?.parentID.flatMap { categories[$0] },
-                amount: amount,
-                transactionCount: transactions[categoryID]?.count ?? 0,
-            )
+        var rows: [SpendingReportRow]
+        switch query.grouping {
+        case .category:
+            rows = categoryRows(in: snapshot, amounts: amounts, transactions: transactions)
+            rows.sort(by: isOrderedBefore)
+        case .payee:
+            rows = payeeRows(in: snapshot, amounts: amounts, transactions: transactions)
+            rows.sort(by: isPayeeOrderedBefore)
         }
-        rows.sort(by: isOrderedBefore)
         let total = rows.reduce(Decimal(0)) { $0 + $1.amount }
         let shares = ReportShares.tenths(of: rows.map(\.amount), total: total)
         for index in rows.indices {
@@ -184,6 +189,27 @@ public enum SpendingReportBuilder {
             total: total,
             accounts: accountOptions(in: snapshot, currency: currency, filter: query.accounts),
         )
+    }
+
+    private static func categoryRows(
+        in snapshot: LedgerSnapshot,
+        amounts: [UUID?: Decimal],
+        transactions: [UUID?: Set<UUID>],
+    ) -> [SpendingReportRow] {
+        let categories = Dictionary(
+            snapshot.categoriesVisible().map { ($0.id, $0) },
+            uniquingKeysWith: { first, _ in first },
+        )
+        return amounts.map { categoryID, amount in
+            let category = categoryID.flatMap { categories[$0] }
+            return SpendingReportRow(
+                categoryID: categoryID,
+                category: category,
+                parent: category?.parentID.flatMap { categories[$0] },
+                amount: amount,
+                transactionCount: transactions[categoryID]?.count ?? 0,
+            )
+        }
     }
 
     /// Every account in `currency` that isn't deleted, hidden ones too (D417), by name.
@@ -216,20 +242,32 @@ public enum SpendingReportBuilder {
         )
     }
 
-    /// The transactions behind one row of `query`'s report, in its currency (`defaultCurrency` when it has
-    /// none, as the report itself falls back; Tech Architect's N3 on #307) and ticked accounts only, newest first.
+    /// The transactions behind one category row of `query`'s report. See `entries(in:query:rowID:defaultCurrency:)`.
     public static func entries(
         in snapshot: LedgerSnapshot,
         query: SpendingReportQuery,
         categoryID: UUID?,
         defaultCurrency: String = CurrencyCode.deviceDefault,
     ) -> [SpendingReportEntry] {
+        entries(in: snapshot, query: query, rowID: categoryID, defaultCurrency: defaultCurrency)
+    }
+
+    /// The transactions behind one row of `query`'s report (a category's, or a payee's when it groups by payee;
+    /// `nil` for Uncategorised or No Payee), in its currency (`defaultCurrency` when it has none, as the report
+    /// itself falls back; Tech Architect's N3 on #307) and ticked accounts only, newest first.
+    public static func entries(
+        in snapshot: LedgerSnapshot,
+        query: SpendingReportQuery,
+        rowID: UUID?,
+        defaultCurrency: String = CurrencyCode.deviceDefault,
+    ) -> [SpendingReportEntry] {
         let range = query.range
+        let key = rowKey(in: snapshot, grouping: query.grouping)
         let currency = CurrencyCode.normalize(query.currencyCode ?? defaultCurrency)
         let payees = Dictionary(snapshot.payeesVisible().map { ($0.id, $0) }, uniquingKeysWith: { first, _ in first })
         var entries: [UUID: SpendingReportEntry] = [:]
         for line in contributions(in: snapshot, range: range)
-        where line.currency == currency && line.categoryID == categoryID && query.accounts.includes(line.account.id) {
+        where line.currency == currency && key(line) == rowID && query.accounts.includes(line.account.id) {
             if entries[line.transaction.id] != nil {
                 entries[line.transaction.id]?.amount += line.amount
             } else {

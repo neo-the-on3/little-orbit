@@ -28,8 +28,21 @@ public final class ReportsFeature {
 
     public var title: String { ReportText.reportsTitle }
     public var spendingQuestion: String { ReportText.spendingQuestion }
+    /// “Where do I spend the most?”: the payee report's row on Reports (#184 slice 4).
+    public var payeeQuestion: String { ReportText.payeeQuestion }
 
     public func makeSpendingReport() -> SpendingReportViewModel {
         SpendingReportViewModel(useCase: spendingReport, locale: locale, timeZone: timeZone, now: now)
+    }
+
+    /// The spending report grouped by payee.
+    public func makePayeeReport() -> SpendingReportViewModel {
+        SpendingReportViewModel(
+            useCase: spendingReport,
+            grouping: .payee,
+            locale: locale,
+            timeZone: timeZone,
+            now: now,
+        )
     }
 }

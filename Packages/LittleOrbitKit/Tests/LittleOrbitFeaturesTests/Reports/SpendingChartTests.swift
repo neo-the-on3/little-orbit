@@ -117,9 +117,9 @@ struct SpendingChartTests {
         let mine = try #require(model.chartBars.first)
         let none = try #require(model.chartBars.last)
         #expect(mine.id == lookalike.id.uuidString)
-        #expect(model.chartRow(id: mine.id)?.categoryID == lookalike.id)
+        #expect(model.chartRow(id: mine.id)?.rowID == lookalike.id)
         #expect(model.chartRow(id: none.id) == model.rows.last)
-        #expect(model.chartRow(id: none.id)?.categoryID == nil)
+        #expect(model.chartRow(id: none.id)?.rowID == nil)
         #expect(model.chartBar(id: none.id)?.amountText == "₹300.00")
         let points = model.chartAudioPoints
         #expect(points.map(\.id) == model.chartBars.map(\.id))

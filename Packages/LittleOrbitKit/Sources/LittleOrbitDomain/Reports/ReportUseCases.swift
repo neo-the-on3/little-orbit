@@ -1,13 +1,15 @@
 import Foundation
 
-/// Loads “What do I spend my money on?” and its drill-down (#27, #184). The spending report's view model depends
+/// Loads “What do I spend my money on?” or, grouped by payee, “Where do I spend the most?”, and their
+/// drill-downs (#27, #184). The spending report's view model depends
 /// only on this protocol; the App target wires in `DefaultLoadSpendingReportUseCase`. Both calls are async, so
 /// the report is built off the main actor (Tech Architect's NB1 on #185).
 public protocol LoadSpendingReportUseCase: Sendable {
     /// The report for `query`, in its currency or, when that currency has no spending in the range, in the
     /// first of the range's currencies (the default currency first).
     func spendingReport(_ query: SpendingReportQuery) async throws -> SpendingReport
-    /// The transactions behind one row of `query`'s report (`categoryID` `nil` is Uncategorised), newest first.
+    /// The transactions behind one row of `query`'s report, newest first. `categoryID` is the row's ID: a
+    /// category's, or a payee's when the query groups by payee; `nil` is Uncategorised or No Payee.
     func spendingEntries(_ query: SpendingReportQuery, categoryID: UUID?) async throws -> [SpendingReportEntry]
 }
 

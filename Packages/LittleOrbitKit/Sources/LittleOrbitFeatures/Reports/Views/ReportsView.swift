@@ -3,8 +3,8 @@
     import LittleOrbitTheme
     import SwiftUI
 
-    /// Reports (#27 core). For Monday it lists one report, “What do I spend my money on?”; the other reports
-    /// are a Follow-up to #27. iOS pushes it from the Accounts home, and macOS shows it for the sidebar's
+    /// Reports (#27 core). It lists “What do I spend my money on?” and, by payee, “Where do I spend the most?”
+    /// (#184 slice 4); the other reports are a Follow-up to #27. iOS pushes it from the Accounts home, and macOS shows it for the sidebar's
     /// Reports item, inside its own navigation stack.
     public struct ReportsView: View {
         private let feature: ReportsFeature
@@ -20,6 +20,11 @@
                 } label: {
                     Label(feature.spendingQuestion, systemImage: "cart.fill")
                 }
+                NavigationLink {
+                    SpendingReportView(feature: feature, grouping: .payee)
+                } label: {
+                    Label(feature.payeeQuestion, systemImage: "storefront.fill")
+                }
             }
             .navigationTitle(feature.title)
         }
@@ -27,6 +32,7 @@
 
     /// “What do I spend my money on?”: the period and currency pickers, the total, the ranked bar chart (#184
     /// slice 3), then one row per category with its amount, share and a bar, each opening its transactions.
+    /// Grouped by payee it's “Where do I spend the most?” (#184 slice 4), with one row per payee and no icons.
     /// Standard list rows, so they get the system chevrons, Dynamic Type and keyboard focus. On the Mac a table
     /// replaces the list.
     struct SpendingReportView: View {
@@ -36,14 +42,16 @@
         @State private var opened = ReportDrillDownPresentation<SpendingRowModel>()
         private let updates: LedgerUpdates
 
-        init(feature: ReportsFeature) {
-            _model = State(initialValue: feature.makeSpendingReport())
+        init(feature: ReportsFeature, grouping: ReportGrouping = .category) {
+            _model = State(
+                initialValue: grouping == .payee ? feature.makePayeeReport() : feature.makeSpendingReport()
+            )
             updates = feature.updates
         }
 
         var body: some View {
             layout
-                .navigationTitle(ReportText.spendingTitle)
+                .navigationTitle(model.navigationTitle)
                 .toolbar {
                     ToolbarItem {
                         Button {
@@ -101,7 +109,7 @@
         }
 
         @ViewBuilder private var controls: some View {
-            Text(ReportText.spendingQuestion)
+            Text(model.question)
                 .font(.title3)
                 .accessibilityAddTraits(.isHeader)
             ReportPeriodControls(model: model)
@@ -157,15 +165,15 @@
                         }
                     }
                 } header: {
-                    Text(ReportText.allCategories)
+                    Text(model.rowsHeader)
                 } footer: {
-                    Text(ReportText.footer)
+                    Text(model.footer)
                 }
             }
         }
     }
 
-    /// One category row: icon, name and amount, then the transaction count and share, then a bar as long as
+    /// One category or payee row: icon (a category's only), name and amount, then the transaction count and share, then a bar as long as
     /// the row's share of the largest row. A row at 0 or below (refund-only) has no bar. VoiceOver reads the
     /// row as one line of the data table: name, amount, currency, share and count.
     ///
@@ -190,7 +198,9 @@
 
         private var standard: some View {
             HStack(alignment: .top) {
-                ReportCategoryIcon(symbolName: row.symbolName, hue: row.hue)
+                if let symbolName = row.symbolName, let hue = row.hue {
+                    ReportCategoryIcon(symbolName: symbolName, hue: hue)
+                }
                 VStack(alignment: .leading) {
                     HStack(alignment: .firstTextBaseline) {
                         Text(row.name)
@@ -219,7 +229,9 @@
 
         private var stacked: some View {
             VStack(alignment: .leading) {
-                ReportCategoryIcon(symbolName: row.symbolName, hue: row.hue)
+                if let symbolName = row.symbolName, let hue = row.hue {
+                    ReportCategoryIcon(symbolName: symbolName, hue: hue)
+                }
                 Text(row.name)
                     .fixedSize(horizontal: false, vertical: true)
                     .frame(maxWidth: .infinity, alignment: .leading)
@@ -246,7 +258,7 @@
         @ViewBuilder private var bar: some View {
             if let fraction = row.barFraction {
                 ProgressView(value: fraction)
-                    .tint(Color(row.hue.token))
+                    .tint(row.hue.map { Color($0.token) } ?? Color.accentColor)
             }
         }
     }

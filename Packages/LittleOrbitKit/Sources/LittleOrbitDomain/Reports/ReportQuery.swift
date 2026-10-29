@@ -1,6 +1,13 @@
 import Foundation
 
-/// What one spending report reads (#184): its days, its currency and its accounts.
+/// How a spending report groups its rows (#184): by category (“What do I spend my money on?”) or by payee
+/// (“Where do I spend the most?”, slice 4). Both count the same transactions the same way.
+public enum ReportGrouping: Hashable, Sendable {
+    case category
+    case payee
+}
+
+/// What one spending report reads (#184): its days, its currency, its accounts and its grouping.
 public struct SpendingReportQuery: Hashable, Sendable {
     /// Both end days included.
     public var range: ReportDayRange
@@ -8,11 +15,18 @@ public struct SpendingReportQuery: Hashable, Sendable {
     /// currencies, the default currency first.
     public var currencyCode: String?
     public var accounts: ReportAccountFilter
+    public var grouping: ReportGrouping
 
-    public init(range: ReportDayRange, currencyCode: String? = nil, accounts: ReportAccountFilter = .all) {
+    public init(
+        range: ReportDayRange,
+        currencyCode: String? = nil,
+        accounts: ReportAccountFilter = .all,
+        grouping: ReportGrouping = .category,
+    ) {
         self.range = range
         self.currencyCode = currencyCode
         self.accounts = accounts
+        self.grouping = grouping
     }
 }
 
