@@ -26,8 +26,13 @@ struct ScheduledMovedBackHoldTests {
         let id: UUID
     }
 
-    /// The scene on 28 Oct, with nothing recorded yet: 26 Oct is due on 3 Nov.
-    private func scene() throws -> Opened {
+    private static let movedBack =
+        "A moved payment was due after the new end date, so it’s back on its scheduled day: 26 Oct."
+    private static let removedOnly = "A moved payment was due after the new end date and was removed: 3 Nov."
+
+    /// The scene on 28 Oct, with nothing recorded yet: `moving` is due on 3 Nov. With the default, 26 Oct is moved,
+    /// so a catch-up on 28 Oct has nothing due; with Mon 2 Nov moved instead, 26 Oct is due and not yet recorded.
+    private func scene(moving: CalendarDay = Self.key) throws -> Opened {
         let scene = try ScheduledScene(today: Self.day(10, 24))
         let water = ScheduledItem(
             amount: 600,
@@ -44,7 +49,7 @@ struct ScheduledMovedBackHoldTests {
         let item = try #require(try scene.repository.scheduleLedger().scheduledItems.first)
         _ = try scene.repository.updateScheduledOccurrence(
             item,
-            editing: ScheduledOccurrenceSave(occurrence: Self.key, dueDay: Self.movedTo, scope: .thisOccurrence),
+            editing: ScheduledOccurrenceSave(occurrence: moving, dueDay: Self.movedTo, scope: .thisOccurrence),
             payee: nil,
             today: Self.day(10, 24),
             now: scene.now,
@@ -56,7 +61,9 @@ struct ScheduledMovedBackHoldTests {
             schedule: scene.repository,
         )
         let feature = scene.feature()
-        #expect(feature.catchUp(atLaunch: false)?.posted.isEmpty == true)
+        if moving == Self.key {
+            #expect(feature.catchUp(atLaunch: false)?.posted.isEmpty == true)
+        }
         return Opened(
             scene: scene,
             feature: feature,
@@ -66,24 +73,56 @@ struct ScheduledMovedBackHoldTests {
     }
 
     /// A list in the window, after the form's End date save on 28 Oct, showing the notice.
-    private func savedEnd(_ opened: Opened) throws -> ScheduledListViewModel {
+    private func savedEnd(_ opened: Opened, notice: String = Self.movedBack) throws -> ScheduledListViewModel {
         let list = opened.feature.makeList()
         list.useUndoHistory(opened.window.history)
         list.load()
-        list.openEditor(opened.id)
+        try saveEnd(of: opened.id, in: list, notice: notice)
+        return list
+    }
+
+    /// The form's End date save of 31 Oct on item `id` in `list`, which then shows `notice`.
+    private func saveEnd(of id: UUID, in list: ScheduledListViewModel, notice: String) throws {
+        list.openEditor(id)
         let form = try #require(list.form)
         form.hasEnd = true
         form.endDay = Self.day(10, 31)
         #expect(form.save())
-        #expect(
-            list.removedNotice?.message
-                == "A moved payment was due after the new end date, so it’s back on its scheduled day: 26 Oct."
+        #expect(list.removedNotice?.message == notice)
+    }
+
+    /// Phone Bill, ₹499.00 weekly on Mondays from 26 Oct, recorded by hand, with Mon 2 Nov moved to Tue 3 Nov.
+    private func addPhoneBill(_ opened: Opened) throws -> UUID {
+        let scene = opened.scene
+        let phone = ScheduledItem(
+            amount: 499,
+            accountID: scene.account.id,
+            categoryID: scene.housing.id,
+            details: "Phone Bill",
+            startDay: Self.day(10, 26),
+            repeatRule: .weekly,
+            processesAutomatically: false,
+            timeZoneID: ScheduledScene.zone,
+            createdAt: scene.now,
         )
-        return list
+        try scene.repository.saveScheduledItem(phone, today: Self.day(10, 28), now: scene.now)
+        let item = try #require(try scene.repository.scheduleLedger().scheduledItems.first { $0.id == phone.id })
+        _ = try scene.repository.updateScheduledOccurrence(
+            item,
+            editing: ScheduledOccurrenceSave(
+                occurrence: Self.day(11, 2),
+                dueDay: Self.movedTo,
+                scope: .thisOccurrence,
+            ),
+            payee: nil,
+            today: Self.day(10, 28),
+            now: scene.now,
+        )
+        return phone.id
     }
 
     private func stored(_ opened: Opened) throws -> ScheduledItem {
-        try #require(try opened.scene.repository.scheduleLedger().scheduledItems.first)
+        try #require(try opened.scene.repository.scheduleLedger().scheduledItems.first { $0.id == opened.id })
     }
 
     private func recorded(_ opened: Opened) throws -> [Transaction] {
@@ -168,6 +207,48 @@ struct ScheduledMovedBackHoldTests {
         }
         #expect(gone == nil)
         #expect(opened.feature.catchUp(atLaunch: false)?.posted.count == 1)
+        #expect(try recorded(opened).count == 1)
+    }
+
+    @Test("A removal-only notice holds nothing: while it shows, catch-up records 26 Oct once, ₹600.00 (A3)")
+    func removalOnlyNoticeHoldsNothing() throws {
+        let opened = try scene(moving: Self.day(11, 2))
+        let list = try savedEnd(opened, notice: Self.removedOnly)
+        #expect(opened.feature.catchUp(atLaunch: false)?.posted.map(\.amount) == [600])
+        #expect(try stored(opened).occurrence(on: Self.key)?.outcome == .posted)
+        #expect(list.removedNotice?.message == Self.removedOnly)
+        list.dismissRemovedNotice()
+        #expect(opened.feature.catchUp(atLaunch: false)?.posted.isEmpty == true)
+        #expect(try recorded(opened).count == 1)
+    }
+
+    @Test("The alert closing the notice by itself ends the hold; the next catch-up records 26 Oct once (A6)")
+    func closingAloneReleasesTheHold() throws {
+        let opened = try scene()
+        let list = try savedEnd(opened)
+        #expect(opened.feature.catchUp(atLaunch: false)?.posted.isEmpty == true)
+        list.removedNoticeClosed()
+        #expect(list.removedNotice == nil)
+        // Closing doesn't catch up by itself.
+        #expect(try recorded(opened).isEmpty)
+        #expect(opened.feature.catchUp(atLaunch: false)?.posted.map(\.amount) == [600])
+        #expect(try stored(opened).occurrence(on: Self.key)?.outcome == .posted)
+        #expect(opened.feature.catchUp(atLaunch: false)?.posted.isEmpty == true)
+        #expect(try recorded(opened).count == 1)
+    }
+
+    @Test("A notice that replaces the shown one ends its hold; the next catch-up records 26 Oct once (A7)")
+    func replacingNoticeReleasesTheOldHold() throws {
+        let opened = try scene()
+        let phone = try addPhoneBill(opened)
+        let list = try savedEnd(opened)
+        #expect(opened.feature.catchUp(atLaunch: false)?.posted.isEmpty == true)
+        // Phone Bill's End date save in the same list: its removal-only notice replaces Water Bill's.
+        try saveEnd(of: phone, in: list, notice: Self.removedOnly)
+        #expect(opened.feature.catchUp(atLaunch: false)?.posted.map(\.amount) == [600])
+        #expect(try recorded(opened).map(\.scheduledTemplateID) == [opened.id])
+        #expect(list.removedNotice?.message == Self.removedOnly)
+        #expect(opened.feature.catchUp(atLaunch: false)?.posted.isEmpty == true)
         #expect(try recorded(opened).count == 1)
     }
 }
