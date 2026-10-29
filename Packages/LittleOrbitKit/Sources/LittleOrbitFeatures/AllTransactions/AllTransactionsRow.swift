@@ -35,20 +35,19 @@ public struct AllTransactionsSection: Identifiable, Equatable, Sendable {
     public var id: Kind { kind }
 }
 
-/// Builds the rows for one page, off the register's row code (`TransactionRowContext`).
+/// Builds the rows for one page, off the register's row code (`TransactionRowContext`). The page's accounts,
+/// categories and payees are put in dictionaries once, so each row looks them up by id (#341).
 struct AllTransactionsRowBuilder {
-    let ledger: TransactionLedger
     let formatter: MoneyFormatter
     let text: TransactionText
     let today: CalendarDay
-    private let payees: [UUID: Payee]
+    private let lookups: TransactionRowLookups
 
     init(ledger: TransactionLedger, formatter: MoneyFormatter, text: TransactionText, today: CalendarDay) {
-        self.ledger = ledger
         self.formatter = formatter
         self.text = text
         self.today = today
-        payees = Dictionary(ledger.payees.map { ($0.id, $0) }, uniquingKeysWith: { first, _ in first })
+        lookups = TransactionRowLookups(ledger: ledger)
     }
 
     func sections(of list: AllTransactionsList) -> [AllTransactionsSection] {
@@ -78,9 +77,7 @@ struct AllTransactionsRowBuilder {
     func row(_ entry: AllTransactionsEntry, isUpcoming: Bool) -> AllTransactionsRow {
         let context = TransactionRowContext(
             account: entry.account,
-            accounts: ledger.accounts,
-            categories: ledger.categories,
-            payees: ledger.payees,
+            lookups: lookups,
             formatter: formatter,
             text: text,
             today: today,
@@ -98,7 +95,7 @@ struct AllTransactionsRowBuilder {
         }
         spoken.append(contentsOf: [row.amountText, row.accountText])
         row.accessibilityLabel = spoken.joined(separator: ", ")
-        let payee = entry.transaction.payeeID.flatMap { payees[$0] }?.name
+        let payee = entry.transaction.payeeID.flatMap { lookups.payees[$0] }?.name
         let description = description(entry.transaction, title: row.title, payee: payee)
         return AllTransactionsRow(
             row: row,
