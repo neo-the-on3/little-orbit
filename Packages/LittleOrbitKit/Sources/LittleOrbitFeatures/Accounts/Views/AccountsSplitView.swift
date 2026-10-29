@@ -320,11 +320,7 @@
                         message: "Start with the account you use most. Use + or Add Account… in the sidebar.",
                     )
                 } else {
-                    UpcomingFeatureView(
-                        title: "All Transactions",
-                        systemImage: "list.bullet",
-                        message: "The transaction list arrives with its own issue.",
-                    )
+                    AllTransactionsView(transactions: transactions, onChange: { model.load() })
                 }
             case nil:
                 noSelection
