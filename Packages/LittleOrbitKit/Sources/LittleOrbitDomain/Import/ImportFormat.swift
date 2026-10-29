@@ -7,17 +7,21 @@ public struct ImportReadSettings: Equatable, Sendable {
     public var dateOrder: ImportDateOrder
     public var decimalSeparator: ImportDecimalSeparator
     public var timeZone: TimeZone
+    /// The month names dates are read with: English and the device's language (#189 I15).
+    public var monthNames: ImportMonthNames
 
     public init(
         mapping: ImportColumnMapping,
         dateOrder: ImportDateOrder,
         decimalSeparator: ImportDecimalSeparator,
         timeZone: TimeZone,
+        monthNames: ImportMonthNames = .device,
     ) {
         self.mapping = mapping
         self.dateOrder = dateOrder
         self.decimalSeparator = decimalSeparator
         self.timeZone = timeZone
+        self.monthNames = monthNames
     }
 }
 
@@ -131,7 +135,8 @@ public struct GenericCSVFormat: ImportFormat {
             reader.fail(.missingDate, at: reader.column(.date) ?? -1)
             return
         }
-        guard let wallTime = ImportDateParser.wallTime(text, order: settings.dateOrder) else {
+        guard let wallTime = ImportDateParser.wallTime(text, order: settings.dateOrder, months: settings.monthNames)
+        else {
             reader.fail(.unreadableDate, at: reader.column(.date) ?? -1)
             return
         }

@@ -46,18 +46,23 @@ public struct ImportWallTime: Equatable, Sendable {
     }
 }
 
-/// Reads dates in a file: three numbers separated by `/`, `-`, `.` or spaces, or a day and year around an
-/// English month name (`20 Oct 2026`), optionally followed by a time (`10:30`, `10:30:15`, `10:30 PM`) after a
-/// space or `T`. Two-digit years are 20xx. Dates that don't exist (31/02) aren't read. Parsing never depends on
-/// the device's language; only the default order for an ambiguous file comes from the region.
+/// Reads dates in a file: three numbers separated by `/`, `-`, `.` or spaces, a compact year-first `20261105`,
+/// or a day and year around a month name in English or the device's language (`20 Oct 2026`, `20. Okt. 2026`;
+/// #189 I15, D387.6), optionally followed by a time (`10:30`, `10:30:15`, `10:30 PM`) after a space or `T`.
+/// Two-digit years are 2000–2099. Dates that don't exist (31/02) aren't read. Parsing never depends on the
+/// region; only the default order for an ambiguous file comes from it.
 public enum ImportDateParser {
-    public static func wallTime(_ text: String, order: ImportDateOrder) -> ImportWallTime? {
+    public static func wallTime(
+        _ text: String,
+        order: ImportDateOrder,
+        months: ImportMonthNames = .device,
+    ) -> ImportWallTime? {
         let trimmed = text.trimmingCharacters(in: .whitespacesAndNewlines)
         guard !trimmed.isEmpty else {
             return nil
         }
         let (datePart, timePart) = split(trimmed)
-        guard let date = calendarDate(datePart, order: order) else {
+        guard let date = calendarDate(datePart, order: order, months: months) else {
             return nil
         }
         guard let time = timePart.map(clockTime) ?? ClockTime(hour: 0, minute: 0, second: 0) else {
@@ -75,12 +80,16 @@ public enum ImportDateParser {
 
     /// The order that reads the samples. Blank samples are skipped. When several orders read all of them, the
     /// region's order wins if it's one of them (#30 S6, S8); if none reads them all, the one that reads most.
-    public static func detect(_ samples: [String], locale: Locale) -> ImportDateDetection {
+    public static func detect(
+        _ samples: [String],
+        locale: Locale,
+        months: ImportMonthNames = .device,
+    ) -> ImportDateDetection {
         let values = samples.filter { !$0.trimmingCharacters(in: .whitespacesAndNewlines).isEmpty }
         let preferred = order(for: locale)
         var counts: [ImportDateOrder: Int] = [:]
         for order in ImportDateOrder.allCases {
-            counts[order] = values.filter { wallTime($0, order: order) != nil }.count
+            counts[order] = values.filter { wallTime($0, order: order, months: months) != nil }.count
         }
         let best = counts.values.max() ?? 0
         guard best > 0 else {
@@ -204,37 +213,27 @@ public enum ImportDateParser {
         }
     }
 
-    private static let monthNames: [String: Int] = {
-        let names = [
-            "jan", "feb", "mar", "apr", "may", "jun", "jul", "aug", "sep", "oct", "nov", "dec",
-        ]
-        let full = [
-            "january", "february", "march", "april", "may", "june", "july", "august", "september", "october",
-            "november", "december",
-        ]
-        var table: [String: Int] = [:]
-        for (index, name) in names.enumerated() {
-            table[name] = index + 1
-            table[full[index]] = index + 1
-        }
-        table["sept"] = 9
-        return table
-    }()
-
     private struct CalendarDate {
         var year: Int
         var month: Int
         var day: Int
     }
 
-    private static func calendarDate(_ text: String, order: ImportDateOrder) -> CalendarDate? {
+    private static func calendarDate(
+        _ text: String,
+        order: ImportDateOrder,
+        months: ImportMonthNames,
+    ) -> CalendarDate? {
         let parts = text.split { "/-. ,".contains($0) }.map(String.init)
-        guard parts.count == 3 else {
-            return nil
-        }
         let date: CalendarDate?
-        if let named = parts.firstIndex(where: { monthNames[$0.lowercased()] != nil }) {
-            date = namedMonthDate(parts, monthAt: named)
+        if parts.count == 1 {
+            date = compactDate(parts[0])
+        } else if parts.count != 3 {
+            return nil
+        } else if let named = parts.firstIndex(where: { months.month($0) != nil }),
+            let month = months.month(parts[named])
+        {
+            date = namedMonthDate(parts, month: month, at: named)
         } else {
             date = numericDate(parts, order: order)
         }
@@ -246,11 +245,16 @@ public enum ImportDateParser {
         return date
     }
 
-    /// `20 Oct 2026`, `Oct 20, 2026` or `2026 Oct 20`.
-    private static func namedMonthDate(_ parts: [String], monthAt named: Int) -> CalendarDate? {
-        guard let month = monthNames[parts[named].lowercased()] else {
+    /// `20261105`: always year, month, day, whatever the order (D387.6).
+    private static func compactDate(_ text: String) -> CalendarDate? {
+        guard text.count == 8, text.allSatisfy(\.isASCIIDigit), let value = Int(text) else {
             return nil
         }
+        return CalendarDate(year: value / 10_000, month: value / 100 % 100, day: value % 100)
+    }
+
+    /// `20 Oct 2026`, `Oct 20, 2026` or `2026 Oct 20`.
+    private static func namedMonthDate(_ parts: [String], month: Int, at named: Int) -> CalendarDate? {
         let numbers = parts.enumerated().filter { $0.offset != named }.map(\.element)
         guard numbers.allSatisfy({ $0.allSatisfy(\.isASCIIDigit) }) else {
             return nil
