@@ -10087,7 +10087,7 @@
       }
     },
     "Enter the amount received in %@.": {
-      "comment": "Scheduled transfer form, under Received; %@ is To’s currency code. A plain hint while Received is required and empty, with Save disabled (as D347.2), and the error on Save when it’s zero.",
+      "comment": "Scheduled transfer form and the transaction form, under Received; %@ is To’s currency code. A plain hint while Received is required and empty, with Save disabled (as D347.2), and the error on Save when it’s zero.",
       "extractionState": "manual",
       "generatesSymbol": false,
       "localizations": {

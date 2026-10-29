@@ -27,7 +27,9 @@ public final class TransactionFormViewModel {
     }
     private var keypad = AmountKeypad()
     public var accountID: UUID?
-    public var transferAccountID: UUID?
+    public var transferAccountID: UUID? {
+        didSet { transferAccountChanged(from: oldValue) }
+    }
     public var receivedText = ""
     public var categoryID: UUID? {
         didSet {
@@ -315,7 +317,7 @@ public final class TransactionFormViewModel {
         accounts.first { $0.id == transferAccountID }?.currencyCode
     }
 
-    private var receivedAmount: Decimal? {
+    var receivedAmount: Decimal? {
         guard let code = receivedCurrencyCode, !receivedText.isEmpty else {
             return nil
         }
@@ -334,14 +336,12 @@ public final class TransactionFormViewModel {
         return "1 \(destination) = \(unit) · worked out from the two amounts"
     }
 
-    /// A problem shown under the rows, such as the same account on both sides of a transfer.
+    /// A problem shown under the rows, such as the same account on both sides of a transfer. A missing Received
+    /// shows as `receivedHint` under its field instead (#215).
     public var issueMessage: String? {
         let issues = draft.issues(accounts: accounts)
         if issues.contains(.sameAccount) {
             return "Same account selected as From and To. Pick a different account to save."
-        }
-        if issues.contains(.missingReceived), amount != nil, let code = receivedCurrencyCode, !receivedText.isEmpty {
-            return "Enter the amount received in \(code)."
         }
         return nil
     }

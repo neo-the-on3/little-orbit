@@ -2,11 +2,20 @@
     import LittleOrbitTheme
     import SwiftUI
 
-    /// The footnotes under a transfer's Received field (D17): the read-only rate once both amounts read.
+    /// The footnotes under a transfer's Received field (D17): the plain “Enter the amount received in EUR.” hint
+    /// while Save waits for it (#215, as #207's scheduled form), then the read-only rate once both amounts read.
     struct TransactionReceivedNotes: View {
+        let hint: String?
         let rate: String?
 
         var body: some View {
+            if let hint {
+                // A hint, not an error. VoiceOver reads it as the field's accessibility hint, so it isn't read twice.
+                Text(verbatim: hint)
+                    .font(.theme(Self.footnoteStyle))
+                    .foregroundStyle(Color(ThemeColor.labelSecondary))
+                    .accessibilityHidden(true)
+            }
             if let rate {
                 Label {
                     Text(rate)

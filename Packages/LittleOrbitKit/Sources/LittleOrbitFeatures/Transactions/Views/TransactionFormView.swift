@@ -137,8 +137,10 @@
                             .keyboardType(.decimalPad)
                         #endif
                         .focused($focus, equals: .received)
+                        // The plain hint is also the field's accessibility hint while it shows, as on #207.
+                        .accessibilityHint(Text(verbatim: model.receivedHint ?? ""))
                     }
-                    TransactionReceivedNotes(rate: model.rateText)
+                    TransactionReceivedNotes(hint: model.receivedHint, rate: model.rateText)
                 }
             } else {
                 stackedRow("Account", value: model.accountName) {
