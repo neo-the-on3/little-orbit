@@ -146,6 +146,17 @@ struct ScheduledOccurrenceCurrencyLockTests {
         #expect(CurrencyLock.scheduledAccountIDs([item]) == Set(item.accountIDs))
     }
 
+    @Test("A deleted item locks neither its own accounts nor its occurrences' own (Tech Architect n1 on #202)")
+    func deletedItemLocksNothing() throws {
+        let repository = try scene(transfer: true)
+        try edit(Self.december, repository, .thisOccurrence, toYen)
+        #expect(CurrencyLock.scheduledAccountIDs(in: repository.snapshot).isSuperset(of: [Self.walletID, Self.yenID]))
+        repository.snapshot.scheduledItems[0].deletedAt = Fix.date(2026, 10, 21)
+        #expect(CurrencyLock.scheduledAccountIDs(in: repository.snapshot).isEmpty)
+        try moveToEuro(Self.walletID, in: repository)
+        try moveToEuro(Self.yenID, in: repository)
+    }
+
     @Test("B2's drop leaves a paid occurrence's own $13 alone when All future moves To; Undo both and it's payable")
     func paidOccurrenceKeepsItsReceived() throws {
         let repository = try scene(transfer: true)
