@@ -13,6 +13,7 @@ struct ScheduledOccurrenceFromCurrencyTests {
     private static let walletID = UUID(uuidString: "5C000000-0000-4000-8000-000000000020")!
     private static let tokyoID = UUID(uuidString: "5C000000-0000-4000-8000-000000000021")!
     private static let osakaID = UUID(uuidString: "5C000000-0000-4000-8000-000000000022")!
+    private static let spareID = UUID(uuidString: "5C000000-0000-4000-8000-000000000023")!
     private static let august = Fix.day(2026, 8, 1)
     private static let september = Fix.day(2026, 9, 1)
     private static let mismatch = LedgerValidationError.fromCurrencyMismatch(
@@ -25,6 +26,7 @@ struct ScheduledOccurrenceFromCurrencyTests {
             Account(id: Self.walletID, name: "USD Wallet", type: .cash, currencyCode: "USD", createdAt: Fix.created),
             Account(id: Self.tokyoID, name: "Tokyo Wallet", type: .cash, currencyCode: "JPY", createdAt: Fix.created),
             Account(id: Self.osakaID, name: "Osaka Wallet", type: .cash, currencyCode: "JPY", createdAt: Fix.created),
+            Account(id: Self.spareID, name: "Spare Dollars", type: .cash, currencyCode: "USD", createdAt: Fix.created),
         ]
         let item = ScheduledItem(
             type: .transfer,
@@ -113,6 +115,64 @@ struct ScheduledOccurrenceFromCurrencyTests {
         }
         #expect(throws: LedgerValidationError.receivedCurrencyMismatch) {
             try edit(Self.september, repository, .thisOccurrence) { $0.accountID = Self.tokyoID }
+        }
+        #expect(repository.snapshot == before, "Nothing written")
+    }
+
+    // Tech Architect's n4 on #202 (review 5691455110): the refusal names From only when the save moved From into
+    // another currency than the occurrence was set up in, and only for a currency error.
+
+    @Test("From moved between two rupee accounts while 1 Sep, from its own Tokyo Wallet, fails: its own error")
+    func fromCurrencyUnchangedKeepsItsError() throws {
+        let repository = try scene()
+        try edit(Self.september, repository, .thisOccurrence) { $0.accountID = Self.tokyoID }
+        let before = repository.snapshot
+        var item = try #require(repository.snapshot.scheduledItems.first)
+        item.accountID = Fix.fundID
+        item.amount = Decimal(string: "1000.50")!
+        // 1 Sep's From stays the Tokyo Wallet, which can't take paise: not a From the save moved, so not B2's message.
+        #expect(throws: LedgerValidationError.tooManyDecimalPlaces) {
+            try repository.useCases().save(item)
+        }
+        #expect(repository.snapshot == before, "Nothing written")
+    }
+
+    @Test("From moved to the Tokyo Wallet while 1 Sep's own To is the Tokyo Wallet too: its own error, not B2's")
+    func otherErrorKeepsItsError() throws {
+        let repository = try scene()
+        try edit(Self.september, repository, .thisOccurrence) {
+            $0.transferAccountID = Self.tokyoID
+            $0.destinationAmount = 1_800
+            $0.receivedCurrencyCode = "JPY"
+        }
+        let before = repository.snapshot
+        var item = try #require(repository.snapshot.scheduledItems.first)
+        item.accountID = Self.tokyoID
+        item.transferAccountID = Self.osakaID
+        item.destinationAmount = nil
+        item.receivedCurrencyCode = nil
+        #expect(throws: LedgerValidationError.sameTransferAccount) {
+            try repository.useCases().save(item)
+        }
+        #expect(repository.snapshot == before, "Nothing written")
+    }
+
+    @Test("A whole-item form from the Tokyo Wallet, its To moved to EUR since the form opened: the stale error")
+    func staleWholeItemFormKeepsStaleError() throws {
+        let repository = try scene()
+        var item = try #require(repository.snapshot.scheduledItems.first)
+        fromTokyo(&item)
+        item.transferAccountID = Self.spareID
+        var spare = try #require(repository.snapshot.accounts.first { $0.id == Self.spareID })
+        spare.currencyCode = "EUR"
+        repository.snapshot = try LedgerBook.savingAccount(
+            spare,
+            in: repository.snapshot,
+            now: Fix.date(2026, 10, 20),
+        )
+        let before = repository.snapshot
+        #expect(throws: LedgerValidationError.receivedCurrencyMismatch) {
+            try repository.useCases().save(item)
         }
         #expect(repository.snapshot == before, "Nothing written")
     }
