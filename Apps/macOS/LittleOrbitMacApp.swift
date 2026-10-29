@@ -33,6 +33,9 @@ struct LittleOrbitMacApp: App {
         // The main windows. A tapped reminder opens a new one by this ID when none is open (S33).
         WindowGroup(id: UserNotificationScheduling.mainWindowID) {
             RootView(features: features)
+                // A Dock or Finder open goes to a main window that's already open, not a new one, and never to
+                // Settings (#189, Tech Architect on #339). With none open, this group opens one for it.
+                .handlesExternalEvents(preferring: ["*"], allowing: ["*"])
         }
         .commands {
             // Edit > Undo and Redo with the step's name, "Undo Pay Phone Plan".

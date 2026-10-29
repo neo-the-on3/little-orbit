@@ -130,32 +130,50 @@ struct ExternalImportInboxTests {
     }
 }
 
-/// Which import is open past its file step, in any window, for D387.4's “Finish This Import First”.
+/// Which import is open past its file step, in any window, for D387.4's “Finish This Import First”. One still on
+/// its file step counts as untouched (D451.1). File names are made up.
 @MainActor
-@Suite("Imports in progress (#189 I11)")
+@Suite("Imports in progress (#189 I11, D451.1)")
 struct ActiveImportsTests {
+    static let riverstone = URL(fileURLWithPath: "/tmp/riverstone_oct.csv")
+    static let harbor = URL(fileURLWithPath: "/tmp/harbor_nov.csv")
+
+    /// An import sheet's model: on its file step, or past it with a made-up file named `fileName`.
+    static func model(_ feature: ImportExportFeature, opened fileName: String? = nil) async throws
+        -> CSVImportViewModel
+    {
+        let model = feature.makeImport()
+        if let fileName {
+            await model.open(data: try CSVFixture.data("Debit and Credit Export"), fileName: fileName)
+            #expect(model.step == .columns)
+        }
+        return model
+    }
+
     @Test("Given no import, Then none is in progress")
     func empty() {
         #expect(ActiveImports().inProgress == nil)
     }
 
     @Test("Given an import shown in one window, Then it's in progress until that sheet closes")
-    func shownThenClosed() {
+    func shownThenClosed() async throws {
+        let feature = Self.feature()
         let imports = ActiveImports()
         let id = UUID()
-        imports.began(id, fileName: "riverstone_oct.csv")
+        imports.began(id, model: try await Self.model(feature, opened: "riverstone_oct.csv"))
         #expect(imports.inProgress == "riverstone_oct.csv")
         imports.ended(id)
         #expect(imports.inProgress == nil)
     }
 
     @Test("Given imports in two windows, Then the first still open is named")
-    func twoWindows() {
+    func twoWindows() async throws {
+        let feature = Self.feature()
         let imports = ActiveImports()
         let first = UUID()
         let second = UUID()
-        imports.began(first, fileName: "riverstone_oct.csv")
-        imports.began(second, fileName: "harbor_nov.csv")
+        imports.began(first, model: try await Self.model(feature, opened: "riverstone_oct.csv"))
+        imports.began(second, model: try await Self.model(feature, opened: "harbor_nov.csv"))
         #expect(imports.inProgress == "riverstone_oct.csv")
         imports.ended(first)
         #expect(imports.inProgress == "harbor_nov.csv")
@@ -163,17 +181,49 @@ struct ActiveImportsTests {
         #expect(imports.inProgress == "harbor_nov.csv")
     }
 
+    @Test("Given an import on its file step, When a file is opened, Then the new file opens (D451.1)")
+    func fileStepCountsAsUntouched() async throws {
+        let feature = Self.feature()
+        let model = try await Self.model(feature)
+        feature.activeImports.began(UUID(), model: model)
+        #expect(model.step == .pickFile)
+        #expect(!model.hasUnsavedEdits)
+        let route = ExternalImportRoute.route(
+            [Self.harbor],
+            importInProgress: feature.activeImports.inProgress,
+            hasUnsavedEdits: model.hasUnsavedEdits,
+        )
+        #expect(route == .open(Self.harbor))
+    }
+
+    @Test("Given an import past its file step, When a file is opened, Then it must finish first (D451.1)")
+    func pastFileStepFinishesFirst() async throws {
+        let feature = Self.feature()
+        let model = try await Self.model(feature, opened: "riverstone_oct.csv")
+        feature.activeImports.began(UUID(), model: model)
+        let route = ExternalImportRoute.route(
+            [Self.harbor],
+            importInProgress: feature.activeImports.inProgress,
+            hasUnsavedEdits: model.hasUnsavedEdits,
+        )
+        #expect(route == .finishImportFirst(current: "riverstone_oct.csv", new: "harbor_nov.csv"))
+    }
+
     @Test("The feature keeps one list for every window")
-    func sharedByFeature() {
+    func sharedByFeature() async throws {
+        let feature = Self.feature()
+        feature.activeImports.began(UUID(), model: try await Self.model(feature, opened: "riverstone_oct.csv"))
+        #expect(feature.activeImports.inProgress == "riverstone_oct.csv")
+    }
+
+    static func feature() -> ImportExportFeature {
         let repository = InMemoryLedgerRepository()
-        let feature = ImportExportFeature(
+        return ImportExportFeature(
             useCases: ImportExportUseCases(
                 importing: ImportUseCases(repository: repository),
                 exporting: DefaultExportTransactionsUseCase(repository: repository),
                 defaultCurrency: "INR",
             )
         )
-        feature.activeImports.began(UUID(), fileName: "riverstone_oct.csv")
-        #expect(feature.activeImports.inProgress == "riverstone_oct.csv")
     }
 }

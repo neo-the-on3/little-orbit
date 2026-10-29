@@ -67,7 +67,7 @@
                         feature.activeImports.ended(old)
                     }
                     if let session {
-                        feature.activeImports.began(session.id, fileName: session.model.fileName)
+                        feature.activeImports.began(session.id, model: session.model)
                     }
                 }
                 .onChange(of: fileToOpen) { _, url in
