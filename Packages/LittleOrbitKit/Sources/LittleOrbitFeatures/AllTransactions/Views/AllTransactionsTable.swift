@@ -23,7 +23,7 @@
                         )
                         .lineLimit(1)
                 }
-                .width(min: 90, ideal: 100)
+                .columnWidth(.date)
                 TableColumn("Description") { item in
                     Text(item.descriptionText)
                         .foregroundStyle(
@@ -34,19 +34,19 @@
                         .truncationMode(.tail)
                         .help(item.descriptionText)
                 }
-                .width(min: 160, ideal: 300)
+                .columnWidth(.description)
                 TableColumn("Payee") { item in
                     textCell(item.payee)
                 }
-                .width(min: 100, ideal: 150)
+                .columnWidth(.payee)
                 TableColumn("Category") { item in
                     textCell(item.row.categoryText)
                 }
-                .width(min: 120, ideal: 125)
+                .columnWidth(.category)
                 TableColumn("Account") { item in
                     textCell(item.row.accountText)
                 }
-                .width(min: 120, ideal: 125)
+                .columnWidth(.account)
                 TableColumn("Amount") { item in
                     Text(item.row.amountText)
                         .font(.theme(Typography.Amount.macOSBody))
@@ -54,7 +54,7 @@
                         .lineLimit(1)
                         .frame(maxWidth: .infinity, alignment: .trailing)
                 }
-                .width(min: 90, ideal: 110)
+                .columnWidth(.amount)
             } rows: {
                 ForEach(model.sections) { section in
                     Section(section.title) {
@@ -92,6 +92,19 @@
                 .lineLimit(1)
                 .truncationMode(.tail)
                 .help(text)
+        }
+    }
+
+    extension TableColumn {
+        /// The column's width from `AllTransactionsColumnSpec`: fixed, or flexible for the one column that
+        /// takes the slack (D-ruling 6486981842).
+        fileprivate func columnWidth(_ column: AllTransactionsColumn) -> TableColumn<RowValue, Sort, Content, Label> {
+            let width = AllTransactionsColumnSpec.width(for: column)
+            return self.width(
+                min: CGFloat(width.min),
+                ideal: CGFloat(width.ideal),
+                max: width.max.map { CGFloat($0) },
+            )
         }
     }
 #endif
