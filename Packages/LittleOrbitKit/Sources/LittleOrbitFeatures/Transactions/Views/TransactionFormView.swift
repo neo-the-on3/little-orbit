@@ -137,17 +137,10 @@
                             .keyboardType(.decimalPad)
                         #endif
                         .focused($focus, equals: .received)
+                        // The plain hint is also the field's accessibility hint while it shows, as on #207.
+                        .accessibilityHint(Text(verbatim: model.receivedHint ?? ""))
                     }
-                    if let rate = model.rateText {
-                        Label {
-                            Text(rate)
-                        } icon: {
-                            Image(systemName: "arrow.left.arrow.right")
-                                .accessibilityHidden(true)
-                        }
-                        .font(.theme(Self.footnoteStyle))
-                        .foregroundStyle(Color(ThemeColor.labelSecondary))
-                    }
+                    TransactionReceivedNotes(hint: model.receivedHint, rate: model.rateText)
                 }
             } else {
                 stackedRow("Account", value: model.accountName) {
