@@ -85,11 +85,12 @@ extension LedgerBook {
         // No occurrence is left with an amount received Pay Now refuses (#202 B2).
         let thisOne = save.scope == .thisOccurrence ? target : nil
         droppingStaleOwnReceived(from: &current, in: result, except: thisOne, now: now)
-        try validate(current, in: result)
+        // The values the form saved first, so a stale form says so; then the item and the occurrences it leaves.
         if let target {
             try validate(withoutMissingEditReferences(current, in: result).resolved(for: target), in: result)
         }
-        try validateOpenOccurrences(of: current, in: result)
+        try validate(current, before: existing, in: result)
+        try validateOpenOccurrences(of: current, before: existing, in: result)
         replace(&result.scheduledItems, with: current)
         return result
     }

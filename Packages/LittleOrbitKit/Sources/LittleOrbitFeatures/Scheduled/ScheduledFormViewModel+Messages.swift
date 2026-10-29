@@ -27,6 +27,9 @@ extension ScheduledFormViewModel {
             // To's currency changed since the form read it: the stale-step message "‹To› has changed since then.
             // Nothing was changed." (#207 B1).
             alert = ScheduledText.toChangedNothingSaved(listing.account(transferAccountID)?.name)
+        case .fromCurrencyMismatch(let mismatch):
+            // From can't pay an occurrence the save leaves: name From and both currencies (#202 B2).
+            alert = cantPayAlert(mismatch)
         case .missingScheduledItem where !isNew:
             // Deleted elsewhere while the form was open: OK closes the form (#258).
             alert = ScheduledText.deletedNothingSaved(itemName)
@@ -41,5 +44,10 @@ extension ScheduledFormViewModel {
         default:
             alert = saveFailedAlert(error)
         }
+    }
+
+    private func cantPayAlert(_ mismatch: ScheduledCurrencyMismatch) -> CategoryAlert {
+        let name = listing.account(mismatch.accountID)?.name ?? StaleText.theAccount
+        return ScheduledText.cantPayInCurrency(name, mismatch, locale: locale)
     }
 }

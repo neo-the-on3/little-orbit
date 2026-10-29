@@ -1,4 +1,5 @@
 import Foundation
+import LittleOrbitDomain
 
 /// The wording of occurrence edits (#197 item 3; #26 D45, D59, D106): the Due Date row and the question Save asks
 /// when fields other than the SERIES ones changed (D114, D115). The same strings on iOS and the Mac.
@@ -54,5 +55,24 @@ extension ScheduledText {
     /// skipped in another window after the form opened (D381.2). OK only; the stale-step message, no new copy.
     static func changedNothingSaved(_ name: String) -> CategoryAlert {
         CategoryAlert(title: CategoryText.couldntSaveTitle, message: StaleText.changed(name))
+    }
+
+    /// “Couldn’t Save Changes” with “JPY Wallet is in Japanese Yen, so it can’t pay this Indian Rupee payment.
+    /// Nothing was changed.”: the save moved From into a currency it can't pay an occurrence in (#202 B2, UI
+    /// Designer). `name` is From's; the currency names are the locale's. OK only.
+    static func cantPayInCurrency(
+        _ name: String,
+        _ mismatch: ScheduledCurrencyMismatch,
+        locale: Locale,
+    ) -> CategoryAlert {
+        CategoryAlert(
+            title: CategoryText.couldntSaveTitle,
+            message: FeatureText.format(
+                "%1$@ is in %2$@, so it can’t pay this %3$@ payment. Nothing was changed.",
+                name,
+                CurrencyTitle.name(for: mismatch.accountCurrencyCode, locale: locale),
+                CurrencyTitle.name(for: mismatch.paymentCurrencyCode, locale: locale),
+            ),
+        )
     }
 }

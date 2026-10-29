@@ -11261,6 +11261,19 @@
         }
       }
     },
+    "%1$@ is in %2$@, so it can’t pay this %3$@ payment. Nothing was changed.": {
+      "comment": "Alert message under “Couldn’t Save Changes” (#202 B2): a scheduled item save was refused because it moved the From account into a currency that can’t pay one of the item’s occurrences. %1$@ is the From account’s name (“JPY Wallet”), %2$@ that account’s currency name (“Japanese Yen”) and %3$@ the payment’s currency name (“Indian Rupee”), both as the system names currencies. Nothing was saved and the form stays open. Its only button is OK.",
+      "extractionState": "manual",
+      "generatesSymbol": false,
+      "localizations": {
+        "en": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "%1$@ is in %2$@, so it can’t pay this %3$@ payment. Nothing was changed."
+          }
+        }
+      }
+    },
     "This occurrence only": {
       "comment": "Button in the question Save asks for a repeating scheduled item: change only the edited occurrence (D45, D59). The Mac’s default button (D106).",
       "extractionState": "manual",

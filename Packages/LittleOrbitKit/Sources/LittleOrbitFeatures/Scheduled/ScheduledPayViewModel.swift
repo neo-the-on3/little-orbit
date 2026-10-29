@@ -303,6 +303,11 @@ public final class ScheduledPayViewModel: Identifiable {
             // To's currency changed since the sheet read it: nothing was paid, and the sheet stays open (#207 B1).
             alert = ScheduledText.toChangedNothingSaved(listing.account(item.transferAccountID)?.name)
             return false
+        } catch LedgerValidationError.fromCurrencyMismatch(let mismatch) {
+            // Also change future occurrences moved From into a currency it can't pay a later one in (#202 B2).
+            let name = listing.account(mismatch.accountID)?.name ?? StaleText.theAccount
+            alert = ScheduledText.cantPayInCurrency(name, mismatch, locale: locale)
+            return false
         } catch {
             alert = ScheduledText.saveFailed
             return false
