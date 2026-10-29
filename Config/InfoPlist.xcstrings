@@ -1,0 +1,30 @@
+{
+  "sourceLanguage": "en",
+  "strings": {
+    "CSV File": {
+      "comment": "The name of the comma-separated values file type little-orbit can open, shown by the system (D451.4).",
+      "extractionState": "manual",
+      "localizations": {
+        "en": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "CSV File"
+          }
+        }
+      }
+    },
+    "TSV File": {
+      "comment": "The name of the tab-separated values file type little-orbit can open, shown by the system (D451.4).",
+      "extractionState": "manual",
+      "localizations": {
+        "en": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "TSV File"
+          }
+        }
+      }
+    }
+  },
+  "version": "1.0"
+}
