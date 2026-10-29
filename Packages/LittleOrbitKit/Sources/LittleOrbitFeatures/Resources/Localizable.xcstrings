@@ -2933,6 +2933,42 @@
         }
       }
     },
+    "Drop a single file to import it. Nothing was imported.": {
+      "comment": "Mac alert message when several files are dropped on the app at once (D387.4).",
+      "extractionState": "manual",
+      "localizations": {
+        "en": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Drop a single file to import it. Nothing was imported."
+          }
+        }
+      }
+    },
+    "Finish or cancel the import of “%1$@”, then open “%2$@” again.": {
+      "comment": "Alert message when a CSV file is opened from outside the app while another import is open (D387.4). %1$@ is the open import’s file name, %2$@ the name of the file just opened.",
+      "extractionState": "manual",
+      "localizations": {
+        "en": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Finish or cancel the import of “%1$@”, then open “%2$@” again."
+          }
+        }
+      }
+    },
+    "Finish This Import First": {
+      "comment": "Alert title when a CSV file is opened from outside the app while another import is open past its file step (D387.4). The only button is OK.",
+      "extractionState": "manual",
+      "localizations": {
+        "en": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Finish This Import First"
+          }
+        }
+      }
+    },
     "Hidden": {
       "comment": "Spending report account filter: the note on a hidden account’s row. Its spending counts while it’s ticked (D417).",
       "extractionState": "manual",
@@ -2942,6 +2978,18 @@
           "stringUnit": {
             "state": "translated",
             "value": "Hidden"
+          }
+        }
+      }
+    },
+    "Import One File at a Time": {
+      "comment": "Mac alert title when several files are dropped on the app at once (D387.4). The only button is OK.",
+      "extractionState": "manual",
+      "localizations": {
+        "en": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Import One File at a Time"
           }
         }
       }

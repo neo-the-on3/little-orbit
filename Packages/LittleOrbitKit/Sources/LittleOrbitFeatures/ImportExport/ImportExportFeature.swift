@@ -25,6 +25,8 @@ public struct ImportExportUseCases {
 public final class ImportExportFeature {
     public let useCases: ImportExportUseCases
     private let updates: LedgerUpdates?
+    /// The imports open past their file step in any window, for a file opened from outside the app (D387.4).
+    public let activeImports = ActiveImports()
 
     /// `updates` tells every window to reload after an import or Undo Import.
     public init(useCases: ImportExportUseCases, updates: LedgerUpdates? = nil) {

@@ -13,6 +13,7 @@ struct ImportExportCatalogTests {
 
     static let sourceFiles = [
         "ImportExportText", "ImportExportText+Review", "ImportExportText+Issues", "ImportExportText+DebitAndCredit",
+        "ImportExportText+External",
     ]
 
     /// The first string literal after each `FeatureText.string(`, `.plural(` and `.format(` call. An
