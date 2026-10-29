@@ -14,6 +14,19 @@
         }
       }
     },
+    "%1$@ (%2$lld)": {
+      "comment": "The audio graph's name for a chart bar whose name another bar already has: %1$@ is the name, %2$lld its position among the bars with that name, as in “Uncategorised (2)”. Reports chart.",
+      "extractionState": "manual",
+      "generatesSymbol": false,
+      "localizations": {
+        "en": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "%1$@ (%2$lld)"
+          }
+        }
+      }
+    },
     "%1$@ are removed from lists, autocomplete and reports.": {
       "comment": "Merge Payees footnote sentence (D297.3): %1$@ is the payee merged into the one kept, or the payees joined in the system list format (“A, B, and C”); how many there are picks the form.",
       "extractionState": "manual",
@@ -2985,6 +2998,54 @@
         }
       }
     },
+    "Other · %lld categories": {
+      "comment": "Spending chart: the last bar, combining the smaller categories (always 2 or more), “Other · 2 categories”.",
+      "extractionState": "manual",
+      "localizations": {
+        "en": {
+          "variations": {
+            "plural": {
+              "one": {
+                "stringUnit": {
+                  "state": "translated",
+                  "value": "Other · %lld category"
+                }
+              },
+              "other": {
+                "stringUnit": {
+                  "state": "translated",
+                  "value": "Other · %lld categories"
+                }
+              }
+            }
+          }
+        }
+      }
+    },
+    "Other, %lld categories": {
+      "comment": "Spending chart: how VoiceOver names the Other bar, “Other, 2 categories”.",
+      "extractionState": "manual",
+      "localizations": {
+        "en": {
+          "variations": {
+            "plural": {
+              "one": {
+                "stringUnit": {
+                  "state": "translated",
+                  "value": "Other, %lld category"
+                }
+              },
+              "other": {
+                "stringUnit": {
+                  "state": "translated",
+                  "value": "Other, %lld categories"
+                }
+              }
+            }
+          }
+        }
+      }
+    },
     "Previous Period": {
       "comment": "Report ‹ button (⌘← on macOS): the month, quarter or year before the one shown.",
       "extractionState": "manual",
@@ -3007,6 +3068,58 @@
           "stringUnit": {
             "state": "translated",
             "value": "All"
+          }
+        }
+      }
+    },
+    "report.column.amount": {
+      "comment": "Spending report: the Mac table’s amount column title, and the audio graph’s amount axis.",
+      "extractionState": "manual",
+      "generatesSymbol": false,
+      "localizations": {
+        "en": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Amount"
+          }
+        }
+      }
+    },
+    "report.column.category": {
+      "comment": "Spending report: the Mac table’s category column title, and the audio graph’s category axis.",
+      "extractionState": "manual",
+      "generatesSymbol": false,
+      "localizations": {
+        "en": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Category"
+          }
+        }
+      }
+    },
+    "report.column.share": {
+      "comment": "Spending report: the Mac table’s column of each category’s share of spending, such as 16.9%.",
+      "extractionState": "manual",
+      "generatesSymbol": false,
+      "localizations": {
+        "en": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Share"
+          }
+        }
+      }
+    },
+    "report.column.transactions": {
+      "comment": "Spending report: the Mac table’s column of how many transactions each category has.",
+      "extractionState": "manual",
+      "generatesSymbol": false,
+      "localizations": {
+        "en": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Transactions"
           }
         }
       }

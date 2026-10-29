@@ -42,6 +42,33 @@ struct ReportCatalogTests {
         #expect(Set(values) == ["%1$lld of %#@total@", "%arg account", "%arg accounts"])
     }
 
+    @Test("The chart's Other bar plurals its count, visibly and for VoiceOver (#184 slice 3)")
+    func otherPlural() throws {
+        let entries = try StringCatalogTests.entries()
+        #expect(
+            Set(try #require(entries["Other · %lld categories"])) == [
+                "Other · %lld category", "Other · %lld categories",
+            ]
+        )
+        #expect(
+            Set(try #require(entries["Other, %lld categories"])) == ["Other, %lld category", "Other, %lld categories"]
+        )
+    }
+
+    @Test("The audio graph's name for a repeated bar name is one entry with its English value (#310 n1)")
+    func repeatedBarName() throws {
+        #expect(try StringCatalogTests.entries()["%1$@ (%2$lld)"] == ["%1$@ (%2$lld)"])
+    }
+
+    @Test("The Mac table's column titles are their own keys, apart from the shared Category, Amount and Transactions")
+    func tableColumns() throws {
+        let entries = try StringCatalogTests.entries()
+        #expect(entries["report.column.category"] == ["Category"])
+        #expect(entries["report.column.transactions"] == ["Transactions"])
+        #expect(entries["report.column.amount"] == ["Amount"])
+        #expect(entries["report.column.share"] == ["Share"])
+    }
+
     @Test("The transaction count has one and other variants, each with %lld")
     func countPlural() throws {
         let values = try #require(try StringCatalogTests.entries()["%lld transactions"])
