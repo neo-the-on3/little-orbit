@@ -183,6 +183,24 @@ struct ScheduledRemovedNoticeTests {
         #expect(opened.window.undoManager.redoActionName == "Edit Phone Plan (new)")
     }
 
+    @Test("M15: the notice's Undo does nothing once a later step is the newest, and still closes the notice")
+    func noticeUndoOnlyWhileItsStepIsNewest() throws {
+        let opened = try window([Edit(key: Self.day(10, 26), movedTo: Self.day(11, 3))])
+        try save(opened, end(Self.day(10, 31)))
+        let notice = try #require(opened.list.removedNotice)
+        // A later save in the same window, which removes nothing, so the first notice is still the one shown.
+        try save(opened) { $0.details = "Phone Plan (renamed)" }
+        #expect(opened.list.removedNotice == notice)
+        #expect(opened.window.undoManager.undoActionName == "Edit Phone Plan (renamed)")
+        opened.list.undoRemovedNotice()
+        #expect(opened.list.removedNotice == nil)
+        let item = try stored(opened.scene)
+        #expect(item.details == "Phone Plan (renamed)")
+        #expect(item.endDay == Self.day(10, 31))
+        #expect(item.occurrence(on: Self.day(10, 26)) == nil)
+        #expect(opened.window.undoManager.undoActionName == "Edit Phone Plan (renamed)")
+    }
+
     @Test("D444 (F): OK closes the notice and keeps the save")
     func noticeOkKeepsTheSave() throws {
         let opened = try window([Edit(key: Self.day(10, 26), movedTo: Self.day(11, 3))])
