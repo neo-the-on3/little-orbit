@@ -16,14 +16,19 @@ public struct ImportDateDetection: Equatable, Sendable {
     public var order: ImportDateOrder
     /// Every order that reads every date. More than one means the file is ambiguous and the user can switch.
     public var candidates: [ImportDateOrder]
+    /// Whether the order changes how any date reads. It doesn't when every date has a month name or is compact
+    /// (`5 Nov 2026`, `20261105`), so there's no Date format to pick (D453.3). A file with no dates, or with a
+    /// numeric or unreadable one, needs an order.
+    public var ordersMatter: Bool
 
-    public init(order: ImportDateOrder, candidates: [ImportDateOrder]) {
+    public init(order: ImportDateOrder, candidates: [ImportDateOrder], ordersMatter: Bool = true) {
         self.order = order
         self.candidates = candidates
+        self.ordersMatter = ordersMatter
     }
 
     public var isAmbiguous: Bool {
-        candidates.count > 1
+        ordersMatter && candidates.count > 1
     }
 }
 
@@ -97,7 +102,14 @@ public enum ImportDateParser {
         }
         let ranking = [preferred] + ImportDateOrder.allCases.filter { $0 != preferred }
         let candidates = ranking.filter { counts[$0] == best }
-        return ImportDateDetection(order: candidates[0], candidates: candidates)
+        let ordersMatter = !values.allSatisfy { readsTheSameInEveryOrder($0, months: months) }
+        return ImportDateDetection(order: candidates[0], candidates: candidates, ordersMatter: ordersMatter)
+    }
+
+    /// Whether every order reads `text`, and as the same date and time.
+    private static func readsTheSameInEveryOrder(_ text: String, months: ImportMonthNames) -> Bool {
+        let reads = ImportDateOrder.allCases.map { wallTime(text, order: $0, months: months) }
+        return reads[0] != nil && reads.allSatisfy { $0 == reads[0] }
     }
 
     /// The region's order: where its numeric short date puts the day, month and year.
