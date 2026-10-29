@@ -107,6 +107,7 @@ struct AllTransactionsUndoTests {
         #expect(prompt.ids == [F.metro.id, F.bakery.id])
         #expect(try F.stored(repository) == before)
         let change = try #require(model.confirmDelete())
+        #expect(model.deletePrompt == nil, "Confirming closes the prompt")
         let window = TestWindow(useCases)
         window.history.record(change)
         #expect(model.visibleIDs == [F.tea.id, F.move.id])
