@@ -3,6 +3,8 @@ import Foundation
 /// Where a list or sidebar row leads.
 enum AccountsRoute: Hashable {
     case allTransactions
+    /// Search (#28), from the iOS magnifying glass; on macOS it's All Transactions' toolbar field.
+    case search
     case home(HomeDestination)
     case account(UUID)
     /// A screen pushed over the Scheduled list on iPhone and iPad. Their Accounts stack has a typed path, so only

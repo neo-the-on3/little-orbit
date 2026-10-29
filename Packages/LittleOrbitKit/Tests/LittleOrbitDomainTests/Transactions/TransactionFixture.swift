@@ -75,4 +75,9 @@ enum TransactionFixture {
             createdAt: date,
         )
     }
+
+    /// A tag, made here because test files also import Testing, whose `Tag` would be ambiguous.
+    static func tag(_ name: String) -> Tag {
+        Tag(name: name)
+    }
 }

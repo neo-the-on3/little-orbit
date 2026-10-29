@@ -312,12 +312,19 @@
             case .scheduled:
                 // Only the iPhone and iPad stack pushes it; here the list has its own stack.
                 noSelection
-            case .allTransactions:
+            case .allTransactions, .search:
                 if model.isFirstRun {
                     UpcomingFeatureView(
                         title: "Add your first account",
                         systemImage: "building.columns",
                         message: "Start with the account you use most. Use + or Add Account… in the sidebar.",
+                    )
+                } else if let search = transactions.makeSearch() {
+                    // #28: every transaction, with the toolbar search field (⌘F) and the scope bar.
+                    TransactionSearchView(
+                        title: SearchText.allTransactionsTitle,
+                        model: search,
+                        transactions: transactions,
                     )
                 } else {
                     UpcomingFeatureView(

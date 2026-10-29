@@ -14,7 +14,7 @@ extension CategoryText {
         FeatureText.string(
             "Try again.",
             comment:
-                "Message under “Couldn’t Load Payees” or “Couldn’t Load Categories” (alerts), and under “Couldn’t Load Report” (the spending report and its drill-down).",
+                "Message under “Couldn’t Load Payees” or “Couldn’t Load Categories” (alerts), under “Couldn’t Load Report” (the spending report and its drill-down), and under “Couldn’t Load Transactions” (search).",
         )
     }
 }

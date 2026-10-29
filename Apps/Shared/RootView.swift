@@ -186,6 +186,8 @@
                     while: { showUpcoming.showsUpcoming },
                 ),
                 categoryPicking: CategoryPickingUseCases(load: editing, edit: editing),
+                // Search (#28) reads the same store: iOS opens it from Accounts, macOS shows it in All Transactions.
+                search: DefaultSearchTransactionsUseCase(repository: repository),
             )
         }
 
