@@ -39,9 +39,7 @@
             }
             .onAppear {
                 // Its form's saves are steps in the window's own Undo history, as on the Scheduled list (D351.1).
-                model.recordStep = { [undoHistory] change, name, subject in
-                    undoHistory.record(change, named: name, subject: subject)
-                }
+                model.useUndoHistory(undoHistory)
                 model.loadIfNeeded()
             }
             .onChange(of: feature.revision) { model.load() }

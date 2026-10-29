@@ -284,7 +284,9 @@ final class FlakyScheduleRepository: ScheduleRepository {
         try base.resettleScheduledOccurrence(change)
     }
 
-    func catchUpScheduledItems(today: CalendarDay, pruningOrphans: Bool) throws -> ScheduledCatchUp {
-        try base.catchUpScheduledItems(today: today, pruningOrphans: pruningOrphans)
+    func catchUpScheduledItems(today: CalendarDay, pruningOrphans: Bool, holding: Set<UUID>) throws
+        -> ScheduledCatchUp
+    {
+        try base.catchUpScheduledItems(today: today, pruningOrphans: pruningOrphans, holding: holding)
     }
 }

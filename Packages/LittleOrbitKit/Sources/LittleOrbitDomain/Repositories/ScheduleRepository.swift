@@ -51,6 +51,14 @@ public protocol ScheduleRepository: AnyObject {
     func unsettleScheduledOccurrence(_ change: ScheduledSettlementChange) throws -> ScheduledSettlementRevert
     /// Redo of a Pay or Skip, in one save: see `LedgerBook.resettlingScheduledOccurrence(_:in:now:)`.
     func resettleScheduledOccurrence(_ change: ScheduledSettlementChange) throws -> ScheduledSettlementRevert
-    /// See `LedgerBook.catchingUpScheduledItems(in:today:now:pruningOrphans:)`. All of it is one save.
-    func catchUpScheduledItems(today: CalendarDay, pruningOrphans: Bool) throws -> ScheduledCatchUp
+    /// See `LedgerBook.catchingUpScheduledItems(in:today:now:pruningOrphans:holding:)`. All of it is one save.
+    func catchUpScheduledItems(today: CalendarDay, pruningOrphans: Bool, holding: Set<UUID>) throws
+        -> ScheduledCatchUp
+}
+
+extension ScheduleRepository {
+    /// A catch-up that holds no item.
+    public func catchUpScheduledItems(today: CalendarDay, pruningOrphans: Bool) throws -> ScheduledCatchUp {
+        try catchUpScheduledItems(today: today, pruningOrphans: pruningOrphans, holding: [])
+    }
 }

@@ -9231,6 +9231,111 @@
         }
       }
     },
+    "%2$lld moved payments were due after the new end date, so they’re back on their scheduled days: %1$@.": {
+      "comment": "Scheduled notice after saving an item whose End date is before the day “This occurrence only” moved one or more payments to; each is due again on its own scheduled day (D444.1). %1$@ is the scheduled days they’re back on, in the locale’s short date format, joined as a list (“26 Oct” or “26 Oct and 2 Nov”); %2$lld is how many. The one form needn’t show the number. Edit › Undo, or the notice’s Undo, brings them back.",
+      "extractionState": "manual",
+      "generatesSymbol": false,
+      "localizations": {
+        "en": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "%#@count@"
+          },
+          "substitutions": {
+            "count": {
+              "argNum": 2,
+              "formatSpecifier": "lld",
+              "variations": {
+                "plural": {
+                  "one": {
+                    "stringUnit": {
+                      "state": "translated",
+                      "value": "A moved payment was due after the new end date, so it’s back on its scheduled day: %1$@."
+                    }
+                  },
+                  "other": {
+                    "stringUnit": {
+                      "state": "translated",
+                      "value": "%2$lld moved payments were due after the new end date, so they’re back on their scheduled days: %1$@."
+                    }
+                  }
+                }
+              }
+            }
+          }
+        }
+      }
+    },
+    "%2$lld moved payments were due after the new end date and were removed: %1$@.": {
+      "comment": "Scheduled notice after saving an item whose End date is before both the day “This occurrence only” moved one or more payments to and their own scheduled days, so they were removed (D444.1). %1$@ is the days they were moved to, in the locale’s short date format, joined as a list (“26 Oct” or “26 Oct and 2 Nov”); %2$lld is how many. The one form needn’t show the number. Edit › Undo, or the notice’s Undo, brings them back.",
+      "extractionState": "manual",
+      "generatesSymbol": false,
+      "localizations": {
+        "en": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "%#@count@"
+          },
+          "substitutions": {
+            "count": {
+              "argNum": 2,
+              "formatSpecifier": "lld",
+              "variations": {
+                "plural": {
+                  "one": {
+                    "stringUnit": {
+                      "state": "translated",
+                      "value": "A moved payment was due after the new end date and was removed: %1$@."
+                    }
+                  },
+                  "other": {
+                    "stringUnit": {
+                      "state": "translated",
+                      "value": "%2$lld moved payments were due after the new end date and were removed: %1$@."
+                    }
+                  }
+                }
+              }
+            }
+          }
+        }
+      }
+    },
+    "%2$lld edited payments no longer match the schedule and were removed: %1$@.": {
+      "comment": "Scheduled notice after saving a new Starts date, repeat or End date that no longer has the day of one or more payments whose amount or other details were edited for that occurrence only, so they were removed (D442.2, D444.2). %1$@ is their days, in the locale’s short date format, joined as a list (“26 Oct” or “26 Oct and 2 Nov”); %2$lld is how many. The one form needn’t show the number. Edit › Undo, or the notice’s Undo, brings them back.",
+      "extractionState": "manual",
+      "generatesSymbol": false,
+      "localizations": {
+        "en": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "%#@count@"
+          },
+          "substitutions": {
+            "count": {
+              "argNum": 2,
+              "formatSpecifier": "lld",
+              "variations": {
+                "plural": {
+                  "one": {
+                    "stringUnit": {
+                      "state": "translated",
+                      "value": "An edited payment no longer matches the schedule and was removed: %1$@."
+                    }
+                  },
+                  "other": {
+                    "stringUnit": {
+                      "state": "translated",
+                      "value": "%2$lld edited payments no longer match the schedule and were removed: %1$@."
+                    }
+                  }
+                }
+              }
+            }
+          }
+        }
+      }
+    },
     "Each is recorded only once.": {
       "comment": "Catch-up hint sentence after two or more recorded occurrences (D338).",
       "extractionState": "manual",
@@ -11121,7 +11226,7 @@
       }
     },
     "Undo": {
-      "comment": "Mac Edit menu: Undo when there's nothing named to undo.",
+      "comment": "The Mac Edit menu's unnamed Undo, and the Undo on the Scheduled removed-payments notice.",
       "extractionState": "manual",
       "generatesSymbol": false,
       "localizations": {

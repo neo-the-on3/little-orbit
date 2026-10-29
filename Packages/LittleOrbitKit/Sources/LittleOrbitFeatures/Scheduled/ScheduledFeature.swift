@@ -13,6 +13,8 @@ public struct ScheduledScreenUseCases {
     public var permission: any NotificationPermissionUseCase
     /// Settings › Scheduled Items › Reminder Time, which the form's footnote names (D340.7).
     public var reminderTime: any ScheduledReminderTimeUseCase
+    /// The items catch-up holds while a save's notice shows (D447), shared by windows.
+    public let catchUpHolds: ScheduledCatchUpHolds
 
     public init(
         load: any LoadScheduledUseCase,
@@ -21,6 +23,7 @@ public struct ScheduledScreenUseCases {
         notices: any ScheduledCatchUpNoticeUseCase = ScheduledCatchUpNotices(),
         permission: any NotificationPermissionUseCase = FixedNotificationPermission(),
         reminderTime: any ScheduledReminderTimeUseCase = FixedReminderTime(),
+        catchUpHolds: ScheduledCatchUpHolds = ScheduledCatchUpHolds(),
     ) {
         self.load = load
         self.manage = manage
@@ -28,6 +31,7 @@ public struct ScheduledScreenUseCases {
         self.notices = notices
         self.permission = permission
         self.reminderTime = reminderTime
+        self.catchUpHolds = catchUpHolds
     }
 }
 
@@ -94,6 +98,8 @@ public final class ScheduledFeature: PlannedItemsSource {
         if let reminders {
             updates?.onChanged { reminders.refresh() }
         }
+        // The removed-occurrences notice's OK ends its hold and records what's due, as usual.
+        useCases.catchUpHolds.catchUp = { [weak self] in self?.catchUp(atLaunch: false) }
     }
 
     /// Records every due occurrence of the automatic items, each once, dated on its own due day. The App calls it
@@ -105,7 +111,7 @@ public final class ScheduledFeature: PlannedItemsSource {
         defer { reminders?.refresh() }
         let result: ScheduledCatchUp
         do {
-            result = try useCases.catchUp.catchUp(atLaunch: atLaunch)
+            result = try useCases.catchUp.catchUp(atLaunch: atLaunch, holding: useCases.catchUpHolds.itemIDs)
         } catch {
             onCatchUpProblem(.failed(error))
             return nil

@@ -336,12 +336,15 @@ extension InMemoryLedgerRepository: ScheduleRepository {
         return outcome.result
     }
 
-    public func catchUpScheduledItems(today: CalendarDay, pruningOrphans: Bool) throws -> ScheduledCatchUp {
+    public func catchUpScheduledItems(today: CalendarDay, pruningOrphans: Bool, holding: Set<UUID>) throws
+        -> ScheduledCatchUp
+    {
         let outcome = LedgerBook.catchingUpScheduledItems(
             in: snapshot,
             today: today,
             now: now(),
             pruningOrphans: pruningOrphans,
+            holding: holding,
         )
         snapshot = outcome.snapshot
         return outcome.result

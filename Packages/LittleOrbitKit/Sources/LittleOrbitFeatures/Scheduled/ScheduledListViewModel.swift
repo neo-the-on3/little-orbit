@@ -23,6 +23,10 @@ public final class ScheduledListViewModel {
     /// The Pay with Custom Date or Amount sheet (D24).
     public var payment: ScheduledPayViewModel?
     @ObservationIgnored public var recordStep: ScheduledStepRecorder = { _, _, _ in }
+    /// The window's Undo for the removed-occurrences notice (D444); the window sets it with `recordStep`.
+    @ObservationIgnored public var undoHook: ScheduledUndoHook?
+    /// The notice after a form save that removed occurrences (D442.3, D444), with Undo and OK.
+    public var removedNotice: ScheduledRemovedNotice?
 
     /// The Scheduled screens on screen, in the order they appeared: the last one presents (see `presenter`).
     public private(set) var visibleScreens: [ScheduledScreen] = []
@@ -243,6 +247,7 @@ public final class ScheduledListViewModel {
             let change = $0
             self?.load()
             self?.recordSave(change)
+            self?.showRemovedNotice(change)
             self?.changed()
         }
     }

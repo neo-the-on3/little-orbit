@@ -111,7 +111,9 @@ private final class UnreadableSchedule: ScheduleRepository {
     func resettleScheduledOccurrence(_: ScheduledSettlementChange) throws -> ScheduledSettlementRevert {
         throw Failure()
     }
-    func catchUpScheduledItems(today _: CalendarDay, pruningOrphans _: Bool) throws -> ScheduledCatchUp {
+    func catchUpScheduledItems(today _: CalendarDay, pruningOrphans _: Bool, holding _: Set<UUID>) throws
+        -> ScheduledCatchUp
+    {
         throw Failure()
     }
 }

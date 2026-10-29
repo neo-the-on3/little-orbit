@@ -89,9 +89,7 @@
                 .onAppear {
                     // A form save, Pay and Skip, from the Mac Table or the iOS List, are this window's Undo steps
                     // (D351.1, D288.3, D290).
-                    model.recordStep = { [undoHistory] change, name, subject in
-                        undoHistory.record(change, named: name, subject: subject)
-                    }
+                    model.useUndoHistory(undoHistory)
                     model.screenAppeared(.list)
                     model.load()
                     feature.watchNotices?.reload()
@@ -436,6 +434,7 @@
                 } message: { alert in
                     Text(alert.message)
                 }
+                .modifier(ScheduledRemovedNoticeAlert(model: model, presents: presents))
         }
     }
 
