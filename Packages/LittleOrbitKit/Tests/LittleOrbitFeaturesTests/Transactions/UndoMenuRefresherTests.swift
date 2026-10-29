@@ -83,19 +83,23 @@ struct UndoMenuRefresherTests {
     /// Fails, and stops the test before it posts from the main actor, unless the refresher observes on the posting
     /// thread. The probe posts from its own thread, so a queue hop can't hold up the main actor: the observer then
     /// runs elsewhere, or `post` never returns and the 5-second bound ends the wait. A passing run never waits on it.
+    /// The posting thread is known by a token in its own thread dictionary, not by its name: on Linux, reading
+    /// `Thread.current.name` back on the thread that set it sometimes gives something else (#303: 9 of 50 runs of
+    /// these suites failed with `observed(onPostingThread: false)` in a few milliseconds).
     static func requirePostingThread() async throws {
         let center = NotificationCenter()
         let name = Notification.Name("test.postingThreadProbe")
-        let poster = "lo.b1.poster"  // Under 16 bytes: Linux keeps thread names that short.
+        let key = "lo.b1.poster"
+        let token = UUID().uuidString
         let (events, sink) = AsyncStream.makeStream(of: ProbeEvent.self)
         let refresher = UndoMenuRefresher(center: center, names: [name]) {
-            sink.yield(.observed(onPostingThread: Thread.current.name == poster))
+            sink.yield(.observed(onPostingThread: Thread.current.threadDictionary[key] as? String == token))
             return false
         } read: {
             UndoMenuItems(FakeUndoManager(), gateClosed: false)
         }
         let thread = Thread {
-            Thread.current.name = poster
+            Thread.current.threadDictionary[key] = token
             center.post(name: name, object: nil)
             sink.yield(.posted)
             sink.finish()

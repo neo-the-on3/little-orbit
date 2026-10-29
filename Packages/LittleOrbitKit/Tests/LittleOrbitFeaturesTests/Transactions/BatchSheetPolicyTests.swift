@@ -8,7 +8,7 @@ import Testing
 /// D401, Tech Architect's review 5664921216: the progress sheet's decision just before the main-thread save, and
 /// the progress model acting on it for Apply, Undo and Redo.
 @MainActor
-@Suite("Batch sheet before the save")
+@Suite("Batch sheet before the save", .timeLimit(.minutes(1)))
 struct BatchSheetPolicyTests {
     typealias Policy = BatchSheetPolicy
 
@@ -84,13 +84,24 @@ struct BatchSheetPolicyTests {
     @Test("A quick one-window Apply of a few rows shows no sheet, and the timer stops at the save")
     func quickApplyShowsNothing() async throws {
         let clock = ManualClock()
-        let progress = BatchProgress(kind: .applying, total: 40, showAfter: .milliseconds(30), now: { clock.instant })
+        let sleeper = ManualSleeper()
+        defer { sleeper.release() }
+        let progress = BatchProgress(
+            kind: .applying,
+            total: 40,
+            showAfter: .milliseconds(30),
+            now: { clock.instant },
+            timerSleep: sleeper.sleep,
+        )
         let reporter = progress.start()
+        let timer = try #require(progress.timer)
+        #expect(await sleeper.next() == .milliseconds(30))
         clock.advance(.milliseconds(20))
         await reporter.willSave(40)
         #expect(!progress.isShown)
-        // The timer can't show it afterwards: it covers the build only.
-        try await Task.sleep(for: .milliseconds(120))
+        // The timer can't show it afterwards: it covers the build only. Its sleep ends as if its time had come.
+        sleeper.release()
+        await timer.value
         #expect(!progress.isShown)
         progress.finish()
     }
@@ -125,24 +136,40 @@ struct BatchSheetNoRowTests {
 
     @Test("A 0-row plan stops the timer, so the sheet never shows afterwards")
     func zeroRowStopsTimer() async throws {
-        let progress = BatchProgress(kind: .applying, total: 3_334, showAfter: .milliseconds(30))
+        let sleeper = ManualSleeper()
+        defer { sleeper.release() }
+        let progress = BatchProgress(
+            kind: .applying,
+            total: 3_334,
+            showAfter: .milliseconds(30),
+            timerSleep: sleeper.sleep,
+        )
         let reporter = progress.start()
+        let timer = try #require(progress.timer)
+        #expect(await sleeper.next() == .milliseconds(30))
         await reporter.willSave(0)
         #expect(!progress.isShown)
-        try await Task.sleep(for: .milliseconds(120))
+        // Its sleep ends as if its time had come: a timer the 0-row plan left running would show the sheet now.
+        sleeper.release()
+        await timer.value
         #expect(!progress.isShown)
         progress.finish()
     }
 
     @Test("A 0-row plan closes a sheet the timer already showed")
     func zeroRowClosesSheet() async throws {
-        let progress = BatchProgress(kind: .applying, total: 3_334, showAfter: .milliseconds(1))
+        // The timer's sleep waits for the test, so a main actor held up by other suites can't decide it (#303).
+        let sleeper = ManualSleeper()
+        defer { sleeper.release() }
+        let progress = BatchProgress(
+            kind: .applying,
+            total: 3_334,
+            showAfter: .milliseconds(1),
+            timerSleep: sleeper.sleep,
+        )
         let reporter = progress.start()
-        let clock = ContinuousClock()
-        let start = clock.now
-        while !progress.isShown, clock.now - start < .seconds(10) {
-            try await Task.sleep(for: .milliseconds(5))
-        }
+        #expect(await sleeper.advance() == .milliseconds(1))
+        await progress.timer?.value
         #expect(progress.isShown)
         await reporter.willSave(0)
         #expect(!progress.isShown)

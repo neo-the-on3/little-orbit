@@ -9,7 +9,7 @@ import Testing
 /// before the save or the half-second timer asks first; the timer keeps running through the save; "Saving…" can
 /// move; and a batch Undo holds the shared busy flag for the whole save and leaves one Undo step.
 @MainActor
-@Suite("Progress sheet with the save off the main actor (#285, B)")
+@Suite("Progress sheet with the save off the main actor (#285, B)", .timeLimit(.minutes(1)))
 struct OffMainSaveSheetTests {
     typealias F = TransactionFeatureFixture  // swiftlint:disable:this type_name
 
@@ -68,11 +68,9 @@ struct OffMainSaveSheetTests {
         let reporter = progress.start()
         let title = progress.title
         reporter.rowsDone(2)
-        let clock = ContinuousClock()
-        let start = clock.now
-        while progress.done < 2, clock.now - start < .seconds(10) {
-            try await Task.sleep(for: .milliseconds(10))
-        }
+        // The count arrives on a later turn of the main actor: wait for it, not for real time (#303).
+        await ObservedState.until { progress.done == 2 }
+        #expect(progress.rowReports == 1)
         #expect(!progress.showsIndeterminateBar, "Determinate while the rows are checked")
         #expect(progress.value == 2)
         #expect(progress.message == "Updating 4 transactions.")
@@ -84,7 +82,7 @@ struct OffMainSaveSheetTests {
         #expect(progress.message == "Saving…", "Saving… once it's indeterminate")
         // A row count that arrives late, then a save that falls back to the main actor, then another hand-off.
         reporter.rowsDone(3)
-        try await Task.sleep(for: .milliseconds(50))
+        await ObservedState.until { progress.rowReports == 2 }
         seen.append(progress.showsIndeterminateBar)
         await reporter.willSave(4)
         seen.append(progress.showsIndeterminateBar)
@@ -100,10 +98,21 @@ struct OffMainSaveSheetTests {
 
     @Test("No row to change: no sheet, and the timer is stopped (D402)")
     func noRows() async throws {
-        let progress = BatchProgress(kind: .applying, total: 5, showAfter: .milliseconds(40))
+        let sleeper = ManualSleeper()
+        defer { sleeper.release() }
+        let progress = BatchProgress(
+            kind: .applying,
+            total: 5,
+            showAfter: .milliseconds(40),
+            timerSleep: sleeper.sleep,
+        )
         let reporter = progress.start()
+        let timer = try #require(progress.timer)
+        #expect(await sleeper.next() == .milliseconds(40))
         await reporter.reportSaving(0, offMain: true)
-        try await Task.sleep(for: .milliseconds(150))
+        // Its sleep ends as if its time had come: a timer left running would show the sheet now.
+        sleeper.release()
+        await timer.value
         #expect(!progress.isShown)
         #expect(progress.timesShown == 0)
         progress.finish()
@@ -112,10 +121,21 @@ struct OffMainSaveSheetTests {
     @Test("The main-actor save keeps its behaviour: the bar stays full, the timer stops")
     func mainActorSave() async throws {
         let clock = ManualClock()
-        let progress = BatchProgress(kind: .redoing, total: 20, showAfter: .milliseconds(40), now: { clock.instant })
+        let sleeper = ManualSleeper()
+        defer { sleeper.release() }
+        let progress = BatchProgress(
+            kind: .redoing,
+            total: 20,
+            showAfter: .milliseconds(40),
+            now: { clock.instant },
+            timerSleep: sleeper.sleep,
+        )
         let reporter = progress.start()
+        let timer = try #require(progress.timer)
+        #expect(await sleeper.next() == .milliseconds(40))
         await reporter.reportSaving(20, offMain: false)
-        try await Task.sleep(for: .milliseconds(150))
+        sleeper.release()
+        await timer.value
         #expect(!progress.savesOffMain)
         #expect(!progress.isShown, "The save cancels the timer")
         progress.finish()
