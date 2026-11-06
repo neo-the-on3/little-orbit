@@ -54,7 +54,7 @@ extension CSVImportViewModel {
         let formatter = ImportRowFormatter(
             file: file,
             ledger: ledger,
-            dateOrder: dateOrder,
+            settings: settings,
             locale: locale,
             timeZone: timeZone,
             defaultCurrency: currency,

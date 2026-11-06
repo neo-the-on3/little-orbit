@@ -11,7 +11,9 @@ extension CSVImportViewModel {
     }
 
     public var accountOptions: [ImportMatchOption] {
-        ledger.accounts.sorted { $0.sortOrder < $1.sortOrder }.map { ImportMatchOption(id: $0.id, name: $0.name) }
+        let accounts =
+            ledger.accounts.sorted { $0.sortOrder < $1.sortOrder } + [choices.newTargetAccount].compactMap { $0 }
+        return accounts.map { ImportMatchOption(id: $0.id, name: $0.name) }
     }
 
     public var targetAccountID: UUID? {

@@ -50,6 +50,8 @@ public struct ImportMatch: Equatable, Sendable, Identifiable {
     public var automaticChoice: ImportMatchChoice
     /// For a new account: the currency its rows use.
     public var currencyCode: String?
+    /// Full form values for a deferred target account; other matches use the usual defaults.
+    public var newAccount: Account?
 
     public var id: ImportMatchKey {
         key
@@ -63,6 +65,7 @@ public struct ImportMatch: Equatable, Sendable, Identifiable {
         choice: ImportMatchChoice,
         automaticChoice: ImportMatchChoice,
         currencyCode: String? = nil,
+        newAccount: Account? = nil,
     ) {
         self.key = key
         self.name = name
@@ -71,6 +74,7 @@ public struct ImportMatch: Equatable, Sendable, Identifiable {
         self.choice = choice
         self.automaticChoice = automaticChoice
         self.currencyCode = currencyCode
+        self.newAccount = newAccount
     }
 
     public var isRemapped: Bool {
@@ -82,16 +86,20 @@ public struct ImportMatch: Equatable, Sendable, Identifiable {
 /// matches, and currencies for new accounts.
 public struct ImportChoices: Equatable, Sendable {
     public var targetAccountID: UUID?
+    /// An account from the import’s New Account sheet; not in the ledger until commit.
+    public var newTargetAccount: Account?
     public var matches: [ImportMatchKey: ImportMatchChoice]
     /// Currency codes for new accounts, by account name key (#60's preview currency picker).
     public var newAccountCurrencies: [String: String]
 
     public init(
         targetAccountID: UUID? = nil,
+        newTargetAccount: Account? = nil,
         matches: [ImportMatchKey: ImportMatchChoice] = [:],
         newAccountCurrencies: [String: String] = [:],
     ) {
         self.targetAccountID = targetAccountID
+        self.newTargetAccount = newTargetAccount
         self.matches = matches
         self.newAccountCurrencies = newAccountCurrencies
     }
@@ -144,6 +152,18 @@ struct ImportMatcher {
         if case .new = choice, matches[key]?.currencyCode == nil {
             let newCurrency = choices.newAccountCurrencies[key.nameKey] ?? currency ?? defaultCurrency
             matches[key]?.currencyCode = newCurrency
+        }
+        return ref(for: key, choice)
+    }
+
+    /// A deferred target is a new match even when an existing account has the same name.
+    mutating func targetAccount(_ account: Account, currency: String?) -> ImportRef {
+        guard account.id == choices.newTargetAccount?.id else { return .existing(account.id) }
+        let key = ImportMatchKey(kind: .account, name: account.name)
+        let choice = note(key, name: account.name, automatic: .new)
+        if choice == .new, matches[key]?.currencyCode == nil {
+            matches[key]?.currencyCode = currency ?? choices.newAccountCurrencies[key.nameKey] ?? account.currencyCode
+            matches[key]?.newAccount = account
         }
         return ref(for: key, choice)
     }
