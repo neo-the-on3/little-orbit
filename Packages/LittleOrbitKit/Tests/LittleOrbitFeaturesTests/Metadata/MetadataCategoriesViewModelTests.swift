@@ -15,17 +15,22 @@ struct MetadataCategoriesViewModelTests {
     final class Setup {
         let repository: InMemoryLedgerRepository
         let model: MetadataCategoriesViewModel
+        let updates: LedgerUpdates
         var removals = 0
 
-        init(_ transactions: [Transaction] = []) throws {
+        init(_ transactions: [Transaction] = [], updates: LedgerUpdates = LedgerUpdates()) throws {
             repository = try F.repository(transactions)
+            self.updates = updates
             let editing = DefaultCategoryEditingUseCase(repository: repository)
             let useCases = CategoryScreenUseCases(
                 load: editing,
                 edit: editing,
                 categories: CategoryUseCases(repository: repository),
             )
-            model = MetadataCategoriesViewModel(screen: CategoriesViewModel(useCases: useCases))
+            model = MetadataCategoriesViewModel(
+                screen: CategoriesViewModel(useCases: useCases),
+                updates: updates,
+            )
             model.screen.onRemoval = { [unowned self] in removals += 1 }
             model.load()
         }

@@ -3,8 +3,10 @@
 
     /// The delete's Move To sheet on the Mac (#24 design, move target): only the category's own kind's
     /// unarchived categories (D291.4), the footnote, then Cancel and Move. Moving can’t be undone (D287.2).
+    /// Move waits while a batch runs (D399).
     struct MetadataMoveSheet: View {
         let choice: CategoryTargetChoice
+        let onConfirm: () -> Bool
         @Environment(\.dismiss) private var dismiss
 
         var body: some View {
@@ -27,12 +29,12 @@
                     Button(CategoryText.cancel) { dismiss() }
                         .keyboardShortcut(.cancelAction)
                     Button(choice.isMerge ? CategoryText.merge : CategoryText.move) {
-                        if choice.confirm() {
+                        if onConfirm() {
                             dismiss()
                         }
                     }
                     .keyboardShortcut(.defaultAction)
-                    .disabled(choice.targetID == nil)
+                    .disabled(choice.targetID == nil || choice.isLedgerBusy())
                 }
             }
             .padding(20)

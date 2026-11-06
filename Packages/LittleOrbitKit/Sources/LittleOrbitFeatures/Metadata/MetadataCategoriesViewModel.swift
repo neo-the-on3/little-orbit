@@ -52,9 +52,21 @@ public final class MetadataCategoriesViewModel {
     /// The category being renamed in its row, with the editor that checks and saves the name.
     public private(set) var renaming: CategoryEditorViewModel?
 
-    public init(screen: CategoriesViewModel) {
+    /// The shared ledger signal: while a Bulk Edit, or its Undo or Redo, runs in any window, Metadata writes
+    /// wait (D399).
+    @ObservationIgnored public var updates: LedgerUpdates?
+
+    public init(screen: CategoriesViewModel, updates: LedgerUpdates? = nil) {
         self.screen = screen
+        self.updates = updates
     }
+
+    /// A Bulk Edit, or its Undo or Redo, runs in some window: Merge, Delete/Move, Unarchive, Save and rename
+    /// wait (D399).
+    public var isWaitingForBatch: Bool { updates?.isBatchRunning ?? false }
+
+    /// Whether Metadata may write the ledger now.
+    public var writesEnabled: Bool { !isWaitingForBatch }
 
     // MARK: Reading
 
@@ -173,21 +185,23 @@ public final class MetadataCategoriesViewModel {
 
     /// Opens Merge 2 Categories for the two selected categories.
     public func startMerge() {
-        guard mergeAvailability == .available else {
+        guard writesEnabled, mergeAvailability == .available else {
             return
         }
-        merge = MetadataCategoryMerge(
+        let sheet = MetadataCategoryMerge(
             ids: rows.map(\.id).filter(selection.contains),
             selectionOrder: selectionOrder,
             screen: screen,
         )
+        sheet.isLedgerBusy = { [weak self] in self?.isWaitingForBatch ?? false }
+        merge = sheet
     }
 
     // MARK: Delete (D19, D287)
 
     /// Asks how to delete the one selected category, with the same alert as iOS.
     public func requestDelete() {
-        guard let id = singleSelection else {
+        guard writesEnabled, let id = singleSelection else {
             return
         }
         screen.requestDelete(id)
@@ -195,12 +209,17 @@ public final class MetadataCategoriesViewModel {
 
     /// The delete alert's Move to Another Category…: the same-kind targets, read once.
     public func startMove(_ id: UUID) {
+        guard writesEnabled else {
+            return
+        }
         screen.deletePrompt = nil
         // The targets are read for the category's own kind (D291.4); the Mac has no kind tab.
         if let category = screen.category(id) {
             screen.kind = category.kind
         }
-        moveChoice = screen.makeTargetChoice(.move(id))
+        let choice = screen.makeTargetChoice(.move(id))
+        choice.isLedgerBusy = { [weak self] in self?.isWaitingForBatch ?? false }
+        moveChoice = choice
     }
 
     // MARK: Rename in the row
@@ -234,6 +253,10 @@ public final class MetadataCategoriesViewModel {
         guard renaming.hasUnsavedEdits else {
             self.renaming = nil
             return true
+        }
+        // A rename with no edits ends; a real write waits while a batch runs (D399).
+        guard writesEnabled else {
+            return false
         }
         if renaming.save() {
             self.renaming = nil
@@ -296,5 +319,68 @@ public final class MetadataCategoriesViewModel {
         }
         renaming = nil
         screen.editor = screen.makeNewCategory(kind: parent.kind, parentID: parent.id)
+    }
+
+    // MARK: Writes gated on a batch (D399)
+
+    /// Merge on the Merge 2 Categories sheet.
+    @discardableResult
+    public func confirmMerge() -> Bool {
+        guard writesEnabled, let merge else {
+            return false
+        }
+        return merge.confirm()
+    }
+
+    /// Move on the delete's Move To sheet.
+    @discardableResult
+    public func confirmMove() -> Bool {
+        guard writesEnabled, let moveChoice else {
+            return false
+        }
+        return moveChoice.confirm()
+    }
+
+    /// Archive in the delete alert.
+    @discardableResult
+    public func confirmArchive(_ id: UUID) -> Bool {
+        guard writesEnabled else {
+            return false
+        }
+        return screen.archive(id)
+    }
+
+    /// Delete / Leave Uncategorised in the delete alert.
+    @discardableResult
+    public func confirmDeleteLeavingUncategorised(_ id: UUID) -> Bool {
+        guard writesEnabled else {
+            return false
+        }
+        return screen.deleteLeavingUncategorised(id)
+    }
+
+    /// Unarchive on an Archived row: may write straight away, or ask first (D302).
+    public func requestUnarchive(_ id: UUID) {
+        guard writesEnabled else {
+            return
+        }
+        screen.requestUnarchive(id)
+    }
+
+    /// Unarchive in the D302 confirmation.
+    public func confirmUnarchive() {
+        guard writesEnabled else {
+            return
+        }
+        screen.confirmUnarchive()
+    }
+
+    /// Save on the Edit / New Category sheet.
+    @discardableResult
+    public func saveOpenEditor() -> Bool {
+        guard writesEnabled, let editor = screen.editor else {
+            return false
+        }
+        return editor.save()
     }
 }

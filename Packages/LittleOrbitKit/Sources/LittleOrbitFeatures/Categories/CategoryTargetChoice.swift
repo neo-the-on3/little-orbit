@@ -23,6 +23,8 @@ public final class CategoryTargetChoice: Identifiable {
     public var alert: CategoryAlert?
 
     @ObservationIgnored private weak var screen: CategoriesViewModel?
+    /// On while a Bulk Edit, or its Undo or Redo, runs in any window: Move / Merge waits (D399).
+    @ObservationIgnored public var isLedgerBusy: @MainActor () -> Bool = { false }
 
     init(purpose: Purpose, screen: CategoriesViewModel) {
         self.purpose = purpose
@@ -68,7 +70,7 @@ public final class CategoryTargetChoice: Identifiable {
 
     /// Merges or moves into the chosen target. On failure the sheet keeps its alert and stays open.
     public func confirm() -> Bool {
-        guard let targetID, let screen else {
+        guard !isLedgerBusy(), let targetID, let screen else {
             return false
         }
         let done = isMerge ? screen.merge(categoryID, into: targetID) : screen.delete(categoryID, movingTo: targetID)

@@ -21,6 +21,8 @@ public final class MetadataCategoryMerge: Identifiable {
 
     @ObservationIgnored private let ids: [UUID]
     @ObservationIgnored private weak var screen: CategoriesViewModel?
+    /// On while a Bulk Edit, or its Undo or Redo, runs in any window: Merge waits (D399).
+    @ObservationIgnored var isLedgerBusy: @MainActor () -> Bool = { false }
 
     /// `ids` are the two selected categories, in the table's order; `selectionOrder` is the order they were
     /// selected in, for a tie.
@@ -62,7 +64,7 @@ public final class MetadataCategoryMerge: Identifiable {
     }
 
     public var canMerge: Bool {
-        sourceID != nil
+        sourceID != nil && !isLedgerBusy()
     }
 
     /// "25 transactions will use Food & Dining. Groceries is then deleted. Merging can’t be undone.", with
@@ -89,7 +91,7 @@ public final class MetadataCategoryMerge: Identifiable {
 
     /// Merges, all or nothing. On failure the sheet keeps its alert and stays open.
     public func confirm() -> Bool {
-        guard let screen, let sourceID, let keptID else {
+        guard !isLedgerBusy(), let screen, let sourceID, let keptID else {
             return false
         }
         if screen.merge(sourceID, into: keptID) {

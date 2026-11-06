@@ -23,13 +23,18 @@
             .navigationTitle(MetadataText.windowTitle)
             .toolbar { toolbar }
             .sheet(item: editorBinding) { editor in
-                MetadataCategoryEditorSheet(model: editor, screen: model.screen)
+                MetadataCategoryEditorSheet(
+                    model: editor,
+                    screen: model.screen,
+                    isWaitingForBatch: model.isWaitingForBatch,
+                    onSave: { model.saveOpenEditor() },
+                )
             }
             .sheet(item: $model.merge) { merge in
-                MetadataMergeSheet(merge: merge)
+                MetadataMergeSheet(merge: merge, onConfirm: { model.confirmMerge() })
             }
             .sheet(item: $model.moveChoice) { choice in
-                MetadataMoveSheet(choice: choice)
+                MetadataMoveSheet(choice: choice, onConfirm: { model.confirmMove() })
             }
             .alert(
                 model.screen.alert?.title ?? "",
@@ -64,8 +69,9 @@
                 ),
                 presenting: model.screen.unarchivePrompt,
             ) { _ in
-                Button(CategoryText.unarchive) { model.screen.confirmUnarchive() }
+                Button(CategoryText.unarchive) { model.confirmUnarchive() }
                     .keyboardShortcut(.defaultAction)
+                    .disabled(model.isWaitingForBatch)
                 Button(CategoryText.cancel, role: .cancel) { model.screen.unarchivePrompt = nil }
             } message: { prompt in
                 Text(prompt.message)
@@ -100,7 +106,11 @@
                     model.beginRename(id)
                 }
             }
-            .onDeleteCommand { model.requestDelete() }
+            .onDeleteCommand {
+                if model.writesEnabled {
+                    model.requestDelete()
+                }
+            }
             // Clicking away from the rename field saves a valid name, as Return does, and otherwise keeps the
             // old name, so no field or error is left behind (NB4).
             .onChange(of: focusedRename) { previous, _ in
@@ -141,12 +151,13 @@
                     model.selection = [id]
                     model.requestDelete()
                 }
+                .disabled(model.isWaitingForBatch)
             } else if ids.count > 1 {
                 Button(PayeeText.mergeEllipsis) {
                     model.selection = ids
                     model.startMerge()
                 }
-                .disabled(model.mergeAvailability(of: ids) != .available)
+                .disabled(model.isWaitingForBatch || model.mergeAvailability(of: ids) != .available)
             }
         }
 
@@ -164,7 +175,8 @@
                                 CategoryRowView(row: row)
                                     .padding(.leading, row.isIndented ? 24 : 0)
                                 Spacer()
-                                Button(CategoryText.unarchive) { model.screen.requestUnarchive(row.id) }
+                                Button(CategoryText.unarchive) { model.requestUnarchive(row.id) }
+                                    .disabled(model.isWaitingForBatch)
                             }
                         }
                         .frame(minHeight: 100, idealHeight: 160, maxHeight: 220)
@@ -218,14 +230,14 @@
                 } label: {
                     Label(PayeeText.mergeEllipsis, systemImage: "arrow.triangle.merge")
                 }
-                .disabled(model.mergeAvailability != .available)
+                .disabled(model.isWaitingForBatch || model.mergeAvailability != .available)
                 .help(model.mergeHelp ?? PayeeText.mergeEllipsis)
                 Button {
                     model.requestDelete()
                 } label: {
                     Label(deleteTitle, systemImage: "trash")
                 }
-                .disabled(model.singleSelection == nil)
+                .disabled(model.isWaitingForBatch || model.singleSelection == nil)
                 .help(deleteTitle)
             }
         }
@@ -242,15 +254,19 @@
         private func deleteButtons(_ prompt: CategoryDeletePrompt) -> some View {
             if prompt.isUnused {
                 Button(CategoryText.delete, role: .destructive) {
-                    _ = model.screen.deleteLeavingUncategorised(prompt.id)
+                    _ = model.confirmDeleteLeavingUncategorised(prompt.id)
                 }
+                .disabled(model.isWaitingForBatch)
             } else {
-                Button(CategoryText.archiveCategory) { _ = model.screen.archive(prompt.id) }
+                Button(CategoryText.archiveCategory) { _ = model.confirmArchive(prompt.id) }
                     .keyboardShortcut(.defaultAction)
+                    .disabled(model.isWaitingForBatch)
                 Button(CategoryText.moveToAnother) { model.startMove(prompt.id) }
+                    .disabled(model.isWaitingForBatch)
                 Button(CategoryText.leaveUncategorised, role: .destructive) {
-                    _ = model.screen.deleteLeavingUncategorised(prompt.id)
+                    _ = model.confirmDeleteLeavingUncategorised(prompt.id)
                 }
+                .disabled(model.isWaitingForBatch)
             }
             Button(CategoryText.cancel, role: .cancel) { model.screen.deletePrompt = nil }
         }

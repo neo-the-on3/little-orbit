@@ -6,10 +6,14 @@
     /// The Mac Edit Category sheet (#24 design, Mac Edit Category): Name, a read-only Kind, a read-only
     /// Parent for a subcategory (the Mac has no Parent control, D287.1), Icon from a grid popover, and Colour
     /// for a top-level category only (D298). Return saves; Esc, like Cancel, asks “Discard Changes?” when
-    /// something was entered or changed (D300.1). A name error shows under the name field (D295.4).
+    /// something was entered or changed (D300.1). Save waits while a batch runs (D399). A name error shows under the name field (D295.4).
     struct MetadataCategoryEditorSheet: View {
         @Bindable var model: CategoryEditorViewModel
         let screen: CategoriesViewModel
+        /// On while a Bulk Edit, or its Undo or Redo, runs in any window: Save waits (D399).
+        var isWaitingForBatch: Bool = false
+        /// Saves through the Metadata model so the batch gate applies.
+        var onSave: () -> Bool = { false }
         @State private var isPickingIcon = false
         @State private var isConfirmingDiscard = false
         @Environment(\.dismiss) private var dismiss
@@ -53,12 +57,12 @@
                     Button(CategoryText.cancel) { cancel() }
                         .keyboardShortcut(.cancelAction)
                     Button(CategoryText.save) {
-                        if model.save() {
+                        if onSave() {
                             dismiss()
                         }
                     }
                     .keyboardShortcut(.defaultAction)
-                    .disabled(!model.canSave)
+                    .disabled(!model.canSave || isWaitingForBatch)
                 }
             }
             .padding(20)

@@ -3,9 +3,10 @@
 
     /// The Mac Merge 2 Categories sheet (#24 design, Mac merge, survivor sheet): the two names, a Keep pop-up
     /// and the footnote. A refused merge shows Can’t Merge Categories on this sheet, OK only, and the sheet
-    /// stays open (D291.1). Merging can’t be undone (D287.2).
+    /// stays open (D291.1). Merging can’t be undone (D287.2). Merge waits while a batch runs (D399).
     struct MetadataMergeSheet: View {
         @Bindable var merge: MetadataCategoryMerge
+        let onConfirm: () -> Bool
         @Environment(\.dismiss) private var dismiss
 
         var body: some View {
@@ -31,7 +32,7 @@
                     Button(CategoryText.cancel) { dismiss() }
                         .keyboardShortcut(.cancelAction)
                     Button(CategoryText.merge) {
-                        if merge.confirm() {
+                        if onConfirm() {
                             dismiss()
                         }
                     }

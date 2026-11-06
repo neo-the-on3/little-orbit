@@ -11,7 +11,8 @@
         private let updates: LedgerUpdates
 
         public init(categories: CategoriesFeature, updates: LedgerUpdates) {
-            _model = State(initialValue: MetadataCategoriesViewModel(screen: categories.makeScreen()))
+            let model = MetadataCategoriesViewModel(screen: categories.makeScreen(), updates: updates)
+            _model = State(initialValue: model)
             self.updates = updates
         }
 
