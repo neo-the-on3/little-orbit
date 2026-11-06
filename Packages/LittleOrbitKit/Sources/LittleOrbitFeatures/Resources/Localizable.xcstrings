@@ -11324,6 +11324,138 @@
           }
         }
       }
+    },
+    "%lld to import": {
+      "comment": "CSV import Review accessibility: one whole spoken count phrase. The number is the row count; preserve it in every plural form.",
+      "extractionState": "manual",
+      "localizations": {
+        "en": {
+          "variations": {
+            "plural": {
+              "one": {
+                "stringUnit": {
+                  "state": "translated",
+                  "value": "%lld to import"
+                }
+              },
+              "other": {
+                "stringUnit": {
+                  "state": "translated",
+                  "value": "%lld to import"
+                }
+              }
+            }
+          }
+        }
+      }
+    },
+    "%lld can’t be imported": {
+      "comment": "CSV import Review accessibility: one whole spoken count phrase. The number is the row count; preserve it in every plural form.",
+      "extractionState": "manual",
+      "localizations": {
+        "en": {
+          "variations": {
+            "plural": {
+              "one": {
+                "stringUnit": {
+                  "state": "translated",
+                  "value": "%lld can’t be imported"
+                }
+              },
+              "other": {
+                "stringUnit": {
+                  "state": "translated",
+                  "value": "%lld can’t be imported"
+                }
+              }
+            }
+          }
+        }
+      }
+    },
+    "%lld shortened": {
+      "comment": "CSV import Review accessibility: one whole spoken count phrase. The number is the row count; preserve it in every plural form.",
+      "extractionState": "manual",
+      "localizations": {
+        "en": {
+          "variations": {
+            "plural": {
+              "one": {
+                "stringUnit": {
+                  "state": "translated",
+                  "value": "%lld shortened"
+                }
+              },
+              "other": {
+                "stringUnit": {
+                  "state": "translated",
+                  "value": "%lld shortened"
+                }
+              }
+            }
+          }
+        }
+      }
+    },
+    "%lld already imported": {
+      "comment": "CSV import Review accessibility: one whole spoken count phrase. The number is the row count; preserve it in every plural form.",
+      "extractionState": "manual",
+      "localizations": {
+        "en": {
+          "variations": {
+            "plural": {
+              "one": {
+                "stringUnit": {
+                  "state": "translated",
+                  "value": "%lld already imported"
+                }
+              },
+              "other": {
+                "stringUnit": {
+                  "state": "translated",
+                  "value": "%lld already imported"
+                }
+              }
+            }
+          }
+        }
+      }
+    },
+    "%lld possible duplicates": {
+      "comment": "CSV import Review accessibility: one whole spoken count phrase. The number is the row count; preserve it in every plural form.",
+      "extractionState": "manual",
+      "localizations": {
+        "en": {
+          "variations": {
+            "plural": {
+              "one": {
+                "stringUnit": {
+                  "state": "translated",
+                  "value": "%lld possible duplicate"
+                }
+              },
+              "other": {
+                "stringUnit": {
+                  "state": "translated",
+                  "value": "%lld possible duplicates"
+                }
+              }
+            }
+          }
+        }
+      }
+    },
+    "Currency for %@": {
+      "comment": "CSV import Match accessibility label for a new-account currency picker. %@ is the source account name in the file. The current currency is spoken as the picker value.",
+      "extractionState": "manual",
+      "localizations": {
+        "en": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Currency for %@"
+          }
+        }
+      }
     }
   },
   "version": "1.0"

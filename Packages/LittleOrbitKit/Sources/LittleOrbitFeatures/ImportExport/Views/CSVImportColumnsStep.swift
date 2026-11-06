@@ -5,6 +5,7 @@
     /// The Columns step: each column's field, the date format and decimal separator, and the first rows.
     struct CSVColumnsStep: View {
         @Bindable var model: CSVImportViewModel
+        @Environment(\.dynamicTypeSize) private var dynamicTypeSize
 
         var body: some View {
             Section {
@@ -25,14 +26,18 @@
                     } label: {
                         VStack(alignment: .leading) {
                             Text(column.header)
+                                .fixedSize(horizontal: false, vertical: true)
                             if !column.samples.isEmpty {
                                 Text(column.samples)
                                     .font(.caption)
                                     .foregroundStyle(.secondary)
-                                    .lineLimit(1)
+                                    .lineLimit(dynamicTypeSize.isAccessibilitySize ? nil : 1)
+                                    .fixedSize(horizontal: false, vertical: true)
                             }
                         }
                     }
+                    .accessibilityLabel(column.header)
+                    .accessibilityValue(column.accessibilityValue)
                 }
             } header: {
                 Text(ImportExportText.columnsHeader)
