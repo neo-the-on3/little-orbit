@@ -226,12 +226,17 @@ struct ImportCommitter {
         switch key.kind {
         case .account:
             let order = (try repository.accounts().map(\.sortOrder).max() ?? 0) + 1
-            let account = Account(
-                name: match.name,
-                currencyCode: match.currencyCode ?? CurrencyCode.deviceDefault,
-                sortOrder: order,
-                createdAt: now,
-            )
+            var account =
+                match.newAccount
+                ?? Account(
+                    name: match.name,
+                    currencyCode: match.currencyCode ?? CurrencyCode.deviceDefault,
+                    sortOrder: order,
+                    createdAt: now,
+                )
+            account.currencyCode = match.currencyCode ?? account.currencyCode
+            account.sortOrder = order
+            account.createdAt = now
             try repository.saveAccount(account)
             created.accounts.append(account)
             return account.id

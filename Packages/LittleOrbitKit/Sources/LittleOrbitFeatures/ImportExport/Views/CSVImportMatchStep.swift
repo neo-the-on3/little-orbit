@@ -41,6 +41,9 @@
                         }
                     }
                 } footer: {
+                    if let note = model.newAccountCurrencyFootnote {
+                        Text(note)
+                    }
                     if let note = model.accountsFooterNote {
                         Label(note, systemImage: "exclamationmark.circle")
                     }

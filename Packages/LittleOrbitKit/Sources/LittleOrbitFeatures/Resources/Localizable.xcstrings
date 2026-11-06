@@ -5594,6 +5594,18 @@
         }
       }
     },
+    "New Account…": {
+      "comment": "CSV import Account step: opens the existing New Account form as a sheet. Nothing is saved until Import.",
+      "extractionState": "manual",
+      "localizations": {
+        "en": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "New Account…"
+          }
+        }
+      }
+    },
     "New accounts": {
       "comment": "Debit & Credit import Review: how many accounts will be created.",
       "extractionState": "manual",

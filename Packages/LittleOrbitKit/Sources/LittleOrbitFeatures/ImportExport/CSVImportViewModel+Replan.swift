@@ -52,7 +52,9 @@ extension CSVImportViewModel {
         guard let fresh = try? useCases.ledger.ledger(), fresh != ledger else { return false }
         ledger = fresh
         keepChoicesThatExist(in: fresh)
-        if let id = choices.targetAccountID, !fresh.accounts.contains(where: { $0.id == id }) {
+        if let id = choices.targetAccountID, id != choices.newTargetAccount?.id,
+            !fresh.accounts.contains(where: { $0.id == id })
+        {
             // The target account has gone: its rows need another one, so the Account step asks again.
             choices.targetAccountID = nil
             invalidatePreview()

@@ -105,7 +105,9 @@ public enum ImportPlanner {
         defaultCurrency: String,
     ) -> ImportPreview {
         var matcher = ImportMatcher(ledger: ledger, choices: choices, defaultCurrency: defaultCurrency)
-        let target = choices.targetAccountID.flatMap { id in ledger.accounts.first { $0.id == id } }
+        let target = choices.targetAccountID.flatMap { id in
+            ledger.accounts.first { $0.id == id } ?? choices.newTargetAccount.flatMap { $0.id == id ? $0 : nil }
+        }
         let pairing = pairTransfers(rows, matcher: matcher, target: target)
         var resolved: [(ImportRow, ImportDraft?)] = []
         resolved.reserveCapacity(rows.count)
@@ -169,7 +171,7 @@ public enum ImportPlanner {
             if let name = row.accountName {
                 matcher.account(named: name, currency: row.currencyCode)
             } else {
-                target.map { .existing($0.id) }
+                target.map { matcher.targetAccount($0, currency: row.currencyCode) }
             }
         var destination: ImportRef?
         if row.kind == .transfer, let name = row.toAccountName {
@@ -205,7 +207,7 @@ public enum ImportPlanner {
             if let name = row.accountName {
                 matcher.account(named: name, currency: row.currencyCode)
             } else {
-                target.map { .existing($0.id) }
+                target.map { matcher.targetAccount($0, currency: row.currencyCode) }
             }
         if account == nil && !issues.contains(.missingAccount) {
             issues.insert(.missingAccount, at: 0)

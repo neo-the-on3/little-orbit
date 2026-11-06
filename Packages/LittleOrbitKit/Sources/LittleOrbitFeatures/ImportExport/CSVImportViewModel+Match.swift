@@ -26,4 +26,11 @@ extension CSVImportViewModel {
     public var accountsFooterNote: String? {
         isDebitAndCredit ? ImportExportText.differentCurrenciesNote : nil
     }
+    /// Reuses D387’s catalog copy under the generic file’s new-account currency picker (D454.2).
+    public var newAccountCurrencyFootnote: String? {
+        guard !isDebitAndCredit, matchSections.accounts.contains(where: { $0.newAccountCurrency != nil }) else {
+            return nil
+        }
+        return ImportExportText.newAccountCurrencyNote
+    }
 }
