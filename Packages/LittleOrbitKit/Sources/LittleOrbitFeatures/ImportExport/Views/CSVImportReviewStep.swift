@@ -8,11 +8,9 @@
 
         var body: some View {
             Section {
-                LabeledContent(ImportExportText.toImport, value: model.readyCount.formatted())
-                LabeledContent(ImportExportText.cantImport, value: model.failedCount.formatted())
-                LabeledContent(ImportExportText.shortened, value: model.shortenedCount.formatted())
-                LabeledContent(ImportExportText.alreadyImported, value: model.alreadyImportedCount.formatted())
-                LabeledContent(ImportExportText.possibleDuplicates, value: model.possibleDuplicateCount.formatted())
+                ForEach(model.accessibilityReviewCounts) { row in
+                    ImportReviewCountView(row: row)
+                }
             } footer: {
                 Text(model.reviewFooter(on: .current))
             }
@@ -39,9 +37,9 @@
         private var debitAndCreditPreview: some View {
             let created = model.createdCounts
             Section(ImportExportText.willBeCreated) {
-                LabeledContent(ImportExportText.newAccounts, value: created.accounts.formatted())
-                LabeledContent(ImportExportText.newCategories, value: created.categories.formatted())
-                LabeledContent(ImportExportText.newPayees, value: created.payees.formatted())
+                ImportReviewCountView(row: ImportReviewCount(kind: .accounts, count: created.accounts))
+                ImportReviewCountView(row: ImportReviewCount(kind: .categories, count: created.categories))
+                ImportReviewCountView(row: ImportReviewCount(kind: .payees, count: created.payees))
             }
             let totals = model.accountTotals
             if !totals.isEmpty {
@@ -78,6 +76,7 @@
         let row: ImportReviewRow
         let isSelected: Bool
         let toggle: () -> Void
+        @Environment(\.dynamicTypeSize) private var dynamicTypeSize
 
         var body: some View {
             Button(action: toggle) {
@@ -87,30 +86,36 @@
                             .foregroundStyle(isSelected ? AnyShapeStyle(.tint) : AnyShapeStyle(.secondary))
                             .accessibilityHidden(true)
                     }
-                    VStack(alignment: .leading, spacing: 2) {
-                        Text(row.title)
-                        Text(row.detail)
-                            .font(.caption)
-                            .foregroundStyle(.secondary)
-                        // Every reason on its own line when the format lists them all (D110).
-                        ForEach(Array(row.reasons.enumerated()), id: \.offset) { _, reason in
-                            Text(reason)
-                                .font(.caption)
-                                .foregroundStyle(messageColor)
-                        }
-                        if let source = row.source {
-                            // D349.1: a long value is cut at the end by the system, not by the text.
-                            Text(verbatim: source)
+                    let layout =
+                        dynamicTypeSize.isAccessibilitySize
+                        ? AnyLayout(VStackLayout(alignment: .leading, spacing: 4))
+                        : AnyLayout(HStackLayout(alignment: .firstTextBaseline))
+                    layout {
+                        VStack(alignment: .leading, spacing: 2) {
+                            Text(row.title)
+                            Text(row.detail)
                                 .font(.caption)
                                 .foregroundStyle(.secondary)
-                                .lineLimit(1)
-                                .truncationMode(.tail)
+                            // Every reason on its own line when the format lists them all (D110).
+                            ForEach(Array(row.reasons.enumerated()), id: \.offset) { _, reason in
+                                Text(reason)
+                                    .font(.caption)
+                                    .foregroundStyle(messageColor)
+                            }
+                            if let source = row.source {
+                                // D349.1: a long value is cut at the end by the system, not by the text.
+                                Text(verbatim: source)
+                                    .font(.caption)
+                                    .foregroundStyle(.secondary)
+                                    .lineLimit(dynamicTypeSize.isAccessibilitySize ? nil : 1)
+                                    .truncationMode(.tail)
+                            }
                         }
+                        if !dynamicTypeSize.isAccessibilitySize { Spacer() }
+                        Text(row.amount)
+                            .monospacedDigit()
+                            .foregroundStyle(row.tone.color)
                     }
-                    Spacer()
-                    Text(row.amount)
-                        .monospacedDigit()
-                        .foregroundStyle(row.tone.color)
                 }
                 .contentShape(.rect)
             }

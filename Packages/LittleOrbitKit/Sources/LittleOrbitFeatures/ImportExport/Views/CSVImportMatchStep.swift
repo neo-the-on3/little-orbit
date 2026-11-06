@@ -30,6 +30,8 @@
                                     Text(model.currencyTitle(for: option)).tag(option)
                                 }
                             }
+                            .accessibilityLabel(row.accessibilityCurrencyLabel)
+                            .accessibilityValue(model.currencyTitle(for: code))
                         }
                     }
                 } header: {
@@ -75,10 +77,13 @@
                 }
             } label: {
                 Text(row.name)
+                    .fixedSize(horizontal: false, vertical: true)
                 if let detail = row.detail {
                     Text(detail)
                 }
             }
+            .accessibilityLabel(row.name)
+            .accessibilityValue(row.accessibilityValue)
         }
 
         private func choiceBinding(_ row: ImportMatchRow) -> Binding<ImportMatchChoice> {
