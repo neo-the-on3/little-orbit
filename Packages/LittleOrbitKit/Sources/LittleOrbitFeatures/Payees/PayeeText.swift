@@ -64,7 +64,11 @@ enum PayeeText {
     }
 
     static var mergeEllipsis: String {
-        FeatureText.string("Merge…", comment: "Payees screen, select mode: opens Merge Payees for the chosen payees.")
+        FeatureText.string(
+            "Merge…",
+            comment:
+                "Payees screen, select mode: opens Merge Payees for the chosen payees; on the Mac, the Metadata manager’s toolbar button and context menu item that open Merge Categories.",
+        )
     }
 
     // MARK: Merge (D287.3, D291.5)

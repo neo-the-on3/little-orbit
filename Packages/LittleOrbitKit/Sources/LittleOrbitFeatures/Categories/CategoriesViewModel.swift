@@ -102,6 +102,12 @@ public final class CategoriesViewModel {
     /// followed by its archived subcategories, indented; an archived subcategory of a live parent stands on
     /// its own. Every archived subcategory's subtitle is its parent's name.
     public var archivedRows: [CategoryRow] {
+        archivedRows(of: kind)
+    }
+
+    /// The Archived rows of one kind, in the same order as `archivedRows`. The Mac Metadata manager lists
+    /// both kinds, so it doesn't go through the chosen tab.
+    func archivedRows(of kind: CategoryKind) -> [CategoryRow] {
         let archived = listing.categories.filter { $0.kind == kind && $0.isArchived }
         return archived.filter { $0.parentID == nil }
             .flatMap { parent in
@@ -146,11 +152,13 @@ public final class CategoriesViewModel {
         )
     }
 
-    private func topLevel(_ kind: CategoryKind) -> [TransactionCategory] {
+    /// The live, unarchived top-level categories of `kind`, in the tree's order.
+    func topLevel(_ kind: CategoryKind) -> [TransactionCategory] {
         listing.categories.filter { $0.parentID == nil && $0.kind == kind && !$0.isArchived }
     }
 
-    private func liveSubcategories(of parentID: UUID) -> [TransactionCategory] {
+    /// A category's unarchived subcategories, in the tree's order.
+    func liveSubcategories(of parentID: UUID) -> [TransactionCategory] {
         listing.subcategories(of: parentID).filter { !$0.isArchived }
     }
 
@@ -360,6 +368,12 @@ public final class CategoriesViewModel {
             useCases: useCases,
             screen: self,
         )
+    }
+
+    /// The editor for a new top-level category of `kind`, or a subcategory under `parentID`, whatever the
+    /// chosen tab is: the Mac Metadata manager has no Expense and Income tabs.
+    func makeNewCategory(kind: CategoryKind, parentID: UUID?) -> CategoryEditorViewModel {
+        CategoryEditorViewModel(mode: .add(kind: kind, parentID: parentID), useCases: useCases, screen: self)
     }
 
     /// The Merge or Move To sheet's state, with its rows read once now (B1 on #155).

@@ -225,3 +225,8 @@ public final class CategoryEditorViewModel {
         }
     }
 }
+
+/// An editor is shown in a sheet keyed by its own identity, on iOS and on the Mac.
+extension CategoryEditorViewModel: Identifiable {
+    public nonisolated var id: ObjectIdentifier { ObjectIdentifier(self) }
+}
