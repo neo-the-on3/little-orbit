@@ -181,12 +181,42 @@ extension ImportExportText {
         )
     }
 
+    /// The file's description. It no longer says “comma-separated”, because Delimiter chooses that (#189 E1).
     static var formatFooter: String {
         FeatureText.string(
-            "Comma-separated, UTF-8 with BOM. Columns: Date, Type, Account, To Account, Amount, Destination Amount, Currency, Category, Payee, Description, Notes. Expenses are negative.",
+            "UTF-8 with BOM. Columns: Date, Type, Account, To Account, Amount, Destination Amount, Currency, Category, Payee, Description, Notes. Expenses are negative.",
             comment:
-                "CSV export: the footer describing the file. The column names are the file’s own and stay in English.",
+                "CSV export: the footer describing the file, under the ISO 8601 Dates and Delimiter choices. The column names are the file’s own and stay in English.",
         )
+    }
+
+    /// A menu-style Picker after the date style: a pop-up on the Mac, a menu row on iOS (#189 E1, D387.8).
+    static var delimiter: String {
+        FeatureText.string(
+            "Delimiter",
+            comment:
+                "CSV export: the label of the menu choosing the character between fields (Comma, Semicolon or Tab).",
+        )
+    }
+
+    static func delimiterName(_ delimiter: CSVDelimiter) -> String {
+        switch delimiter {
+        case .comma:
+            FeatureText.string(
+                "Comma",
+                comment: "CSV export Delimiter choice, the default: fields are separated by commas (.csv file).",
+            )
+        case .semicolon:
+            FeatureText.string(
+                "Semicolon",
+                comment: "CSV export Delimiter choice: fields are separated by semicolons (.csv file).",
+            )
+        case .tab:
+            FeatureText.string(
+                "Tab",
+                comment: "CSV export Delimiter choice: fields are separated by tab characters (.tsv file).",
+            )
+        }
     }
 
     /// “Will export 1,204 transactions”.

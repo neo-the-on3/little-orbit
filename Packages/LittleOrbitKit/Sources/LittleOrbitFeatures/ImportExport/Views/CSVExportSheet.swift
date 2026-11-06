@@ -2,7 +2,8 @@
     import LittleOrbitDomain
     import SwiftUI
 
-    /// The export sheet: which transactions, the date range and date style, then the system save panel.
+    /// The export sheet: which transactions, the date range, date style and delimiter (#189 E1), then the system save
+    /// panel.
     struct CSVExportSheet: View {
         @State private var model: CSVExportViewModel
         @Environment(\.dismiss) private var dismiss
@@ -57,6 +58,13 @@
                     }
                     Section {
                         Toggle(ImportExportText.isoDates, isOn: $model.iso8601Dates)
+                        // After the format and date range: a pop-up on the Mac, a menu row on iOS (#189 E1).
+                        Picker(ImportExportText.delimiter, selection: $model.delimiter) {
+                            ForEach(CSVDelimiter.allCases, id: \.self) { delimiter in
+                                Text(ImportExportText.delimiterName(delimiter)).tag(delimiter)
+                            }
+                        }
+                        .pickerStyle(.menu)
                     } footer: {
                         Text(ImportExportText.formatFooter)
                     }
@@ -95,7 +103,7 @@
             .fileExporter(
                 isPresented: $model.isExporterPresented,
                 document: model.pendingFile.map { CSVFileDocument(data: $0.data) },
-                contentTypes: [.commaSeparatedText],
+                contentTypes: [CSVFileDocument.contentType(model.exportContentTypeIdentifier)],
                 defaultFilename: model.defaultFileName,
                 onCompletion: { result in
                     switch result {
