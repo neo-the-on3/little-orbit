@@ -8006,7 +8006,7 @@
       }
     },
     "Try Again": {
-      "comment": "Button under “Couldn’t Load Backups” in the Backups list. Reads the list again (D211.5).",
+      "comment": "Button under “Couldn’t Load Backups” (D211.5), “Couldn’t Load Report” (D318.5), and “Couldn’t Load Transactions” (D454 / D320.6). Reads again.",
       "extractionState": "manual",
       "localizations": {
         "en": {

@@ -9,6 +9,7 @@ struct SearchCatalogTests {
         "Upcoming matches are listed but not counted.", "Use YYYY-MM-DD", "Clear Search", "No Results for “%@”",
         "Check the spelling or try fewer words. Search looks at description, category, payee, tag and notes.",
         "No Transactions", "Transactions you add will appear here.", "Couldn’t Load Transactions", "Try again.",
+        "Try Again",
         "%@ moved", "Upcoming, %1$@, %2$@", "To %@", "From %@", "Export CSV…", "Export CSV", "Refund · %@",
         "Refund (original deleted) · %@", "Refund", "Refund (original deleted)",
     ]

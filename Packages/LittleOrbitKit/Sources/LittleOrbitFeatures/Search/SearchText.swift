@@ -214,7 +214,7 @@ enum SearchText {
         )
     }
 
-    /// The load failure's title and message (D320.6, as D318.5). A retry button comes with #187.
+    /// The load failure's title and message (D320.6, as D318.5).
     static var loadFailedTitle: String {
         FeatureText.string(
             "Couldn’t Load Transactions",
@@ -225,6 +225,15 @@ enum SearchText {
     /// The shared “Try again.” entry, whose comment names every place it shows.
     static var loadFailedMessage: String {
         CategoryText.tryAgain
+    }
+
+    /// Try Again under the load failure (D454 / D320.6), the same catalog key Reports uses for D318.5.
+    static var tryAgainButton: String {
+        FeatureText.string(
+            "Try Again",
+            comment:
+                "Button under “Couldn’t Load Transactions” that reads the store again after a search load failure (D454 / D320.6).",
+        )
     }
 
     static var openHint: String {

@@ -116,6 +116,8 @@ public final class TransactionSearchViewModel {
     public var emptyMessage: String { SearchText.noTransactionsMessage }
     public var upcomingFooter: String? { hasUpcoming ? SearchText.upcomingFooter : nil }
     public var openHint: String { SearchText.openHint }
+    /// Try Again under the load failure (D454 / D320.6).
+    public var tryAgainButton: String { SearchText.tryAgainButton }
     /// “Export CSV…” in the macOS toolbar; “Export CSV”, with no ellipsis, as the iOS row (D325.1).
     public var exportTitle: String { SearchText.exportCSV }
     public var exportRowTitle: String { SearchText.exportCSVRow }
@@ -202,6 +204,11 @@ public final class TransactionSearchViewModel {
     /// Clear Search: empties the field and shows every transaction again.
     public func clear() {
         query = ""
+        load()
+    }
+
+    /// Try Again after a failed read (D454 / D320.6): reads the store again and keeps the typed query.
+    public func retry() {
         load()
     }
 
@@ -325,7 +332,7 @@ public final class TransactionSearchViewModel {
     }
 }
 
-/// The load failure's empty state (D320.6): a title and a message. A retry button comes with #187.
+/// The load failure's empty state (D320.6): a title and a message. Try Again calls `retry()` (D454).
 public struct SearchFailure: Equatable, Sendable {
     public var title: String
     public var message: String

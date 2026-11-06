@@ -216,12 +216,16 @@
 
         @ViewBuilder private var emptyState: some View {
             if let failure = model.failure {
-                // A retry button comes with #187 (D320.6).
-                ContentUnavailableView(
-                    failure.title,
-                    systemImage: "exclamationmark.triangle",
-                    description: Text(failure.message),
-                )
+                // Try Again re-reads the store and keeps the typed query (D454 / D320.6).
+                ContentUnavailableView {
+                    Label(failure.title, systemImage: "exclamationmark.triangle")
+                } description: {
+                    Text(failure.message)
+                } actions: {
+                    Button(model.tryAgainButton) {
+                        model.retry()
+                    }
+                }
             } else if model.isNoResults {
                 // The frame's wording and Clear Search, in the system's search empty state.
                 ContentUnavailableView {
