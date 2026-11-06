@@ -6844,6 +6844,19 @@
         }
       }
     },
+    "Share…": {
+      "comment": "CSV export sheet: the button that opens the share sheet with the same file, and file name, that Export writes.",
+      "extractionState": "manual",
+      "generatesSymbol": false,
+      "localizations": {
+        "en": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Share…"
+          }
+        }
+      }
+    },
     "Skipped · syncing": {
       "comment": "Apple Watch, Scheduled list row: skipped on the watch, waiting for the iPhone to apply it.",
       "extractionState": "manual",

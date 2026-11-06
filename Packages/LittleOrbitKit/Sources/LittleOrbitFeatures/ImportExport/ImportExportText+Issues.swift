@@ -219,6 +219,15 @@ extension ImportExportText {
         }
     }
 
+    /// The ShareLink beside Export on iOS and at the leading edge of the Mac sheet's buttons (#189 E3).
+    static var share: String {
+        FeatureText.string(
+            "Share…",
+            comment:
+                "CSV export sheet: the button that opens the share sheet with the same file, and file name, that Export writes.",
+        )
+    }
+
     /// “Will export 1,204 transactions”.
     static func willExport(_ count: Int) -> String {
         FeatureText.plural("Will export %lld transactions", one: "Will export %lld transaction", count)

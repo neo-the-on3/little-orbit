@@ -3,8 +3,8 @@ import LittleOrbitDomain
 import Observation
 
 /// Export Transactions to CSV (#30): every account or chosen ones, all time, this month or a custom range, ISO or
-/// short dates, and a Comma, Semicolon or Tab delimiter (#189 E1). The file goes to the system save panel or Files;
-/// it never leaves the device otherwise (D14).
+/// short dates, and a Comma, Semicolon or Tab delimiter (#189 E1). The file goes to the system save panel or Files,
+/// or to the share sheet the user opens with Share… (#189 E3); it never leaves the device otherwise (D14).
 @MainActor
 @Observable
 public final class CSVExportViewModel {
@@ -142,6 +142,28 @@ public final class CSVExportViewModel {
     /// The save panel's file type: the pending file's, or the chosen delimiter's before there is one.
     public var exportContentTypeIdentifier: String {
         (pendingFile?.delimiter ?? delimiter).contentTypeIdentifier
+    }
+
+    // MARK: Share (#189 E3)
+
+    /// The name Share… shows and the shared file has: the same as Export would write now.
+    public var shareFileName: String {
+        options.fileName(today: day(of: now()))
+    }
+
+    /// The file Share… hands to the share sheet: the same bytes and name Export would write with these options,
+    /// made when the share sheet asks for it. The save panel isn't opened and nothing is left pending.
+    public func shareFile() throws -> TransactionExport {
+        do {
+            return try exporting.export(options, locale: locale, today: day(of: now()))
+        } catch {
+            ImportLog.event(.exportFailed)
+            alert = ImportAlert(
+                title: ImportExportText.exportFailedTitle,
+                message: ImportExportText.exportFailedMessage,
+            )
+            throw error
+        }
     }
 
     private var exportRange: TransactionExportOptions.Range {

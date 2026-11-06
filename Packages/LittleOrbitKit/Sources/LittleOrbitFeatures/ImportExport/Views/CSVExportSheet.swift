@@ -2,8 +2,8 @@
     import LittleOrbitDomain
     import SwiftUI
 
-    /// The export sheet: which transactions, the date range, date style and delimiter (#189 E1), then the system save
-    /// panel.
+    /// The export sheet: which transactions, the date range, date style and delimiter, then the system save panel, or
+    /// Share… for the same file (#189 E1, E3).
     struct CSVExportSheet: View {
         @State private var model: CSVExportViewModel
         @Environment(\.dismiss) private var dismiss
@@ -79,6 +79,17 @@
                     ToolbarItem(placement: .cancellationAction) {
                         Button(ImportExportText.cancel) { dismiss() }
                     }
+                    // Share… shares the file Export would write (#189 E3): at the leading edge of the Mac sheet's
+                    // button row, and beside Export on iOS.
+                    #if os(macOS)
+                        ToolbarItem(placement: .navigation) {
+                            CSVExportShareLink(model: model)
+                        }
+                    #else
+                        ToolbarItem(placement: .primaryAction) {
+                            CSVExportShareLink(model: model)
+                        }
+                    #endif
                     ToolbarItem(placement: .confirmationAction) {
                         Button(exportLabel) { model.export() }
                             .disabled(!model.canExport)
