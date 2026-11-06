@@ -2621,6 +2621,19 @@
         }
       }
     },
+    "Comma": {
+      "comment": "CSV export Delimiter choice, the default: fields are separated by commas (.csv file).",
+      "extractionState": "manual",
+      "generatesSymbol": false,
+      "localizations": {
+        "en": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Comma"
+          }
+        }
+      }
+    },
     "Comma (1.234,56)": {
       "comment": "CSV import decimal separator: a comma.",
       "extractionState": "manual",
@@ -2630,19 +2643,6 @@
           "stringUnit": {
             "state": "translated",
             "value": "Comma (1.234,56)"
-          }
-        }
-      }
-    },
-    "Comma-separated, UTF-8 with BOM. Columns: Date, Type, Account, To Account, Amount, Destination Amount, Currency, Category, Payee, Description, Notes. Expenses are negative.": {
-      "comment": "CSV export: the footer describing the file. The column names are the file’s own and stay in English.",
-      "extractionState": "manual",
-      "generatesSymbol": false,
-      "localizations": {
-        "en": {
-          "stringUnit": {
-            "state": "translated",
-            "value": "Comma-separated, UTF-8 with BOM. Columns: Date, Type, Account, To Account, Amount, Destination Amount, Currency, Category, Payee, Description, Notes. Expenses are negative."
           }
         }
       }
@@ -3794,6 +3794,19 @@
           "stringUnit": {
             "state": "translated",
             "value": "Deleting can’t be undone."
+          }
+        }
+      }
+    },
+    "Delimiter": {
+      "comment": "CSV export: the label of the menu choosing the character between fields (Comma, Semicolon or Tab).",
+      "extractionState": "manual",
+      "generatesSymbol": false,
+      "localizations": {
+        "en": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Delimiter"
           }
         }
       }
@@ -6818,6 +6831,32 @@
         }
       }
     },
+    "Semicolon": {
+      "comment": "CSV export Delimiter choice: fields are separated by semicolons (.csv file).",
+      "extractionState": "manual",
+      "generatesSymbol": false,
+      "localizations": {
+        "en": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Semicolon"
+          }
+        }
+      }
+    },
+    "Share…": {
+      "comment": "CSV export sheet: the button that opens the share sheet with the same file, and file name, that Export writes.",
+      "extractionState": "manual",
+      "generatesSymbol": false,
+      "localizations": {
+        "en": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Share…"
+          }
+        }
+      }
+    },
     "Skipped · syncing": {
       "comment": "Apple Watch, Scheduled list row: skipped on the watch, waiting for the iPhone to apply it.",
       "extractionState": "manual",
@@ -6929,6 +6968,19 @@
           "stringUnit": {
             "state": "translated",
             "value": "Spent in %1$@ · %2$@ · %3$@"
+          }
+        }
+      }
+    },
+    "Tab": {
+      "comment": "CSV export Delimiter choice: fields are separated by tab characters (.tsv file).",
+      "extractionState": "manual",
+      "generatesSymbol": false,
+      "localizations": {
+        "en": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Tab"
           }
         }
       }
@@ -7825,6 +7877,19 @@
           "stringUnit": {
             "state": "translated",
             "value": "Use 100 characters or fewer."
+          }
+        }
+      }
+    },
+    "UTF-8 with BOM. Columns: Date, Type, Account, To Account, Amount, Destination Amount, Currency, Category, Payee, Description, Notes. Expenses are negative.": {
+      "comment": "CSV export: the footer describing the file, under the ISO 8601 Dates and Delimiter choices. The column names are the file’s own and stay in English.",
+      "extractionState": "manual",
+      "generatesSymbol": false,
+      "localizations": {
+        "en": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "UTF-8 with BOM. Columns: Date, Type, Account, To Account, Amount, Destination Amount, Currency, Category, Payee, Description, Notes. Expenses are negative."
           }
         }
       }

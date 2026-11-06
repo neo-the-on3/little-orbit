@@ -12,20 +12,47 @@ public struct TransactionExportOptions: Equatable, Sendable {
     public var accountIDs: Set<UUID>?
     public var range: Range
     public var iso8601Dates: Bool
+    /// Comma by default; Tab files end in `.tsv` (#189 E1, D387.8).
+    public var delimiter: CSVDelimiter
 
-    public init(accountIDs: Set<UUID>? = nil, range: Range = .allTime, iso8601Dates: Bool = true) {
+    public init(
+        accountIDs: Set<UUID>? = nil,
+        range: Range = .allTime,
+        iso8601Dates: Bool = true,
+        delimiter: CSVDelimiter = .comma,
+    ) {
         self.accountIDs = accountIDs
         self.range = range
         self.iso8601Dates = iso8601Dates
+        self.delimiter = delimiter
+    }
+
+    /// `little-orbit_2026-10-25.csv`; with a range, its days; `.tsv` for Tab (design rule, D387.8). Export and
+    /// Share both use it, so the two write the same name (#189 E3).
+    public func fileName(today: CalendarDay) -> String {
+        let stem =
+            switch range {
+            case .allTime:
+                "little-orbit_\(Self.text(today))"
+            case .days(let first, let last):
+                "little-orbit_\(Self.text(first))_to_\(Self.text(last))"
+            }
+        return stem + "." + delimiter.fileExtension
+    }
+
+    private static func text(_ day: CalendarDay) -> String {
+        String(format: "%04d-%02d-%02d", day.year, day.month, day.day)
     }
 }
 
-/// An export's file, ready for the system exporter.
+/// An export's file, ready for the system exporter or the share sheet.
 public struct TransactionExport: Equatable, Sendable {
     public var data: Data
     public var rowCount: Int
-    /// `little-orbit_2026-10-25.csv`; with a range, its days (design rule).
+    /// `little-orbit_2026-10-25.csv`; with a range, its days; `.tsv` for Tab (design rule, D387.8).
     public var fileName: String
+    /// The delimiter it was written with, which picks the file type.
+    public var delimiter: CSVDelimiter = .comma
 }
 
 /// Export Transactions to CSV (#30). Offline, on this device only (D14).
@@ -68,11 +95,13 @@ public struct DefaultExportTransactionsUseCase: ExportTransactionsUseCase {
             for: transactions,
             lookup: TransactionCSVLookup(ledger),
             dateStyle: options.iso8601Dates ? .iso8601 : .shortDate(locale),
+            delimiter: options.delimiter,
         )
         return TransactionExport(
             data: data,
             rowCount: transactions.count,
-            fileName: Self.fileName(options.range, today: today),
+            fileName: options.fileName(today: today),
+            delimiter: options.delimiter,
         )
     }
 
@@ -95,18 +124,5 @@ public struct DefaultExportTransactionsUseCase: ExportTransactionsUseCase {
                 return true
             }
             .sorted { ($0.date, $0.createdAt.timeIntervalSince1970) < ($1.date, $1.createdAt.timeIntervalSince1970) }
-    }
-
-    static func fileName(_ range: TransactionExportOptions.Range, today: CalendarDay) -> String {
-        switch range {
-        case .allTime:
-            "little-orbit_\(text(today)).csv"
-        case .days(let first, let last):
-            "little-orbit_\(text(first))_to_\(text(last)).csv"
-        }
-    }
-
-    private static func text(_ day: CalendarDay) -> String {
-        String(format: "%04d-%02d-%02d", day.year, day.month, day.day)
     }
 }

@@ -2,9 +2,16 @@
     import SwiftUI
     import UniformTypeIdentifiers
 
-    /// An exported CSV file's bytes, for the system save panel or Files.
+    /// An exported CSV or TSV file's bytes, for the system save panel or Files.
     struct CSVFileDocument: FileDocument {
         static var readableContentTypes: [UTType] { [.commaSeparatedText] }
+        /// Tab files are saved as `.tsv` (#189 E1).
+        static var writableContentTypes: [UTType] { [.commaSeparatedText, .tabSeparatedText] }
+
+        /// The save panel's type for `CSVDelimiter.contentTypeIdentifier`.
+        static func contentType(_ identifier: String) -> UTType {
+            UTType(identifier) ?? .commaSeparatedText
+        }
 
         let data: Data
 

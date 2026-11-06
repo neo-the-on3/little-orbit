@@ -32,8 +32,10 @@ public enum TransactionCSVDateStyle: Equatable, Sendable {
 /// Description, Notes`. A transfer is one row with Account as the from-account, Amount sent and Destination
 /// Amount received (blank when both accounts share a currency). Amounts use `.` with no grouping and the
 /// currency's decimals; expenses are negative. A refund keeps its expense category and has Type `Refund`.
-/// A subcategory is written `Parent › Child`. The text is UTF-8 with a byte order mark, comma-separated, CRLF,
-/// RFC 4180 quoting, which `GenericCSVFormat` reads back.
+/// A subcategory is written `Parent › Child`. The text is UTF-8 with a byte order mark, CRLF, RFC 4180 quoting,
+/// comma-separated by default or with the chosen `CSVDelimiter` (#189 E1), which `GenericCSVFormat` reads back.
+/// A field is quoted when it holds the chosen delimiter, a quote, a line break or edge spaces, so a semicolon
+/// file leaves commas unquoted and a tab file quotes a cell with a tab.
 ///
 /// Free-text cells (account names, category, payee, description and notes) that start with `=`, `+`, `-`, `@`,
 /// a tab or a carriage return get one leading apostrophe, so a spreadsheet shows them as text instead of running
@@ -106,8 +108,12 @@ public enum TransactionCSVWriter {
         for transactions: [Transaction],
         lookup: TransactionCSVLookup,
         dateStyle: TransactionCSVDateStyle,
+        delimiter: CSVDelimiter = .comma,
     ) -> String {
-        CSVWriter.text(records(for: transactions, lookup: lookup, dateStyle: dateStyle))
+        CSVWriter.text(
+            records(for: transactions, lookup: lookup, dateStyle: dateStyle),
+            delimiter: delimiter.character,
+        )
     }
 
     /// The file's bytes: UTF-8 with a byte order mark.
@@ -115,8 +121,12 @@ public enum TransactionCSVWriter {
         for transactions: [Transaction],
         lookup: TransactionCSVLookup,
         dateStyle: TransactionCSVDateStyle,
+        delimiter: CSVDelimiter = .comma,
     ) -> Data {
-        CSVWriter.data(records(for: transactions, lookup: lookup, dateStyle: dateStyle))
+        CSVWriter.data(
+            records(for: transactions, lookup: lookup, dateStyle: dateStyle),
+            delimiter: delimiter.character,
+        )
     }
 
     /// The Type column's value. These are file values, read back by `GenericCSVFormat`, not screen text.
