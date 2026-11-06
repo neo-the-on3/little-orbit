@@ -162,7 +162,7 @@ struct ImportMatcher {
         let key = ImportMatchKey(kind: .account, name: account.name)
         let choice = note(key, name: account.name, automatic: .new)
         if choice == .new, matches[key]?.currencyCode == nil {
-            matches[key]?.currencyCode = choices.newAccountCurrencies[key.nameKey] ?? currency ?? account.currencyCode
+            matches[key]?.currencyCode = currency ?? choices.newAccountCurrencies[key.nameKey] ?? account.currencyCode
             matches[key]?.newAccount = account
         }
         return ref(for: key, choice)

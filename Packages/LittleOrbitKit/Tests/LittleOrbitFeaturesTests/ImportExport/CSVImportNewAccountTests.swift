@@ -139,4 +139,30 @@ struct CSVImportNewAccountTests {
         #expect(model.readyCount == 1)
         #expect(model.failedCount == 1)
     }
+    @Test("Mapping a Currency column after using the new-account picker makes the file currency win")
+    func mappedCurrencyReplacesPicker() async throws {
+        let repository = try CSVFixture.repository()
+        let model = CSVFixture.model(repository)
+        await model.open(
+            data: Data("Date,Amount,Foreign code\n2026-10-05,-12.50,EUR\n".utf8),
+            fileName: "maple_oct.csv",
+        )
+        await model.next()
+        let form = model.newAccountForm()
+        form.name = "Travel Card"
+        model.selectNewAccount(try #require(form.save()))
+        await model.next()
+        let match = try #require(model.accountMatches.first)
+        await model.setCurrency("USD", forNewAccount: match.id)
+        model.back()
+        model.back()
+        model.setField(.currency, forColumn: 2)
+        await model.next()
+        await model.next()
+        #expect(model.accountMatches.first?.newAccountCurrency == nil)
+        #expect(model.newAccountCurrencyFootnote == nil)
+        await model.next()
+        #expect(model.failedCount == 0)
+        #expect(model.selectedRows.first?.amount.contains("€") == true)
+    }
 }
