@@ -22,6 +22,19 @@ public struct TransactionSearchSnapshot: Equatable, Sendable {
         self.tags = tags
     }
 
+    /// This read laid out for searching it again on each keystroke (#340). A screen makes it once per read.
+    public func index() -> TransactionSearchIndex {
+        TransactionSearchIndex(
+            TransactionSearchLedger(
+                accounts: ledger.accounts,
+                transactions: ledger.transactions,
+                categories: ledger.categories,
+                payees: ledger.payees,
+                tags: tags,
+            )
+        )
+    }
+
     /// The matches for `query` with `filter`, as of `today`, with totals per currency (`defaultCurrency` first).
     public func search(
         _ query: TransactionSearchQuery,
@@ -29,19 +42,7 @@ public struct TransactionSearchSnapshot: Equatable, Sendable {
         today: CalendarDay,
         defaultCurrency: String,
     ) -> TransactionSearchResult {
-        TransactionSearch.run(
-            query,
-            filter: filter,
-            in: TransactionSearchLedger(
-                accounts: ledger.accounts,
-                transactions: ledger.transactions,
-                categories: ledger.categories,
-                payees: ledger.payees,
-                tags: tags,
-            ),
-            today: today,
-            defaultCurrency: defaultCurrency,
-        )
+        index().run(query, filter: filter, today: today, defaultCurrency: defaultCurrency)
     }
 }
 
