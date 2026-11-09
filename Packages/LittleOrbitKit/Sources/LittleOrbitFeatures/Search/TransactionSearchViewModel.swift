@@ -62,8 +62,9 @@ public final class TransactionSearchViewModel {
     @ObservationIgnored private let timeZone: TimeZone
     @ObservationIgnored private let now: () -> Date
     @ObservationIgnored private let defaultCurrency: String
-    /// The store as last read, with the lookups its rows use, and the change signal's value at that read.
-    @ObservationIgnored private var store: (snapshot: TransactionSearchSnapshot, lookup: SearchLookup)?
+    /// The store as last read, with the lookups its rows use, the index each keystroke searches (#340), and the
+    /// change signal's value at that read.
+    @ObservationIgnored private var store: Store?
     @ObservationIgnored private var storeRevision: Int?
     /// Rows already built from this read for this day, by transaction, with their macOS table cells. A row depends
     /// only on its transaction, the read and today, so a keystroke reuses them and formats only rows it hasn't
@@ -76,6 +77,13 @@ public final class TransactionSearchViewModel {
     struct CachedRow {
         var row: TransactionRowModel
         var columns: SearchTableColumns
+    }
+
+    /// One read of the store: the snapshot, the lookups its rows use and the index a keystroke searches (#340).
+    private struct Store {
+        var snapshot: TransactionSearchSnapshot
+        var lookup: SearchLookup
+        var index: TransactionSearchIndex
     }
 
     private struct Shown: Equatable {
@@ -151,7 +159,7 @@ public final class TransactionSearchViewModel {
                 // A save changes a row or two, so the rows of unchanged transactions carry over (Tech Architect
                 // #188 NB1): a store change in an unfiltered list of 10,000 formats only what changed.
                 rowCache = rowCache.flatMap { Self.carriedRows($0, from: store?.snapshot, to: snapshot) }
-                store = (snapshot, SearchLookup(snapshot.ledger))
+                store = Store(snapshot: snapshot, lookup: SearchLookup(snapshot.ledger), index: snapshot.index())
                 storeRevision = revision
             } catch {
                 showFailure()
@@ -169,7 +177,7 @@ public final class TransactionSearchViewModel {
         }
         let parsed = TransactionSearchQuery.parse(typed)
         let filter = TransactionSearchFilter(type: scope.type, accountID: accountID)
-        let result = store.snapshot.search(parsed, filter: filter, today: today, defaultCurrency: defaultCurrency)
+        let result = store.index.run(parsed, filter: filter, today: today, defaultCurrency: defaultCurrency)
         failure = nil
         show(result, lookup: store.lookup, today: today, typed: typed, parsed: parsed)
         shown = next

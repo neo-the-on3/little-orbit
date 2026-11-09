@@ -14,9 +14,9 @@ struct TransactionSearchPerformanceTests {
     /// The search step for one query, in a debug build. Release builds are several times faster.
     static let bound = Duration.seconds(2)
 
-    /// 10,000 transactions over three years: expenses, income, refunds and transfers, with categories, payees,
-    /// tags, details and notes, a few in another currency.
-    static func ledger() -> TransactionSearchLedger {
+    /// 10,000 transactions (or `count`) over three years: expenses, income, refunds and transfers, with categories,
+    /// payees, tags, details and notes, a few in another currency.
+    static func ledger(count: Int = transactionCount) -> TransactionSearchLedger {
         var generator = SplitMix(seed: 28)
         let categories =
             (0..<40).map { TransactionCategory(name: "Category \($0)") } + [
@@ -30,7 +30,7 @@ struct TransactionSearchPerformanceTests {
         let tags = (0..<20).map { F.tag("tag\($0)") }
         let details = ["Lunch", "Coffee with team", "Weekly shop", "Fuel", "Rent", nil, nil, "Café visit"]
         let start = F.date(2023, 11, 1)
-        let transactions = (0..<Self.transactionCount)
+        let transactions = (0..<count)
             .map { index -> Transaction in
                 let date = start.addingTimeInterval(Double(generator.next(below: 1_100 * 86_400)))
                 let amount = Decimal(generator.next(below: 500_000)) / 100
