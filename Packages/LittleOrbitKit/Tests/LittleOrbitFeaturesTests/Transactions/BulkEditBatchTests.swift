@@ -209,17 +209,21 @@ struct BatchProgressTests {
     @Test("The sheet shows only once the work has run for its delay (half a second in the app)")
     func delay() async throws {
         #expect(BatchProgress.showDelay == .milliseconds(500))
+        // The test steps the timer's sleep, so neither real time nor a busy main actor decides the result (CI on #353).
+        let sleeper = ManualSleeper()
+        defer { sleeper.release() }
         let progress = BatchProgress(kind: .applying, total: 10, showAfter: .milliseconds(20))
+        progress.timerSleep = sleeper.sleep
         _ = progress.start()
+        let timer = try #require(progress.timer)
         #expect(!progress.isShown)
-        // Other tests share the main actor, so the delay is a lower bound here: wait for it, up to 10 s.
-        let clock = ContinuousClock()
-        let start = clock.now
-        while !progress.isShown, clock.now - start < .seconds(10) {
-            try await Task.sleep(for: .milliseconds(10))
-        }
+        // The timer sleeps for exactly the delay, and the sheet stays down until that sleep ends.
+        #expect(await sleeper.next() == .milliseconds(20))
+        #expect(!progress.isShown)
+        #expect(await sleeper.advance() == .milliseconds(20))
+        await timer.value
         #expect(progress.isShown)
-        #expect(clock.now - start >= .milliseconds(20))
+        #expect(progress.timesShown == 1)
         progress.finish()
     }
 

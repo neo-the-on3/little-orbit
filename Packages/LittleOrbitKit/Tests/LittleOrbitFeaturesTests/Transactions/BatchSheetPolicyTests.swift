@@ -83,15 +83,22 @@ struct BatchSheetPolicyTests {
 
     @Test("A quick one-window Apply of a few rows shows no sheet, and the timer stops at the save")
     func quickApplyShowsNothing() async throws {
+        let sleeper = ManualSleeper()
+        defer { sleeper.release() }
         let clock = ManualClock()
         let progress = BatchProgress(kind: .applying, total: 40, showAfter: .milliseconds(30), now: { clock.instant })
+        progress.timerSleep = sleeper.sleep
         let reporter = progress.start()
+        let timer = try #require(progress.timer)
+        #expect(await sleeper.next() == .milliseconds(30))
         clock.advance(.milliseconds(20))
         await reporter.willSave(40)
         #expect(!progress.isShown)
-        // The timer can't show it afterwards: it covers the build only.
-        try await Task.sleep(for: .milliseconds(120))
+        // The timer can't show it afterwards: it covers the build only. The save cancelled it, so its held sleep
+        // ends without the test stepping it, and it returns without showing anything.
+        await timer.value
         #expect(!progress.isShown)
+        #expect(progress.timesShown == 0)
         progress.finish()
     }
 
@@ -125,24 +132,32 @@ struct BatchSheetNoRowTests {
 
     @Test("A 0-row plan stops the timer, so the sheet never shows afterwards")
     func zeroRowStopsTimer() async throws {
+        let sleeper = ManualSleeper()
+        defer { sleeper.release() }
         let progress = BatchProgress(kind: .applying, total: 3_334, showAfter: .milliseconds(30))
+        progress.timerSleep = sleeper.sleep
         let reporter = progress.start()
+        let timer = try #require(progress.timer)
         await reporter.willSave(0)
         #expect(!progress.isShown)
-        try await Task.sleep(for: .milliseconds(120))
+        // The save cancelled the timer: its sleep ends without being stepped, and it shows nothing.
+        await timer.value
         #expect(!progress.isShown)
+        #expect(progress.timesShown == 0)
         progress.finish()
     }
 
     @Test("A 0-row plan closes a sheet the timer already showed")
     func zeroRowClosesSheet() async throws {
+        // The test ends the timer's sleep itself, so the sheet is up however busy the main actor is (CI on #353).
+        let sleeper = ManualSleeper()
+        defer { sleeper.release() }
         let progress = BatchProgress(kind: .applying, total: 3_334, showAfter: .milliseconds(1))
+        progress.timerSleep = sleeper.sleep
         let reporter = progress.start()
-        let clock = ContinuousClock()
-        let start = clock.now
-        while !progress.isShown, clock.now - start < .seconds(10) {
-            try await Task.sleep(for: .milliseconds(5))
-        }
+        let timer = try #require(progress.timer)
+        #expect(await sleeper.advance() == .milliseconds(1))
+        await timer.value
         #expect(progress.isShown)
         await reporter.willSave(0)
         #expect(!progress.isShown)

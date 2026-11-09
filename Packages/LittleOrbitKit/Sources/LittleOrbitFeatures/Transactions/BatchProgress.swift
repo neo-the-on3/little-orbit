@@ -93,6 +93,9 @@ public final class BatchProgress {
     /// How the announcement's waits sleep: `Task.sleep` in the app; tests step it by hand, so no wait depends on
     /// real time under load.
     @ObservationIgnored var sleep: @MainActor (Duration) async -> Void = { try? await Task.sleep(for: $0) }
+    /// How the show-delay timer sleeps: `Task.sleep` in the app; tests step it by hand (`ManualSleeper`), so a sheet
+    /// the timer shows, or a timer the save stops, never depends on real time or a free main actor under load.
+    @ObservationIgnored var timerSleep: @MainActor (Duration) async -> Void = { try? await Task.sleep(for: $0) }
     /// The wait after `sheetDismissed()`.
     @ObservationIgnored private var dismissWait: Task<Void, Never>?
 
@@ -135,8 +138,9 @@ public final class BatchProgress {
         )
         startedAt = now()
         if let delay {
+            let sleep = timerSleep
             timer = Task { [weak self] in
-                try? await Task.sleep(for: delay)
+                await sleep(delay)
                 guard !Task.isCancelled, let self, !self.isShown else {
                     return
                 }

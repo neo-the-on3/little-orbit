@@ -20,6 +20,8 @@ struct OffMainSaveSheetTests {
 
     @Test("Shown before the save, then the timer fires: the sheet went up once")
     func shownOnce() async throws {
+        let sleeper = ManualSleeper()
+        defer { sleeper.release() }
         let clock = ManualClock()
         let progress = BatchProgress(
             kind: .applying,
@@ -27,7 +29,9 @@ struct OffMainSaveSheetTests {
             showAfter: .milliseconds(60),
             now: { clock.instant },
         )
+        progress.timerSleep = sleeper.sleep
         let reporter = progress.start()
+        let timer = try #require(progress.timer)
         clock.instant += .milliseconds(300)
         try #require(reporter.willSaveOffMain != nil)
         await reporter.reportSaving(3_334, offMain: true)
@@ -36,8 +40,9 @@ struct OffMainSaveSheetTests {
         #expect(!progress.savesOffMain, "Not until the hand-off (D405.5)")
         reporter.handingOff()
         #expect(progress.savesOffMain, "The bar moves while the save runs")
-        // The save is still running when the timer's half second (60 ms here) passes.
-        await progress.timer?.value
+        // The save is still running when the timer's half second (60 ms here) passes: the test ends its sleep.
+        #expect(await sleeper.advance() == .milliseconds(60))
+        await timer.value
         #expect(progress.isShown)
         #expect(progress.timesShown == 1)
         progress.finish()
@@ -46,15 +51,20 @@ struct OffMainSaveSheetTests {
     @Test("A quick, small batch skips the sheet before the save, and the timer shows it once if the save runs long")
     func timerDuringSave() async throws {
         let clock = ManualClock()
+        let sleeper = ManualSleeper()
+        defer { sleeper.release() }
         let progress = BatchProgress(kind: .undoing, total: 20, showAfter: .milliseconds(60), now: { clock.instant })
+        progress.timerSleep = sleeper.sleep
         let reporter = progress.start()
+        let timer = try #require(progress.timer)
         clock.instant += .milliseconds(10)
         await reporter.reportSaving(20, offMain: true)
         #expect(!progress.isShown, "No flash for a quick, small batch")
         #expect(progress.timesShown == 0)
         reporter.handingOff()
-        // The timer's own task, not a real-time sleep, so a loaded run can't reorder them.
-        await progress.timer?.value
+        // The test ends the timer's sleep after the hand-off, so a loaded run can't reorder them.
+        #expect(await sleeper.advance() == .milliseconds(60))
+        await timer.value
         #expect(progress.isShown, "The timer still runs during a save off the main actor")
         #expect(progress.timesShown == 1)
         progress.finish()
@@ -68,11 +78,8 @@ struct OffMainSaveSheetTests {
         let reporter = progress.start()
         let title = progress.title
         reporter.rowsDone(2)
-        let clock = ContinuousClock()
-        let start = clock.now
-        while progress.done < 2, clock.now - start < .seconds(10) {
-            try await Task.sleep(for: .milliseconds(10))
-        }
+        // Counted turns of the main actor, not real time: the row count arrives on the next one or two.
+        await ManualSleeper.until { progress.done >= 2 }
         #expect(!progress.showsIndeterminateBar, "Determinate while the rows are checked")
         #expect(progress.value == 2)
         #expect(progress.message == "Updating 4 transactions.")
@@ -100,10 +107,15 @@ struct OffMainSaveSheetTests {
 
     @Test("No row to change: no sheet, and the timer is stopped (D402)")
     func noRows() async throws {
+        let sleeper = ManualSleeper()
+        defer { sleeper.release() }
         let progress = BatchProgress(kind: .applying, total: 5, showAfter: .milliseconds(40))
+        progress.timerSleep = sleeper.sleep
         let reporter = progress.start()
+        let timer = try #require(progress.timer)
         await reporter.reportSaving(0, offMain: true)
-        try await Task.sleep(for: .milliseconds(150))
+        // Cancelled, the timer's held sleep ends without being stepped, and it shows nothing.
+        await timer.value
         #expect(!progress.isShown)
         #expect(progress.timesShown == 0)
         progress.finish()
@@ -112,10 +124,14 @@ struct OffMainSaveSheetTests {
     @Test("The main-actor save keeps its behaviour: the bar stays full, the timer stops")
     func mainActorSave() async throws {
         let clock = ManualClock()
+        let sleeper = ManualSleeper()
+        defer { sleeper.release() }
         let progress = BatchProgress(kind: .redoing, total: 20, showAfter: .milliseconds(40), now: { clock.instant })
+        progress.timerSleep = sleeper.sleep
         let reporter = progress.start()
+        let timer = try #require(progress.timer)
         await reporter.reportSaving(20, offMain: false)
-        try await Task.sleep(for: .milliseconds(150))
+        await timer.value
         #expect(!progress.savesOffMain)
         #expect(!progress.isShown, "The save cancels the timer")
         progress.finish()
