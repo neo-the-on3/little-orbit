@@ -11324,6 +11324,30 @@
           }
         }
       }
+    },
+    "Reading %1$lld of %2$lld rows…": {
+      "comment": "CSV import: shown while a file of more than 5,000 rows is read. First number: rows read so far. Second: the file’s total rows. A whole phrase; the plural follows the total. Keep both placeholders.",
+      "extractionState": "manual",
+      "localizations": {
+        "en": {
+          "variations": {
+            "plural": {
+              "one": {
+                "stringUnit": {
+                  "state": "translated",
+                  "value": "Reading %1$lld of %2$lld row…"
+                }
+              },
+              "other": {
+                "stringUnit": {
+                  "state": "translated",
+                  "value": "Reading %1$lld of %2$lld rows…"
+                }
+              }
+            }
+          }
+        }
+      }
     }
   },
   "version": "1.0"

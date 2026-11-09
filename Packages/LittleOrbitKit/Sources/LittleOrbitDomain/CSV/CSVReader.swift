@@ -162,10 +162,14 @@ public enum CSVReader {
     public static let delimiters: [Character] = [",", ";", "\t", "|"]
 
     /// Reads `text` into a table. With no `delimiter`, the one used most in the first record wins.
-    public static func read(_ text: String, delimiter: Character? = nil) throws -> CSVTable {
+    public static func read(
+        _ text: String,
+        delimiter: Character? = nil,
+        progress: (@Sendable (_ rowsParsed: Int, _ totalRows: Int) -> Void)? = nil,
+    ) throws -> CSVTable {
         let scalars = Array(text.unicodeScalars)
         let separator = delimiter ?? detectDelimiter(scalars)
-        let records = parse(scalars, delimiter: separator.unicodeScalars.first ?? ",")
+        let records = try parse(scalars, delimiter: separator.unicodeScalars.first ?? ",", progress: progress)
         guard let headerIndex = records.firstIndex(where: { !isBlank($0) }) else {
             throw CSVFileError.empty
         }
@@ -214,7 +218,11 @@ public enum CSVReader {
         return best
     }
 
-    private static func parse(_ scalars: [Unicode.Scalar], delimiter: Unicode.Scalar) -> [CSVRecord] {
+    private static func parse(
+        _ scalars: [Unicode.Scalar],
+        delimiter: Unicode.Scalar,
+        progress: (@Sendable (_ rowsParsed: Int, _ totalRows: Int) -> Void)?,
+    ) throws -> [CSVRecord] {
         var records: [CSVRecord] = []
         var fields: [String] = []
         var field = String.UnicodeScalarView()
@@ -223,6 +231,8 @@ public enum CSVReader {
         var atFieldStart = true
         var inQuotes = false
         var recordHasContent = false
+        var readProgress = CSVParseProgress(report: progress)
+        try readProgress.countTotal(scalars, delimiter: delimiter)
 
         func endField() {
             fields.append(String(field))
@@ -231,13 +241,16 @@ public enum CSVReader {
         }
         func endRecord(unterminated: Bool = false) {
             endField()
-            records.append(CSVRecord(rowNumber: rowNumber, fields: fields, isUnterminated: unterminated))
+            let record = CSVRecord(rowNumber: rowNumber, fields: fields, isUnterminated: unterminated)
+            records.append(record)
+            readProgress.append(record)
             fields = []
             rowNumber += 1
             recordHasContent = false
         }
 
         while index < scalars.count {
+            try readProgress.checkCancellation(at: index)
             let scalar = scalars[index]
             if inQuotes {
                 if scalar == "\"" {
@@ -276,6 +289,7 @@ public enum CSVReader {
         } else if recordHasContent || !field.isEmpty {
             endRecord()
         }
+        try readProgress.finish()
         return records
     }
 }

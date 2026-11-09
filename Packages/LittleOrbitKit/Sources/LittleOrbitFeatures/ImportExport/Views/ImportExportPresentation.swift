@@ -39,6 +39,7 @@
         @Binding var isPicking: Bool
         @State private var session: CSVImportSession?
         @State private var openAlert: ImportAlert?
+        @State private var presentedModel: CSVImportViewModel?
 
         func body(content: Content) -> some View {
             content
@@ -48,7 +49,7 @@
                     }
                     Task { await open(url) }
                 }
-                .sheet(item: $session) { session in
+                .sheet(item: $session, onDismiss: importDismissed) { session in
                     CSVImportSheet(model: session.model, feature: feature)
                 }
                 #if DEBUG
@@ -73,11 +74,21 @@
 
         private func open(_ url: URL) async {
             let model = feature.makeImport()
+            presentedModel = model
+            // Present before reading: the progress and Cancel must be reachable during the read itself.
+            session = CSVImportSession(model: model)
             await model.open(url: url)
-            if model.step == .pickFile {
-                openAlert = model.alert
-            } else {
-                session = CSVImportSession(model: model)
+            guard session?.model === model else { return }
+            if model.step == .pickFile { session = nil }
+        }
+
+        private func importDismissed() {
+            let model = presentedModel
+            presentedModel = nil
+            if model?.wasReadCancelled == true {
+                isPicking = true
+            } else if model?.step == .pickFile {
+                openAlert = model?.alert
             }
         }
     }
