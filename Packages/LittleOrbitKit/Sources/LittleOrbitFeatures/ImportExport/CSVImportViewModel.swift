@@ -22,6 +22,11 @@ public final class CSVImportViewModel {
         didSet { if step != oldValue { dataChangedNotice = nil } }
     }
     public internal(set) var isWorking = false
+    public internal(set) var isReading = false
+    public internal(set) var readProgress: ImportReadProgress?
+    public internal(set) var wasReadCancelled = false
+    @ObservationIgnored var readTask: Task<ImportFile, any Error>?
+    @ObservationIgnored var readGeneration = 0
     /// What the progress overlay says: reading the file, or saving the import.
     public internal(set) var workingText = ImportExportText.reading
     public var alert: ImportAlert?
@@ -134,39 +139,40 @@ public final class CSVImportViewModel {
 
     /// Reads a file the system picker or a drop handed over. Only the name is kept, never the path.
     public func open(url: URL) async {
-        let name = url.lastPathComponent
-        startWork(ImportExportText.reading)
-        let result = await Task.detached { Self.read(url) }.value
-        isWorking = false
-        switch result {
-        case .success(let data):
-            await open(data: data, fileName: name)
-        case .failure:
-            ImportLog.event(.fileUnreadable)
-            alert = ImportAlert(title: ImportExportText.couldntOpenTitle(name), message: ImportExportText.unreadable)
-        }
-    }
-
-    /// The file's bytes, inside its security scope on Apple platforms.
-    nonisolated private static func read(_ url: URL) -> Result<Data, any Error> {
-        #if canImport(Darwin)
-            let scoped = url.startAccessingSecurityScopedResource()
-            defer { if scoped { url.stopAccessingSecurityScopedResource() } }
-        #endif
-        return Result { try Data(contentsOf: url) }
+        let pipeline = useCases.pipeline
+        guard
+            let opened = await readInBackground({ progress in
+                let data = try CSVFileReader.read(url, progress: progress)
+                return try pipeline.open(data, progress: progress)
+            })
+        else { return }
+        finishOpening(opened, fileName: url.lastPathComponent, fromURL: true)
     }
 
     public func open(data: Data, fileName: String) async {
-        startWork(ImportExportText.reading)
-        defer { isWorking = false }
         let pipeline = useCases.pipeline
-        let opened = await Task.detached { Result { try pipeline.open(data) } }.value
-        guard !isClosed else { return }
+        guard
+            let opened = await readInBackground({ progress in
+                try pipeline.open(data, progress: progress)
+            })
+        else { return }
+        finishOpening(opened, fileName: fileName, fromURL: false)
+    }
+
+    private func finishOpening(_ opened: Result<ImportFile, any Error>, fileName: String, fromURL: Bool) {
         let file: ImportFile
         switch opened {
         case .success(let read):
             file = read
         case .failure(let error):
+            if fromURL, !(error is CSVFileError) {
+                ImportLog.event(.fileUnreadable)
+                alert = ImportAlert(
+                    title: ImportExportText.couldntOpenTitle(fileName),
+                    message: ImportExportText.unreadable,
+                )
+                return
+            }
             ImportLog.event(.fileRefused)
             alert =
                 error as? CSVFileError == .notText
@@ -198,6 +204,18 @@ public final class CSVImportViewModel {
         setMapping(file.suggestedMapping)
         step = .columns
         ImportLog.opened(rows: file.rowCount, columns: file.table.header.count)
+    }
+
+    func resetCancelledRead() {
+        file = nil
+        fileName = ""
+        mapping = ImportColumnMapping()
+        detection = nil
+        choices = ImportChoices()
+        receipt = nil
+        invalidatePreview()
+        alert = nil
+        step = .pickFile
     }
 
     /// Whether a tapped reminder must leave the sheet open (S33): from a picked file until the import is done, the

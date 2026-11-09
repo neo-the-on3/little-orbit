@@ -46,6 +46,7 @@ public struct ImportDetection: Equatable, Sendable {
 public protocol ImportPipeline: Sendable {
     /// Decodes and tokenises the file and picks its format. Throws `CSVFileError`.
     func open(_ data: Data) throws -> ImportFile
+    func open(_ data: Data, progress: @escaping @Sendable (ImportReadProgress) -> Void) throws -> ImportFile
     /// The date order and decimal separator the mapped columns point to, falling back to the region's.
     func detect(_ file: ImportFile, mapping: ImportColumnMapping, locale: Locale) -> ImportDetection
     /// The file's rows read with `settings` by its format.
@@ -58,6 +59,24 @@ public protocol ImportPipeline: Sendable {
         settings: ImportReadSettings,
         defaultCurrency: String,
     ) -> ImportPreview
+}
+
+extension ImportPipeline {
+    /// Existing custom pipelines remain compatible; the default pipeline reports real parse milestones.
+    public func open(_ data: Data, progress: @escaping @Sendable (ImportReadProgress) -> Void) throws -> ImportFile {
+        try Task.checkCancellation()
+        let file = try open(data)
+        try Task.checkCancellation()
+        progress(
+            ImportReadProgress(
+                bytesRead: data.count,
+                totalBytes: data.count,
+                rowsParsed: file.rowCount,
+                totalRows: file.rowCount,
+            )
+        )
+        return file
+    }
 }
 
 /// The pipeline over a set of formats. Pass #60's Debit & Credit format in `formats` to plug it in.
@@ -76,6 +95,41 @@ public struct DefaultImportPipeline: ImportPipeline {
             formatID: format.id,
             suggestedMapping: format.suggestedMapping(for: table.header),
         )
+    }
+
+    public func open(_ data: Data, progress: @escaping @Sendable (ImportReadProgress) -> Void) throws -> ImportFile {
+        try Task.checkCancellation()
+        let text = try CSVText.decode(data)
+        try Task.checkCancellation()
+        let table = try CSVReader.read(
+            text,
+            progress: { rows, total in
+                progress(
+                    ImportReadProgress(
+                        bytesRead: data.count,
+                        totalBytes: data.count,
+                        rowsParsed: rows,
+                        totalRows: total,
+                    )
+                )
+            },
+        )
+        let format = formats.format(for: table.header)
+        let file = ImportFile(
+            table: table,
+            formatID: format.id,
+            suggestedMapping: format.suggestedMapping(for: table.header),
+        )
+        progress(
+            ImportReadProgress(
+                bytesRead: data.count,
+                totalBytes: data.count,
+                rowsParsed: file.rowCount,
+                totalRows: file.rowCount,
+            )
+        )
+        try Task.checkCancellation()
+        return file
     }
 
     public func detect(_ file: ImportFile, mapping: ImportColumnMapping, locale: Locale) -> ImportDetection {

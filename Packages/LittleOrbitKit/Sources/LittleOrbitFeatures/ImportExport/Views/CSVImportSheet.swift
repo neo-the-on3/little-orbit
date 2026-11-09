@@ -13,14 +13,16 @@
         var body: some View {
             NavigationStack {
                 stepContainer
+                    .disabled(model.isReading)
                     .navigationTitle(ImportExportText.importTitle)
                     .navigationSubtitle(model.stepTitle)
                     .toolbar { toolbar }
                     .overlay {
                         if model.isWorking {
-                            ProgressView(model.workingText)
-                                .padding()
-                                .background(.regularMaterial, in: .rect(cornerRadius: 12))
+                            CSVImportWorkingView(model: model) {
+                                model.cancelReading()
+                                dismiss()
+                            }
                         }
                     }
             }
@@ -41,7 +43,10 @@
             .openSheet(hasUnsavedEdits: { model.hasUnsavedEdits }, close: { dismiss() })
             .alert(
                 model.alert?.title ?? "",
-                isPresented: Binding(get: { model.alert != nil }, set: { if !$0 { model.alert = nil } }),
+                isPresented: Binding(
+                    get: { model.alert != nil && model.step != .pickFile },
+                    set: { if !$0 { model.alert = nil } },
+                ),
                 presenting: model.alert,
             ) { _ in
                 Button(ImportExportText.okay) {}

@@ -104,6 +104,7 @@ extension CSVImportViewModel {
 
     /// The sheet closed: results of work still running are dropped instead of landing in a dismissed sheet.
     public func close() {
+        stopReading()
         isClosed = true
     }
 
