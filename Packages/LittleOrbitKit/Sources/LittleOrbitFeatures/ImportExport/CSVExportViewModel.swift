@@ -3,7 +3,8 @@ import LittleOrbitDomain
 import Observation
 
 /// Export Transactions to CSV (#30): every account or chosen ones, all time, this month or a custom range, ISO or
-/// short dates. The file goes to the system save panel or Files; it never leaves the device otherwise (D14).
+/// short dates, and a Comma, Semicolon or Tab delimiter (#189 E1). The file goes to the system save panel or Files,
+/// or to the share sheet the user opens with Share… (#189 E3); it never leaves the device otherwise (D14).
 @MainActor
 @Observable
 public final class CSVExportViewModel {
@@ -34,6 +35,8 @@ public final class CSVExportViewModel {
         didSet { refreshCount() }
     }
     public var iso8601Dates = true
+    /// Comma by default; Tab writes a `.tsv` file (#189 E1, D387.8). The count doesn't depend on it.
+    public var delimiter: CSVDelimiter = .comma
     public private(set) var accounts: [Account] = []
     public private(set) var count = 0
     /// The file waiting for the save panel.
@@ -78,6 +81,7 @@ public final class CSVExportViewModel {
             accountIDs: scope == .accounts ? selectedAccountIDs : nil,
             range: exportRange,
             iso8601Dates: iso8601Dates,
+            delimiter: delimiter,
         )
     }
 
@@ -128,9 +132,38 @@ public final class CSVExportViewModel {
         isExporterPresented = false
     }
 
-    /// The file name without `.csv`, for the save panel, which adds the extension.
+    /// The file name without `.csv` or `.tsv`, for the save panel, which adds the extension.
     public var defaultFileName: String? {
-        pendingFile.map { String($0.fileName.dropLast(4)) }
+        pendingFile.map { file in
+            String(file.fileName.dropLast(file.delimiter.fileExtension.count + 1))
+        }
+    }
+
+    /// The save panel's file type: the pending file's, or the chosen delimiter's before there is one.
+    public var exportContentTypeIdentifier: String {
+        (pendingFile?.delimiter ?? delimiter).contentTypeIdentifier
+    }
+
+    // MARK: Share (#189 E3)
+
+    /// The name Share… shows and the shared file has: the same as Export would write now.
+    public var shareFileName: String {
+        options.fileName(today: day(of: now()))
+    }
+
+    /// The file Share… hands to the share sheet: the same bytes and name Export would write with these options,
+    /// made when the share sheet asks for it. The save panel isn't opened and nothing is left pending.
+    public func shareFile() throws -> TransactionExport {
+        do {
+            return try exporting.export(options, locale: locale, today: day(of: now()))
+        } catch {
+            ImportLog.event(.exportFailed)
+            alert = ImportAlert(
+                title: ImportExportText.exportFailedTitle,
+                message: ImportExportText.exportFailedMessage,
+            )
+            throw error
+        }
     }
 
     private var exportRange: TransactionExportOptions.Range {

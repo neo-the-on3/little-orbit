@@ -2621,6 +2621,19 @@
         }
       }
     },
+    "Comma": {
+      "comment": "CSV export Delimiter choice, the default: fields are separated by commas (.csv file).",
+      "extractionState": "manual",
+      "generatesSymbol": false,
+      "localizations": {
+        "en": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Comma"
+          }
+        }
+      }
+    },
     "Comma (1.234,56)": {
       "comment": "CSV import decimal separator: a comma.",
       "extractionState": "manual",
@@ -2630,19 +2643,6 @@
           "stringUnit": {
             "state": "translated",
             "value": "Comma (1.234,56)"
-          }
-        }
-      }
-    },
-    "Comma-separated, UTF-8 with BOM. Columns: Date, Type, Account, To Account, Amount, Destination Amount, Currency, Category, Payee, Description, Notes. Expenses are negative.": {
-      "comment": "CSV export: the footer describing the file. The column names are the file’s own and stay in English.",
-      "extractionState": "manual",
-      "generatesSymbol": false,
-      "localizations": {
-        "en": {
-          "stringUnit": {
-            "state": "translated",
-            "value": "Comma-separated, UTF-8 with BOM. Columns: Date, Type, Account, To Account, Amount, Destination Amount, Currency, Category, Payee, Description, Notes. Expenses are negative."
           }
         }
       }
@@ -3798,6 +3798,19 @@
         }
       }
     },
+    "Delimiter": {
+      "comment": "CSV export: the label of the menu choosing the character between fields (Comma, Semicolon or Tab).",
+      "extractionState": "manual",
+      "generatesSymbol": false,
+      "localizations": {
+        "en": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Delimiter"
+          }
+        }
+      }
+    },
     "Description shortened to %@ characters": {
       "comment": "CSV import Review: a row whose description was cut to the limit (D105). The number is the limit.",
       "extractionState": "manual",
@@ -4590,15 +4603,15 @@
       },
       "generatesSymbol": false
     },
-    "Import transactions from a bank or another app’s CSV file. Exported files open in Numbers, Excel and other apps. Files stay on this device.": {
-      "comment": "Settings › Import & Export: the footer under the import and export rows.",
+    "Import transactions from a bank or another app’s CSV file. Exported files open in Numbers, Excel and other apps. Your data stays on this device. It leaves only when you share or save an export somewhere.": {
+      "comment": "Settings › Import & Export: the footer under the import and export rows. Data leaves only when the person uses Share… or saves an Export.",
       "extractionState": "manual",
       "generatesSymbol": false,
       "localizations": {
         "en": {
           "stringUnit": {
             "state": "translated",
-            "value": "Import transactions from a bank or another app’s CSV file. Exported files open in Numbers, Excel and other apps. Files stay on this device."
+            "value": "Import transactions from a bank or another app’s CSV file. Exported files open in Numbers, Excel and other apps. Your data stays on this device. It leaves only when you share or save an export somewhere."
           }
         }
       }
@@ -6818,6 +6831,32 @@
         }
       }
     },
+    "Semicolon": {
+      "comment": "CSV export Delimiter choice: fields are separated by semicolons (.csv file).",
+      "extractionState": "manual",
+      "generatesSymbol": false,
+      "localizations": {
+        "en": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Semicolon"
+          }
+        }
+      }
+    },
+    "Share…": {
+      "comment": "CSV export sheet: the button that opens the share sheet with the same file, and file name, that Export writes.",
+      "extractionState": "manual",
+      "generatesSymbol": false,
+      "localizations": {
+        "en": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Share…"
+          }
+        }
+      }
+    },
     "Skipped · syncing": {
       "comment": "Apple Watch, Scheduled list row: skipped on the watch, waiting for the iPhone to apply it.",
       "extractionState": "manual",
@@ -6929,6 +6968,19 @@
           "stringUnit": {
             "state": "translated",
             "value": "Spent in %1$@ · %2$@ · %3$@"
+          }
+        }
+      }
+    },
+    "Tab": {
+      "comment": "CSV export Delimiter choice: fields are separated by tab characters (.tsv file).",
+      "extractionState": "manual",
+      "generatesSymbol": false,
+      "localizations": {
+        "en": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Tab"
           }
         }
       }
@@ -7825,6 +7877,19 @@
           "stringUnit": {
             "state": "translated",
             "value": "Use 100 characters or fewer."
+          }
+        }
+      }
+    },
+    "UTF-8 with BOM. Columns: Date, Type, Account, To Account, Amount, Destination Amount, Currency, Category, Payee, Description, Notes. Expenses are negative.": {
+      "comment": "CSV export: the footer describing the file, under the ISO 8601 Dates and Delimiter choices. The column names are the file’s own and stay in English.",
+      "extractionState": "manual",
+      "generatesSymbol": false,
+      "localizations": {
+        "en": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "UTF-8 with BOM. Columns: Date, Type, Account, To Account, Amount, Destination Amount, Currency, Category, Payee, Description, Notes. Expenses are negative."
           }
         }
       }
