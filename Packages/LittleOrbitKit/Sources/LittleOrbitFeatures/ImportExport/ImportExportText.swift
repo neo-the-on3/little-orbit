@@ -39,8 +39,9 @@ enum ImportExportText {
 
     static var sectionFooter: String {
         FeatureText.string(
-            "Import transactions from a bank or another app’s CSV file. Exported files open in Numbers, Excel and other apps. Files stay on this device.",
-            comment: "Settings › Import & Export: the footer under the import and export rows.",
+            "Import transactions from a bank or another app’s CSV file. Exported files open in Numbers, Excel and other apps. Your data stays on this device. It leaves only when you share or save an export somewhere.",
+            comment:
+                "Settings › Import & Export: the footer under the import and export rows. Data leaves only when the person uses Share… or saves an Export.",
         )
     }
 

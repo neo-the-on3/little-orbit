@@ -62,6 +62,15 @@ struct CSVExportDelimiterTests {
         #expect(ImportExportText.formatFooter.hasPrefix("UTF-8 with BOM. Columns: Date, Type, Account"))
     }
 
+    @Test("D455: Settings Import & Export footer says data leaves only when shared")
+    func sectionFooter() {
+        #expect(
+            ImportExportText.sectionFooter
+                == "Import transactions from a bank or another app’s CSV file. Exported files open in Numbers, Excel and other apps. Your data stays on this device. It leaves only when you share or save an export somewhere."
+        )
+        #expect(!ImportExportText.sectionFooter.contains("Files stay on this device."))
+    }
+
     @Test("E1: a Tab export is a UTF-8 .tsv file with a BOM, and the save panel offers the TSV type")
     func tabExport() throws {
         let model = try model()
