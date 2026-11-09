@@ -251,13 +251,67 @@ jobs:
               echo "Missing Package.swift."
             fi
             echo "Once both are in the tree, this job builds the three schemes with CODE_SIGNING_ALLOWED=NO, runs mise run test (xcrun swift), then xcodebuild test on each Swift package."
-            echo "  LittleOrbit iOS     - iOS Simulator, iPhone 17, OS 27.0"
+            echo "  LittleOrbit iOS     - iOS Simulator by UDID (iPhone 17, preferred OS 27.0)"
             echo "  LittleOrbit macOS   - macOS (arm64)"
-            echo "  LittleOrbit watchOS - watchOS Simulator, Apple Watch Series 12 (42mm), OS 27.0"
+            echo "  LittleOrbit watchOS - watchOS Simulator by UDID (Apple Watch Series 12 (42mm), preferred OS 27.0)"
             exit 0
           fi
 
           derived="derived-data"
+
+          # Resolve a simulator by UDID. Name+OS destinations are ambiguous when the
+          # image pairs the same watch or iPhone model with several phone runtimes.
+          # Prefer the configured OS; otherwise take the newest available runtime that
+          # still has that model. macOS stays a platform destination.
+          resolve_simulator_udid() {
+            local platform="$1" name="$2" preferred_os="$3"
+            xcrun simctl list devices available -j | python3 -c '
+          import json, re, sys
+
+          platform, name, preferred_os = sys.argv[1:4]
+
+          def version_parts(text):
+              return tuple(int(p) for p in text.split(".") if p.isdigit())
+
+          preferred = version_parts(preferred_os)
+          if not preferred:
+              sys.exit("error: preferred OS %r is not a version." % preferred_os)
+
+          by_version = {}
+          for key, devices in json.load(sys.stdin).get("devices", {}).items():
+              match = re.fullmatch(
+                  r"com\.apple\.CoreSimulator\.SimRuntime\.%s-(\d+(?:-\d+)*)(?:-.+)?"
+                  % re.escape(platform),
+                  key,
+              )
+              if not match:
+                  continue
+              version = tuple(int(p) for p in match.group(1).split("-"))
+              matching = [
+                  d for d in devices
+                  if d.get("name") == name and d.get("udid") and d.get("isAvailable", True)
+              ]
+              if matching:
+                  by_version.setdefault(version, []).extend(matching)
+
+          if not by_version:
+              sys.exit(
+                  "error: no available %s simulator named %r (preferred OS %s)."
+                  % (platform, name, preferred_os)
+              )
+
+          if preferred in by_version:
+              version = preferred
+          elif any(v[: len(preferred)] == preferred for v in by_version):
+              version = max(v for v in by_version if v[: len(preferred)] == preferred)
+          else:
+              version = max(by_version)
+
+          device = sorted(by_version[version], key=lambda d: d["udid"])[0]
+          os_version = ".".join(str(p) for p in version)
+          print("%s\t%s\t%s" % (device["name"], os_version, device["udid"]))
+          ' "$platform" "$name" "$preferred_os"
+          }
 
           # The shared schemes' TestAction has no testables, so `xcodebuild test`
           # on those schemes exits 66: "Scheme ... is not currently configured for
@@ -276,9 +330,17 @@ jobs:
               CODE_SIGNING_ALLOWED=NO
           }
 
-          run_scheme "LittleOrbit iOS" "platform=iOS Simulator,name=iPhone 17,OS=27.0"
+          ios_pick="$(resolve_simulator_udid iOS "iPhone 17" "27.0")"
+          IFS=$'\t' read -r ios_name ios_os ios_udid <<<"$ios_pick"
+          echo "iOS simulator: ${ios_name}, OS ${ios_os}, UDID ${ios_udid}"
+          run_scheme "LittleOrbit iOS" "id=${ios_udid}"
+
           run_scheme "LittleOrbit macOS" "platform=macOS,arch=arm64"
-          run_scheme "LittleOrbit watchOS" "platform=watchOS Simulator,name=Apple Watch Series 12 (42mm),OS=27.0"
+
+          watch_pick="$(resolve_simulator_udid watchOS "Apple Watch Series 12 (42mm)" "27.0")"
+          IFS=$'\t' read -r watch_name watch_os watch_udid <<<"$watch_pick"
+          echo "watchOS simulator: ${watch_name}, OS ${watch_os}, UDID ${watch_udid}"
+          run_scheme "LittleOrbit watchOS" "id=${watch_udid}"
 
           echo "mise run test"
           test_status=0
